@@ -13,7 +13,12 @@ return new class extends Migration
     {
         Schema::create('wards', function (Blueprint $table) {
             $table->id();
+            $table->uuid('uuid')->unique();
+            $table->string('name');
+            $table->unsignedBigInteger('user_id')->nullable();
+            $table->unsignedBigInteger('lga_id');
             $table->timestamps();
+            $table->foreign('lga_id')->references('id')->on('local_government_areas')->onDelete('cascade');
         });
     }
 

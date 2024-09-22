@@ -21,5 +21,9 @@ class Region extends Model
     {
         return $this->hasMany(State::class);
     }
-    
+
+    public function users(){
+        return $this->hasMany(User::class);
+    }
+
 }

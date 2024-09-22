@@ -42,10 +42,47 @@ class User extends Authenticatable
     }
 
 
+    public function country(){
+        return $this->belongsTo(Country::class);
+    }
+
+
+    public function region(){
+        return $this->belongsTo(Region::class);
+    }
+
+
+    public function state(){
+        return $this->belongsTo(State::class);
+    }
+
+
+    public function lga(){
+        return $this->belongsTo(LocalGovernmentArea::class);
+    }
+
+
+    public function ward(){
+        return $this->belongsTo(Ward::class);
+    }
+
 
     public function pollingUnit(){
        return $this->belongsTo(PollingUnit::class);
     }
 
-    
+    public function religion(){
+        return $this->belongsTo(Religion::class);
+    }
+
+    public function supportGroup(){
+        return $this->belongsTo(SupportGroup::class);
+    }
+
+
+    public function ageGrade(){
+        return $this->belongsTo(AgeGrade::class);
+    }
+
+
 }

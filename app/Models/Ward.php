@@ -19,4 +19,8 @@ class Ward extends Model
         return $this->hasMany(PollingUnit::class);
     }
 
+    public function users(){
+        return $this->hasMany(User::class);
+    }
+
 }

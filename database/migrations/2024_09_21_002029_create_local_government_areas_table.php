@@ -13,7 +13,13 @@ return new class extends Migration
     {
         Schema::create('local_government_areas', function (Blueprint $table) {
             $table->id();
+            $table->uuid('uuid')->unique();
+            $table->string('name');
+            $table->unsignedBigInteger('user_id')->nullable();
+            $table->unsignedBigInteger('state_id');
             $table->timestamps();
+
+            $table->foreign('state_id')->references('id')->on('states')->onDelete('cascade');
         });
     }
 

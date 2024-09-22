@@ -13,7 +13,13 @@ return new class extends Migration
     {
         Schema::create('states', function (Blueprint $table) {
             $table->id();
+            $table->uuid('uuid')->unique();
+            $table->string('name');
+            $table->unsignedBigInteger('user_id')->nullable();
+            $table->unsignedBigInteger('region_id');
             $table->timestamps();
+
+            $table->foreign('region_id')->references('id')->on('regions')->onDelete('cascade');
         });
     }
 
