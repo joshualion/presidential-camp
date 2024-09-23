@@ -62,6 +62,10 @@ class DatabaseSeeder extends Seeder
         $this->call(ReligionTableSeeder::class);
         $this->call(UsersTableSeeder::class);
 
+        // Settings Seeders
+        $this->call(SystemSettingsSeeder::class);
+        $this->call(SMTPSettingsSeeder::class);
+
         // User::factory(10)->create();
         // User::factory()->create([
         //     'name' => 'Test User',
