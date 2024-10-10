@@ -11,9 +11,10 @@ class UsersTableSeeder extends Seeder
 {
     public function run()
     {
-        $roles = [
+        $access_levels = [
             'superadmin',
             'nationaladmin',
+            'regionaladmin',
             'stateadmin',
             'lgaadmin',
             'wardadmin',
@@ -21,13 +22,13 @@ class UsersTableSeeder extends Seeder
             'user',
         ];
 
-        foreach ($roles as $role) {
+        foreach ($access_levels as $access_level) {
             User::create([
                 'uuid' => Str::uuid(),
-                'username' => $role . '_user',
-                'email' => $role . '@example.com',
+                'username' => $access_level . '_user',
+                'email' => $access_level . '@example.com',
                 'password' => Hash::make('password'), // Using Laravel's password hashing
-                'firstname' => ucfirst($role),
+                'firstname' => ucfirst($access_level),
                 'lastname' => 'User',
                 'phone' => null,
                 'vin' => null,
@@ -36,9 +37,9 @@ class UsersTableSeeder extends Seeder
                 'occupation' => null,
                 'qualification' => null,
                 'validVoter' => 'no',
-                'gender' => null,
+                'gender' => 'male',
                 'status' => 'active',
-                'role' => $role,
+                'access_level' => $access_level,
                 'email_verified_at' => now(),
                 'country_id' => 1,
                 'region_id' => 5,
@@ -46,7 +47,6 @@ class UsersTableSeeder extends Seeder
                 'lga_id' => 156,
                 'ward_id' => 6,
                 'polling_unit_id' => rand(1, 25),
-                'support_group_id' => 1,
                 'religion_id' => 1,
                 'age_grade_id' => 1,
                 'remember_token' => Str::random(10),

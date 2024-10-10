@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 
 class EmailVerificationNotificationController extends Controller
@@ -14,7 +15,12 @@ class EmailVerificationNotificationController extends Controller
     public function store(Request $request): RedirectResponse
     {
         if ($request->user()->hasVerifiedEmail()) {
-            return redirect()->intended(route('dashboard', absolute: false));
+
+            $notification = [
+                'message' => 'Welcome back '.Auth::user()->firstname .' '.Auth::user()->lastname. '!  Your email has been verified successfully.',
+                'alert-type' => 'success'
+            ];
+            return redirect()->route('dashboard')->with($notification);
         }
 
         $request->user()->sendEmailVerificationNotification();

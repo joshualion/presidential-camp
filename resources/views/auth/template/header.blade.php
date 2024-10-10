@@ -5,10 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   <title>
-    @if (!$systemSettings->isEmpty() )
-              @foreach ($systemSettings as $setting)
-                {{ $setting->system_name }}
-              @endforeach
+    @if ($SystemSetting)
+        {{$SystemSetting->system_name}}
     @else
         Political Campaign & Election Management Solution
     @endif
@@ -36,12 +34,12 @@
       background-attachment: fixed;
     }
     a{
-      color: #008751 !important;
+      color: {{ $SystemSetting ? $SystemSetting->dark_theme_color : '#008751' }} !important;
     }
 
     .btn-primary{
-      background: #008751 !important;
-      border:#008751 !important;
+      background: {{ $SystemSetting ? $SystemSetting->dark_theme_color : '#008751' }} !important;
+      border:{{ $SystemSetting ? $SystemSetting->dark_theme_color : '#008751' }} !important;
     }
 
     .card-title{
@@ -49,7 +47,7 @@
     }
 
     .navbar-bg{
-    background: #008751 !important;
+    background:{{ $SystemSetting ? $SystemSetting->dark_theme_color : '#008751' }} !important;
     }
 
   </style>
@@ -59,5 +57,7 @@
 
 <div class="register-box">
   <div class="register-logo">
-    <a href="/"><img src="{{asset('assets/dist/img/logo2.png')}}" width="35%" height="35%"/></a>
+    <a href="/">
+        <img 
+        src="@if (!empty($SystemSetting->logo)) {{ url('uploads/system_images/'.$SystemSetting->logo) }} @else {{ url('uploads/system_images/logo.png') }} @endif" width="35%" height="35%"/></a>
   </div>

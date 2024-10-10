@@ -28,7 +28,42 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->intended(route('dashboard', absolute: false));
+        $url ='';
+        if (Auth::user()->access_level === 'superadmin') {
+            $url = '/superadmin/dashboard';
+        }elseif(Auth::user()->access_level === 'nationaladmin') {
+            $url = '/national/dashboard';
+        }elseif(Auth::user()->access_level === 'regionaladmin') {
+            $url = '/regional/dashboard';
+        }elseif (Auth::user()->access_level==='stateadmin'){
+            $url = '/state/dashboard';
+        }elseif (Auth::user()->access_level==='wardadmin'){
+            $url = '/ward/dashboard';
+        }elseif (Auth::user()->access_level==='puadmin'){
+            $url = '/pu/dashboard';
+        }elseif (Auth::user()->access_level==='user') {
+            $url = '/dashboard';
+        }else{
+            //logout User something has gone wrong
+           // Auth::guard('web')->logout();
+            //$request->session()->invalidate();
+           // $request->session()->regenerateToken();
+            $notification =[
+                'message' => 'Something went wrong, please try again in a few minutes',
+                'alert-type' => 'error'
+            ];
+
+            return redirect()->back()->with($notification);
+
+        }
+
+        $notification = [
+            'message' => 'Welcome back '.Auth::user()->firstname,
+            'alert-type' => 'success'
+        ];
+
+        return redirect($url)->with($notification);
+
     }
 
     /**

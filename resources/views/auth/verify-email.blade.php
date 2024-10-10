@@ -1,10 +1,29 @@
-<x-guest-layout>
+@include('auth.template.header')
+
+<style>
+    .text-primary, .card-outline{
+        color: {{ $SystemSetting ? $SystemSetting->dark_theme_color : '#008751' }} !important;
+    }
+</style>
+
+<div class="card card-primary">
+    <div class="card-body login-card-body">
+      <h3 class="login-box-msg">
+        <div class="register-logo">
+            <a href="/">
+                <img src="{{asset('frontend/images/logo/1.png')}}" alt="Ultimataepips Logo" width="75%" height="75%">
+            </a>
+          </div>
+      </h3>
+
+
+
     <div class="mb-4 text-sm text-gray-600 dark:text-gray-400">
         {{ __('Thanks for signing up! Before getting started, could you verify your email address by clicking on the link we just emailed to you? If you didn\'t receive the email, we will gladly send you another.') }}
     </div>
 
     @if (session('status') == 'verification-link-sent')
-        <div class="mb-4 font-medium text-sm text-green-600 dark:text-green-400">
+        <div class="mb-4 font-medium text-sm text-green-600 dark:text-green-400 text-center text-success">
             {{ __('A new verification link has been sent to the email address you provided during registration.') }}
         </div>
     @endif
@@ -14,18 +33,25 @@
             @csrf
 
             <div>
-                <x-primary-button>
+                <button class="btn btn-primary">
                     {{ __('Resend Verification Email') }}
-                </x-primary-button>
+                </button>
             </div>
         </form>
-
+        <br><br>
         <form method="POST" action="{{ route('logout') }}">
             @csrf
 
-            <button type="submit" class="underline text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800">
+            <button type="submit" class="btn btn-secondary underline text-sm ">
                 {{ __('Log Out') }}
             </button>
         </form>
     </div>
-</x-guest-layout>
+
+
+
+</div><!-- /.card -->
+    </div>
+    <!-- /.register-box -->
+
+  @include('auth.template.footer')

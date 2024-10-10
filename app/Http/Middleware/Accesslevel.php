@@ -6,17 +6,17 @@ use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-class Role
+class Accesslevel
 {
     /**
      * Handle an incoming request.
      *
      * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
      */
-    public function handle(Request $request, Closure $next, $role): Response
+    public function handle(Request $request, Closure $next, $access_level): Response
     {
-        if (($request->user()->role !== $role) ) {
-            return redirect('/dashboard');
+        if (($request->user()->access_level !== $access_level) ) {
+            return redirect('/login');
         }
 
 

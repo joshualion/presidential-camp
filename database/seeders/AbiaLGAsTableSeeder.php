@@ -30,6 +30,7 @@ class AbiaLGAsTableSeeder extends Seeder
             ['name' => 'Isiala Ngwa North', 'uuid' => (string) Str::uuid(), 'state_id' => $abiaId, 'created_at' => $now, 'updated_at' => $now],
             ['name' => 'Isiala Ngwa South', 'uuid' => (string) Str::uuid(), 'state_id' => $abiaId, 'created_at' => $now, 'updated_at' => $now],
             ['name' => 'Isuikwuato', 'uuid' => (string) Str::uuid(), 'state_id' => $abiaId, 'created_at' => $now, 'updated_at' => $now],
+            ['name' => 'Ikwuano', 'uuid' => (string) Str::uuid(), 'state_id' => $abiaId, 'created_at' => $now, 'updated_at' => $now],
             ['name' => 'Obi Ngwa', 'uuid' => (string) Str::uuid(), 'state_id' => $abiaId, 'created_at' => $now, 'updated_at' => $now],
             ['name' => 'Ohafia', 'uuid' => (string) Str::uuid(), 'state_id' => $abiaId, 'created_at' => $now, 'updated_at' => $now],
             ['name' => 'Osisioma', 'uuid' => (string) Str::uuid(), 'state_id' => $abiaId, 'created_at' => $now, 'updated_at' => $now],

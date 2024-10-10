@@ -23,8 +23,8 @@ class SystemSettingServiceProvider extends ServiceProvider
     public function boot(): void
     {
         View::composer('*', function ($view) {
-            $systemSettings = SystemSetting::all();
-            $view->with('systemSettings', $systemSettings);
+            $SystemSetting = SystemSetting::first();
+            $view->with('SystemSetting', $SystemSetting);
         });
 
 

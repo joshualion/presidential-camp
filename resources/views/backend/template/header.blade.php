@@ -31,7 +31,7 @@
 
       <!-- Include Leaflet CSS and JS -->
       <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
-    
+
 
 
   <!-- ChartJS CSS -->
@@ -42,11 +42,11 @@
   <link rel="stylesheet" href="{{asset('assets/plugins/datatables-responsive/css/responsive.bootstrap4.min.css')}}">
   <link rel="stylesheet" href="{{asset('assets/plugins/datatables-buttons/css/buttons.bootstrap4.min.css')}}">
   <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
-  
+
   <!-- SweetAlerts -->
   <link rel="stylesheet" href="{{asset('assets/plugins/sweetalert2/sweetalert2.min.css')}}" />
 
-  
+
   <meta name="csrf-token" content="content">
    <meta name="csrf-token" content="{{ csrf_token() }}">
 
@@ -58,18 +58,35 @@
 <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.css" >
 
   <style>
-    a{
-      color: #008751 !important;
+
+    h1{
+      color: {{ $SystemSetting->dark_theme_color ?? ' #008751'}} !important;
     }
-    .page-item.active .page-link{   
+
+    a{
+      color: {{ $SystemSetting->dark_theme_color ?? ' #008751'}} !important;
+    }
+
+    .sidebar-light-primary{
+      color: {{ $SystemSetting->light_theme_color ?? ' #dff1ea'}} !important;
+    }
+
+    /* Specifically targeting the card-outline */
+    .card.card-primary  .card-header{
+    background-color: {{ $SystemSetting->dark_theme_color ?? '#008751' }} !important;
+    border-color: {{ $SystemSetting->dark_theme_color ?? '#008751' }} !important;
+   }
+
+
+    .page-item.active .page-link{
       color: #fff !important;
-      background-color: #008751 !important;
-      border-color: #008751 !important;
+      background-color: {{ $SystemSetting->dark_theme_color ?? ' #008751'}} !important;
+      border-color: {{ $SystemSetting->dark_theme_color ?? ' #008751'}} !important;
     }
     .dataTables_paginate .paginate_button:hover {
       color: #fff !important;
-      background-color: #008751 !important;
-      border-color: #008751 !important;
+      background-color: {{ $SystemSetting->dark_theme_color ?? ' #008751'}} !important;
+      border-color: {{ $SystemSetting->dark_theme_color ?? ' #008751'}} !important;
     }
 
     .datable-print-buttons,dt-buttons{
@@ -83,8 +100,9 @@
     }
 
     .btn-primary{
-      background: #008751 !important;
-      border:#008751 !important;
+      background: {{ $SystemSetting->dark_theme_color ?? ' #008751'}} !important;
+      border: {{ $SystemSetting->dark_theme_color ?? '#008751'}} !important;
+
     }
 
     .card-title{
@@ -92,10 +110,10 @@
     }
 
     .navbar-bg{
-    background: #008751 !important;
+    background: {{ $SystemSetting->dark_theme_color ?? '#008751'}} !important;
     }
-    
-  
+
+
     /* Hide the default file input */
     #image {
       display: none;
@@ -114,13 +132,34 @@
       margin-top: 4px;
       display: inline-block;
     }
-  </style>
+
+    .nav-pills {
+      color: {{ $SystemSetting->dark_theme_color ?? ' #008751'}} !important;
+      border-color: {{ $SystemSetting->dark_theme_color ?? ' #dff1ea'}} !important;
+      background-color: {{ $SystemSetting->light_theme_color ?? ' #dff1ea'}} !important;
+
+    }
+
+    .nav-pills .nav-link.active {
+      color: {{ $SystemSetting->light_theme_color ?? ' #008751'}} !important;
+      border-color: {{ $SystemSetting->dark_theme_color ?? ' #008751'}} !important;
+      background-color: {{ $SystemSetting->dark_theme_color ?? ' #008751'}} !important;
+
+    }
+
+    .nav-pills .nav-link:hover {
+        color: {{ $SystemSetting->light_theme_color ?? ' #dff1ea'}} !important;
+        background-color:  {{ $SystemSetting->dark_theme_color ?? ' #008751'}} !important; /* Darker green for hover */
+
+    }
+
+</style>
+
 </head>
 <body class="hold-transition sidebar-mini layout-fixed">
 <div class="wrapper">
 
   <!-- Preloader -->
   <div class="preloader flex-column justify-content-center align-items-center">
-    <img class="animation__shake" src="{{asset('assets/dist/img/Logo2.png')}}" alt="Logo" height="15%" width="15%">
+    <img class="animation__shake" src="{{ !empty($SystemSetting->logo) ? url('uploads/system_images/'.$SystemSetting->logo) : url('uploads/system_images/logo.png') }}" alt="Logo" height="15%" width="15%">
   </div>
-  

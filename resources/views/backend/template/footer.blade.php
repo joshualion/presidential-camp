@@ -8,11 +8,18 @@
 
 
   <footer class="main-footer">
-    <strong>Copyright &copy; {{Date('Y')}} <a href="https://wa.link/wk31zi">Joshua Ekpe</a>.</strong>
-    All rights reserved.
-    <div class="float-right d-none d-sm-inline-block">
-      <em>Promoting Good Governance</em>
-    </div>
+
+        @if($SystemSetting->copyright)
+           {!! $SystemSetting->copyright !!}
+        @else
+            Copyright &copy; {{ date('Y') }} <a href="https://diginettechnologies.com/" target="_blank">Diginet Tech Africa Limited </a> - All rights reserved.
+        @endif
+
+        <div class="float-right d-none d-sm-inline-block">
+            <em>{!! $SystemSetting->campaign_slogan !!}</em>
+        </div>
+
+
   </footer>
 
 
@@ -20,8 +27,8 @@
 <!-- ./wrapper -->
 
 <!-- REQUIRED SCRIPTS -->
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-
+<!-- jQuery -->
+<script src="{{asset('assets/plugins/jquery/jquery.min.js')}}"></script>
 <!-- Handle photo upload -->
 <script type="text/javascript">
     $(document).ready(function(){
@@ -63,7 +70,7 @@
     });
 </script>
 
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
 <script>
 $(document).ready(function() {
     $('#phone').on('input', function() {
@@ -98,7 +105,7 @@ $(document).ready(function() {
       .then(res => res.json())
       .then(data => callback(data.country_code))
       .catch(() => callback("us"));
-      
+
   },
      separateDialCode: true,
       hiddenInput: "full_phone",
@@ -149,7 +156,7 @@ input.addEventListener('keyup', reset);
 
 <!-- Handle Ajax request to states, lgas, wards and PU dropdown select -->
 <script>
-    $(document).ready(function() { 
+    $(document).ready(function() {
         $('#region-dropdown').on('change', function() {
             var region_id = this.value;
             console.log(region_id);
@@ -169,7 +176,7 @@ input.addEventListener('keyup', reset);
                                 .id + '">' + value.name + '</option>');
                         });
 
-                    $('#lga-dropdown').html('<option value="">Select Voting LGA</option>'); 
+                    $('#lga-dropdown').html('<option value="">Select Voting LGA</option>');
                 }
             });
         });
@@ -192,7 +199,7 @@ input.addEventListener('keyup', reset);
                             $("#lga-dropdown").append('<option value="' + value
                                 .id + '">' + value.name + '</option>');
                         });
-                    $('#ward-dropdown').html('<option value="">Select Voting Ward</option>'); 
+                    $('#ward-dropdown').html('<option value="">Select Voting Ward</option>');
                 }
             });
         });
@@ -215,7 +222,7 @@ input.addEventListener('keyup', reset);
                             $("#ward-dropdown").append('<option value="' + value
                                 .id + '">' + value.name + '</option>');
                         });
-                    $('#pu-dropdown').html('<option value="">Select Voting Polling Units</option>'); 
+                    $('#pu-dropdown').html('<option value="">Select Voting Polling Units</option>');
                 }
             });
         });
@@ -232,12 +239,12 @@ input.addEventListener('keyup', reset);
                 },
                 cache: false,
                 dataType: 'json',
-                success: function(result){  
+                success: function(result){
                     $('#pu-dropdown').html('<option value="">Select Voting Polling Units</option>');
                         $.each(result.pollingUnits, function (key, value) {
                             $("#pu-dropdown").append('<option value="' + value
                                 .id + '">' + value.name + '</option>');
-                        }); 
+                        });
                 }
             });
         });
@@ -265,10 +272,10 @@ input.addEventListener('keyup', reset);
 
     case 'error':
     toastr.error(" {{ Session::get('message') }} ");
-    break; 
+    break;
  }
  </script>
- @endif 
+ @endif
 
 
 

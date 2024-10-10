@@ -1,22 +1,32 @@
 
-@include('auth.template.header')   
-<div class="card card-success card-outline">
+@include('auth.template.header')
+<style>
+    .text-primary, .card-outline{
+        color: {{ $SystemSetting ? $SystemSetting->dark_theme_color : '#008751' }} !important;
+    }
+</style>
+<div class="card card-primary">
     <div class="card-body login-card-body">
-      <p class="login-box-msg">Sign in to start your session</p>
+        <div class="text-center ">
+            <h3 class="login-box-msg text-uppercase text-primary ">
+                Login
+            </h3><hr class="card card-primary"/>
+            <p class="login-box-msg text-muted">Sign in to start your session</p>
+        </div>
 
-     
+
 
 
     <!-- Session Status -->
     <x-auth-session-status class="mb-4" :status="session('status')" />
 
   <form method="POST" action="{{ route('login') }}">
-        @csrf
+        @csrf @method('POST')
         <div class="input-group mb-3">
           <input type="text" class="form-control @error('login') is-invalid @enderror" id ="login" name="login" placeholder="Email/Username/Phone">
           <div class="input-group-append">
             <div class="input-group-text">
-              <span class="fas fa-envelope"></span>
+              <span class="fas fa-envelope text-primary"></span>
             </div>
           </div>
           @error('login')
@@ -28,7 +38,7 @@
           <input type="password" class="form-control @error('password') is-invalid @enderror" name="password" id="password" placeholder="Password">
           <div class="input-group-append">
             <div class="input-group-text">
-              <span class="fas fa-lock"></span>
+              <span class="fas fa-lock text-primary"></span>
             </div>
           </div>
           @error('password')
@@ -47,7 +57,7 @@
           </div>
           <!-- /.col -->
           <div class="col-4">
-            <button type="submit" class="btn btn-success btn-block">Sign In</button>
+            <button type="submit" class="btn btn-primary btn-outline btn-block">Sign In</button>
           </div>
           <!-- /.col -->
         </div>

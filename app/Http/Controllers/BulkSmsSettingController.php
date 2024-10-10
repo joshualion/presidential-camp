@@ -5,9 +5,9 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\BulkSmsSetting;
 use App\Models\User;
-use DeepCopy\f001\B;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Request;
 
 class BulkSmsSettingController extends Controller
@@ -15,7 +15,7 @@ class BulkSmsSettingController extends Controller
 
     public function __construct()
     {
-        $this->middleware(['auth','role:admin']);
+
         $pageTitle = ' BulkSMS Settings';
         View::share('pageTitle', $pageTitle);
     }
@@ -38,13 +38,19 @@ class BulkSmsSettingController extends Controller
             }
     }
 
-    public function store(){
-        $this->validate(request(), [
+    public function store(Request $request){
+       // Validate the request data
+       $validator = Validator::make($request->all(), [
             'user_id' => 'required',
             'smsgateway_provider' => 'required',
             'sender_id' => 'required',
             'sms_api_key' => 'required',
         ]);
+
+         // If validation fails, return to the previous page with errors
+         if ($validator->fails()) {
+            return redirect()->back()->withErrors($validator)->withInput();
+        }
 
         $bulksms = new BulkSmsSetting();
         $bulksms->user_id = Auth::user()->id;
@@ -63,27 +69,32 @@ class BulkSmsSettingController extends Controller
 
     public function update(Request $request)
     {
-         $this->validate(request(), [
+        $validator = Validator::make($request->all(), [
               'user_id' => 'required',
               'smsgateway_provider' => 'required',
               'sender_id' => 'required',
               'sms_api_key' => 'required',
          ]);
-    
+
+          // If validation fails, return to the previous page with errors
+        if ($validator->fails()) {
+            return redirect()->back()->withErrors($validator)->withInput();
+        }
+
          $bulksms = BulkSmsSetting::where('user_id', Auth::user()->id)->first();
          $bulksms->user_id = Auth::user()->id;
          $bulksms->smsgateway_provider = request()->smsgateway_provider;
          $bulksms->sender_id = request()->sender_id;
          $bulksms->sms_api_key = request()->sms_api_key;
          $bulksms->save();
-    
+
          $notification = array(
               'message' => 'Bulk SMS Settings Updated Successfully',
               'alert-type' => 'success'
          );
          return redirect()->route('admin.bulksms.setting')->with($notification);
-    }   
+    }
 
-  
-    
+
+
 }

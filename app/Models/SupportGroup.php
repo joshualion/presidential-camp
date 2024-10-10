@@ -11,7 +11,8 @@ class SupportGroup extends Model
 
     protected $guarded = [];
 
-    public function users(){
-        return $this->hasMany(User::class);
+    public function users()
+    {
+        return $this->belongsToMany(User::class, 'user_support_group');
     }
 }

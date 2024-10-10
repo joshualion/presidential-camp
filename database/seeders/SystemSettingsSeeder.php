@@ -19,20 +19,28 @@ class SystemSettingsSeeder extends Seeder
     {
         $now = Carbon::now();
         DB::table('system_settings')->insert([
-            'logo' => '',
-            'favicon'=> 'favicon.png',
+            'logo' => 'logo.png',
+            'favicon'=> 'favicon-32x32.png',
+            'login_page_background' => 'aso-rock.jpg',
+            'dark_theme_color' => '#008751',
+            'light_theme_color' => '#f7f7f7',
             'system_name' => 'Political Campaign Management Solution',
-            'admin_email' => 'info@campaignmanager.ng',
+            'campaign_slogan' => 'Promoting Good Governance, Transparency and Trust',
+            'system_email' => 'info@campaignmanager.ng',
+            'system_country' => 'Nigeria',
             'system_currency' => 'NGN',
             'company_address' => '123 Almond St, Lagos, Nigeria',
             'company_phone' => '+1234567890',
             'activation_code' => '',
-            'facebook' => 'https://www.facebook.com/ultimatepipsfrx',
-            'twitter' => 'https://www.twitter.com/ultimatepipsfrx',
-            'copyright' => 'Diginet Tech Africa Ltd',
+            'facebook' => 'https://www.facebook.com/campaignmanagerng',
+            'twitter' => 'https://www.twitter.com/campaignmanagerng',
+            'linkedin' => 'https://www.linkedin.com/campaignmanagerng',
+            'instagram' => 'https://www.instagram.com/campaignmanagerng',
+            'youtube' => 'https://www.youtube.com/campaignmanagerng',
+            'copyright' => '<div class="float-left d-none d-sm-inline-block">Copyright &copy; 2024 <a href="https://diginettechnologies.com/" target="_blank">Diginet Tech Africa Limited </a> - All rights reserved. </div>',
             'disclaimer' => '',
             'tos' => '
-            <h3>Terms of Service</h3>
+            <h3>Terms & Conditions</h3>
             <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam nec quam tristique, fermentum quam sit amet, ullamcorper turpis. Sed euismod vel libero id pellentesque. Suspendisse a felis et elit suscipit ultrices. Vivamus suscipit dui id ex tempus malesuada.</p>
 
             <p>Curabitur id velit eget eros feugiat vehicula. Sed sit amet enim eu elit varius laoreet. Integer non odio a turpis suscipit tincidunt. Vivamus interdum odio ut arcu suscipit, non condimentum justo iaculis.</p>

@@ -17,8 +17,8 @@ return new class extends Migration
             $table->string('username')->unique();
             $table->string('email')->unique()->nullable();
             $table->string('password');
-            $table->string('firstname')->nullable(); 
-            $table->string('lastname')->nullable(); 
+            $table->string('firstname')->nullable();
+            $table->string('lastname')->nullable();
             $table->string('phone')->unique()->nullable();
             $table->string('vin')->nullable();
             $table->string('photo')->nullable();
@@ -28,7 +28,7 @@ return new class extends Migration
             $table->enum('validVoter', ['yes', 'no'])->default('no');
             $table->enum('gender', ['male', 'female'])->nullable();
             $table->enum('status', ['active', 'inactive'])->default('active');
-            $table->enum('role', ['superadmin', 'nationaladmin', 'stateadmin', 'lgaadmin', 'wardadmin', 'puadmin','user'])->default('user');
+            $table->enum('access_level', ['superadmin', 'nationaladmin', 'regionaladmin', 'stateadmin', 'lgaadmin', 'wardadmin', 'puadmin','user'])->default('user');
             $table->timestamp('email_verified_at')->nullable();
             $table->unsignedBigInteger('country_id')->nullable();
             $table->unsignedBigInteger('region_id')->nullable();
@@ -36,7 +36,6 @@ return new class extends Migration
             $table->unsignedBigInteger('lga_id')->nullable();
             $table->unsignedBigInteger('ward_id')->nullable();
             $table->unsignedBigInteger('polling_unit_id')->nullable();
-            $table->unsignedBigInteger('support_group_id')->nullable();
             $table->unsignedBigInteger('religion_id')->nullable();
             $table->unsignedBigInteger('age_grade_id')->nullable();
             $table->rememberToken();
@@ -48,7 +47,6 @@ return new class extends Migration
             $table->foreign('lga_id')->references('id')->on('local_government_areas')->onDelete('cascade');
             $table->foreign('ward_id')->references('id')->on('wards')->onDelete('cascade');
             $table->foreign('polling_unit_id')->references('id')->on('polling_units')->onDelete('cascade');
-            $table->foreign('support_group_id')->references('id')->on('support_groups')->onDelete('cascade');
             $table->foreign('religion_id')->references('id')->on('religions')->onDelete('cascade');
             $table->foreign('age_grade_id')->references('id')->on('age_grades')->onDelete('cascade');
         });

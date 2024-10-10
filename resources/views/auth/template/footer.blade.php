@@ -16,7 +16,7 @@
       .then(res => res.json())
       .then(data => callback(data.country_code))
       .catch(() => callback("us"));
-      
+
   },
      separateDialCode: true,
       hiddenInput: "full_phone",
@@ -70,10 +70,10 @@ input.addEventListener('keyup', reset);
 
     case 'error':
     toastr.error(" {{ Session::get('message') }} ");
-    break; 
+    break;
  }
 </script>
-@endif 
+@endif
 
 <!-- jQuery -->
 <script src="{{asset('assets/plugins/jquery/jquery.min.js')}}"></script>

@@ -13,17 +13,27 @@ return new class extends Migration
     {
         Schema::create('system_settings', function (Blueprint $table) {
             $table->id();
+            $table->enum('package',['national','state','lga','ward','pu'])->default('national');
             $table->string('logo')->nullable();
             $table->string('favicon')->nullable();
+            $table->string('login_page_background')->nullable();
+            $table->string('dark_theme_color')->nullable();
+            $table->string('light_theme_color')->nullable();
             $table->string('system_name')->nullable();
-            $table->string('admin_email')->nullable();
+            $table->string('campaign_slogan')->nullable();
+            $table->string('system_email')->nullable();
             $table->string('system_currency')->nullable();
             $table->decimal('exchange_rate', 10, 2)->nullable();
             $table->string('company_address')->nullable();
+            $table->string('system_country')->nullable();
             $table->string('company_phone')->nullable();
             $table->string('activation_code')->nullable();
+            $table->boolean('frontend_community')->default(false);
             $table->string('facebook')->nullable();
             $table->string('twitter')->nullable();
+            $table->string('linkedin')->nullable();
+            $table->string('instagram')->nullable();
+            $table->string('youtube')->nullable();
             $table->string('copyright')->nullable();
             $table->text('disclaimer')->nullable();
             $table->text('tos')->nullable();

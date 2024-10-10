@@ -6,10 +6,12 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\DB;
+use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, HasRoles;
 
     /**
      * The attributes that are mass assignable.
@@ -75,14 +77,37 @@ class User extends Authenticatable
         return $this->belongsTo(Religion::class);
     }
 
-    public function supportGroup(){
-        return $this->belongsTo(SupportGroup::class);
+    public function supportGroups()
+    {
+        return $this->belongsToMany(SupportGroup::class, 'user_support_group');
     }
 
 
     public function ageGrade(){
         return $this->belongsTo(AgeGrade::class);
     }
+
+    public static function getPermissionGroups()
+    {
+        $permission_groups = DB::table('permissions')->select('group_name')->groupBy('group_name')->get();
+        return $permission_groups;
+    }
+
+    public static function getPermissionByGroupName($group_name){
+        $permissions = DB::table('permissions')->select('name','id')->where('group_name', $group_name)->get();
+        return $permissions;
+    }
+
+    public static function roleHasPermissions($role, $permissions){
+        $hasPermission = true;
+        foreach($permissions as $permission){
+            if(!$role->hasPermissionTo($permission->name)){
+                $hasPermission = false;
+            }
+        }
+        return $hasPermission;
+    }
+
 
 
 }
