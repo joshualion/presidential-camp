@@ -1,4 +1,4 @@
-@extends('template.backend-master')
+@extends('backend.template.backend-master')
 @section('content')
 
 
@@ -7,13 +7,13 @@
       <div class="container-fluid">
         <div class="row">
           <div class="col-12">
-            <div class="card card-default">
+            <div class="card card-primary">
               <div class="card-header">
                 <h3 class="card-title">All Permissions</h3>
                 <div class="card-tools">
-                     <a href="{{ route('admin.settings.permission.add') }}"><button class="btn btn-primary"> <i class="fa fa-plus-square"></i> Add Permission</button></a>
-                     <a href="{{route('admin.settings.import.permission')}}"><button class="btn btn-success"> <i class="fa fa-file-excel"></i> Import</button></a>
-                     <a href="{{ route('admin.settings.roles') }}"><button class="btn btn-primary"> <i class="fas fa-pencil-alt"></i> Manage Roles</button></a>
+                     <a href="{{ route('superadmin.settings.permission.add') }}"><button class="btn btn-default"> <i class="fa fa-plus-square"></i> Add Permission</button></a>
+                     <a href="{{route('superadmin.settings.import.permission')}}"><button class="btn btn-dark"> <i class="fa fa-file-excel"></i> Import</button></a>
+                     <a href="{{ route('superadmin.settings.roles') }}"><button class="btn btn-default"> <i class="fas fa-pencil-alt"></i> Manage Roles</button></a>
                 </div>
               </div>
               <!-- /.card-header -->
@@ -34,20 +34,20 @@
                         @endphp
                   @foreach( $permissions as  $permission)
                   <tr>
-                   
+
                     <td>{{ $serialNumber++ }}</td>
                     <td>{{ $permission->name}}</td>
                     <td>{{ $permission->guard_name}}</td>
                     <td>{{ $permission->group_name}}</td>
                     <td>
-                      <a href="{{ route('admin.settings.permission.edit',  $permission->id)}}" ><button class="btn btn-success btn-sm"><i class="fas fa-pencil-alt"></i> Edit</button></a>
-                      <form action="{{ route('admin.settings.permission.delete',  $permission->id) }}" method="POST" style="display: inline-block;">
+                      <a href="{{ route('superadmin.settings.permission.edit',  encrypt($permission->id))}}" ><button class="btn btn-success btn-sm"><i class="fas fa-pencil-alt"></i> Edit</button></a>
+                      <form action="{{ route('superadmin.settings.permission.delete',  encrypt($permission->id)) }}" method="POST" style="display: inline-block;">
                         @csrf
                         @method('DELETE')
                         <button type="submit" class="btn btn-danger btn-sm delete-btn"><i class="fas fa-trash"></i> Delete</button>
                       </form>
-                    </td>  
-                                   
+                    </td>
+
                   </tr>
                     @endforeach
                   </tbody>
@@ -61,7 +61,7 @@
                   </tr>
                   </tfoot>
                 </table>
-               
+
               </div>
               <!-- /.card-body -->
             </div>
@@ -75,7 +75,7 @@
     </section>
     <!-- /.content -->
 
-    
+
     <script>
     document.addEventListener('DOMContentLoaded', function () {
         const deleteButtons = document.querySelectorAll('.delete-btn');
@@ -137,7 +137,7 @@ $(document).ready(function() {
 
 
 
-  
+
 
 @endsection
 

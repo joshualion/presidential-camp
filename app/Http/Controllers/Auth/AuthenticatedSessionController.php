@@ -45,9 +45,9 @@ class AuthenticatedSessionController extends Controller
             $url = '/dashboard';
         }else{
             //logout User something has gone wrong
-           // Auth::guard('web')->logout();
-            //$request->session()->invalidate();
-           // $request->session()->regenerateToken();
+           Auth::guard('web')->logout();
+            $request->session()->invalidate();
+           $request->session()->regenerateToken();
             $notification =[
                 'message' => 'Something went wrong, please try again in a few minutes',
                 'alert-type' => 'error'
@@ -62,7 +62,8 @@ class AuthenticatedSessionController extends Controller
             'alert-type' => 'success'
         ];
 
-        return redirect($url)->with($notification);
+
+        return redirect()->intended($url)->with($notification);
 
     }
 

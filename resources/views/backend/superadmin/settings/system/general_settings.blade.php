@@ -1,5 +1,5 @@
 
-@if($profileData->access_level == 'superadmin')
+@if($profileData->access_level = 'superadmin')
     <div class="form-group row">
         <label for="system_country" class="col-sm-3 col-form-label">System Country</label>
             <div class="col-sm-9">
@@ -23,7 +23,7 @@
     <input type="hidden" name="system_country" value="{{ $SystemSetting->system_country }}" />
 @endif
 
-@if($profileData->access_level == 'superadmin')
+@if($profileData->access_level = 'superadmin')
     <div class="form-group row">
         <label for="package" class="col-sm-3 col-form-label">Package</label>
             <div class="col-sm-9">

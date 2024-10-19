@@ -58,6 +58,8 @@
 <div class="register-box">
   <div class="register-logo">
     <a href="/">
-        <img 
-        src="@if (!empty($SystemSetting->logo)) {{ url('uploads/system_images/'.$SystemSetting->logo) }} @else {{ url('uploads/system_images/logo.png') }} @endif" width="35%" height="35%"/></a>
-  </div>
+        <img src="{{ !empty($SystemSetting->logo) ? url('uploads/system_images/'.$SystemSetting->logo) : url('uploads/system_images/logo.png') }}" alt="Logo" class="brand-image" width="35%" height="35%" style="opacity: .8">
+
+    </a>
+
+    </div>

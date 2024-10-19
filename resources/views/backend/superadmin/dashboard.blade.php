@@ -158,7 +158,7 @@
                                 <div class="icon">
                                   <i class="ion ion-person"></i>
                                 </div>
-                                <a href="#" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
+                                <a href="/superadmin/members" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
                               </div>
                             </div> <!-- ./col -->
                   </div><!-- /.row -->

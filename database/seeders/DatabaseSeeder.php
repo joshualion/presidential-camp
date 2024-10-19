@@ -51,7 +51,7 @@ class DatabaseSeeder extends Seeder
         $this->call(SokotoLGAsTableSeeder::class);
         $this->call(TarabaLGAsTableSeeder::class);
         $this->call(YobeLGAsTableSeeder::class);
-        $this->call(ZamfaraLGAsTableSeeder::class);
+        $this->call(ZamfaraLGAsSeederTable::class);
         $this->call(CRSCalMunicipalWards::class);
         $this->call(CRSCalSouthWards::class);
         $this->call(CalMunWardSixPUSeederTable::class);
@@ -65,6 +65,11 @@ class DatabaseSeeder extends Seeder
         // Settings Seeders
         $this->call(SystemSettingsSeeder::class);
         $this->call(SMTPSettingsSeeder::class);
+
+        // Roles & Permissions
+        $this->call(RolesTableSeeder::class);
+        $this->call(PermissionsTableSeeder::class);
+       // $this->call(RolePermissionTableSeeder::class);
 
         // User::factory(10)->create();
         // User::factory()->create([

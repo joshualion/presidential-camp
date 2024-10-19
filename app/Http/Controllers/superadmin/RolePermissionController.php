@@ -36,7 +36,8 @@ class RolePermissionController extends Controller
      public function allPermission(){
         $permissions = Permission::all();
         $profileData = $this->getProfileData();
-        return view('backend.superadmin.settings.permission.permissions', compact('permissions','profileData'));
+        $pageTitle = 'Permissions';
+        return view('backend.superadmin.settings.permission.permissions', compact('permissions','profileData','pageTitle'));
         }
 
      public function addPermission(){
@@ -73,14 +74,15 @@ class RolePermissionController extends Controller
         }
 
 
-          return redirect()->route('admin.settings.permissions')->with($notification);
+          return redirect()->route('superadmin.settings.permissions')->with($notification);
      }
 
 
      public function editPermission($id){
-         $permission = Permission::findOrFail($id);
+         $permission = Permission::findOrFail(decrypt($id));
          $profileData = $this->getProfileData();
-         return view('backend.superadmin.settings.permission.edit_permission', compact('permission', 'profileData'));
+         $pageTitle = 'Edit Permission';
+         return view('backend.superadmin.settings.permission.edit_permission', compact('permission', 'profileData', 'pageTitle'));
      }
 
      public function updatePermission(Request $request){
@@ -114,12 +116,12 @@ class RolePermissionController extends Controller
             }
         }
 
-          return redirect()->route('admin.settings.permissions')->with($notification);
+          return redirect()->route('superadmin.settings.permissions')->with($notification);
      }
 
 
      public function deletePermission($id){
-        Permission::findOrFail($id)->delete();
+        Permission::findOrFail(decrypt($id))->delete();
         $notification = array(
             'message' => 'Permission Deleted Successfully',
             'alert-type' => 'success'
@@ -131,7 +133,9 @@ class RolePermissionController extends Controller
      }
 
         public function importPermission(){
-            return view('backend.superadmin.settings.permission.import_permission');
+            $profileData = $this->getProfileData();
+            $pageTitle = 'Import Permission';
+            return view('backend.superadmin.settings.permission.import_permission', compact('profileData','pageTitle'));
 
         }
 
@@ -145,7 +149,7 @@ class RolePermissionController extends Controller
                 'message' => 'Permission Imported Successfully',
                 'alert-type' => 'success'
             );
-            return redirect()->route('admin.settings.permissions')->with($notification);
+            return redirect()->route('superadmin.settings.permissions')->with($notification);
         }
 
 
@@ -155,12 +159,14 @@ class RolePermissionController extends Controller
     public function allrole(){
         $roles = Role::all();
         $profileData = $this->getProfileData();
-        return view('admin.settings.roles', compact('roles','profileData'));
+        $pageTitle = 'Roles';
+        return view('backend.superadmin.settings.role.roles', compact('roles','profileData', 'pageTitle'));
      }
 
      public function addrole(){
         $profileData = $this->getProfileData();
-        return view('admin.settings.add_role', compact('profileData'));
+        $pageTitle = 'Add Role';
+        return view('backend.superadmin.settings.role.add_role', compact('profileData', 'pageTitle'));
      }
 
      public function storerole(Request $request){
@@ -168,6 +174,7 @@ class RolePermissionController extends Controller
         try{
         $role = Role::create([
             'name' => $request->name,
+            'group_name' => $request->group_name,
           ]);
 
           $notification = array(
@@ -192,13 +199,14 @@ class RolePermissionController extends Controller
             }
         }
 
-        return redirect()->route('admin.settings.roles')->with($notification);
+        return redirect()->route('superadmin.settings.roles')->with($notification);
     }
 
         public function editrole($id){
-            $role = Role::findOrFail($id);
+            $role = Role::findOrFail(decrypt($id));
             $profileData = $this->getProfileData();
-            return view('admin.settings.edit_role', compact('role', 'profileData'));
+            $pageTitle = 'Edit Role';
+            return view('backend.superadmin.settings.role.edit_role', compact('role', 'profileData', 'pageTitle'));
         }
 
 
@@ -207,6 +215,7 @@ class RolePermissionController extends Controller
                 $role_id = $request->id;
                 Role::findOrfail($role_id)->update([
                 'name' => $request->name,
+                'group_name' => $request->group_name,
               ]);
 
               $notification = array(
@@ -231,12 +240,12 @@ class RolePermissionController extends Controller
                 }
             }
 
-            return redirect()->route('admin.settings.roles')->with($notification);
+            return redirect()->route('superadmin.settings.roles')->with($notification);
         }
 
 
         public function deleterole($id){
-            Role::findOrFail($id)->delete();
+            Role::findOrFail(decrypt($id))->delete();
             $notification = array(
                 'message' => 'Role Deleted Successfully',
                 'alert-type' => 'success'
@@ -250,7 +259,7 @@ class RolePermissionController extends Controller
             $profileData = $this->getProfileData();
             $permissions = Permission::all();
             $permission_groups = User::getPermissionGroups();
-            return view('admin.settings.add_role_permission', compact('roles', 'permissions','profileData','permission_groups'));
+            return view('backend.superadmin.settings.rolespermission.add_role_permission', compact('roles', 'permissions','profileData','permission_groups'));
         }
 
 
@@ -272,7 +281,7 @@ class RolePermissionController extends Controller
                     'message' => 'Role Permission Assigned Successfully',
                     'alert-type' => 'success'
                   );
-                return redirect()->route('admin.settings.rolespermission')->with($notification);
+                return redirect()->route('superadmin.settings.rolespermission')->with($notification);
 
         }
 
@@ -280,16 +289,16 @@ class RolePermissionController extends Controller
         public function allRolesPermission(){
             $roles = Role::all();
             $profileData = $this->getProfileData();
-            return view('admin.settings.rolespermission', compact('roles', 'profileData'));
+            return view('backend.superadmin.settings.rolespermission.rolespermission', compact('roles', 'profileData'));
         }
 
 
         public function editRolePermission($id){
-            $role = Role::findOrFail($id);
+            $role = Role::findOrFail(decrypt($id));
             $profileData = $this->getProfileData();
             $permissions = Permission::all();
             $permission_groups = User::getPermissionGroups();
-            return view('admin.settings.edit_role_permission', compact('role', 'permissions','profileData','permission_groups'));
+            return view('backend.superadmin.settings.rolespermission.edit_role_permission', compact('role', 'permissions','profileData','permission_groups'));
         }
 
         public function updateRolePermission(Request $request, $id){
@@ -303,13 +312,13 @@ class RolePermissionController extends Controller
                 'alert-type' => 'success'
             );
 
-            return redirect()->route('admin.settings.rolespermission')->with($notification);
+            return redirect()->route('superadmin.settings.rolespermission')->with($notification);
 
 
         }
 
         public function deleteRolePermission($id){
-            DB::table('role_has_permissions')->where('role_id', $id)->delete();
+            DB::table('role_has_permissions')->where('role_id', decrypt($id))->delete();
             $notification = array(
                 'message' => 'Role Permission Deleted Successfully',
                 'alert-type' => 'success'

@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
 
 class Accesslevel
@@ -16,7 +17,19 @@ class Accesslevel
     public function handle(Request $request, Closure $next, $access_level): Response
     {
         if (($request->user()->access_level !== $access_level) ) {
-            return redirect('/login');
+            //logout if auth exists but is not admin
+            if ($request->user()) {
+                Auth::guard('web')->logout();
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
+            }
+
+            $notification = [
+                'message' => 'You have been logged out',
+                'alert-type' => 'error'
+            ];
+
+            return redirect()->route('login')->with($notification);
         }
 
 

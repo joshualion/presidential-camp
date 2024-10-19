@@ -14,60 +14,7 @@
 
             </li>
 
-            <li class="tab nav-item menu-close">
-                        <a href="#" class="nav-link">
-                          <i class="nav-icon fas fa-user-secret"></i>
-                          <p>
-                            Officials
-                            <i class="right fas fa-angle-left"></i>
-                          </p>
-                        </a>
-                        <ul class="nav nav-treeview">
-
-                          <li class="nav-item">
-                            <a href="/admin/dashboard" class="nav-link">
-                              <i class="fas fa-user nav-icon"></i>
-                              <p>National leaders</p>
-                            </a>
-                          </li>
-
-                          <li class="nav-item">
-                            <a href="/admin/region/leaders/" class="nav-link">
-                              <i class="fas fa-tachometer-alt nav-icon"></i>
-                              <p>Regional Leaders</p>
-                            </a>
-                          </li>
-
-                          <li class="nav-item">
-                            <a href="/admin/state/dashboard" class="nav-link">
-                            <i class="fas fa-user nav-icon"></i>
-                              <p>State leaders</p>
-                            </a>
-                          </li>
-
-                          <li class="nav-item">
-                            <a href="./index2.html" class="nav-link">
-                            <i class="fas fa-user nav-icon"></i>
-                              <p>LGA Leaders</p>
-                            </a>
-                          </li>
-
-                          <li class="nav-item">
-                            <a href="./index3.html" class="nav-link">
-                            <i class="fas fa-user nav-icon"></i>
-                              <p>Ward Leaders</p>
-                            </a>
-                          </li>
-
-                          <li class="nav-item">
-                            <a href="./index3.html" class="nav-link">
-                            <i class="fas fa-user nav-icon"></i>
-                              <p>PU Leaders</p>
-                            </a>
-                          </li>
-
-                        </ul>
-            </li>
+          
             <li class="tab nav-item menu-close">
                         <a href="#" class="nav-link">
                           <i class="nav-icon fas fa-users"></i>
@@ -86,14 +33,14 @@
                           </li>
 
                           <li class="nav-item">
-                            <a href="/admin/region/dashboard/home" class="nav-link">
+                            <a href="/superadmin/region/dashboard/home" class="nav-link">
                               <i class="fas fa-tachometer-alt nav-icon"></i>
                               <p>Members By Region</p>
                             </a>
                           </li>
 
                           <li class="nav-item">
-                            <a href="/admin/state/dashboard" class="nav-link">
+                            <a href="/superadmin/state/dashboard" class="nav-link">
                             <i class="fas fa-user nav-icon"></i>
                               <p>members by States</p>
                             </a>
@@ -133,21 +80,21 @@
                         <ul class="nav nav-treeview">
 
                         <li class="nav-item">
-                            <a href="/admin/dashboard" class="nav-link">
+                            <a href="/superadmin/dashboard" class="nav-link">
                               <i class="fas fa-award nav-icon"></i>
                               <p>Election Results</p>
                             </a>
                           </li>
 
                           <li class="nav-item">
-                            <a href="/admin/dashboard" class="nav-link">
+                            <a href="/superadmin/dashboard" class="nav-link">
                               <i class="fas fa-vote-yea nav-icon"></i>
                               <p>Election Reports</p>
                             </a>
                           </li>
 
                           <li class="nav-item">
-                            <a href="/admin/state/dashboard" class="nav-link">
+                            <a href="/superadmin/state/dashboard" class="nav-link">
                             <i class="fa fa-thumbs-up nav-icon"></i>
                               <p>Votes</p>
                             </a>
@@ -171,7 +118,7 @@
                         <ul class="nav nav-treeview">
 
                           <li class="nav-item">
-                            <a href="/admin/bulksms/send" class="nav-link">
+                            <a href="/superadmin/bulksms/send" class="nav-link">
                               <i class="fas fa-sms	 nav-icon"></i>
                               <p>Send SMS</p>
                             </a>
@@ -211,35 +158,35 @@
                         <ul class="nav nav-treeview">
 
                           <li class="nav-item">
-                            <a href="/admin/dashboard" class="nav-link">
+                            <a href="/superadmin/regions" class="nav-link">
                               <i class="	fas fa-map-marker	 nav-icon"></i>
                               <p>Regions</p>
                             </a>
                           </li>
 
                           <li class="nav-item">
-                            <a href="/admin/state/dashboard" class="nav-link">
+                            <a href="/superadmin/location/states" class="nav-link">
                             <i class="fas fa-map-marker-alt nav-icon"></i>
                               <p>States</p>
                             </a>
                           </li>
                           <li class="nav-item">
-                            <a href="/admin/state/dashboard" class="nav-link">
+                            <a href="/superadmin/location/localgovernments" class="nav-link">
                             <i class="fas fa-map-pin nav-icon"></i>
                               <p>LGA's</p>
                             </a>
                           </li>
 
                           <li class="nav-item">
-                            <a href="/admin/state/dashboard" class="nav-link">
+                            <a href="/superadmin/location/wards" class="nav-link">
                             <i class="fas fa-map-marked-alt nav-icon"></i>
                               <p> Wards</p>
                             </a>
                           </li>
                           <li class="nav-item">
-                            <a href="/admin/state/dashboard" class="nav-link">
+                            <a href="/superadmin/location/pollingunits" class="nav-link">
                             <i class="fas fa-monument nav-icon"></i>
-                              <p> Polling Centers</p>
+                              <p> Polling Units</p>
                             </a>
                           </li>
                         </ul>
@@ -257,41 +204,31 @@
                         <ul class="nav nav-treeview">
 
                           <li class="nav-item">
-                            <a href="/admin/system/settings" class="nav-link">
+                            <a href="/superadmin/system/settings" class="nav-link">
                               <i class="fas fa-tools	 nav-icon"></i>
                               <p>General Settings</p>
                             </a>
                           </li>
 
                           <li class="nav-item">
-                            <a href="/admin/state/dashboard" class="nav-link">
+                            <a href="/superadmin/state/dashboard" class="nav-link">
                             <i class="fas fa-award nav-icon"></i>
                               <p> Election Settings</p>
                             </a>
                           </li>
 
                           <li class="nav-item">
-                            <a href="/admin/bulksms/setting" class="nav-link">
+                            <a href="/superadmin/bulksms/setting" class="nav-link">
                             <i class="fas fa-sms nav-icon"></i>
                               <p>SMS Settings</p>
                             </a>
                           </li>
-                          <!-- <li class="nav-item">
-                            <a href="/admin/state/dashboard" class="nav-link">
-                            <i class="fas fa-money-check-alt nav-icon"></i>
-                              <p>Payment Settings</p>
-                            </a>
-                          </li> -->
+
+
+
 
                           <li class="nav-item">
-                            <a href="/admin/leadership/offices" class="nav-link">
-                            <i class="fas fa-sitemap nav-icon"></i>
-                              <p> Leadership Settings</p>
-                            </a>
-                          </li>
-
-                          <li class="nav-item">
-                            <a href="/admin/volunteer/group" class="nav-link">
+                            <a href="/superadmin/volunteer/group" class="nav-link">
                             <i class="fas fa-handshake nav-icon"></i>
                               <p> Volunteer Settings</p>
                             </a>
@@ -300,6 +237,48 @@
                         </ul>
 
             </li>
+
+            {{-- Roles & Permission Menu --}}
+            <li class="tab nav-item menu-close">
+                <a href="#" class="nav-link">
+                  <i class="fas fa-tools nav-icon"></i>
+                  <p>
+                    Roles & Permission
+                    <i class="right fas fa-angle-left"></i>
+                  </p>
+                </a>
+                <ul class="nav nav-treeview">
+
+                <li class="nav-item">
+                    <a href="/superadmin/settings/rolespermission" class="nav-link">
+                      <i class="fas fa-ban nav-icon"></i>
+                      <p>Roles Permissions</p>
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <a href="/superadmin/settings/add/roles/permission" class="nav-link">
+                      <i class="fas fa-plus-square	 nav-icon"></i>
+                      <p>Add Roles Permission</p>
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <a href="/superadmin/settings/permissions" class="nav-link">
+                      <i class="fas fa-door-open	 nav-icon"></i>
+                      <p>Manage Permissions</p>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/superadmin/settings/roles" class="nav-link">
+                      <i class="fas fa-crown	 nav-icon"></i>
+                      <p>Manage Roles</p>
+                    </a>
+                </li>
+              </ul>
+
+    </li>
+    {{--  End Roles & Permission Menu  --}}
             <li class="tab nav-item menu-close">
                         <a href="#" class="nav-link">
                           <i class="nav-icon fas fa-user-shield"></i>
@@ -311,7 +290,7 @@
                         <ul class="nav nav-treeview">
 
                           <li class="nav-item">
-                            <a href="/admin/profile" class="nav-link">
+                            <a href="/superadmin/profile" class="nav-link">
                               <i class="fas fa-file nav-icon"></i>
                               <p> Manage Profile</p>
                             </a>

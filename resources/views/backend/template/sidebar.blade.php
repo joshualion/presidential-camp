@@ -6,25 +6,25 @@
         <img src="{{ !empty($SystemSetting->logo) ? url('uploads/system_images/'.$SystemSetting->logo) : url('uploads/system_images/logo.png') }}" alt="Logo" class="brand-image" width="100%" height="100%" style="opacity: .8">
 
       <span class="brand-text font-weight-light" style="opacity:0;">::</span>
-      
+
     </a>
 
-   
+
 
     <!-- Sidebar -->
     <div class="sidebar" style="overflow-y: auto;">
       <!-- Sidebar user panel (optional) -->
       <div class="user-panel mt-3 pb-3 mb-3 d-flex">
         <div class="image">
-             <img src="{{(!empty($profileData->photo)) ? url('uploads/profile_images/'.$profileData->photo) : url('uploads/no_image.jpg')}}" class="img-circle elevation-2" alt="User Image">
+             <img src="{{(!empty($profileData->photo)) ? url('uploads/member_images/'.$profileData->photo) : url('uploads/no_image.jpg')}}" class="img-circle elevation-2" alt="User Image">
             </div>
         <div class="info">
-        
+
             @php
             $url = '';
-         
 
-           
+
+
 
             if(Auth::user()->access_level === 'superadmin') {
                       $url = '/superadmin/profile';
@@ -47,11 +47,11 @@
                   }else{
                       $url = '/member/profile';
                   }
-              @endphp 
-        
+              @endphp
+
           <a href="{{$url}}" class="d-block">{{(!empty($profileData->firstname)) ? ($profileData->firstname.' '. $profileData->lastname ) : ('Unamed User')}}</a>
         </div>
-      </div>  
+      </div>
 
 <!-- super admin Menu -->
 @Include('backend.template.superadminmenu')
@@ -59,66 +59,15 @@
 
 <!-- National admin Menu -->
 @if(Auth::user()->access_level == 'nationaladmin')
-  <nav class="mt-2">
-        <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
-                                
-              <li class="nav-item menu-open">
-                          <a href="#" class="nav-link">
-                            <i class="nav-icon fas fa-chess-king"></i>
-                            <p>
-                              Officials
-                              <i class="right fas fa-angle-left"></i>
-                            </p>
-                          </a>
-                          <ul class="nav nav-treeview">
-
-                            <li class="nav-item">
-                              <a href="/admin/dashboard" class="nav-link">
-                                <i class="fas fa-user nav-icon"></i>
-                                <p>National leaders</p>
-                              </a>
-                            </li>
-
-                            <li class="nav-item">
-                              <a href="/admin/state/dashboard" class="nav-link">
-                              <i class="fas fa-user nav-icon"></i>
-                                <p>State leaders</p>
-                              </a>
-                            </li>
-
-                            <li class="nav-item">
-                              <a href="./index2.html" class="nav-link">
-                              <i class="fas fa-user nav-icon"></i>
-                                <p>LGA Leaders</p>
-                              </a>
-                            </li>
-
-                            <li class="nav-item">
-                              <a href="./index3.html" class="nav-link">
-                              <i class="fas fa-tachometer-alt nav-icon"></i>
-                                <p>Ward Leaders</p>
-                              </a>
-                            </li>
-
-                            <li class="nav-item">
-                              <a href="./index3.html" class="nav-link">
-                              <i class="fas fa-tachometer-alt nav-icon"></i>
-                                <p>PU Leaders</p>
-                              </a>
-                            </li>
-
-                          </ul>
-              </li>    
-        </ul>
-  </nav>
-  @endif
+ @Include('backend.template.nationalAdminMenu')
+@endif
 <!-- /National admin Menu -->
 
 <!-- State admin Menu -->
 @if(Auth::user()->access_level == 'stateadmin')
   <nav class="mt-2">
         <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
-                                
+
               <li class="nav-item menu-open">
                           <a href="#" class="nav-link">
                             <i class="nav-icon fas fa-users"></i>
@@ -165,7 +114,7 @@
                             </li>
 
                           </ul>
-              </li>    
+              </li>
         </ul>
   </nav>
   @endif
@@ -176,7 +125,7 @@
 @if(Auth::user()->access_level == 'user')
   <nav class="mt-2">
         <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
-                                
+
               <li class="tab nav-item menu-close">
                           <a href="#" class="nav-link">
                             <i class="nav-icon fas fa-home"></i>
@@ -194,11 +143,11 @@
                               </a>
                             </li>
 
-                           
+
 
                           </ul>
-              </li>              
-              
+              </li>
+
              @if(Auth::user()->firstname != '')
               <li class="tab nav-item menu-close">
                           <a href="#" class="nav-link">
@@ -233,13 +182,13 @@
                             </li>
 
                           </ul>
-              </li> 
+              </li>
 
-            
+
 
         </ul>
   </nav>
-  @endif  
+  @endif
 <!-- /Member Menu -->
 
 

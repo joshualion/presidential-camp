@@ -19,7 +19,7 @@
 
       <form action="{{ route('register') }}" method="post" autocomplete="off">
         @csrf
-
+                                                                                        
         <!-- Username Unique -->
         <div class="  input-group mb-3">
           <input type="text" class="form-control @error('username') is-invalid @enderror " id="username" name="username" required placeholder="Username *" autofocus="false">
