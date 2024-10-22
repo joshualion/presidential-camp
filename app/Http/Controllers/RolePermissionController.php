@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\superadmin;
+namespace App\Http\Controllers;
 
 
 use App\Http\Controllers\Controller;
@@ -34,18 +34,21 @@ class RolePermissionController extends Controller
      }
 
      public function allPermission(){
+
         $permissions = Permission::all();
         $profileData = $this->getProfileData();
         $pageTitle = 'Permissions';
-        return view('backend.superadmin.settings.permission.permissions', compact('permissions','profileData','pageTitle'));
+        return view('backend.'.$profileData->access_level.'.settings.permission.permissions', compact('permissions','profileData','pageTitle'));
         }
 
      public function addPermission(){
         $profileData = $this->getProfileData();
-        return view('backend.superadmin.settings.permission.add_permission', compact('profileData'));
+        return view('backend.'.$profileData->access_level.'.settings.permission.add_permission', compact('profileData'));
      }
 
      public function storePermission(Request $request){
+        $profileData = $this->getProfileData();
+        
         try{
         $permission = Permission::create([
             'name' => $request->name,
@@ -74,7 +77,7 @@ class RolePermissionController extends Controller
         }
 
 
-          return redirect()->route('superadmin.settings.permissions')->with($notification);
+          return redirect()->route($profileData->access_level.'.settings.permissions')->with($notification);
      }
 
 
@@ -82,11 +85,12 @@ class RolePermissionController extends Controller
          $permission = Permission::findOrFail(decrypt($id));
          $profileData = $this->getProfileData();
          $pageTitle = 'Edit Permission';
-         return view('backend.superadmin.settings.permission.edit_permission', compact('permission', 'profileData', 'pageTitle'));
+         return view('backend.'.$profileData->access_level.'.settings.permission.edit_permission', compact('permission', 'profileData', 'pageTitle'));
      }
 
      public function updatePermission(Request $request){
 
+        $profileData = $this->getProfileData();
         try {
             $perm_id = $request->id;
             Permission::findOrfail($perm_id)->update([
@@ -116,7 +120,7 @@ class RolePermissionController extends Controller
             }
         }
 
-          return redirect()->route('superadmin.settings.permissions')->with($notification);
+          return redirect()->route($profileData->access_level.'.settings.permissions')->with($notification);
      }
 
 
@@ -135,7 +139,7 @@ class RolePermissionController extends Controller
         public function importPermission(){
             $profileData = $this->getProfileData();
             $pageTitle = 'Import Permission';
-            return view('backend.superadmin.settings.permission.import_permission', compact('profileData','pageTitle'));
+            return view('backend.'.$profileData->access_level.'.settings.permission.import_permission', compact('profileData','pageTitle'));
 
         }
 
@@ -144,12 +148,13 @@ class RolePermissionController extends Controller
         }
 
         public function importPermissionData(Request $request){
+            $profileData = $this->getProfileData();
             Excel::import(new PermissionImport, $request->file('import_file'));
             $notification = array(
                 'message' => 'Permission Imported Successfully',
                 'alert-type' => 'success'
             );
-            return redirect()->route('superadmin.settings.permissions')->with($notification);
+            return redirect()->route($profileData->access_level.'.settings.permissions')->with($notification);
         }
 
 
@@ -160,17 +165,18 @@ class RolePermissionController extends Controller
         $roles = Role::all();
         $profileData = $this->getProfileData();
         $pageTitle = 'Roles';
-        return view('backend.superadmin.settings.role.roles', compact('roles','profileData', 'pageTitle'));
+        return view('backend.'.$profileData->access_level.'.settings.role.roles', compact('roles','profileData', 'pageTitle'));
      }
 
      public function addrole(){
         $profileData = $this->getProfileData();
         $pageTitle = 'Add Role';
-        return view('backend.superadmin.settings.role.add_role', compact('profileData', 'pageTitle'));
+        return view('backend.'.$profileData->access_level.'.settings.role.add_role', compact('profileData', 'pageTitle'));
      }
 
      public function storerole(Request $request){
 
+        $profileData = $this->getProfileData();
         try{
         $role = Role::create([
             'name' => $request->name,
@@ -199,18 +205,20 @@ class RolePermissionController extends Controller
             }
         }
 
-        return redirect()->route('superadmin.settings.roles')->with($notification);
+        return redirect()->route($profileData->access_level.'.settings.roles')->with($notification);
     }
 
         public function editrole($id){
             $role = Role::findOrFail(decrypt($id));
             $profileData = $this->getProfileData();
             $pageTitle = 'Edit Role';
-            return view('backend.superadmin.settings.role.edit_role', compact('role', 'profileData', 'pageTitle'));
+            return view('backend.'.$profileData->access_level.'.settings.role.edit_role', compact('role', 'profileData', 'pageTitle'));
         }
 
 
         public function updaterole(Request $request){
+            $profileData =  $this->getProfileData();
+            
             try {
                 $role_id = $request->id;
                 Role::findOrfail($role_id)->update([
@@ -240,7 +248,7 @@ class RolePermissionController extends Controller
                 }
             }
 
-            return redirect()->route('superadmin.settings.roles')->with($notification);
+            return redirect()->route($profileData->access_level.'.settings.roles')->with($notification);
         }
 
 
@@ -259,11 +267,13 @@ class RolePermissionController extends Controller
             $profileData = $this->getProfileData();
             $permissions = Permission::all();
             $permission_groups = User::getPermissionGroups();
-            return view('backend.superadmin.settings.rolespermission.add_role_permission', compact('roles', 'permissions','profileData','permission_groups'));
+            return view('backend.'.$profileData->access_level.'.settings.rolespermission.add_role_permission', compact('roles', 'permissions','profileData','permission_groups'));
         }
 
 
         public function RolePermissionStore(Request $request){
+            $profileData = $this->getProfileData();
+            
             $permissions = $request->input('permission');
 
             if (!empty($permissions)) {
@@ -281,7 +291,7 @@ class RolePermissionController extends Controller
                     'message' => 'Role Permission Assigned Successfully',
                     'alert-type' => 'success'
                   );
-                return redirect()->route('superadmin.settings.rolespermission')->with($notification);
+                return redirect()->route($profileData->access_level.'.settings.rolespermission')->with($notification);
 
         }
 
@@ -289,7 +299,7 @@ class RolePermissionController extends Controller
         public function allRolesPermission(){
             $roles = Role::all();
             $profileData = $this->getProfileData();
-            return view('backend.superadmin.settings.rolespermission.rolespermission', compact('roles', 'profileData'));
+            return view('backend.'.$profileData->access_level.'.settings.rolespermission.rolespermission', compact('roles', 'profileData'));
         }
 
 
@@ -298,10 +308,12 @@ class RolePermissionController extends Controller
             $profileData = $this->getProfileData();
             $permissions = Permission::all();
             $permission_groups = User::getPermissionGroups();
-            return view('backend.superadmin.settings.rolespermission.edit_role_permission', compact('role', 'permissions','profileData','permission_groups'));
+            return view('backend.'.$profileData->access_level.'.settings.rolespermission.edit_role_permission', compact('role', 'permissions','profileData','permission_groups'));
         }
 
         public function updateRolePermission(Request $request, $id){
+            $profileData = $this->getProfileData();
+            
             $role = Role::findOrFail($id);
             $permissions = $request->input('permission');
             if(!empty($permissions)){
@@ -312,7 +324,7 @@ class RolePermissionController extends Controller
                 'alert-type' => 'success'
             );
 
-            return redirect()->route('superadmin.settings.rolespermission')->with($notification);
+            return redirect()->route($profileData->access_level.'.settings.rolespermission')->with($notification);
 
 
         }

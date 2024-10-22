@@ -11,8 +11,8 @@
               <div class="card-header">
                 <h3 class="card-title">Import Permission</h3>
                 <div class="card-tools">
-                    <a href="{{ route('superadmin.settings.permissions') }}"><button class="btn btn-default"> <i class="fas fa-eye"></i> All Permissions</button></a>
-                    <a href="{{route('superadmin.settings.export.permission')}}"><button class="btn btn-dark"> <i class="fa fa-file-excel"></i> Download Excel File</button></a>
+                    <a href="{{ route('nationaladmin.settings.permissions') }}"><button class="btn btn-default"> <i class="fas fa-eye"></i> All Permissions</button></a>
+                    <a href="{{route('nationaladmin.settings.export.permission')}}"><button class="btn btn-dark"> <i class="fa fa-file-excel"></i> Download Excel File</button></a>
 
                 </div>
               </div>
@@ -20,7 +20,7 @@
               <div class="card-body">
 
               <!-- form start -->
-              <form class="form" action="{{route('superadmin.settings.import.permission.data')}}" method="POST" enctype="multipart/form-data">
+              <form class="form" action="{{route('nationaladmin.settings.import.permission.data')}}" method="POST" enctype="multipart/form-data">
                 @csrf
                 <div class="card-body">
                   <div class="form-group">

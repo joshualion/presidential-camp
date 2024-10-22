@@ -16,16 +16,16 @@
               <div class="card-header">
                 <h3 class="card-title">Add Roles in Permission</h3>
                 <div class="card-tools">
-                <a href="{{ route('superadmin.settings.roles') }}"><button class="btn btn-default"> <i class="fas fa-eye"></i> Manage Roles</button></a>
+                <a href="{{ route('nationaladmin.settings.roles') }}"><button class="btn btn-default"> <i class="fas fa-eye"></i> Manage Roles</button></a>
 
-                <a href="{{ route('superadmin.settings.permissions') }}"><button class="btn btn-default"> <i class="fas fa-eye"></i> Manage Permissions</button></a>
+                <a href="{{ route('nationaladmin.settings.permissions') }}"><button class="btn btn-default"> <i class="fas fa-eye"></i> Manage Permissions</button></a>
                 </div>
               </div>
               <!-- /.card-header -->
               <div class="card-body">
 
               <!-- form start -->
-              <form class="form" action="{{route('superadmin.settings.role.permission.store')}}" method="POST">
+              <form class="form" action="{{route('nationaladmin.settings.role.permission.store')}}" method="POST">
                 @csrf
 
 

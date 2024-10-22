@@ -108,6 +108,33 @@
                         </ul>
             </li>
             <li class="tab nav-item menu-close">
+                <a href="#" class="nav-link">
+                  <i class="nav-icon fas fa-calendar"></i>
+                  <p>
+                    Events
+                    <i class="right fas fa-angle-left"></i>
+                  </p>
+                </a>
+                <ul class="nav nav-treeview">
+
+                <li class="nav-item">
+                    <a href="/superadmin/events" class="nav-link">
+                      <i class="fas fa-award nav-icon"></i>
+                      <p>All Events</p>
+                    </a>
+                  </li>
+
+                  <li class="nav-item">
+                    <a href="/superadmin/event/add" class="nav-link">
+                      <i class="fas fa-plus nav-icon"></i>
+                      <p>Add Event</p>
+                    </a>
+                  </li>
+
+                 
+                </ul>
+           </li>
+            <li class="tab nav-item menu-close">
                         <a href="#" class="nav-link">
                           <i class="nav-icon fas fa-comments"></i>
                           <p>
@@ -192,7 +219,7 @@
                         </ul>
 
             </li>
-
+            {{-- Settings --}}
             <li class="tab nav-item menu-close">
                         <a href="#" class="nav-link">
                           <i class="nav-icon fas fa-cogs"></i>
@@ -211,9 +238,9 @@
                           </li>
 
                           <li class="nav-item">
-                            <a href="/superadmin/state/dashboard" class="nav-link">
+                            <a href="/national/settings/smtp" class="nav-link">
                             <i class="fas fa-award nav-icon"></i>
-                              <p> Election Settings</p>
+                              <p> SMTP Settings</p>
                             </a>
                           </li>
 

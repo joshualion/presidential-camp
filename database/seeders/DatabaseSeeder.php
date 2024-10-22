@@ -60,7 +60,6 @@ class DatabaseSeeder extends Seeder
         $this->call(AgeGradeTableSeeder::class);
         $this->call(SupportGroupSeeder::class);
         $this->call(ReligionTableSeeder::class);
-        $this->call(UsersTableSeeder::class);
 
         // Settings Seeders
         $this->call(SystemSettingsSeeder::class);
@@ -69,6 +68,9 @@ class DatabaseSeeder extends Seeder
         // Roles & Permissions
         $this->call(RolesTableSeeder::class);
         $this->call(PermissionsTableSeeder::class);
+
+        //Users        
+        $this->call(UsersTableSeeder::class);
        // $this->call(RolePermissionTableSeeder::class);
 
         // User::factory(10)->create();

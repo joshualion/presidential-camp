@@ -1,9 +1,10 @@
 <?php
 
 use App\Http\Controllers\LocationController;
+use App\Http\Controllers\MembersController;
 use App\Http\Controllers\superadmin\SuperAdminController;
 use App\Http\Controllers\superadmin\SystemSettingController;
-use App\Http\Controllers\superadmin\RolePermissionController;
+use App\Http\Controllers\RolePermissionController;
 use Illuminate\Support\Facades\Route;
 
 
@@ -83,16 +84,18 @@ Route::get('/superadmin/member/distribution/state', [SuperAdminController::class
 
 
 //Member Management
-Route::get('/superadmin/members/data', [SuperAdminController::class, 'getMembersData'])->name('superadmin.members.data');
-
-Route::get('/superadmin/members', [SuperAdminController::class, 'allMembers'])->name('superadmin.members')->middleware('access_level:superadmin');
-Route::get('/superadmin/member/add', [SuperAdminController::class, 'addMember'])->name('superadmin.member.add')->middleware('access_level:superadmin');
-Route::post('/superadmin/member/store', [SuperAdminController::class, 'storeMember'])->name('superadmin.member.store')->middleware('access_level:superadmin');
-Route::get('/superadmin/member/edit/{uuid}', [SuperAdminController::class, 'editMember'])->name('superadmin.member.edit')->middleware('access_level:superadmin');
-Route::put('/superadmin/member/update/', [SuperAdminController::class, 'updateMember'])->name('superadmin.member.update')->middleware('access_level:superadmin');
-Route::get('/superadmin/member/view/{uuid}', [SuperAdminController::class, 'viewMember'])->name('superadmin.member.view')->middleware('access_level:superadmin');
-Route::get('/superadmin/member/suspend/{uuid}', [SuperAdminController::class, 'suspendMember'])->name('superadmin.member.suspend')->middleware('access_level:superadmin');
-Route::delete('/superadmin/member/delete/{uuid}', [SuperAdminController::class, 'deleteMember'])->name('superadmin.member.delete')->middleware('access_level:superadmin');
+Route::get('/superadmin/members/data', [MembersController::class, 'getMembersData'])->name('superadmin.members.data');
+Route::get('/superadmin/members', [MembersController::class, 'allMembers'])->name('superadmin.members')->middleware('access_level:superadmin');
+Route::get('/superadmin/member/add', [MembersController::class, 'addMember'])->name('superadmin.member.add')->middleware('access_level:superadmin');
+Route::post('/superadmin/member/store', [MembersController::class, 'storeMember'])->name('superadmin.member.store')->middleware('access_level:superadmin');
+Route::get('/superadmin/member/edit/{uuid}', [MembersController::class, 'editMember'])->name('superadmin.member.edit')->middleware('access_level:superadmin');
+Route::put('/superadmin/member/update/', [MembersController::class, 'updateMember'])->name('superadmin.member.update')->middleware('access_level:superadmin');
+Route::get('/superadmin/member/view/{uuid}', [MembersController::class, 'viewMember'])->name('superadmin.member.view')->middleware('access_level:superadmin');
+Route::get('/superadmin/member/suspend/{uuid}', [MembersController::class, 'suspendMember'])->name('superadmin.member.suspend')->middleware('access_level:superadmin');
+Route::delete('/superadmin/member/delete/{uuid}', [MembersController::class, 'deleteMember'])->name('superadmin.member.delete')->middleware('access_level:superadmin');
+ //Members By region
+ Route::get('/superadmin/members/region', [MembersController::class, 'membersByRegions'])->name('superadmin.members.region')->middleware('access_level:superadmin');
+ Route::get('/superadmin/members/region/{uuid}', [MembersController::class, 'RegionMembersView'])->name('superadmin.member.region.view')->middleware('access_level:superadmin');
 
 
 //Locations Management Routes
@@ -127,6 +130,15 @@ Route::post('/superadmin/location/ward/store', [LocationController::class, 'stor
 Route::get('/superadmin/location/ward/edit/{uuid}', [LocationController::class, 'editWard'])->name('superadmin.location.ward.edit')->middleware('access_level:superadmin');
 Route::post('/superadmin/location/ward/update/{uuid}', [LocationController::class, 'updateWard'])->name('superadmin.location.ward.update')->middleware('access_level:superadmin');
 Route::delete('/superadmin/location/ward/delete/{uuid}', [LocationController::class, 'deleteWard'])->name('superadmin.location.ward.delete')->middleware('access_level:superadmin');
+//import PU Form
+Route::get('/superadmin/location/importwards', [LocationController::class, 'importWardsForm'])->name('superadmin.location.ward.import')->middleware('access_level:superadmin');
+// Export Route
+Route::get('/superadmin/location/exportwards', [LocationController::class, 'exportWards'])->name('superadmin.location.ward.exportWards')->middleware('access_level:superadmin');
+
+// Import Route
+Route::post('/superadmin/location/importwards', [LocationController::class, 'importWards'])->name('superadmin.location.ward.importWards')->middleware('access_level:superadmin');
+
+
 //Manage Polling Units
 Route::get('/superadmin/location/pollingunits', [LocationController::class, 'allPollingUnits'])->name('superadmin.location.pus')->middleware('access_level:superadmin');
 Route::get('/superadmin/location/pollingunit/add', [LocationController::class, 'addPollingUnit'])->name('superadmin.location.pu.add')->middleware('access_level:superadmin');
@@ -134,6 +146,13 @@ Route::post('/superadmin/location/pollingunit/store', [LocationController::class
 Route::get('/superadmin/location/pollingunit/edit/{uuid}', [LocationController::class, 'editPollingUnit'])->name('superadmin.location.pu.edit')->middleware('access_level:superadmin');
 Route::post('/superadmin/location/pollingunit/update/{uuid}', [LocationController::class, 'updatePollingUnit'])->name('superadmin.location.pu.update')->middleware('access_level:superadmin');
 Route::delete('/superadmin/location/pollingunit/delete/{uuid}', [LocationController::class, 'deletePollingUnit'])->name('superadmin.location.pu.delete')->middleware('access_level:superadmin');
+//import PU Form
+Route::get('/superadmin/import-polling-units', [LocationController::class, 'importPollingUnitsForm'])->name('superadmin.location.pu.import')->middleware('access_level:superadmin');
+// Export Route
+Route::get('/superadmin/export-polling-units', [LocationController::class, 'exportPollingUnits'])->name('superadmin.location.pu.exportPollingUnits')->middleware('access_level:superadmin');
+
+// Import Route
+Route::post('/superadmin/import-polling-units', [LocationController::class, 'importPollingUnits'])->name('superadmin.location.pu.importPollingUnits')->middleware('access_level:superadmin');
 
 });
 

@@ -20,7 +20,7 @@ class SystemSettingsSeeder extends Seeder
         $now = Carbon::now();
         DB::table('system_settings')->insert([
             'logo' => 'logo.png',
-            'favicon'=> 'favicon-32x32.png',
+            'favicon'=> 'favicon.png',
             'login_page_background' => 'aso-rock.jpg',
             'dark_theme_color' => '#008751',
             'light_theme_color' => '#f7f7f7',

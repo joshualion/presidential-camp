@@ -93,7 +93,7 @@
                   <div class="tab-pane active" id="editprofile">
 
 
-        <form class="form-horizontal" id="member" method="POST" action="{{route('nationaladmin.member.update', $member->id)}}" enctype="multipart/form-data">
+        <form class="form-horizontal" id="member" method="POST" action="{{route($profileData->access_level.'.member.update', $member->id)}}" enctype="multipart/form-data">
                                         @csrf
                                         @method('PUT')
 
@@ -565,7 +565,7 @@
                 .catch(() => callback("us"));
 
             },
-                separateDialCode: true,
+                separateDialCode: false,
                 hiddenInput: "full_phone",
                 utilsScript: "{{asset('assets/js/intl-tel-input/utils.js')}}",
             });

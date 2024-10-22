@@ -14,7 +14,7 @@
 
             </li>
 
-
+            {{-- Members --}}
             <li class="tab nav-item menu-close">
                         <a href="#" class="nav-link">
                           <i class="nav-icon fas fa-users"></i>
@@ -33,7 +33,7 @@
                           </li>
 
                           <li class="nav-item">
-                            <a href="/national/region/dashboard/" class="nav-link">
+                            <a href="/national/members/region" class="nav-link">
                               <i class="fas fa-tachometer-alt nav-icon"></i>
                               <p>Members By Region</p>
                             </a>
@@ -69,6 +69,8 @@
 
                         </ul>
             </li>
+            {{-- / Members --}}
+
             <li class="tab nav-item menu-close">
                         <a href="#" class="nav-link">
                           <i class="nav-icon fas fa-book"></i>
@@ -107,6 +109,33 @@
                           </li>
                         </ul>
             </li>
+            <li class="tab nav-item menu-close">
+                <a href="#" class="nav-link">
+                  <i class="nav-icon fas fa-calendar"></i>
+                  <p>
+                    Events
+                    <i class="right fas fa-angle-left"></i>
+                  </p>
+                </a>
+                <ul class="nav nav-treeview">
+
+                <li class="nav-item">
+                    <a href="/national/events" class="nav-link">
+                      <i class="fas fa-award nav-icon"></i>
+                      <p>All Events</p>
+                    </a>
+                  </li>
+
+                  <li class="nav-item">
+                    <a href="/national/event/add" class="nav-link">
+                      <i class="fas fa-plus nav-icon"></i>
+                      <p>Add Event</p>
+                    </a>
+                  </li>
+
+                 
+                </ul>
+           </li>
             <li class="tab nav-item menu-close">
                         <a href="#" class="nav-link">
                           <i class="nav-icon fas fa-comments"></i>
@@ -184,15 +213,16 @@
                             </a>
                           </li>
                           <li class="nav-item">
-                            <a href="/national/state/dashboard" class="nav-link">
+                            <a href="/national/location/pollingunits" class="nav-link">
                             <i class="fas fa-monument nav-icon"></i>
-                              <p> Polling Centers</p>
+                              <p> Polling Units</p>
                             </a>
                           </li>
                         </ul>
 
             </li>
 
+            {{-- Settings --}}
             <li class="tab nav-item menu-close">
                         <a href="#" class="nav-link">
                           <i class="nav-icon fas fa-cogs"></i>
@@ -212,9 +242,9 @@
                           </li>
 
                           <li class="nav-item">
-                            <a href="/national/state/dashboard" class="nav-link">
+                            <a href="/national/settings/smtp" class="nav-link">
                             <i class="fas fa-award nav-icon"></i>
-                              <p> Election Settings</p>
+                              <p> SMTP Settings</p>
                             </a>
                           </li>
 

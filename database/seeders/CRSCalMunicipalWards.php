@@ -15,21 +15,21 @@ class CRSCalMunicipalWards extends Seeder
     public function run(): void
     {
         // Get the ID of Calabar Municipal LGA from the LGAs table
-        $calMunicipalId = DB::table('local_government_areas')->where('name', 'Calabar Municipal')->value('id');
+        $calMunicipalId = DB::table('local_government_areas')->where('name', 'Calabar Municipality')->value('id');
         // Current timestamp
         $now = Carbon::now();
         // Array of CRSCalMunicipalWards in alphabetical order
         $crsCalMunicipalWards = [
-            ['name' => 'Ward One', 'uuid' => (string) Str::uuid(), 'lga_id' =>  $calMunicipalId , 'created_at' => $now, 'updated_at' => $now],
-            ['name' => 'Ward Two', 'uuid' => (string) Str::uuid(), 'lga_id' =>  $calMunicipalId , 'created_at' => $now, 'updated_at' => $now],
-            ['name' => 'Ward Three', 'uuid' => (string) Str::uuid(), 'lga_id' =>  $calMunicipalId , 'created_at' => $now, 'updated_at' => $now],
-            ['name' => 'Ward Four', 'uuid' => (string) Str::uuid(), 'lga_id' =>  $calMunicipalId , 'created_at' => $now, 'updated_at' => $now],
-            ['name' => 'Ward Five', 'uuid' => (string) Str::uuid(), 'lga_id' =>  $calMunicipalId , 'created_at' => $now, 'updated_at' => $now],
-            ['name' => 'Ward Six', 'uuid' => (string) Str::uuid(), 'lga_id' =>  $calMunicipalId , 'created_at' => $now, 'updated_at' => $now],
-            ['name' => 'Ward Seven', 'uuid' => (string) Str::uuid(), 'lga_id' =>  $calMunicipalId , 'created_at' => $now, 'updated_at' => $now],
-            ['name' => 'Ward Eight', 'uuid' => (string) Str::uuid(), 'lga_id' =>  $calMunicipalId , 'created_at' => $now, 'updated_at' => $now],
-            ['name' => 'Ward Nine', 'uuid' => (string) Str::uuid(), 'lga_id' =>  $calMunicipalId , 'created_at' => $now, 'updated_at' => $now],
-            ['name' => 'Ward Ten', 'uuid' => (string) Str::uuid(), 'lga_id' =>  $calMunicipalId , 'created_at' => $now, 'updated_at' => $now],
+            ['name' => 'One', 'uuid' => (string) Str::uuid(), 'lga_id' =>  $calMunicipalId , 'created_at' => $now, 'updated_at' => $now],
+            ['name' => 'Two', 'uuid' => (string) Str::uuid(), 'lga_id' =>  $calMunicipalId , 'created_at' => $now, 'updated_at' => $now],
+            ['name' => 'Three', 'uuid' => (string) Str::uuid(), 'lga_id' =>  $calMunicipalId , 'created_at' => $now, 'updated_at' => $now],
+            ['name' => 'Four', 'uuid' => (string) Str::uuid(), 'lga_id' =>  $calMunicipalId , 'created_at' => $now, 'updated_at' => $now],
+            ['name' => 'Five', 'uuid' => (string) Str::uuid(), 'lga_id' =>  $calMunicipalId , 'created_at' => $now, 'updated_at' => $now],
+            ['name' => 'Six', 'uuid' => (string) Str::uuid(), 'lga_id' =>  $calMunicipalId , 'created_at' => $now, 'updated_at' => $now],
+            ['name' => 'Seven', 'uuid' => (string) Str::uuid(), 'lga_id' =>  $calMunicipalId , 'created_at' => $now, 'updated_at' => $now],
+            ['name' => 'Eight', 'uuid' => (string) Str::uuid(), 'lga_id' =>  $calMunicipalId , 'created_at' => $now, 'updated_at' => $now],
+            ['name' => 'Nine', 'uuid' => (string) Str::uuid(), 'lga_id' =>  $calMunicipalId , 'created_at' => $now, 'updated_at' => $now],
+            ['name' => 'Ten', 'uuid' => (string) Str::uuid(), 'lga_id' =>  $calMunicipalId , 'created_at' => $now, 'updated_at' => $now],
 
         ];
         // Create CRSCalMunicipalWards

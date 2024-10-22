@@ -8,7 +8,7 @@
             <div class="col-12">
                 <div class="card card-primary">
                 <div class="card-header">
-                    <h3 class="card-title">All Local Government Areas</h3>
+                    <h3 class="card-title">All Local Government Areas - <span class="badge badge-light">{{number_format($lgas->count(),0)}}</span></h3>
                     <div class="card-tools">
                         <a href="{{ route('nationaladmin.location.lga.add') }}"><button class="btn btn-default"> <i class="fa fa-plus-square"></i> Add local Government Area</button></a>
                     </div>

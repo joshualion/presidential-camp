@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 
 class PollingUnit extends Model
 {
@@ -18,6 +19,16 @@ class PollingUnit extends Model
 
     public function users(){
         return $this->hasMany(User::class);
+    }
+
+    //boot method for uuid
+
+    public static function boot()
+    {
+        parent::boot();
+        self::creating(function ($pu) {
+            $pu->uuid = (string) Str::uuid();
+        });
     }
 
 }

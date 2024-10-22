@@ -8,9 +8,10 @@
             <div class="col-12">
                 <div class="card card-primary">
                 <div class="card-header">
-                    <h3 class="card-title">All Wards</h3>
+                    <h3 class="card-title">All Wards - <span class="badge badge-light">{{ number_format($wardCount, 0) }}</span></h3>
                     <div class="card-tools">
                         <a href="{{ route($profileData->access_level.'.location.ward.add') }}"><button class="btn btn-default"> <i class="fa fa-plus-square"></i> Add Ward</button></a>
+                        <a href="{{route($profileData->access_level.'.location.ward.import')}}"><button class="btn btn-dark"> <i class="fa fa-file-excel"></i> Import Wards</button></a>
                     </div>
                 </div>
                 <!-- /.card-header -->

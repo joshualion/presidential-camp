@@ -18,16 +18,16 @@
                 <div class="card-header">
                     <h3 class="card-title">Add Member</h3>
                     <div class="card-tools">
-                        <a href="{{ route('nationaladmin.member.add') }}"><button class="btn btn-default"> <i class="fa fa-plus-square"></i> Add New Member</button></a>
+                        <a href="{{ route($profileData->access_level.'.member.add') }}"><button class="btn btn-default"> <i class="fa fa-plus-square"></i> Add New Member</button></a>
                     </div>
                 </div>
                 <!-- /.card-header -->
                 <div class="card-body">
 
-                    <form action="{{ route('nationaladmin.member.store') }}" method="POST">
+                    <form action="{{ route($profileData->access_level.'.member.store') }}" method="POST">
                         @csrf
 
-                        @include('backend.nationaladmin.member.add-member-form')
+                        @include('backend.'.$profileData->access_level.'.member.add-member-form')
                     </form>
 
                 </div>

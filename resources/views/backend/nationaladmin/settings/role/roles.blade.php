@@ -11,8 +11,8 @@
                 <div class="card-header">
                     <h3 class="card-title">All Roles</h3>
                     <div class="card-tools">
-                        <a href="{{ route('superadmin.settings.role.add') }}"><button class="btn btn-default"> <i class="fa fa-plus-square"></i> Add role</button></a>
-                        <a href="{{ route('superadmin.settings.permissions') }}"><button class="btn btn-default"> <i class="fas fa-pencil-alt"></i> Manage Permissions</button></a>
+                        <a href="{{ route('nationaladmin.settings.role.add') }}"><button class="btn btn-default"> <i class="fa fa-plus-square"></i> Add role</button></a>
+                        <a href="{{ route('nationaladmin.settings.permissions') }}"><button class="btn btn-default"> <i class="fas fa-pencil-alt"></i> Manage Permissions</button></a>
                     </div>
                 </div>
                 <!-- /.card-header -->
@@ -39,8 +39,8 @@
                         <td>{{ $role->guard_name}}</td>
                         <td>{{ $role->group_name}}</td>
                         <td>
-                        <a href="{{ route('superadmin.settings.role.edit',  encrypt($role->id))}}" ><button class="btn btn-success btn-sm"><i class="fas fa-pencil-alt"></i> Edit</button></a>
-                        <form action="{{ route('superadmin.settings.role.delete',  encrypt($role->id)) }}" method="POST" style="display: inline-block;">
+                        <a href="{{ route('nationaladmin.settings.role.edit',  encrypt($role->id))}}" ><button class="btn btn-success btn-sm"><i class="fas fa-pencil-alt"></i> Edit</button></a>
+                        <form action="{{ route('nationaladmin.settings.role.delete',  encrypt($role->id)) }}" method="POST" style="display: inline-block;">
                             @csrf
                             @method('DELETE')
                             <button type="submit" class="btn btn-danger btn-sm delete-btn"><i class="fas fa-trash"></i> Delete</button>

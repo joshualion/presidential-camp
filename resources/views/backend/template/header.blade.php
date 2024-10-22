@@ -63,12 +63,17 @@
       color: {{ $SystemSetting->dark_theme_color ?? ' #008751'}} !important;
     }
 
+    .os-scrollbar{
+     background-color: {{ $SystemSetting->dark_theme_color ?? ' #008751'}} !important;
+      
+    }
+
     a{
       color: {{ $SystemSetting->dark_theme_color ?? ' #008751'}} !important;
     }
 
     .sidebar-light-primary{
-      color: {{ $SystemSetting->light_theme_color ?? ' #dff1ea'}} !important;
+      color: {{ $SystemSetting->light_theme_color ?? '#dff1ea'}} !important;
     }
 
     /* Specifically targeting the card-outline */

@@ -12,18 +12,18 @@ class UsersTableSeeder extends Seeder
     public function run()
     {
         $access_levels = [
-            'superadmin',
-            'nationaladmin',
-            'regionaladmin',
-            'stateadmin',
-            'lgaadmin',
-            'wardadmin',
-            'puadmin',
-            'user',
+            'superadmin' => 'National ICT/Media Director',
+            'nationaladmin' => 'National ICT/Media Director',
+            'regionaladmin' => 'Regional ICT/Media Director',
+            'stateadmin' => 'State ICT/Media Director',
+            'lgaadmin' => 'LGA ICT/Media Director',
+            'wardadmin' => 'Ward ICT/Media Director',
+            'puadmin' => 'PU ICT/Media Director',
+            'user' => 'Member',
         ];
 
-        foreach ($access_levels as $access_level) {
-            User::create([
+        foreach ($access_levels as $access_level => $role_name) {
+            $user =User::create([
                 'uuid' => Str::uuid(),
                 'username' => $access_level . '_user',
                 'email' => $access_level . '@example.com',
@@ -51,6 +51,9 @@ class UsersTableSeeder extends Seeder
                 'age_grade_id' => 1,
                 'remember_token' => Str::random(10),
             ]);
+
+            // Assign the role to the user
+            $user->assignRole($role_name);
         }
     }
 }

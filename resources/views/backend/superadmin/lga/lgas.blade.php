@@ -10,7 +10,7 @@
                 <div class="card-header">
                     <h3 class="card-title">All Local Government Areas</h3>
                     <div class="card-tools">
-                        <a href="{{ route('superadmin.location.lga.add') }}"><button class="btn btn-default"> <i class="fa fa-plus-square"></i> Add local Government Area</button></a>
+                        <a href="{{ route('superadmin.location.lga.add') }}"><button class="btn btn-default"> <i class="fa fa-plus-square"></i> Add local Government Area - <span class="badge badge-light">{{number_format($lgas->count(),0)}}</span></button></a>
                     </div>
                 </div>
                 <!-- /.card-header -->

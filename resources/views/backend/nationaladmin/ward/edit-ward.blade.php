@@ -40,8 +40,8 @@
                                                 @foreach ($lgasByState as $lga)
                                                 <option value="{{ $lga->id }}" {{ old('lga_id', $ward->lga_id) == $lga->id ? 'selected' : '' }}>
                                                     {{ $lga->name }}
-                                                </option>
-                                                 @endforeach
+                                                </option>                                                
+                                                @endforeach
                                             </optgroup>
                                         @endforeach
                                     </select>

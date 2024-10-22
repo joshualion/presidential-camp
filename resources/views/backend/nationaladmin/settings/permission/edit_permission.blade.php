@@ -11,14 +11,14 @@
               <div class="card-header">
                 <h3 class="card-title">Edit Permission</h3>
                 <div class="card-tools">
-                    <a href="{{ route('superadmin.settings.permissions') }}"><button class="btn btn-default"> <i class="fas fa-eye"></i> All Permissions</button></a>
+                    <a href="{{ route('nationaladmin.settings.permissions') }}"><button class="btn btn-default"> <i class="fas fa-eye"></i> All Permissions</button></a>
                 </div>
               </div>
               <!-- /.card-header -->
               <div class="card-body">
 
               <!-- form start -->
-              <form class="form" action="{{route('superadmin.settings.permission.update',  $permission->id)}}" method="POST">
+              <form class="form" action="{{route('nationaladmin.settings.permission.update',  $permission->id)}}" method="POST">
                 @csrf
                 <div class="card-body">
                   <div class="form-group">

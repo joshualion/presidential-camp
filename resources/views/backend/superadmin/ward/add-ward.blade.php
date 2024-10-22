@@ -11,6 +11,7 @@
                     <h3 class="card-title">Add Ward</h3>
                     <div class="card-tools">
                         <a href="{{ route($profileData->access_level.'.location.wards') }}"><button class="btn btn-default"> <i class="fa fa-eye"></i> All Wards</button></a>
+                        <a href="{{route($profileData->access_level.'.location.ward.import')}}"><button class="btn btn-dark"> <i class="fa fa-file-excel"></i> Import Wards</button></a>
                     </div>
                 </div>
                 <!-- /.card-header -->

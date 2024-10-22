@@ -29,7 +29,7 @@ class CrossRiverLGAsTableSeeder extends Seeder
             ['name' => 'Bekwarra', 'uuid' => (string) Str::uuid(), 'state_id' => $crossRiverId, 'created_at' => $now, 'updated_at' => $now],
             ['name' => 'Biase', 'uuid' => (string) Str::uuid(), 'state_id' => $crossRiverId, 'created_at' => $now, 'updated_at' => $now],
             ['name' => 'Boki', 'uuid' => (string) Str::uuid(), 'state_id' => $crossRiverId, 'created_at' => $now, 'updated_at' => $now],
-            ['name' => 'Calabar Municipal', 'uuid' => (string) Str::uuid(), 'state_id' => $crossRiverId, 'created_at' => $now, 'updated_at' => $now],
+            ['name' => 'Calabar Municipality', 'uuid' => (string) Str::uuid(), 'state_id' => $crossRiverId, 'created_at' => $now, 'updated_at' => $now],
             ['name' => 'Calabar South', 'uuid' => (string) Str::uuid(), 'state_id' => $crossRiverId, 'created_at' => $now, 'updated_at' => $now],
             ['name' => 'Etung', 'uuid' => (string) Str::uuid(), 'state_id' => $crossRiverId, 'created_at' => $now, 'updated_at' => $now],
             ['name' => 'Ikom', 'uuid' => (string) Str::uuid(), 'state_id' => $crossRiverId, 'created_at' => $now, 'updated_at' => $now],

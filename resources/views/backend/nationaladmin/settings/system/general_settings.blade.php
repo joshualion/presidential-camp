@@ -126,7 +126,7 @@
                 .catch(() => callback("us"));
 
             },
-                separateDialCode: true,
+                separateDialCode: false,
                 hiddenInput: "full_phone",
                 utilsScript: "{{asset('assets/js/intl-tel-input/utils.js')}}",
             });
