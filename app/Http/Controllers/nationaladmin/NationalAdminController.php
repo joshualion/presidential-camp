@@ -533,18 +533,18 @@ class NationalAdminController extends Controller
              $puWithUsersCount = PollingUnit::whereIn('ward_id', $wards)
                  ->whereHas('users') // Ensures only polling units with users are counted
                  ->count();
-                 $excoCount = User::where('region_id', $state->id)                    
+                 $excoCount = User::where('state_id', $state->id)                    
                  ->where('access_level', '!=', 'user')
                  ->where('access_level', '!=', 'superadmin')->count();
                  
-                 $memberCount = User ::where('region_id', $state->id)
+                 $memberCount = User ::where('state_id', $state->id)
                  ->where('access_level', '!=', 'superadmin')
                  ->where('access_level', 'user')->count();
 
-                 $userCount = User ::where('region_id', $state->id)
+                 $userCount = User ::where('state_id', $state->id)
                  ->where('access_level', '!=', 'superadmin')->count();
 
-                 $newMembers = User ::where('region_id', $state->id)
+                 $newMembers = User ::where('state_id', $state->id)
                  ->where('access_level', '!=', 'superadmin')
                  ->where('created_at', '>=', Carbon::now()->subDays(1))
                  ->count();
@@ -571,6 +571,8 @@ class NationalAdminController extends Controller
     
         }
 
+
+        
 
 
 

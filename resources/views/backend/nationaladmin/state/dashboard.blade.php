@@ -246,7 +246,7 @@
             <!-- DONUT CHART -->
             <div class="card card-primary ">
                 <div class="card-header">
-                <h3 class="card-title">DISTRIBUTION BY STATES</h3>
+                <h3 class="card-title">DISTRIBUTION BY LGA</h3>
     
                 <div class="card-tools">
                     <button type="button" class="btn btn-tool" data-card-widget="collapse">
@@ -259,7 +259,7 @@
                 </div>
                 <div class="card-body" style="display: block;">
                     <div class="chart"><div class="chartjs-size-monitor"><div class="chartjs-size-monitor-expand"><div class=""></div></div><div class="chartjs-size-monitor-shrink"><div class=""></div></div></div>
-                    <canvas id="stateDonutChart" style="min-height: 250px; height: 241px; max-height: 250px; max-width: 100%; display: block; width: 470px;" width="470" height="241" class="chartjs-render-monitor"></canvas>
+                    <canvas id="lgaDonutChart" style="min-height: 250px; height: 241px; max-height: 250px; max-width: 100%; display: block; width: 470px;" width="470" height="241" class="chartjs-render-monitor"></canvas>
                     </div>
                 </div> <!-- /.card-body -->
             </div>  <!-- /.card -->

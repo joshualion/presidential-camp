@@ -241,12 +241,12 @@ class ChartsController extends Controller
         $state = State::where('uuid', $uuid)->firstOrFail();
         $validVoterCounts = [
             'Yes' => User::where('access_level', '!=', 'superadmin')
-                         ->where('region_id', $state->id)
+                         ->where('state_id', $state->id)
                          ->where('validvoter', 'Yes')
                          ->where('access_level', '!=', 'superadmin')->count(),
             
                          'No' => User::where('access_level', '!=', 'superadmin')
-                         ->where('region_id', $state->id)
+                         ->where('state_id', $state->id)
                          ->where('validvoter', 'No')                            
                          ->where('access_level', '!=', 'superadmin')->count(),
         ];
@@ -262,7 +262,7 @@ class ChartsController extends Controller
         ];
 
         return response()->json($validVoterData);
- }
+    }
 
       //function member Distribution By State
     public function StateDistributionByRegion($uuid)
@@ -320,7 +320,7 @@ class ChartsController extends Controller
     public function lgaDistributionByState($uuid)
     {
         $state = State::where('uuid', $uuid)->firstOrFail();
-        $lgas = LocalGovernmentArea::where('state_id', $state->id)->get(); // Assuming you have a LocalGovernmentArea model and table
+        $lgas  = LocalGovernmentArea::where('state_id', $state->id)->get(); // Assuming you have a LocalGovernmentArea model and table
 
         $lgaCounts = [];
         // Define an array of colors
