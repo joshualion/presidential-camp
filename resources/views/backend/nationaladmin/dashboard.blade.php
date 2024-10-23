@@ -1,7 +1,6 @@
 @extends('backend.template.backend-master')
 @section('content')
 
-
 <div class="card card-primary">
               <div class="card-header">
                     <h3 class="card-title">Nationwide Statistics</h3>
@@ -34,7 +33,7 @@
                                 <div class="icon">
                                   <i class="ion ion-nigeria"></i>
                                 </div>
-                                <a href="#" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
+                                <a href="{{route($profileData->access_level.'.members.byState', $uuid)}}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
                               </div>
                             </div>
                             <!-- ./col -->

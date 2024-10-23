@@ -13,6 +13,7 @@ use App\Models\State;
 use App\Models\SupportGroup;
 use App\Models\SystemSetting;
 use App\Models\Ward;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\View;
@@ -411,379 +412,93 @@ class SuperAdminController extends Controller
              return response()->json($stateData);
          }
 
-
-        /* USER MANAGEMENT */
-
-        public function allMembers()
+         
+        public function RegionDashBoard($uuid)
         {
-            $profileData = $this->getProfileData();
-            $pageTitle = 'Team Members';
-            //$members = User::where('access_level', '!=', 'superadmin')->get();
-            $roles   = Role::all();
-            return view('backend.superadmin.member.members', compact( 'profileData', 'pageTitle',  'roles'));
-        }
+                    $region = Region::where('uuid', $uuid)->first();
+                    $pageTitle = 'Regional Dashboard';
+                    $profileData  = $this->getProfileData();
+                    
+                    $stateCount = State::where('region_id', $region->id)->count();
+                    $statesWithUsersCount = User::whereIn('state_id', function($query) use ($region) {
+                        $query->select('id')
+                            ->from('states')
+                            ->where('region_id', $region->id);
+                    })->distinct('state_id')->count('state_id');
+                    
 
-        public function getMembersData()
-        {
-            $members = User::where('access_level', '!=', 'superadmin')->get();
+            
+                // Get the count of LGAs by first finding all the states in the region and then finding LGAs in those states
+                $stateIds = State::where('region_id', $region->id)->pluck('id'); // Get all state IDs in the region
+                $lgaCount = LocalGovernmentArea::whereIn('state_id', $stateIds)->count();
 
-            return datatables($members)
-                ->addIndexColumn() // This will automatically add a serial number column
-                ->addColumn('name', function($member) {
-                    return $member->firstname . ' ' . $member->lastname;
-                })
+                // Get LGAs that belong to the states in the region and have users
+                $lgaWithUsersCount = LocalGovernmentArea::whereIn('state_id', $stateIds)
+                ->whereHas('users') // Ensures only LGAs with users are counted
+                ->count();
 
-                ->addColumn('state', function($member) {
-                    return optional($member->state)->name;
-                })
-                ->addColumn('access_level', function($member) {
-                    return $member->access_level;
-                })
-                ->addColumn('role', function($member) {
-                    return $member->roles->map(function($role) {
-                        return '<span class="badge badge-pill bg-secondary">' . $role->name . '</span>';
-                    })->implode(' ');
-                })
-                ->addColumn('action', function($member) {
-                    // Check if the member is active or not
-                    if ($member->status == 'active') {
-                        // If active, show Suspend button
-                        $button = '
-                            <a href="' . route('superadmin.member.suspend', $member->uuid) . '">
-                                <button class="btn btn-warning btn-sm">
-                                    <i class="fas fa-pause"></i> Suspend
-                                </button>
-                            </a>
-                        ';
-                    } else {
-                        // If not active, show Activate button
-                        $button = '
-                            <a href="' . route('superadmin.member.suspend', $member->uuid) . '">
-                                <button class="btn btn-success btn-sm">
-                                    <i class="fas fa-play"></i> Activate
-                                </button>
-                            </a>
-                        ';
-                    }
+                // Get all the LGA IDs in those states
+                $lgas = LocalGovernmentArea::whereIn('state_id', $stateIds)->pluck('id');
 
-                    // Add other action buttons (View, Edit, Delete)
-                    return '
-                        <a href="' . route('superadmin.member.view', $member->uuid) . '">
-                            <button class="btn btn-primary btn-sm">
-                                <i class="fas fa-eye"></i> Show
-                            </button>
-                        </a>
-                        <a href="' . route('superadmin.member.edit', $member->uuid) . '">
-                            <button class="btn btn-info btn-sm">
-                                <i class="fas fa-pencil-alt"></i> Edit
-                            </button>
-                        </a>
-                        ' . $button . '
-                        <form action="' . route('superadmin.member.delete', $member->uuid) . '" method="POST" style="display:inline-block;" data-associated-users="false">
-                            ' . csrf_field() . method_field('DELETE') . '
-                            <button type="submit" class="btn btn-danger btn-sm delete-btn">
-                                <i class="fas fa-trash"></i> Delete
-                            </button>
-                        </form>
-                    ';
-                })
+                // Get the total count of wards in the LGAs (wardCount)
+                $wardCount = Ward::whereIn('lga_id', $lgas)->count();
 
-                ->rawColumns(['role', 'action']) // Ensures that HTML in the 'role' and 'action' columns is rendered properly
-                ->make(true);
-        }
+                // Get the count of wards that have associated users (wardWithUsersCount)
+                $wardWithUsersCount = Ward::whereIn('lga_id', $lgas)
+                    ->whereHas('users') // Ensures only wards with users are counted
+                    ->count();
 
+                // Get all the ward IDs in those LGAs
+                $wards = Ward::whereIn('lga_id', $lgas)->pluck('id');
 
+                // Get the total count of polling units in the wards (puCount)
+                $puCount = PollingUnit::whereIn('ward_id', $wards)->count();
 
-        public function addMember()
-        {
-            $profileData = $this->getProfileData();
-            $pageTitle = 'Team Members';
-            $roles = Role::all();
-            $countries = Country::all();
-            $regions = $this->getRegions();
-            $states = State::all();
-            $lgas =   LocalGovernmentArea::all();
-            $wards = Ward::all();
-            return view('backend.superadmin.member.add', compact( 'profileData', 'pageTitle', 'roles', 'countries', 'regions', 'states', 'lgas', 'wards'));
-        }
+                // Get the count of polling units that have associated users (puWithUsersCount)
+                $puWithUsersCount = PollingUnit::whereIn('ward_id', $wards)
+                    ->whereHas('users') // Ensures only polling units with users are counted
+                    ->count();
 
-        public function storeMember(Request $request)
-        {
-            $request->validate([
-                'username' => 'required|string|max:255|unique:users',
-                'firstname' => 'required|string',
-                'lastname' => 'required|string',
-                'email' => 'required|email|unique:users,email',
-                'password' => 'required|confirmed|min:6',
-                'access_level' => 'required',
-            ]);
+                    $excoCount = User::where('region_id', $region->id)                    
+                    ->where('access_level', '!=', 'user')
+                    ->where('access_level', '!=', 'superadmin')->count();
+                    
+                    $memberCount = User ::where('region_id', $region->id)
+                    ->where('access_level', '!=', 'superadmin')
+                    ->where('access_level', 'user')->count();
 
-            if(empty($request->roles)){
-                $access_level = 'user';
-            }else{
-                $access_level = $request->access_level;
-            }
+                    $userCount = User ::where('region_id', $region->id)
+                    ->where('access_level', '!=', 'superadmin')->count();
 
-            $user = User::create([
-                'uuid' => Str::uuid()->toString(),
-                'username' => $request->username,
-                'firstname' => $request->firstname,
-                'lastname' => $request->lastname,
-                'email' => $request->email,
-                'password' => Hash::make($request->password),
-                'access_level' => $access_level,
-                'region_id' => $request->region_id,
-                'state_id' => $request->state_id,
-                'lga_id' => $request->lga_id,
-                'ward_id' => $request->ward_id,
-            ]);
+                    $newMembers = User ::where('region_id', $region->id)
+                    ->where('access_level', '!=', 'superadmin')
+                    ->where('created_at', '>=', Carbon::now()->subDays(1))
+                    ->count();
 
-            // Assign Role
-            if ($request->has('roles') && !empty($request->roles)) {
-                // Assuming you're passing only one role ID (you can adjust this for multiple roles if needed)
-                $roleId = $request->roles; // Make sure $request->roles contains the correct role ID
-
-            // Find the role by its ID
-            $role = Role::findById($roleId);
-
-                if ($role) {
-                    // Sync the role to the member using its name
-                    $user->syncRoles([$role->name]);
-                } else {
-                    // Handle the case where the role is not found
-                    $notification = [
-                        'message' => 'Invalid role selected.',
-                        'alert-type' => 'error'
-                    ];
-
-                    return redirect()->back()->withErrors($notification);
-                }
-                } else {
-                    // No role selected, assign default role 'Member' (role ID = 40)
-                    $defaultRole = Role::findById(40); // Find the role by its ID (40)
-
-                    if ($defaultRole) {
-                        $user->syncRoles([$defaultRole->name]);
-                    }
-                }
-
-            $notification = [
-                'message' => 'Member Added Successfully',
-                'alert-type' => 'success'
-            ];
-            return redirect()->route('superadmin.members')->with($notification);
-        }
-
-        public function editMember($uuid)
-        {
-            $profileData = $this->getProfileData();
-            $pageTitle = 'Edit Team Member';
-            $member = User::where('uuid', $uuid)->first();
-            $roles = Role::all();  // Assuming a member can have multiple roles
-            $countries = Country::all();
-            $regions = $this->getRegions();
-            $states = State::all();
-            $lgas = LocalGovernmentArea::all();
-            $wards = Ward::all();
-            $pollingUnits = PollingUnit::all();
-            $religions = Religion::all();
-            $ageGrades = AgeGrade::all();
-
-            return view('backend.superadmin.member.member', compact(
-                'profileData', 'pageTitle', 'member', 'roles', 'countries',
-                'regions', 'states', 'lgas', 'wards', 'pollingUnits', 'religions', 'ageGrades'
-            ));
-        }
+                    return view('backend.'.$profileData->access_level.'.region.dashboard',
+                    compact(
+            'profileData', 
+            'pageTitle',
+                        'region',     
+                    'stateCount',
+                    'statesWithUsersCount',
+                    'lgaCount',
+                    'lgaWithUsersCount',
+                    'wardCount',
+                    'wardWithUsersCount',
+                    'puCount',
+                    'puWithUsersCount',
+                    'excoCount',
+                    'memberCount',
+                    'userCount',
+                    'newMembers'
+                    ));
+        
+    
+       }
 
 
-        public function updateMember(Request $request) // Add $id to match the route
-        {
-            // Find the member by ID and update
-            $member = User::findOrFail($request->id);
-            // Validation rules
-            $validatedData = $request->validate([
-                'firstname' => 'required|string|max:255',
-                'lastname' => 'required|string|max:255',
-                'email' => 'required|email|max:255',
-                'phone' => 'required|string|max:15|unique:users,phone,' .$member->id,
-
-                'validvoter' => 'required|in:yes,no',
-                'vin' => 'nullable|string|max:255',
-                'age_grade_id' => 'required|exists:age_grades,id',
-                'gender' => 'required|in:male,female',
-                'region_id' => 'required|exists:regions,id',
-                'state_id' => 'required|exists:states,id',
-                'lga_id' => 'required|exists:local_government_areas,id',
-                'ward_id' => 'required|exists:wards,id',
-                'polling_unit_id' => 'required|exists:polling_units,id',
-                'access_level' => 'required|in:nationaladmin,regionaladmin,stateadmin,lgaadmin,wardadmin,puadmin,user,superadmin',
-                'roles' => 'nullable|exists:roles,id',
-                'religion_id' => 'required|exists:religions,id',
-                'address' => 'nullable|string|max:255',
-                'occupation' => 'nullable|string|max:255',
-                'qualification' => 'nullable|string|max:255',
-                'photo' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
-            ]);
-
-
-
-
-            $member->update([
-                'firstname' => $request->firstname,
-                'lastname' => $request->lastname,
-                'email' => $request->email,
-                'phone' => $request->phone,
-                'validVoter' => $request->validvoter,
-                'vin' => $request->vin,
-                'age_grade_id' => $request->age_grade_id,
-                'gender' => $request->gender,
-                'region_id' => $request->region_id,
-                'state_id' => $request->state_id,
-                'lga_id' => $request->lga_id,
-                'ward_id' => $request->ward_id,
-                'polling_unit_id' => $request->polling_unit_id,
-                'access_level' => $request->access_level,
-                'religion_id' => $request->religion_id,
-                'address' => $request->address,
-                'occupation' => $request->occupation,
-                'qualification' => $request->qualification,
-            ]);
-
-            if ($request->hasFile('photo')) {
-                $photo = $request->file('photo');
-                $filename = time() . '.' . $photo->getClientOriginalExtension();
-                $photo->move(public_path('uploads/member_images'), $filename);
-                $member->update(['photo' => $filename]);
-            }
-
-            // Assign Role
-            if ($request->has('roles') && !empty($request->roles)) {
-                // Assuming you're passing only one role ID (you can adjust this for multiple roles if needed)
-                $roleId = $request->roles; // Make sure $request->roles contains the correct role ID
-
-            // Find the role by its ID
-            $role = Role::findById($roleId);
-
-                if ($role) {
-                    // Sync the role to the member using its name
-                    $member->syncRoles([$role->name]);
-                } else {
-                    // Handle the case where the role is not found
-                    $notification = [
-                        'message' => 'Invalid role selected.',
-                        'alert-type' => 'error'
-                    ];
-
-                    return redirect()->back()->withErrors($notification);
-                }
-                } else {
-                    // No role selected, assign default role 'Member' (role ID = 40)
-                    $defaultRole = Role::findById(40); // Find the role by its ID (40)
-
-                    if ($defaultRole) {
-                        $member->syncRoles([$defaultRole->name]);
-                    }
-                }
-
-
-
-            $notification = [
-                'message' => 'Member updated successfully.',
-                'alert-type' => 'success'
-            ];
-
-            return redirect()->route('superadmin.members')->with($notification);
-        }
-
-        public function viewMember($uuid){
-            $profileData = $this->getProfileData();
-            $pageTitle = 'Team Member';
-            $member = User::where('uuid', $uuid)->first();
-            $roles = Role::all();  // Assuming a member can have multiple roles
-            $countries = Country::all();
-            $regions = $this->getRegions();
-            $states = State::all();
-            $lgas = LocalGovernmentArea::all();
-            $wards = Ward::all();
-            $pollingUnits = PollingUnit::all();
-            $religions = Religion::all();
-            $ageGrades = AgeGrade::all();
-
-            return view('backend.superadmin.member.show_member', compact(
-                'profileData', 'pageTitle', 'member', 'roles', 'countries',
-                'regions', 'states', 'lgas', 'wards', 'pollingUnits', 'religions', 'ageGrades'
-            ));
-
-        }
-
-        public function suspendMember($uuid){
-            $member = User::where('uuid', $uuid)->first();
-
-            //check status and suspend or activated accordingly
-            if($member->status == 'inactive'){
-                $member->status = 'active';
-                $member->save();
-                $notification = [
-                    'message' => 'Member activated successfully.',
-                    'alert-type' => 'success'
-                ];
-
-            }else{
-
-                $member->status = 'inactive';
-                $member->save();
-            $notification = [
-                'message' => 'Member suspended successfully.',
-                'alert-type' => 'success'
-            ];
-
-            }
-
-            return redirect()->back()->with($notification);
-        }
-
-
-
-        public function deleteMember(Request $request, $uuid)
-        {
-            // Find the member by uuid
-            $member = User::where('uuid', $uuid)->first();
-
-            // Check if the member exists
-            if (!$member) {
-                // Prepare error notification
-                $notification = [
-                    'message' => 'Member not found!',
-                    'alert-type' => 'error'
-                ];
-
-                // Redirect back with error notification
-                return redirect()->back()->with($notification);
-            }
-
-            // Attempt to delete the member
-            try {
-                $member->delete();
-
-                // Prepare success notification
-                $notification = [
-                    'message' => 'Member deleted successfully!',
-                    'alert-type' => 'success'
-                ];
-
-                // Redirect back with success notification
-                return redirect()->back()->with($notification);
-            } catch (\Exception $e) {
-                // Prepare error notification in case of failure
-                $notification = [
-                    'message' => 'Failed to delete member!',
-                    'alert-type' => 'error'
-                ];
-
-                // Redirect back with error notification
-                return redirect()->back()->with($notification);
-            }
-        }
+       
 
 
 

@@ -67,6 +67,7 @@ class NationalAdminController extends Controller
 
 
    public function nationalAdminDashBoard(){
+        $uuid = $this->getCountries()->uuid;
         $profileData  = $this->getProfileData();
         $regionsCount = $this->getRegions()->count();
         $regionsWithUsersCount = User::where('access_level', '!=', 'superadmin')->whereNotNull('region_id')->where('access_level', '!=', 'superadmin')->distinct('region_id')->count();
@@ -85,6 +86,7 @@ class NationalAdminController extends Controller
         return view('backend.nationaladmin.dashboard',
         compact(
         'profileData',
+        'uuid',
         'regionsCount',
         'regionsWithUsersCount',
         'stateCount',
@@ -405,10 +407,7 @@ class NationalAdminController extends Controller
 
              return response()->json($stateData);
          } 
-
-
-
-         //Other Dasboards
+         //Other Dashboards
         public function RegionDashBoard($uuid)
             {
                         $region = Region::where('uuid', $uuid)->first();
@@ -491,6 +490,85 @@ class NationalAdminController extends Controller
                         ));
             
         
+        }
+
+        public function StateDashBoard($uuid)
+        {
+            $pageTitle = 'State Dashboard';
+            $profileData  = $this->getProfileData();
+            $state = State::where('uuid', $uuid)->first();
+            
+            if(!$state){
+                return redirect()->back()->with('error', 'State not found');
+            }
+
+            $lgaCount = LocalGovernmentArea::where('state_id', $state->id)->count();
+
+            // Get LGAs that belong to the state  and have atleast one user
+            $lgasWithUsersCount = User::whereIn('lga_id', function($query) use ($state) {
+                $query->select('id')
+                    ->from('local_government_areas')
+                    ->where('state_id', $state->id);
+            })->distinct('lga_id')->count('lga_id');
+
+
+             // Get all the LGA IDs in those states
+             $lgas = LocalGovernmentArea::where('state_id', $state->id)->pluck('id');
+
+             // Get the total count of wards in the LGAs (wardCount)
+             $wardCount = Ward::whereIn('lga_id', $lgas)->count();
+
+             // Get the count of wards that have associated users (wardWithUsersCount)
+             $wardWithUsersCount = Ward::whereIn('lga_id', $lgas)
+                 ->whereHas('users') // Ensures only wards with users are counted
+                 ->count();
+            
+             // Get all the ward IDs in those LGAs
+             $wards = Ward::whereIn('lga_id', $lgas)->pluck('id');
+
+             // Get the total count of polling units in the wards (puCount)
+             $puCount = PollingUnit::whereIn('ward_id', $wards)->count();
+
+             // Get the count of polling units that have associated users (puWithUsersCount)
+             $puWithUsersCount = PollingUnit::whereIn('ward_id', $wards)
+                 ->whereHas('users') // Ensures only polling units with users are counted
+                 ->count();
+                 $excoCount = User::where('region_id', $state->id)                    
+                 ->where('access_level', '!=', 'user')
+                 ->where('access_level', '!=', 'superadmin')->count();
+                 
+                 $memberCount = User ::where('region_id', $state->id)
+                 ->where('access_level', '!=', 'superadmin')
+                 ->where('access_level', 'user')->count();
+
+                 $userCount = User ::where('region_id', $state->id)
+                 ->where('access_level', '!=', 'superadmin')->count();
+
+                 $newMembers = User ::where('region_id', $state->id)
+                 ->where('access_level', '!=', 'superadmin')
+                 ->where('created_at', '>=', Carbon::now()->subDays(1))
+                 ->count();
+
+
+
+                return view('backend.'.$profileData->access_level.'.state.dashboard',
+                        compact(
+                            'profileData', 
+                            'pageTitle',
+                            'state',
+                            'lgaCount',
+                            'lgasWithUsersCount',
+                            'wardCount',
+                            'wardWithUsersCount',
+                            'puCount',
+                            'puWithUsersCount',
+                            'excoCount',
+                            'memberCount',
+                            'userCount',
+                            'newMembers'                   
+                        ));
+        
+    
         }
 
 

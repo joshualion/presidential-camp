@@ -15,60 +15,62 @@
             </li>
 
           
-            <li class="tab nav-item menu-close">
-                        <a href="#" class="nav-link">
-                          <i class="nav-icon fas fa-users"></i>
-                          <p>
-                            Members
-                            <i class="right fas fa-angle-left"></i>
-                          </p>
-                        </a>
-                        <ul class="nav nav-treeview">
+             {{-- Members --}}
+             <li class="tab nav-item menu-close">
+                <a href="#" class="nav-link">
+                  <i class="nav-icon fas fa-users"></i>
+                  <p>
+                    Members
+                    <i class="right fas fa-angle-left"></i>
+                  </p>
+                </a>
+                <ul class="nav nav-treeview">
 
-                          <li class="nav-item">
-                            <a href="#" class="nav-link">
-                              <i class="fas fa-user nav-icon"></i>
-                              <p>All Members</p>
-                            </a>
-                          </li>
+                  <li class="nav-item">
+                    <a href="/superadmin/members" class="nav-link">
+                      <i class="fas fa-user nav-icon"></i>
+                      <p>All Members</p>
+                    </a>
+                  </li>
 
-                          <li class="nav-item">
-                            <a href="/superadmin/region/dashboard/home" class="nav-link">
-                              <i class="fas fa-tachometer-alt nav-icon"></i>
-                              <p>Members By Region</p>
-                            </a>
-                          </li>
+                  <li class="nav-item">
+                    <a href="/superadmin/members/region" class="nav-link">
+                      <i class="fas fa-tachometer-alt nav-icon"></i>
+                      <p>Members By Region</p>
+                    </a>
+                  </li>
 
-                          <li class="nav-item">
-                            <a href="/superadmin/state/dashboard" class="nav-link">
-                            <i class="fas fa-user nav-icon"></i>
-                              <p>members by States</p>
-                            </a>
-                          </li>
+                  <li class="nav-item">
+                    <a href="/superadmin/state/dashboard" class="nav-link">
+                    <i class="fas fa-user nav-icon"></i>
+                      <p>members by States</p>
+                    </a>
+                  </li>
 
-                          <li class="nav-item">
-                            <a href="./index2.html" class="nav-link">
-                            <i class="fas fa-user nav-icon"></i>
-                              <p>Members by LGA</p>
-                            </a>
-                          </li>
+                  <li class="nav-item">
+                    <a href="./index2.html" class="nav-link">
+                    <i class="fas fa-user nav-icon"></i>
+                      <p>Members by LGA</p>
+                    </a>
+                  </li>
 
-                          <li class="nav-item">
-                            <a href="./index3.html" class="nav-link">
-                            <i class="fas fa-user nav-icon"></i>
-                              <p>Members By Wards</p>
-                            </a>
-                          </li>
+                  <li class="nav-item">
+                    <a href="./index3.html" class="nav-link">
+                    <i class="fas fa-user nav-icon"></i>
+                      <p>Members By Wards</p>
+                    </a>
+                  </li>
 
-                          <li class="nav-item">
-                            <a href="./index3.html" class="nav-link">
-                            <i class="fas fa-user nav-icon"></i>
-                              <p>Members By PU</p>
-                            </a>
-                          </li>
+                  <li class="nav-item">
+                    <a href="./index3.html" class="nav-link">
+                    <i class="fas fa-user nav-icon"></i>
+                      <p>Members By PU</p>
+                    </a>
+                  </li>
 
-                        </ul>
-            </li>
+                </ul>
+    </li>
+    {{-- / Members --}}
             <li class="tab nav-item menu-close">
                         <a href="#" class="nav-link">
                           <i class="nav-icon fas fa-book"></i>
@@ -238,7 +240,7 @@
                           </li>
 
                           <li class="nav-item">
-                            <a href="/national/settings/smtp" class="nav-link">
+                            <a href="/superadmin/settings/smtp" class="nav-link">
                             <i class="fas fa-award nav-icon"></i>
                               <p> SMTP Settings</p>
                             </a>
@@ -264,6 +266,7 @@
                         </ul>
 
             </li>
+            {{-- End Settings --}}
 
             {{-- Roles & Permission Menu --}}
             <li class="tab nav-item menu-close">
@@ -304,8 +307,8 @@
                 </li>
               </ul>
 
-    </li>
-    {{--  End Roles & Permission Menu  --}}
+            </li>
+        {{--  End Roles & Permission Menu  --}}
             <li class="tab nav-item menu-close">
                         <a href="#" class="nav-link">
                           <i class="nav-icon fas fa-user-shield"></i>

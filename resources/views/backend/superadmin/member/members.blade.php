@@ -25,7 +25,6 @@
                                     <tr>
                                         <th>S/N</th>
                                         <th>Name</th>
-                                        <th>State</th>
                                         <th>access Level</th>
                                         <th>Role</th>
                                         <th>Action</th>
@@ -37,7 +36,6 @@
                                     <tr>
                                         <th>S/N</th>
                                         <th>Name</th>
-                                        <th>State</th>
                                         <th>Access Level</th>
                                         <th>Role</th>
                                         <th>Action</th>
@@ -122,7 +120,6 @@
                 "orderable": false
             },
             { "data": "name" },
-            { "data": "state" },
             { "data": "access_level" },
             { "data": "role" }, // Fix the column name here, it should match the one returned in JSON
             { "data": "action", "orderable": false, "searchable": false }

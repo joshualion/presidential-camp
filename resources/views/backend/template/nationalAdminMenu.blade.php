@@ -40,7 +40,7 @@
                           </li>
 
                           <li class="nav-item">
-                            <a href="/national/state/dashboard" class="nav-link">
+                            <a href="/national/members/bystate" class="nav-link">
                             <i class="fas fa-user nav-icon"></i>
                               <p>members by States</p>
                             </a>

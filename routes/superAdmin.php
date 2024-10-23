@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ChartsController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\MembersController;
 use App\Http\Controllers\superadmin\SuperAdminController;
@@ -95,11 +96,18 @@ Route::get('/superadmin/member/suspend/{uuid}', [MembersController::class, 'susp
 Route::delete('/superadmin/member/delete/{uuid}', [MembersController::class, 'deleteMember'])->name('superadmin.member.delete')->middleware('access_level:superadmin');
  //Members By region
  Route::get('/superadmin/members/region', [MembersController::class, 'membersByRegions'])->name('superadmin.members.region')->middleware('access_level:superadmin');
- Route::get('/superadmin/members/region/{uuid}', [MembersController::class, 'RegionMembersView'])->name('superadmin.member.region.view')->middleware('access_level:superadmin');
+ Route::get('/superadmin/members/region/{uuid}', [MembersController::class, 'ViewMembersByRegion'])->name('superadmin.member.region.view')->middleware('access_level:superadmin');
+ Route::get('/superadmin/region/members/data/{uuid}', [MembersController::class, 'getRegionMembersData'])->name('superadmin.region.members.data');
 
 
 //Locations Management Routes
-//Manage Regions
+//Regions
+Route::get('/superadmin/location/region/dashboard/{uuid}', [SuperAdminController::class, 'RegionDashBoard'])->name('superadmin.location.region.dashboard')->middleware('access_level:superadmin');
+Route::get('/superadmin/region/member/distribution/gender/{uuid}', [ChartsController::class, 'GenderDistributionByRegion'])->name('superadmin.region.member.distribution.gender')->middleware('access_level:superadmin');
+Route::get('/superadmin/region/member/distribution/age/{uuid}', [ChartsController::class, 'AgeDistributionByRegion'])->name('superadmin.region.member.distribution.age')->middleware('access_level:superadmin');
+Route::get('/superadmin/region/member/distribution/state/{uuid}', [ChartsController::class, 'StateDistributionByRegion'])->name('superadmin.region.member.distribution.state')->middleware('access_level:superadmin');
+Route::get('/superadmin/region/member/distribution/voter{uuid}', [ChartsController::class, 'VoterDistributionByRegion'])->name('superadmin.region.member.distribution.voter')->middleware('access_level:superadmin');
+
 Route::get('/superadmin/regions', [LocationController::class, 'allRegions'])->name('superadmin.location.regions')->middleware('access_level:superadmin');
 Route::get('/superadmin/region/add', [LocationController::class, 'addRegion'])->name('superadmin.location.region.add')->middleware('access_level:superadmin');
 Route::post('/superadmin/region/store', [LocationController::class, 'storeRegion'])->name('superadmin.location.region.store')->middleware('access_level:superadmin');

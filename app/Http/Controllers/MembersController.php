@@ -41,24 +41,24 @@ class MembersController extends Controller
      {
           // Retrieve the value of the default_country setting
           $defaultCountry = SystemSetting::find(1);
- 
+
          // Retrieve the ID of the default country
          return Country::where('name', $defaultCountry->system_country)->first();
      }
- 
+
      //Function to retrieves regions from set country
      public function getRegions()
      {
          $country_id = $this->getCountries()->id;
          $country = Country::where('id',$country_id)->first();
- 
+
          if($country->name == 'Nigeria'){
              $region = Region::where('country_id', $country_id)->where('name', '!=', 'No-region')->get();
          }else{
          $region = Region::where('country_id', $country_id)->get();
          }
- 
- 
+
+
          return($region);
      }
 
@@ -456,7 +456,7 @@ class MembersController extends Controller
      }
 
 
-        public function ViewMembersByRegion($uuid)
+    public function ViewMembersByRegion($uuid)
         {
             $profileData = $this->getProfileData();
 
@@ -467,25 +467,25 @@ class MembersController extends Controller
             $members = User::where('region_id', $region->id)->get();
 
             return view('backend.' . $profileData->access_level . '.member.viewMembersByRegion', compact('region', 'members', 'profileData'));
-        }
+    }
 
 
 
-        public function getRegionMembersData($uuid)
+    public function getRegionMembersData($uuid)
         {
-            
-            $region = Region::where('uuid', $uuid)->first();   
-   
+
+            $region = Region::where('uuid', $uuid)->first();
+
             $members = User::where('access_level', '!=', 'superadmin')
                             ->where('region_id', $region->id)
                             ->get();
-   
+
             return datatables($members)
                 ->addIndexColumn() // This will automatically add a serial number column
                 ->addColumn('name', function($member) {
                     return $member->firstname . ' ' . $member->lastname;
                 })
-   
+
                 ->addColumn('access_level', function($member) {
                     return $member->access_level;
                 })
@@ -496,7 +496,7 @@ class MembersController extends Controller
                 })
                 ->addColumn('action', function($member) {
                     $profileData = $this->getProfileData();
-   
+
                     // Check if the member is active or not for Suspend/Activate button
                     if ($member->status == 'active') {
                         $button = '
@@ -515,7 +515,7 @@ class MembersController extends Controller
                             </a>
                         ';
                     }
-   
+
                     // Action buttons visible to all
                     $actionButtons = '
                         <a href="' . route('nationaladmin.member.view', $member->uuid) . '">
@@ -524,7 +524,7 @@ class MembersController extends Controller
                             </button>
                         </a>
                         ' . $button;
-   
+
                     // Conditionally show Edit and Delete buttons based on roles/access_level
                     if (
                         $profileData->hasAnyRole([
@@ -550,12 +550,153 @@ class MembersController extends Controller
                             </form>
                         ';
                     }
-   
+
                     return $actionButtons;
                 })
                 ->rawColumns(['role', 'action']) // Ensures that HTML in the 'role' and 'action' columns is rendered properly
                 ->make(true);
+    }
+
+    
+    // *** MEMBERS BY STATES ***
+    public function membersByStates($uuid = null)
+    {
+
+        $profileData = $this->getProfileData();
+       
+    if($uuid) {
+            
+        
+                $country = Country::where('uuid', $uuid)->first();
+                $region = Region::where('uuid', $uuid)->first();
+
+                // Check if the $uuid belongs to a region
+                if($region) {
+                    // Fetch states by region ID
+                    $states = State::where('region_id', $region->id)
+                        ->orderBy('name', 'asc')
+                        ->get();
+                } 
+                // If the $uuid belongs to a country, fetch all states under regions within that country
+                elseif($country) {
+                    // Fetch regions that belong to the country
+                    $regions = Region::where('country_id', $country->id)->pluck('id');
+
+                    // Fetch states that belong to these regions
+                    $states = State::whereIn('region_id', $regions)
+                        ->orderBy('name', 'asc')
+                        ->get();
+                        }
+
+        }else{
+            
+                // If no UUID is provided, fetch all states
+              $states = State::orderBy('name', 'asc')->get();
         }
+
+        
+        
+        return view('backend.'.$profileData->access_level.'.member.membersByState', compact('states', 'profileData'));
+    }
+
+    public function ViewMembersByState($uuid)
+    {
+        $profileData = $this->getProfileData();
+
+        // Find state by UUID or return a 404 error if not found
+        $state = State::where('uuid', $uuid)->firstOrFail();
+
+        // Retrieve members belonging to the region
+        $members = User::where('state_id', $state->id)->get();
+
+        return view('backend.' . $profileData->access_level . '.member.viewMembersByState', compact('state', 'members', 'profileData'));
+    }
+
+    public function getStateMembersData($uuid)
+    {
+
+        $state = State::where('uuid', $uuid)->first();
+
+        $members = User::where('access_level', '!=', 'superadmin')
+                        ->where('state_id', $state->id)
+                        ->get();
+
+        return datatables($members)
+            ->addIndexColumn() // This will automatically add a serial number column
+            ->addColumn('name', function($member) {
+                return $member->firstname . ' ' . $member->lastname;
+            })
+
+            ->addColumn('access_level', function($member) {
+                return $member->access_level;
+            })
+            ->addColumn('role', function($member) {
+                return $member->roles->map(function($role) {
+                    return '<span class="badge badge-pill bg-secondary">' . $role->name . '</span>';
+                })->implode(' ');
+            })
+            ->addColumn('action', function($member) {
+                $profileData = $this->getProfileData();
+
+                // Check if the member is active or not for Suspend/Activate button
+                if ($member->status == 'active') {
+                    $button = '
+                        <a href="' . route($profileData->access_level.'.member.suspend', $member->uuid) . '">
+                            <button class="btn btn-warning btn-sm">
+                                <i class="fas fa-pause"></i> Suspend
+                            </button>
+                        </a>
+                    ';
+                } else {
+                    $button = '
+                        <a href="' . route($profileData->access_level.'.member.suspend', $member->uuid) . '">
+                            <button class="btn btn-success btn-sm">
+                                <i class="fas fa-play"></i> Activate
+                            </button>
+                        </a>
+                    ';
+                }
+
+                // Action buttons visible to all
+                $actionButtons = '
+                    <a href="' . route($profileData->access_level.'.member.view', $member->uuid) . '">
+                        <button class="btn btn-primary btn-sm">
+                            <i class="fas fa-eye"></i> Show
+                        </button>
+                    </a>
+                    ' . $button;
+
+                // Conditionally show Edit and Delete buttons based on roles/access_level
+                if (
+                    $profileData->hasAnyRole([
+                        'National ICT/Media Director',
+                        'Regional ICT/Media Director',
+                        'State ICT/Media Director',
+                        'LGA ICT/Media Director',
+                        'Ward ICT/Media Director',
+                        'PU ICT/Media Director'
+                    ]) || $profileData->access_level == 'superadmin'
+                ) {
+                    $actionButtons .= '
+                        <a href="' . route($profileData->access_level.'.member.edit', $member->uuid) . '">
+                            <button class="btn btn-info btn-sm">
+                                <i class="fas fa-pencil-alt"></i> Edit
+                            </button>
+                        </a>
+                        <form action="' . route($profileData->access_level.'.member.delete', $member->uuid) . '" method="POST" style="display:inline-block;" data-associated-users="false">
+                            ' . csrf_field() . method_field('DELETE') . '
+                            <button type="submit" class="btn btn-danger btn-sm delete-btn">
+                                <i class="fas fa-trash"></i> Delete
+                            </button>
+                        </form>
+                    ';
+                }
+
+                return $actionButtons;
+            })
+            ->rawColumns(['role', 'action']) // Ensures that HTML in the 'role' and 'action' columns is rendered properly
+            ->make(true);
+    }
 
 
 }

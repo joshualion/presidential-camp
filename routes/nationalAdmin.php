@@ -84,7 +84,6 @@ Route::get('/national/member/distribution/voter', [NationalAdminController::clas
 Route::get('/national/member/distribution/state', [NationalAdminController::class, 'nationaladminStateDistribution'])->name('nationaladmin.member.distribution.state')->middleware('access_level:nationaladmin');
 //Member Management
 Route::get('/national/members/data', [MembersController::class, 'getMembersData'])->name('nationaladmin.members.data');
-Route::get('/national/region/members/data/{uuid}', [MembersController::class, 'getRegionMembersData'])->name('nationaladmin.region.members.data');
 
 Route::get('/national/members', [MembersController::class, 'allMembers'])->name('nationaladmin.members')->middleware('access_level:nationaladmin');
 Route::get('/national/member/add', [MembersController::class, 'addMember'])->name('nationaladmin.member.add')->middleware('access_level:nationaladmin');
@@ -97,14 +96,19 @@ Route::delete('/national/member/delete/{uuid}', [MembersController::class, 'dele
  //Members By region
 Route::get('/national/members/region', [MembersController::class, 'membersByRegions'])->name('nationaladmin.members.region')->middleware('access_level:nationaladmin');
 Route::get('/national/members/region/{uuid}', [MembersController::class, 'ViewMembersByRegion'])->name('nationaladmin.member.region.view')->middleware('access_level:nationaladmin');
+Route::get('/national/region/members/data/{uuid}', [MembersController::class, 'getRegionMembersData'])->name('nationaladmin.region.members.data');
+// Members By State
+Route::get('/national/members/bystate/{uuid?}', [MembersController::class, 'membersByStates'])->name('nationaladmin.members.byState')->middleware('access_level:nationaladmin');    
+Route::get('/national/members/state/{uuid}', [MembersController::class, 'ViewMembersByState'])->name('nationaladmin.member.state.view')->middleware('access_level:nationaladmin');
+Route::get('/national/state/members/data/{uuid}', [MembersController::class, 'getStateMembersData'])->name('nationaladmin.state.members.data');
 
 //Locations Management Routes
 //Manage Regions
 Route::get('/national/location/region/dashboard/{uuid}', [NationalAdminController::class, 'RegionDashBoard'])->name('nationaladmin.location.region.dashboard')->middleware('access_level:nationaladmin');
-Route::get('/national/region/member/distribution/gender/{uuid}', [ChartsController::class, 'nationaladminGenderDistributionByRegion'])->name('nationaladmin.region.member.distribution.gender')->middleware('access_level:nationaladmin');
-Route::get('/national/region/member/distribution/age/{uuid}', [ChartsController::class, 'nationaladminAgeDistributionByRegion'])->name('nationaladmin.region.member.distribution.age')->middleware('access_level:nationaladmin');
-Route::get('/national/region/member/distribution/state/{uuid}', [ChartsController::class, 'nationaladminStateDistributionByRegion'])->name('nationaladmin.region.member.distribution.state')->middleware('access_level:nationaladmin');
-Route::get('/national/region/member/distribution/voter{uuid}', [ChartsController::class, 'nationaladminVoterDistributionByRegion'])->name('nationaladmin.region.member.distribution.voter')->middleware('access_level:nationaladmin');
+Route::get('/national/region/member/distribution/gender/{uuid}', [ChartsController::class, 'GenderDistributionByRegion'])->name('nationaladmin.region.member.distribution.gender')->middleware('access_level:nationaladmin');
+Route::get('/national/region/member/distribution/age/{uuid}', [ChartsController::class, 'AgeDistributionByRegion'])->name('nationaladmin.region.member.distribution.age')->middleware('access_level:nationaladmin');
+Route::get('/national/region/member/distribution/state/{uuid}', [ChartsController::class, 'StateDistributionByRegion'])->name('nationaladmin.region.member.distribution.state')->middleware('access_level:nationaladmin');
+Route::get('/national/region/member/distribution/voter{uuid}', [ChartsController::class, 'VoterDistributionByRegion'])->name('nationaladmin.region.member.distribution.voter')->middleware('access_level:nationaladmin');
 Route::get('/national/location/regions', [LocationController::class, 'allRegions'])->name('nationaladmin.location.regions')->middleware('access_level:nationaladmin');
 Route::get('/national/location/region/add', [LocationController::class, 'addRegion'])->name('nationaladmin.location.region.add')->middleware('access_level:nationaladmin');
 Route::post('/national/location/region/store', [LocationController::class, 'storeRegion'])->name('nationaladmin.location.region.store')->middleware('access_level:nationaladmin');
@@ -113,6 +117,12 @@ Route::post('/national/location/region/update/{uuid}', [LocationController::clas
 Route::delete('/national/location/region/delete/{uuid}', [LocationController::class, 'deleteRegion'])->name('nationaladmin.location.region.delete')->middleware('access_level:nationaladmin');
 
 // Manage States
+Route::get('/national/location/state/dashboard/{uuid}', [NationalAdminController::class, 'StateDashBoard'])->name('nationaladmin.location.state.dashboard')->middleware('access_level:nationaladmin');
+Route::get('/national/state/member/distribution/gender/{uuid}', [ChartsController::class, 'GenderDistributionByState'])->name('nationaladmin.state.member.distribution.gender')->middleware('access_level:nationaladmin');
+Route::get('/national/state/member/distribution/age/{uuid}', [ChartsController::class, 'AgeDistributionByState'])->name('nationaladmin.state.member.distribution.age')->middleware('access_level:nationaladmin');
+Route::get('/national/state/member/distribution/lga/{uuid}', [ChartsController::class, 'LgaDistributionByState'])->name('nationaladmin.state.member.distribution.lga')->middleware('access_level:nationaladmin');
+Route::get('/national/state/member/distribution/voter{uuid}', [ChartsController::class, 'VoterDistributionByState'])->name('nationaladmin.state.member.distribution.voter')->middleware('access_level:nationaladmin');
+
 Route::get('/national/location/states', [LocationController::class, 'allStates'])->name('nationaladmin.location.states')->middleware('access_level:nationaladmin');
 Route::get('/national/location/state/add', [LocationController::class, 'addState'])->name('nationaladmin.location.state.add')->middleware('access_level:nationaladmin');
 Route::post('/national/location/state/store', [LocationController::class, 'storeState'])->name('nationaladmin.location.state.store')->middleware('access_level:nationaladmin');
