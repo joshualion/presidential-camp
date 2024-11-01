@@ -47,21 +47,21 @@
                           </li>
 
                           <li class="nav-item">
-                            <a href="./index2.html" class="nav-link">
+                            <a href="/national/members/bylga" class="nav-link">
                             <i class="fas fa-user nav-icon"></i>
                               <p>Members by LGA</p>
                             </a>
                           </li>
 
                           <li class="nav-item">
-                            <a href="./index3.html" class="nav-link">
+                            <a href="/national/members/byward/" class="nav-link">
                             <i class="fas fa-user nav-icon"></i>
                               <p>Members By Wards</p>
                             </a>
                           </li>
 
                           <li class="nav-item">
-                            <a href="./index3.html" class="nav-link">
+                            <a href="/national/members/bypu/" class="nav-link">
                             <i class="fas fa-user nav-icon"></i>
                               <p>Members By PU</p>
                             </a>
@@ -133,7 +133,7 @@
                     </a>
                   </li>
 
-                 
+
                 </ul>
            </li>
             <li class="tab nav-item menu-close">

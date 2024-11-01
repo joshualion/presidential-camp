@@ -73,9 +73,14 @@ class MembersController extends Controller
      {
 
 
-         $members = User::where('access_level', '!=', 'superadmin')->get();
+         $members = User::query()->where('access_level', '!=', 'superadmin');
 
-         return datatables($members)
+         return datatables()->eloquent($members)
+
+                ->filterColumn('name', function ($query, $keyword) {
+                    $query->where('firstname', 'like', "%{$keyword}%")
+                        ->orWhere('lastname', 'like', "%{$keyword}%");
+                })
              ->addIndexColumn() // This will automatically add a serial number column
              ->addColumn('name', function($member) {
                  return $member->firstname . ' ' . $member->lastname;
@@ -476,11 +481,15 @@ class MembersController extends Controller
 
             $region = Region::where('uuid', $uuid)->first();
 
-            $members = User::where('access_level', '!=', 'superadmin')
-                            ->where('region_id', $region->id)
-                            ->get();
+            $members = User::query()->where('access_level', '!=', 'superadmin')
+                            ->where('region_id', $region->id);
 
-            return datatables($members)
+                            return datatables()->eloquent($members)
+
+                            ->filterColumn('name', function ($query, $keyword) {
+                                $query->where('firstname', 'like', "%{$keyword}%")
+                                    ->orWhere('lastname', 'like', "%{$keyword}%");
+                            })
                 ->addIndexColumn() // This will automatically add a serial number column
                 ->addColumn('name', function($member) {
                     return $member->firstname . ' ' . $member->lastname;
@@ -557,28 +566,29 @@ class MembersController extends Controller
                 ->make(true);
     }
 
-    
+
     // *** MEMBERS BY STATES ***
     public function membersByStates($uuid = null)
     {
-
         $profileData = $this->getProfileData();
-       
-    if($uuid) {
-            
-        
-                $country = Country::where('uuid', $uuid)->first();
-                $region = Region::where('uuid', $uuid)->first();
 
-                // Check if the $uuid belongs to a region
-                if($region) {
-                    // Fetch states by region ID
-                    $states = State::where('region_id', $region->id)
-                        ->orderBy('name', 'asc')
-                        ->get();
-                } 
-                // If the $uuid belongs to a country, fetch all states under regions within that country
-                elseif($country) {
+        // Initialize $states to avoid undefined variable
+        $states = collect();
+
+        if ($uuid) {
+            // Check if the $uuid belongs to a region first
+            $region = Region::where('uuid', $uuid)->first();
+
+            if ($region) {
+                // Fetch states by region ID
+                $states = State::where('region_id', $region->id)
+                    ->orderBy('name', 'asc')
+                    ->get();
+            } else {
+                // If not a region, check if the $uuid belongs to a country
+                $country = Country::where('uuid', $uuid)->first();
+
+                if ($country) {
                     // Fetch regions that belong to the country
                     $regions = Region::where('country_id', $country->id)->pluck('id');
 
@@ -586,18 +596,16 @@ class MembersController extends Controller
                     $states = State::whereIn('region_id', $regions)
                         ->orderBy('name', 'asc')
                         ->get();
-                        }
-
-        }else{
-            
-                // If no UUID is provided, fetch all states
-              $states = State::orderBy('name', 'asc')->get();
+                }
+            }
+        } else {
+            // If no UUID is provided, fetch all states
+            $states = State::orderBy('name', 'asc')->get();
         }
 
-        
-        
         return view('backend.'.$profileData->access_level.'.member.membersByState', compact('states', 'profileData'));
     }
+
 
     public function ViewMembersByState($uuid)
     {
@@ -616,12 +624,15 @@ class MembersController extends Controller
     {
 
         $state = State::where('uuid', $uuid)->first();
+        $members = User::query()->where('access_level', '!=', 'superadmin')
+                        ->where('state_id', $state->id);
 
-        $members = User::where('access_level', '!=', 'superadmin')
-                        ->where('state_id', $state->id)
-                        ->get();
+          return datatables()->eloquent($members)
 
-        return datatables($members)
+            ->filterColumn('name', function ($query, $keyword) {
+                    $query->where('firstname', 'like', "%{$keyword}%")
+                    ->orWhere('lastname', 'like', "%{$keyword}%");
+             })
             ->addIndexColumn() // This will automatically add a serial number column
             ->addColumn('name', function($member) {
                 return $member->firstname . ' ' . $member->lastname;
@@ -697,6 +708,413 @@ class MembersController extends Controller
             ->rawColumns(['role', 'action']) // Ensures that HTML in the 'role' and 'action' columns is rendered properly
             ->make(true);
     }
+
+
+    // *** MEMBERS BY LOCAL GOVERNMENTS ***
+    public function membersByLocalGovernments($uuid = null)
+
+      {
+        $profileData = $this->getProfileData();
+
+        // Initialize $lgas to avoid undefined variable issues
+        $lgas = collect();
+
+        if ($uuid) {
+            // Prioritize checking for state, region, then country
+            $state = State::where('uuid', $uuid)->first();
+
+            if ($state) {
+                // Fetch all LGAs in that state
+                $lgas = LocalGovernmentArea::where('state_id', $state->id)
+                    ->orderBy('name', 'asc')
+                    ->get();
+            } else {
+                // If not a state, check for region
+                $region = Region::where('uuid', $uuid)->first();
+
+                if ($region) {
+                    // Fetch LGAs in states that belong to this region
+                    $states = State::where('region_id', $region->id)->pluck('id');
+                    $lgas = LocalGovernmentArea::whereIn('state_id', $states)
+                        ->orderBy('name', 'asc')
+                        ->get();
+                } else {
+                    // If not a region, check for country
+                    $country = Country::where('uuid', $uuid)->first();
+
+                    if ($country) {
+                        // Fetch LGAs in states under regions in that country
+                        $regions = Region::where('country_id', $country->id)->pluck('id');
+                        $states = State::whereIn('region_id', $regions)->pluck('id');
+                        $lgas = LocalGovernmentArea::whereIn('state_id', $states)
+                            ->orderBy('name', 'asc')
+                            ->get();
+                    }
+                }
+            }
+        } else {
+            // If no UUID is provided, fetch all LGAs
+            $lgas = LocalGovernmentArea::orderBy('name', 'asc')->get();
+        }
+
+        return view('backend.' . $profileData->access_level . '.member.membersByLga', compact('lgas', 'profileData'));
+    }
+
+    public function viewMembersByLocalGovernments($uuid)
+    {
+        $profileData = $this->getProfileData();
+
+        // Find state by UUID or return a 404 error if not found
+        $lga = LocalGovernmentArea::where('uuid', $uuid)->firstOrFail();
+
+        // Retrieve members belonging to the region
+        $members = User::where('lga_id', $lga->id)->get();
+
+        return view('backend.' . $profileData->access_level . '.member.viewMembersByLga', compact('lga', 'members', 'profileData'));
+    }
+
+    public function getLgaMembersData($uuid)
+    {
+
+        $lga = LocalGovernmentArea::where('uuid', $uuid)->first();
+
+        $members = User::query()->where('access_level', '!=', 'superadmin')
+                        ->where('lga_id', $lga->id);
+
+                        return datatables()->eloquent($members)
+
+                        ->filterColumn('name', function ($query, $keyword) {
+                                $query->where('firstname', 'like', "%{$keyword}%")
+                                ->orWhere('lastname', 'like', "%{$keyword}%");
+                         })
+            ->addIndexColumn() // This will automatically add a serial number column
+            ->addColumn('name', function($member) {
+                return $member->firstname . ' ' . $member->lastname;
+            })
+
+            ->addColumn('access_level', function($member) {
+                return $member->access_level;
+            })
+            ->addColumn('role', function($member) {
+                return $member->roles->map(function($role) {
+                    return '<span class="badge badge-pill bg-secondary">' . $role->name . '</span>';
+                })->implode(' ');
+            })
+            ->addColumn('action', function($member) {
+                $profileData = $this->getProfileData();
+
+                // Check if the member is active or not for Suspend/Activate button
+                if ($member->status == 'active') {
+                    $button = '
+                        <a href="' . route($profileData->access_level.'.member.suspend', $member->uuid) . '">
+                            <button class="btn btn-warning btn-sm">
+                                <i class="fas fa-pause"></i> Suspend
+                            </button>
+                        </a>
+                    ';
+                } else {
+                    $button = '
+                        <a href="' . route($profileData->access_level.'.member.suspend', $member->uuid) . '">
+                            <button class="btn btn-success btn-sm">
+                                <i class="fas fa-play"></i> Activate
+                            </button>
+                        </a>
+                    ';
+                }
+
+                // Action buttons visible to all
+                $actionButtons = '
+                    <a href="' . route($profileData->access_level.'.member.view', $member->uuid) . '">
+                        <button class="btn btn-primary btn-sm">
+                            <i class="fas fa-eye"></i> Show
+                        </button>
+                    </a>
+                    ' . $button;
+
+                // Conditionally show Edit and Delete buttons based on roles/access_level
+                if (
+                    $profileData->hasAnyRole([
+                        'National ICT/Media Director',
+                        'Regional ICT/Media Director',
+                        'State ICT/Media Director',
+                        'LGA ICT/Media Director',
+                        'Ward ICT/Media Director',
+                        'PU ICT/Media Director'
+                    ]) || $profileData->access_level == 'superadmin'
+                ) {
+                    $actionButtons .= '
+                        <a href="' . route($profileData->access_level.'.member.edit', $member->uuid) . '">
+                            <button class="btn btn-info btn-sm">
+                                <i class="fas fa-pencil-alt"></i> Edit
+                            </button>
+                        </a>
+                        <form action="' . route($profileData->access_level.'.member.delete', $member->uuid) . '" method="POST" style="display:inline-block;" data-associated-users="false">
+                            ' . csrf_field() . method_field('DELETE') . '
+                            <button type="submit" class="btn btn-danger btn-sm delete-btn">
+                                <i class="fas fa-trash"></i> Delete
+                            </button>
+                        </form>
+                    ';
+                }
+
+                return $actionButtons;
+            })
+            ->rawColumns(['role', 'action']) // Ensures that HTML in the 'role' and 'action' columns is rendered properly
+            ->make(true);
+    }
+
+
+      // *** MEMBERS BY WARDS ***
+    public function membersByWards($uuid = null)
+     {
+                $profileData = $this->getProfileData();
+
+                if($uuid) {
+                    $LgaStateRegionCountryUUID = $uuid;
+                   }else{
+                    //get system Country
+                    $Setting= SystemSetting::find(1);
+                    $countryName = $Setting->system_country;
+                    $country = Country::where('name',  $countryName)->first();
+
+                    $LgaStateRegionCountryUUID = $country->uuid;
+                   }
+                return view('backend.' . $profileData->access_level . '.member.membersByWard', compact('LgaStateRegionCountryUUID', 'profileData'));
+    }
+
+
+    public function viewMembersByWard($uuid){
+        $profileData = $this->getProfileData();
+
+        // Find state by UUID or return a 404 error if not found
+        $ward = Ward::where('uuid', $uuid)->firstOrFail();
+
+        // Retrieve members belonging to the region
+        $members = User::where('ward_id', $ward->id)->get();
+
+        return view('backend.' . $profileData->access_level . '.member.viewMembersByWard', compact('ward', 'members', 'profileData'));
+
+
+    }
+
+
+    public function getWardMembersData($uuid)
+    {
+
+        $ward = Ward::where('uuid', $uuid)->first();
+
+        $members = User::query()->where('access_level', '!=', 'superadmin')
+                        ->where('ward_id', $ward->id);
+
+                        return datatables()->eloquent($members)
+
+                        ->filterColumn('name', function ($query, $keyword) {
+                                $query->where('firstname', 'like', "%{$keyword}%")
+                                ->orWhere('lastname', 'like', "%{$keyword}%");
+                         })
+            ->addIndexColumn() // This will automatically add a serial number column
+            ->addColumn('name', function($member) {
+                return $member->firstname . ' ' . $member->lastname;
+            })
+
+            ->addColumn('access_level', function($member) {
+                return $member->access_level;
+            })
+            ->addColumn('role', function($member) {
+                return $member->roles->map(function($role) {
+                    return '<span class="badge badge-pill bg-secondary">' . $role->name . '</span>';
+                })->implode(' ');
+            })
+            ->addColumn('action', function($member) {
+                $profileData = $this->getProfileData();
+
+                // Check if the member is active or not for Suspend/Activate button
+                if ($member->status == 'active') {
+                    $button = '
+                        <a href="' . route($profileData->access_level.'.member.suspend', $member->uuid) . '">
+                            <button class="btn btn-warning btn-sm">
+                                <i class="fas fa-pause"></i> Suspend
+                            </button>
+                        </a>
+                    ';
+                } else {
+                    $button = '
+                        <a href="' . route($profileData->access_level.'.member.suspend', $member->uuid) . '">
+                            <button class="btn btn-success btn-sm">
+                                <i class="fas fa-play"></i> Activate
+                            </button>
+                        </a>
+                    ';
+                }
+
+                // Action buttons visible to all
+                $actionButtons = '
+                    <a href="' . route($profileData->access_level.'.member.view', $member->uuid) . '">
+                        <button class="btn btn-primary btn-sm">
+                            <i class="fas fa-eye"></i> Show
+                        </button>
+                    </a>
+                    ' . $button;
+
+                // Conditionally show Edit and Delete buttons based on roles/access_level
+                if (
+                    $profileData->hasAnyRole([
+                        'National ICT/Media Director',
+                        'Regional ICT/Media Director',
+                        'State ICT/Media Director',
+                        'LGA ICT/Media Director',
+                        'Ward ICT/Media Director',
+                        'PU ICT/Media Director'
+                    ]) || $profileData->access_level == 'superadmin'
+                ) {
+                    $actionButtons .= '
+                        <a href="' . route($profileData->access_level.'.member.edit', $member->uuid) . '">
+                            <button class="btn btn-info btn-sm">
+                                <i class="fas fa-pencil-alt"></i> Edit
+                            </button>
+                        </a>
+                        <form action="' . route($profileData->access_level.'.member.delete', $member->uuid) . '" method="POST" style="display:inline-block;" data-associated-users="false">
+                            ' . csrf_field() . method_field('DELETE') . '
+                            <button type="submit" class="btn btn-danger btn-sm delete-btn">
+                                <i class="fas fa-trash"></i> Delete
+                            </button>
+                        </form>
+                    ';
+                }
+
+                return $actionButtons;
+            })
+            ->rawColumns(['role', 'action']) // Ensures that HTML in the 'role' and 'action' columns is rendered properly
+            ->make(true);
+    }
+
+
+     // *** MEMBERS BY PU ***
+
+     public function membersByPus($uuid = null)
+     {
+                $profileData = $this->getProfileData();
+
+                if($uuid) {
+                    $WardLgaStateRegionCountryUUID = $uuid;
+                   }else{
+                    //get system Country
+                    $Setting= SystemSetting::find(1);
+                    $countryName = $Setting->system_country;
+                    $country = Country::where('name',  $countryName)->first();
+
+                    $WardLgaStateRegionCountryUUID = $country->uuid;
+                   }
+                return view('backend.' . $profileData->access_level . '.member.membersByPu', compact('WardLgaStateRegionCountryUUID', 'profileData'));
+    }
+
+
+    public function viewMembersByPu($uuid){
+        $profileData = $this->getProfileData();
+
+        // Find state by UUID or return a 404 error if not found
+        $pu = PollingUnit::where('uuid', $uuid)->firstOrFail();
+
+        // Retrieve members belonging to the region
+        $members = User::where('polling_unit_id', $pu->id)->get();
+
+        return view('backend.' . $profileData->access_level . '.member.viewMembersByPu', compact('pu', 'members', 'profileData'));
+
+
+    }
+
+
+    public function getPuMembersData($uuid)
+    {
+
+    $pu = PollingUnit::where('uuid', $uuid)->first();
+
+        $members = User::query()->where('access_level', '!=', 'superadmin')
+                        ->where('polling_unit_id', $pu->id);
+
+                        return datatables()->eloquent($members)
+
+                        ->filterColumn('name', function ($query, $keyword) {
+                                $query->where('firstname', 'like', "%{$keyword}%")
+                                ->orWhere('lastname', 'like', "%{$keyword}%");
+                         })
+            ->addIndexColumn() // This will automatically add a serial number column
+            ->addColumn('name', function($member) {
+                return $member->firstname . ' ' . $member->lastname;
+            })
+
+            ->addColumn('access_level', function($member) {
+                return $member->access_level;
+            })
+            ->addColumn('role', function($member) {
+                return $member->roles->map(function($role) {
+                    return '<span class="badge badge-pill bg-secondary">' . $role->name . '</span>';
+                })->implode(' ');
+            })
+            ->addColumn('action', function($member) {
+                $profileData = $this->getProfileData();
+
+                // Check if the member is active or not for Suspend/Activate button
+                if ($member->status == 'active') {
+                    $button = '
+                        <a href="' . route($profileData->access_level.'.member.suspend', $member->uuid) . '">
+                            <button class="btn btn-warning btn-sm">
+                                <i class="fas fa-pause"></i> Suspend
+                            </button>
+                        </a>
+                    ';
+                } else {
+                    $button = '
+                        <a href="' . route($profileData->access_level.'.member.suspend', $member->uuid) . '">
+                            <button class="btn btn-success btn-sm">
+                                <i class="fas fa-play"></i> Activate
+                            </button>
+                        </a>
+                    ';
+                }
+
+                // Action buttons visible to all
+                $actionButtons = '
+                    <a href="' . route($profileData->access_level.'.member.view', $member->uuid) . '">
+                        <button class="btn btn-primary btn-sm">
+                            <i class="fas fa-eye"></i> Show
+                        </button>
+                    </a>
+                    ' . $button;
+
+                // Conditionally show Edit and Delete buttons based on roles/access_level
+                if (
+                    $profileData->hasAnyRole([
+                        'National ICT/Media Director',
+                        'Regional ICT/Media Director',
+                        'State ICT/Media Director',
+                        'LGA ICT/Media Director',
+                        'Ward ICT/Media Director',
+                        'PU ICT/Media Director'
+                    ]) || $profileData->access_level == 'superadmin'
+                ) {
+                    $actionButtons .= '
+                        <a href="' . route($profileData->access_level.'.member.edit', $member->uuid) . '">
+                            <button class="btn btn-info btn-sm">
+                                <i class="fas fa-pencil-alt"></i> Edit
+                            </button>
+                        </a>
+                        <form action="' . route($profileData->access_level.'.member.delete', $member->uuid) . '" method="POST" style="display:inline-block;" data-associated-users="false">
+                            ' . csrf_field() . method_field('DELETE') . '
+                            <button type="submit" class="btn btn-danger btn-sm delete-btn">
+                                <i class="fas fa-trash"></i> Delete
+                            </button>
+                        </form>
+                    ';
+                }
+
+                return $actionButtons;
+            })
+            ->rawColumns(['role', 'action']) // Ensures that HTML in the 'role' and 'action' columns is rendered properly
+            ->make(true);
+    }
+
+
 
 
 }

@@ -11,6 +11,7 @@
                     <h3 class="card-title">Add Local Government Area</h3>
                     <div class="card-tools">
                         <a href="{{ route($profileData->access_level.'.location.lgas') }}"><button class="btn btn-default"> <i class="fa fa-eye"></i> All local Government Area</button></a>
+                        <a href="{{route($profileData->access_level.'.location.lga.import')}}"><button class="btn btn-dark"> <i class="fa fa-file-excel"></i> Import LGAs</button></a>
                     </div>
                 </div>
                 <!-- /.card-header -->

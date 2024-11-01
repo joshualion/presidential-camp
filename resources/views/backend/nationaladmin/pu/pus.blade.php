@@ -15,7 +15,7 @@
                     </div>
                 </div>
                 <!-- /.card-header -->
-                <div class="card-body">                    
+                <div class="card-body">
 
             <table id="mypus" class="table table-bordered table-striped">
                     <thead>
@@ -101,7 +101,15 @@
 <!-- Page specific data table script -->
 <!-- jQuery -->
 <script src="{{asset('assets/plugins/jquery/jquery.min.js')}}"></script>
+
+
 <script>
+
+$.ajaxSetup({
+    headers: {
+        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+    }
+});
 
  $(document).ready(function() {
     $('#mypus').DataTable({
@@ -109,6 +117,7 @@
         "serverSide": true,
         "ajax": "{{ route('pus.data') }}", // Define a route to get the paginated data
         "pageLength": 25, // Default number of rows per page
+        "searching": true,
         "lengthMenu": [ [10, 25, 50, 100], [10, 25, 50, 100] ],
         "columns": [
             {
@@ -118,11 +127,11 @@
                 },
                 "orderable": false
             },
-            { "data": "name" },
-            { "data": "ward" },
-            { "data": "lga" },
-            { "data": "state" },
-            { "data": "region" }, // Fix the column name here, it should match the one returned in JSON
+            { "data": "name", "searchable": true },
+            { "data": "ward", "searchable": true },
+            { "data": "lga", "searchable": true },
+            { "data": "state", "searchable": true },
+            { "data": "region", "searchable": true }, // Fix the column name here, it should match the one returned in JSON
             { "data": "action", "orderable": false, "searchable": false }
         ],
         "responsive": true,

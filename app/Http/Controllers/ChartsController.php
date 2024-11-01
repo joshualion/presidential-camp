@@ -24,8 +24,8 @@ use Spatie\Permission\Models\Role;
 
 class ChartsController extends Controller
 {
-    
-    
+
+
     public function __construct()
     {
 
@@ -65,7 +65,7 @@ class ChartsController extends Controller
 
         return($region);
     }
-    
+
     public function GenderDistributionByRegion($uuid)
     {
         $region = Region::where('uuid', $uuid)->firstOrFail();
@@ -114,6 +114,78 @@ class ChartsController extends Controller
         return response()->json($genderData);
     }
 
+    public function GenderDistributionByLga($uuid)
+    {
+        $lga = LocalGovernmentArea::where('uuid', $uuid)->firstOrFail();
+
+        $maleCount = User::where('access_level', '!=', 'superadmin')
+                            ->where('lga_id', $lga->id)
+                            ->where('gender', 'Male')->count();
+        $femaleCount = User::where('access_level', '!=', 'superadmin')
+                            ->where('lga_id', $lga->id)
+                            ->where('gender', 'Female')->count();
+
+        $genderData = [
+            'labels' => ['Male', 'Female'],
+            'datasets' => [
+                [
+                    'data' => [$maleCount, $femaleCount],
+                    'backgroundColor' => ['#28a745', '#e74c3c']
+                ]
+            ]
+        ];
+
+        return response()->json($genderData);
+    }
+
+    public function GenderDistributionByWard($uuid)
+    {
+        $ward = Ward::where('uuid', $uuid)->firstOrFail();
+
+        $maleCount = User::where('access_level', '!=', 'superadmin')
+                            ->where('ward_id', $ward->id)
+                            ->where('gender', 'Male')->count();
+        $femaleCount = User::where('access_level', '!=', 'superadmin')
+                            ->where('ward_id', $ward->id)
+                            ->where('gender', 'Female')->count();
+
+        $genderData = [
+            'labels' => ['Male', 'Female'],
+            'datasets' => [
+                [
+                    'data' => [$maleCount, $femaleCount],
+                    'backgroundColor' => ['#28a745', '#e74c3c']
+                ]
+            ]
+        ];
+
+        return response()->json($genderData);
+    }
+
+    public function GenderDistributionByPu($uuid)
+    {
+        $pu = PollingUnit::where('uuid', $uuid)->firstOrFail();
+
+        $maleCount = User::where('access_level', '!=', 'superadmin')
+                            ->where('polling_unit_id ', $pu->id)
+                            ->where('gender', 'Male')->count();
+        $femaleCount = User::where('access_level', '!=', 'superadmin')
+                            ->where('polling_unit_id ', $pu->id)
+                            ->where('gender', 'Female')->count();
+
+        $genderData = [
+            'labels' => ['Male', 'Female'],
+            'datasets' => [
+                [
+                    'data' => [$maleCount, $femaleCount],
+                    'backgroundColor' => ['#28a745', '#e74c3c']
+                ]
+            ]
+        ];
+
+        return response()->json($genderData);
+    }
+
 
 
     // function member Distribution By Age
@@ -121,7 +193,7 @@ class ChartsController extends Controller
     {
         $region = Region::where('uuid', $uuid)->firstOrFail();
         $profileData  = $this->getProfileData();
-        
+
         // Fetch all age grades
         $ageGrades = AgeGrade::all(); // Get both id and name
 
@@ -166,7 +238,7 @@ class ChartsController extends Controller
     {
         $state = State::where('uuid', $uuid)->firstOrFail();
         $profileData  = $this->getProfileData();
-        
+
         // Fetch all age grades
         $ageGrades = AgeGrade::all(); // Get both id and name
 
@@ -207,6 +279,51 @@ class ChartsController extends Controller
         return response()->json($ageData);
     }
 
+    public function AgeDistributionByLga($uuid)
+    {
+        $lga = LocalGovernmentArea::where('uuid', $uuid)->firstOrFail();
+
+
+        // Fetch all age grades
+        $ageGrades = AgeGrade::all(); // Get both id and name
+
+        // Initialize the counts array
+        $ageCounts = [];
+
+        // Loop through each age grade and count the users
+        foreach ($ageGrades as $ageGrade) {
+            // Count users by age_grade_id
+            $count = User::where('access_level', '!=', 'superadmin')
+                            ->where('lga_id', $lga->id)
+                            ->where('age_grade_id', $ageGrade->id)->count();
+            // Append the count to the ageCounts array
+            $ageCounts[] = $count;
+        }
+
+        // Define an array of colors for the chart
+        $colors = [
+            '#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c', '#d35400', '#c0392b', '#34495e', '#27ae60', '#2980b9'
+        ];
+
+        // Use the array of colors for background colors
+        $backgroundColors = array_slice($colors, 0, count($ageGrades));
+
+        // Prepare the data structure for Chart.js
+        $ageData = [
+            'labels' => $ageGrades->pluck('name'), // Pluck age grade names
+            'datasets' => [
+                [
+                    'label' => 'Age Distribution',
+                    'data' => $ageCounts, // Data for the counts
+                    'backgroundColor' => $backgroundColors
+                ]
+            ]
+        ];
+
+        // Return the data as JSON for Chart.js
+        return response()->json($ageData);
+    }
+
        //function member Distribution By Eligible Voters
     public function VoterDistributionByRegion($uuid)
        {
@@ -216,10 +333,10 @@ class ChartsController extends Controller
                             ->where('region_id', $region->id)
                             ->where('validvoter', 'Yes')
                             ->where('access_level', '!=', 'superadmin')->count(),
-               
+
                             'No' => User::where('access_level', '!=', 'superadmin')
                             ->where('region_id', $region->id)
-                            ->where('validvoter', 'No')                            
+                            ->where('validvoter', 'No')
                             ->where('access_level', '!=', 'superadmin')->count(),
            ];
 
@@ -244,10 +361,94 @@ class ChartsController extends Controller
                          ->where('state_id', $state->id)
                          ->where('validvoter', 'Yes')
                          ->where('access_level', '!=', 'superadmin')->count(),
-            
+
                          'No' => User::where('access_level', '!=', 'superadmin')
                          ->where('state_id', $state->id)
-                         ->where('validvoter', 'No')                            
+                         ->where('validvoter', 'No')
+                         ->where('access_level', '!=', 'superadmin')->count(),
+        ];
+
+        $validVoterData = [
+            'labels' => ['Eligible Voters', 'Ineligible Voters'],
+            'datasets' => [
+                [
+                    'data' => array_values($validVoterCounts),
+                    'backgroundColor' => ['#3498db', '#e74c3c']
+                ]
+            ]
+        ];
+
+        return response()->json($validVoterData);
+    }
+
+    public function VoterDistributionByLga($uuid)
+    {
+        $lga = LocalGovernmentArea::where('uuid', $uuid)->firstOrFail();
+        $validVoterCounts = [
+            'Yes' => User::where('access_level', '!=', 'superadmin')
+                         ->where('lga_id', $lga->id)
+                         ->where('validvoter', 'Yes')
+                         ->where('access_level', '!=', 'superadmin')->count(),
+
+                         'No' => User::where('access_level', '!=', 'superadmin')
+                         ->where('lga_id', $lga->id)
+                         ->where('validvoter', 'No')
+                         ->where('access_level', '!=', 'superadmin')->count(),
+        ];
+
+        $validVoterData = [
+            'labels' => ['Eligible Voters', 'Ineligible Voters'],
+            'datasets' => [
+                [
+                    'data' => array_values($validVoterCounts),
+                    'backgroundColor' => ['#3498db', '#e74c3c']
+                ]
+            ]
+        ];
+
+        return response()->json($validVoterData);
+    }
+
+    public function VoterDistributionByWard($uuid)
+    {
+        $ward = Ward::where('uuid', $uuid)->firstOrFail();
+        $validVoterCounts = [
+            'Yes' => User::where('access_level', '!=', 'superadmin')
+                         ->where('ward_id', $ward->id)
+                         ->where('validvoter', 'Yes')
+                         ->where('access_level', '!=', 'superadmin')->count(),
+
+                         'No' => User::where('access_level', '!=', 'superadmin')
+                         ->where('ward_id', $ward->id)
+                         ->where('validvoter', 'No')
+                         ->where('access_level', '!=', 'superadmin')->count(),
+        ];
+
+        $validVoterData = [
+            'labels' => ['Eligible Voters', 'Ineligible Voters'],
+            'datasets' => [
+                [
+                    'data' => array_values($validVoterCounts),
+                    'backgroundColor' => ['#3498db', '#e74c3c']
+                ]
+            ]
+        ];
+
+        return response()->json($validVoterData);
+    }
+
+    public function VoterDistributionByPu($uuid)
+    {
+        $pu = PollingUnit::where('uuid', $uuid)->firstOrFail();
+        $validVoterCounts = [
+            'Yes' => User::where('access_level', '!=', 'superadmin')
+                         ->where('polling_unit_id', $pu->id)
+                         ->where('validvoter', 'Yes')
+                         ->where('access_level', '!=', 'superadmin')->count(),
+
+                         'No' => User::where('access_level', '!=', 'superadmin')
+                         ->where('polling_unit_id', $pu->id)
+                         ->where('validvoter', 'No')
                          ->where('access_level', '!=', 'superadmin')->count(),
         ];
 
@@ -315,7 +516,7 @@ class ChartsController extends Controller
           ];
 
           return response()->json($stateData);
-    } 
+    }
 
     public function lgaDistributionByState($uuid)
     {
@@ -359,7 +560,7 @@ class ChartsController extends Controller
             'labels' => $filteredLabels,
             'datasets' => [
                 [
-                    'label' => 'State Distribution',
+                    'label' => 'LGA Distribution',
                     'data' => array_values($filteredlgaCounts),
                     'backgroundColor' => $filteredBackgroundColors
                 ]
@@ -367,7 +568,57 @@ class ChartsController extends Controller
         ];
 
         return response()->json($lgaData);
-    } 
+    }
 
-    
+    public function wardDistributionByLga($uuid)
+    {
+        $lga = LocalGovernmentArea::where('uuid', $uuid)->firstOrFail();
+        $wards  = Ward::where('lga_id', $lga->id)->get(); // Assuming you have a Ward model and table
+
+        $wardCounts = [];
+        // Define an array of colors
+        $colors = [
+            '#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c', '#d35400', '#c0392b', '#34495e', '#27ae60', '#2980b9',
+            '#e74c3c', '#f39c12', '#1abc9c', '#9b59b6', '#27ae60', '#d35400', '#c0392b', '#34495e', '#3498db', '#2ecc71', '#2980b9',
+            '#e74c3c', '#f39c12', '#1abc9c', '#9b59b6', '#27ae60', '#d35400', '#c0392b', '#34495e', '#3498db', '#2ecc71', '#2980b9',
+            '#e74c3c', '#f39c12', '#1abc9c',
+        ];
+
+        // Use the array of colors for background colors
+        $backgroundColors = array_slice($colors, 0, count($wards));
+
+        // Iterate over wards to get the user count per ward
+            foreach ($wards as $ward) {
+                $count = User::where('ward_id', $ward->id)
+                ->where('lga_id', $lga->id)
+                ->where('access_level', '!=', 'superadmin')->count();
+                $wardCounts[] = $count;
+            }
+
+        // Get an array of state names
+        $wardLabels = $wards->pluck('name')->toArray();
+
+        // Filter out states with zero user counts
+        $filteredwardCounts = array_filter($wardCounts, function ($count) {
+            return $count > 0;
+        });
+
+        // Filter corresponding state names and background colors
+        $filteredLabels = array_values(array_intersect_key($wardLabels, $filteredwardCounts));
+        $filteredBackgroundColors = array_slice($backgroundColors, 0, count($filteredLabels));
+
+        // Prepare the state distribution data for the donut chart
+        $wardData = [
+            'labels' => $filteredLabels,
+            'datasets' => [
+                [
+                    'label' => 'Ward Distribution',
+                    'data' => array_values($filteredwardCounts),
+                    'backgroundColor' => $filteredBackgroundColors
+                ]
+            ]
+        ];
+
+        return response()->json($wardData);
+    }
 }

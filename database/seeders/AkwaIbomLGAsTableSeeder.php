@@ -48,7 +48,7 @@ class AkwaIbomLGAsTableSeeder extends Seeder
             ['name' => 'Onna', 'uuid' => (string) Str::uuid(), 'state_id' => $akwaIbomId, 'created_at' => $now, 'updated_at' => $now],
             ['name' => 'Oron', 'uuid' => (string) Str::uuid(), 'state_id' => $akwaIbomId, 'created_at' => $now, 'updated_at' => $now],
             ['name' => 'Oruk Anam', 'uuid' => (string) Str::uuid(), 'state_id' => $akwaIbomId, 'created_at' => $now, 'updated_at' => $now],
-            ['name' => 'Udung-Uko', 'uuid' => (string) Str::uuid(), 'state_id' => $akwaIbomId, 'created_at' => $now, 'updated_at' => $now],
+            ['name' => 'Udung Uko', 'uuid' => (string) Str::uuid(), 'state_id' => $akwaIbomId, 'created_at' => $now, 'updated_at' => $now],
             ['name' => 'Ukanafun', 'uuid' => (string) Str::uuid(), 'state_id' => $akwaIbomId, 'created_at' => $now, 'updated_at' => $now],
             ['name' => 'Uruan', 'uuid' => (string) Str::uuid(), 'state_id' => $akwaIbomId, 'created_at' => $now, 'updated_at' => $now],
             ['name' => 'Urue-Offong/Oruko', 'uuid' => (string) Str::uuid(), 'state_id' => $akwaIbomId, 'created_at' => $now, 'updated_at' => $now],

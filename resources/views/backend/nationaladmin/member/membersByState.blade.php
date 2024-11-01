@@ -32,7 +32,7 @@
                                             <tr>
                                                 <td>{{ $loop->iteration }}</td>
                                                 <td>{{ $state->region->name }}</td>
-                                                <td>{{ $state->name }}</td>
+                                                <td><strong>{{ $state->name }}</strong></td>
                                                 <td>
                                                     <span class="badge bg-secondary text-white">
                                                         {{ $state->users->where('access_level', '!=', 'superadmin')->count() }}

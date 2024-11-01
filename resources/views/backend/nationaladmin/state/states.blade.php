@@ -32,7 +32,7 @@
                     <tr>
 
                         <td>{{ $serialNumber++ }}</td>
-                        <td>{{ $state->name}}</td>                                                
+                        <td><strong>{{ $state->name}}</strong></td>                                                
                         <td>{{ optional($state->region)->name}}</td>
                         
                         <td>

@@ -131,6 +131,17 @@ Route::post('/superadmin/location/localgovernment/store', [LocationController::c
 Route::get('/superadmin/location/localgovernment/edit/{uuid}', [LocationController::class, 'editLocalGovernment'])->name('superadmin.location.lga.edit')->middleware('access_level:superadmin');
 Route::post('/superadmin/location/localgovernment/update/{uuid}', [LocationController::class, 'updateLocalGovernment'])->name('superadmin.location.lga.update')->middleware('access_level:superadmin');
 Route::delete('/superadmin/location/localgovernment/delete/{uuid}', [LocationController::class, 'deleteLocalGovernment'])->name('superadmin.location.lga.delete')->middleware('access_level:superadmin');
+
+//import LGA Form
+Route::get('/national/location/importlgas', [LocationController::class, 'importLgasForm'])->name('nationaladmin.location.lga.import')->middleware('access_level:nationaladmin');
+
+// Export Route
+Route::get('/national/location/exportlgas', [LocationController::class, 'exportLgas'])->name('nationaladmin.location.ward.exportLgas')->middleware('access_level:nationaladmin');
+
+// Import Route
+Route::post('/national/location/importlgas', [LocationController::class, 'importLgas'])->name('nationaladmin.location.lga.importLgas')->middleware('access_level:nationaladmin');
+
+
 // manage Wards
 Route::get('/superadmin/location/wards', [LocationController::class, 'allWards'])->name('superadmin.location.wards')->middleware('access_level:superadmin');
 Route::get('/superadmin/location/ward/add', [LocationController::class, 'addWard'])->name('superadmin.location.ward.add')->middleware('access_level:superadmin');

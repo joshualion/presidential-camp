@@ -18,7 +18,7 @@
 
                    <!-- Small boxes (Stat box) -->
                   <div class="row">
-                            
+
                             <!-- ./col -->
                             <div class="col-lg-4 col-6">
                               <!-- small box -->
@@ -28,7 +28,7 @@
                                   <p>Out of <strong>{{$lgaCount}}</strong> LGAs in {{$state->name}}</p>
                                   <p style="float: right;">
                                     <b>
-                                        @php 
+                                        @php
                                             if ($lgaCount > 0) {
                                                 echo number_format(($lgasWithUsersCount / $lgaCount) * 100, 2);
                                             } else {
@@ -41,7 +41,7 @@
                                 <div class="icon">
                                   <i class="ion ion-lga"></i>
                                 </div>
-                                <a href="#" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
+                                <a href="{{route($profileData->access_level.'.members.byLga', $state->uuid)}}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
                               </div>
                             </div>
                             <!-- ./col -->
@@ -66,7 +66,7 @@
                                 <div class="icon">
                                   <i class="ion ion-ward"></i>
                                 </div>
-                                <a href="#" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
+                                <a href="{{route($profileData->access_level.'.members.byWard', $state->uuid)}}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
                               </div>
                             </div>
                             <!-- ./col -->
@@ -85,13 +85,13 @@
                                                 echo '0.00'; // Handle the case where $puCount is zero
                                             }
                                         @endphp %
-                                    </b> 
+                                    </b>
                                   </p>
                                 </div>
                                 <div class="icon">
                                   <i class="ion ion-pu"></i>
                                 </div>
-                                <a href="#" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
+                                <a href="{{route($profileData->access_level.'.members.byPu', $state->uuid)}}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
                               </div>
                             </div>
                             <!-- ./col -->
@@ -108,7 +108,7 @@
                                 <h3>{{ $newMembers }}</h3>
                                   <p>New Member(s) Today</p>
                                   <p style="float: right;">
-                                        
+
                                   </p>
                                 </div>
                                 <div class="icon">
@@ -240,14 +240,14 @@
             </div>
         <!-- /.card-body -->
         </div> <!-- /.card -->
-    </div>  
+    </div>
 
     <div class="col-md-6">
             <!-- DONUT CHART -->
             <div class="card card-primary ">
                 <div class="card-header">
                 <h3 class="card-title">DISTRIBUTION BY LGA</h3>
-    
+
                 <div class="card-tools">
                     <button type="button" class="btn btn-tool" data-card-widget="collapse">
                     <i class="fas fa-minus"></i>
@@ -266,7 +266,7 @@
             </div><!-- /.col Right -->
     </div>
 
-   
+
 <!-- End Member Distribution by State and Eligibility -->
 
 

@@ -22,7 +22,7 @@
                                     <tr>
                                         <th>S/N</th>
                                         <th>Name</th>
-                                        <th>access Level</th>
+                                        <th>Access Level</th>
                                         <th>Role</th>
                                         <th>Action</th>
                                     </tr>
@@ -100,31 +100,30 @@
 <!-- jQuery -->
 <script src="{{asset('assets/plugins/jquery/jquery.min.js')}}"></script>
 <script>
-
- $(document).ready(function() {
-    $('#myMembers').DataTable({
-        "processing": true,
-        "serverSide": true,
-        "ajax": "{{ route($profileData->access_level.'.state.members.data', $state->uuid) }}", // Define a route to get the paginated data
-        "pageLength": 25, // Default number of rows per page
-        "lengthMenu": [ [10, 25, 50, 100], [10, 25, 50, 100] ],
-        "columns": [
-            {
-                "data": null, // No specific data for this column
-                "render": function (data, type, row, meta) {
-                    return meta.row + meta.settings._iDisplayStart + 1; // Create the serial number dynamically
-                },
-                "orderable": false
-            },
-            { "data": "name" },
-            { "data": "access_level" },
-            { "data": "role" }, // Fix the column name here, it should match the one returned in JSON
-            { "data": "action", "orderable": false, "searchable": false }
-        ],
-        "responsive": true,
-        "autoWidth": false,
-    });
-});
+            $(document).ready(function() {
+                $('#myMembers').DataTable({
+                    "processing": true,
+                    "serverSide": true,
+                    "ajax": "{{ route($profileData->access_level.'.state.members.data', $state->uuid) }}", // Define a route to get the paginated data
+                    "pageLength": 25, // Default number of rows per page
+                    "lengthMenu": [ [10, 25, 50, 100], [10, 25, 50, 100] ],
+                    "columns": [
+                        {
+                            "data": null, // No specific data for this column
+                            "render": function (data, type, row, meta) {
+                                return meta.row + meta.settings._iDisplayStart + 1; // Create the serial number dynamically
+                            },
+                            "orderable": false
+                        },
+                        { "data": "name" },
+                        { "data": "access_level" },
+                        { "data": "role" }, // Fix the column name here, it should match the one returned in JSON
+                        { "data": "action", "orderable": false, "searchable": false }
+                    ],
+                    "responsive": true,
+                    "autoWidth": false,
+                });
+        });
 </script>
 
 

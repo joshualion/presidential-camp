@@ -18,6 +18,10 @@ class PollingUnitImport implements ToModel, WithHeadingRow, SkipsOnFailure
 {
     use SkipsFailures;
 
+    public $successfulInserts = 0; // Track successful inserts
+    public $failedInserts = 0; // Track failed inserts
+    public $duplicates = 0; // Track duplicates
+
     private function getProfileData()
     {
         $id = Auth::user()->id;
@@ -26,66 +30,53 @@ class PollingUnitImport implements ToModel, WithHeadingRow, SkipsOnFailure
 
     public function model(array $row)
     {
-        // Get User Id
         $profileData = $this->getProfileData();
         $user_id = $profileData->id;
 
-        // Find the state by name
         $state = State::where('name', $row['state'])->first();
-
         if (!$state) {
-            // Log an error for the missing state
-            return null; // SkipsFailures will handle this
-        }
-
-        // Find the local government based on state and LGA name
-        $lga = LocalGovernmentArea::where('name', $row['local_government'])
-            ->where('state_id', $state->id)
-            ->first();
-
-        if (!$lga) {
-            // Log an error for the missing LGA
-            return null; // SkipsFailures will handle this
-        }
-
-        // Find the ward based on the local government and ward name
-        $ward = Ward::where('name', $row['ward_name'])
-            ->where('lga_id', $lga->id)
-            ->first();
-
-        if (!$ward) {
-            // Explicitly log that the ward was not found
-            return null; // SkipsFailures will handle this
-        }
-
-        // Check if a polling unit with the same name already exists in the chosen ward
-        $existingPollingUnit = PollingUnit::where('name', $row['name'])
-                                ->where('ward_id', $ward->id)
-                                ->first();
-
-        if ($existingPollingUnit) {
-            // Skip the creation to avoid duplicates
+            $this->failedInserts++;
             return null;
         }
 
+        $lga = LocalGovernmentArea::where('name', $row['local_government'])
+            ->where('state_id', $state->id)
+            ->first();
+        if (!$lga) {
+            $this->failedInserts++;
+            return null;
+        }
+
+        $ward = Ward::where('name', $row['ward_name'])
+            ->where('lga_id', $lga->id)
+            ->first();
+        if (!$ward) {
+            $this->failedInserts++;
+            return null;
+        }
+
+
+        $existingPollingUnit = PollingUnit::where('name', $row['name'])
+                                ->where('ward_id', $ward->id)
+                                ->first();
+        if ($existingPollingUnit) {
+            $this->duplicates++; // Increment duplicates counter
+            return null;
+        }
+
+        $this->successfulInserts++;
         return new PollingUnit([
             'name' => $row['name'],
             'remarks' => $row['remarks'] ?? null,
-            'user_id' => $user_id ?? null, // Nullable
-            'ward_id' => $ward->id, // Found via state and LGA
+            'user_id' => $user_id ?? null,
+            'ward_id' => $ward->id,
         ]);
     }
 
     public function onFailure(Failure ...$failures)
     {
-        // You can log or process failures if needed
         foreach ($failures as $failure) {
-            // Add failure messages if needed
+            $this->failedInserts++;
         }
-    }
-
-    public function getFailures()
-    {
-        return $this->failures;
     }
 }

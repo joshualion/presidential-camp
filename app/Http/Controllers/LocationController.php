@@ -10,6 +10,8 @@ use App\Models\State;
 use App\Models\SystemSetting;
 use App\Models\User;
 use App\Models\Ward;
+use App\Exports\LocalGovernmentExport;
+use App\Imports\LocalGovernmentImport;
 use App\Exports\PollingUnitExport;
 use App\Imports\PollingUnitImport;
 use App\Exports\WardExport;
@@ -430,6 +432,56 @@ class LocationController extends Controller
             return redirect()->route($profileData->access_level.'.location.lgas')->with($notification);
     }
 
+    
+    public function importLgasForm()
+    {
+        $profileData = $this->getProfileData();
+        return view('backend.'.$profileData->access_level.'.lga.import-lga', compact('profileData'));
+    }
+ // For Export
+    public function exportLgas()
+    {
+        return Excel::download(new LocalGovernmentExport, 'local-governments.xlsx');
+    } 
+
+    public function importLgas(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|mimes:xlsx',
+        ]);
+
+        $import = new LocalGovernmentImport;
+        Excel::import($import, $request->file('file'));
+
+        $successCount = $import->successfulInserts;
+        $failureCount = $import->failedInserts;
+        $duplicateCount = $import->duplicates;
+
+        // Notification messages based on outcome
+        if ($successCount > 0 && $failureCount > 0) {
+            // Partial Success
+            $message = "Some data were imported correctly; however, check the imported file for spelling errors or ensure that the target State exists.";
+            $alertType = 'warning';
+        } elseif ($failureCount > 0 && $successCount === 0) {
+            // Complete Failure
+            $message = "Your data is incorrect. Please check that the target States exist and that all spellings are correct.";
+            $alertType = 'error';
+        } elseif ($duplicateCount > 0 && $successCount === 0 && $failureCount === 0) {
+            // Duplicate Data
+            $message = "Duplicate data. The data you are trying to import already exists.";
+            $alertType = 'info';
+        } else {
+            // Full Success
+            $message = "{$successCount} Local Government(s) imported successfully.";
+            $alertType = 'success';
+        }
+
+        return redirect()->route($this->getProfileData()->access_level.'.location.lgas')->with([
+            'message' => $message,
+            'alert-type' => $alertType
+        ]);
+    }
+
 
 
     /* Wards Management Functions  */
@@ -541,48 +593,49 @@ class LocationController extends Controller
         $profileData = $this->getProfileData();
         return view('backend.'.$profileData->access_level.'.ward.import-ward', compact('profileData'));
     }
-
-
      // For Export
     public function exportWards()
     {
         return Excel::download(new WardExport, 'wards.xlsx');
+    } 
+
+    public function importWards(Request $request)
+{
+    $request->validate([
+        'file' => 'required|mimes:xlsx',
+    ]);
+
+    $import = new WardImport;
+    Excel::import($import, $request->file('file'));
+
+    $successCount = $import->successfulInserts;
+    $failureCount = $import->failedInserts;
+    $duplicateCount = $import->duplicates;
+
+    // Notification messages based on outcome
+    if ($successCount > 0 && $failureCount > 0) {
+        // Partial Success
+        $message = "Some data were imported correctly; however, check the imported file for spelling errors or ensure that the target local government exists.";
+        $alertType = 'warning';
+    } elseif ($failureCount > 0 && $successCount === 0) {
+        // Complete Failure
+        $message = "Your data is incorrect. Please check that the target local governments exist and that all spellings are correct.";
+        $alertType = 'error';
+    } elseif ($duplicateCount > 0 && $successCount === 0 && $failureCount === 0) {
+        // Duplicate Data
+        $message = "Duplicate data. The data you are trying to import already exists.";
+        $alertType = 'info';
+    } else {
+        // Full Success
+        $message = "{$successCount} wards imported successfully.";
+        $alertType = 'success';
     }
 
-    
-  public function importWards(Request $request)
-  {
-      $request->validate([
-          'file' => 'required|mimes:xlsx',
-      ]);
-  
-      // Perform the import
-      $import = new WardImport;
-      Excel::import($import, $request->file('file'));
-  
-      // Check for import failures
-      $failures = $import->getFailures();
-  
-      if (!empty($failures)) {
-          // Create a failure notification message
-          $errorMessages = '';
-          foreach ($failures as $failure) {
-              // Each failure has a row (integer) and an array of errors
-              $errorMessages .= "Error in row " . $failure->row() . ": " . implode(', ', $failure->errors()) . "\n";
-          }
-  
-          return redirect()->route($this->getProfileData()->access_level.'.location.pus')
-                           ->withErrors(['import_errors' => rtrim($errorMessages)]);
-      } else {
-          // Success notification
-          $notification = array(  
-              'message' => 'Wards imported successfully',
-              'alert-type' => 'success'
-          );  
-  
-          return redirect()->route($this->getProfileData()->access_level.'.location.wards')->with($notification);
-      }
-      }
+    return redirect()->route($this->getProfileData()->access_level.'.location.wards')->with([
+        'message' => $message,
+        'alert-type' => $alertType
+    ]);
+    }
 
 
     /* POlling Units Management Functions  */
@@ -718,38 +771,43 @@ class LocationController extends Controller
 
     // For Import
     public function importPollingUnits(Request $request)
-{
-    $request->validate([
-        'file' => 'required|mimes:xlsx',
-    ]);
-
-    // Perform the import
-    $import = new PollingUnitImport;
-    Excel::import($import, $request->file('file'));
-
-    // Check for import failures
-    $failures = $import->getFailures();
-
-    if (!empty($failures)) {
-        // Create a failure notification message
-        $errorMessages = '';
-        foreach ($failures as $failure) {
-            // Each failure has a row (integer) and an array of errors
-            $errorMessages .= "Error in row " . $failure->row() . ": " . implode(', ', $failure->errors()) . "\n";
+    {
+        $request->validate([
+            'file' => 'required|mimes:xlsx',
+        ]);
+    
+        $import = new PollingUnitImport;
+        Excel::import($import, $request->file('file'));
+    
+        $successCount = $import->successfulInserts;
+        $failureCount = $import->failedInserts;
+        $duplicatesCount = $import->duplicates;
+    
+        // Create notification message based on counts
+        if ($failureCount > 0 && $successCount > 0) {
+            $message = "Some polling units were imported successfully. However, there were issues with some rows. Please check for potential misspellings or missing local governments in your file.";
+            $alertType = 'warning';
+        } elseif ($failureCount > 0) {
+            $message = "No polling units were imported. Please check that the local government and ward names in your file are correct.";
+            $alertType = 'error';
+        } else {
+            $message = "{$successCount} polling units imported successfully.";
+            $alertType = 'success';
         }
-
-        return redirect()->route($this->getProfileData()->access_level.'.location.pus')
-                         ->withErrors(['import_errors' => rtrim($errorMessages)]);
-    } else {
-        // Success notification
-        $notification = array(  
-            'message' => 'Polling Units imported successfully',
-            'alert-type' => 'success'
-        );  
-
+    
+        // Include duplicates count in the message if applicable
+        if ($duplicatesCount > 0) {
+            $message .= " {$duplicatesCount} polling units were not imported due to duplicates.";
+        }
+    
+        $notification = [
+            'message' => $message,
+            'alert-type' => $alertType
+        ];
+    
         return redirect()->route($this->getProfileData()->access_level.'.location.pus')->with($notification);
     }
-    }
+    
 
 
 

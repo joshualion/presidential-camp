@@ -2,6 +2,8 @@
 
 namespace Database\Seeders;
 
+use App\Jobs\GenerateFakeUsersJob;
+use App\Jobs\GeneratePollingUnitsJob;
 use App\Models\User;
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -17,7 +19,7 @@ class DatabaseSeeder extends Seeder
         $this->call(CountrySeeder::class);
         $this->call(RegionSeeder::class);
         $this->call(StateSeeder::class);
-        $this->call(AbiaLGAsTableSeeder::class);
+       /* $this->call(AbiaLGAsTableSeeder::class);
         $this->call(AdamawaLGAsTableSeeder::class);
         $this->call(AnambraLGAsTableSeeder::class);
         $this->call(AkwaIbomLGAsTableSeeder::class);
@@ -52,9 +54,21 @@ class DatabaseSeeder extends Seeder
         $this->call(TarabaLGAsTableSeeder::class);
         $this->call(YobeLGAsTableSeeder::class);
         $this->call(ZamfaraLGAsSeederTable::class);
-        $this->call(CRSCalMunicipalWards::class);
-        $this->call(CRSCalSouthWards::class);
-        $this->call(CalMunWardSixPUSeederTable::class);
+       // $this->call(CRSCalMunicipalWards::class);
+       // $this->call(CRSCalSouthWards::class);
+       // $this->call(CalMunWardSixPUSeederTable::class); */
+
+       /* //LGA Factory
+       \App\Models\LocalGovernmentArea::factory()->count(774)->create();
+
+       //Ward factory
+       \App\Models\Ward::factory()->count(8809)->create();
+
+       //Polling Unit Factory Dispatcher
+       GeneratePollingUnitsJob::dispatch();
+       */
+
+
 
         //other seeders
         $this->call(AgeGradeTableSeeder::class);
@@ -69,8 +83,9 @@ class DatabaseSeeder extends Seeder
         $this->call(RolesTableSeeder::class);
         $this->call(PermissionsTableSeeder::class);
 
-        //Users        
+        //Users
         $this->call(UsersTableSeeder::class);
+       
        // $this->call(RolePermissionTableSeeder::class);
 
         // User::factory(10)->create();
