@@ -70,7 +70,9 @@
             @endif
       </p>
       <hr/>
-      <a href="/register" class="text-center">Not yet a member?</a>
+      @if($SystemSetting && $SystemSetting->frontend_registration == 1)
+      <a href="/register" class="text-center">New member? Signup</a>
+      @endif
 
 
 </div><!-- /.card -->

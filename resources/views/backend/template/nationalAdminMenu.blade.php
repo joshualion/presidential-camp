@@ -1,4 +1,8 @@
-
+<style>
+    .nav-treeview{
+        background: #ffffff !important;
+    }
+</style>
 @if(Auth::user()->access_level == 'nationaladmin')
 <nav class="mt-2">
       <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
@@ -11,6 +15,7 @@
                             <i class="right fas fa-angle-left"></i>
                           </p>
                         </a>
+
 
             </li>
 
@@ -26,7 +31,7 @@
                         <ul class="nav nav-treeview">
 
                           <li class="nav-item">
-                            <a href="/national/members" class="nav-link">
+                            <a href="/national/members/fetch/" class="nav-link">
                               <i class="fas fa-user nav-icon"></i>
                               <p>All Members</p>
                             </a>
@@ -71,6 +76,42 @@
             </li>
             {{-- / Members --}}
 
+            {{-- Election --}}
+            <li class="tab nav-item menu-close">
+                            <a href="#" class="nav-link">
+                              <i class="nav-icon fas fa-award"></i>
+                              <p>
+                                Elections
+                                <i class="right fas fa-angle-left"></i>
+                              </p>
+                            </a>
+                            <ul class="nav nav-treeview">
+
+                            <li class="nav-item">
+                                <a href="/national/dashboard" class="nav-link">
+                                  <i class="fas fa-award nav-icon"></i>
+                                  <p>Manage Elections</p>
+                                </a>
+                              </li>
+
+                              <li class="nav-item">
+                                <a href="/national/dashboard" class="nav-link">
+                                  <i class="fas fa-vote-yea nav-icon"></i>
+                                  <p>Manage Political parties</p>
+                                </a>
+                              </li>
+
+                              <li class="nav-item">
+                                <a href="/national/state/dashboard" class="nav-link">
+                                <i class="fa fa-thumbs-up nav-icon"></i>
+                                  <p>Votes &  Incidents</p>
+                                </a>
+                              </li>
+                            </ul>
+            </li>
+            {{-- / Election --}}
+
+            {{-- Reports --}}
             <li class="tab nav-item menu-close">
                         <a href="#" class="nav-link">
                           <i class="nav-icon fas fa-book"></i>
@@ -91,24 +132,67 @@
                           <li class="nav-item">
                             <a href="/national/dashboard" class="nav-link">
                               <i class="fas fa-vote-yea nav-icon"></i>
-                              <p>Election Reports</p>
+                              <p>Election Incident Reports</p>
                             </a>
                           </li>
 
                           <li class="nav-item">
                             <a href="/national/state/dashboard" class="nav-link">
                             <i class="fa fa-thumbs-up nav-icon"></i>
-                              <p>Votes</p>
-                            </a>
-                          </li>
-                           <li class="nav-item">
-                            <a href="#" class="nav-link">
-                            <i class="fas fa-hand-holding-usd nav-icon"></i>
-                              <p>Donations</p>
+                              <p>Financial Reports</p>
                             </a>
                           </li>
                         </ul>
             </li>
+            {{-- / Reports --}}
+
+            {{-- Finances --}}
+            <li class="tab nav-item menu-close">
+                <a href="#" class="nav-link">
+                  <i class="nav-icon fas fa-money-bill"></i>
+                  <p>
+                    Accounting
+                    <i class="right fas fa-angle-left"></i>
+                  </p>
+                </a>
+                <ul class="nav nav-treeview">
+
+                <li class="nav-item">
+                    <a href="/national/dashboard" class="nav-link">
+                      <i class="fas fa-hand-holding-usd nav-icon"></i>
+                      <p>Donations</p>
+                    </a>
+                  </li>
+
+
+
+                  <li class="nav-item">
+                    <a href="/national/dashboard" class="nav-link">
+                      <i class="fas fa-credit-card nav-icon"></i>
+                      <p>Expenses</p>
+                    </a>
+                  </li>
+
+                  <li class="nav-item">
+                    <a href="/national/dashboard" class="nav-link">
+                      <i class="fas fa-shopping-cart nav-icon"></i>
+                      <p>Sales Records</p>
+                    </a>
+                  </li>
+
+                  <li class="nav-item">
+                    <a href="/national/state/dashboard" class="nav-link">
+                    <i class="fas fa-dollar-sign nav-icon"></i>
+                      <p>Funding Request</p>
+                    </a>
+                  </li>
+
+                </ul>
+            </li>
+            {{-- / Finances --}}
+
+
+            {{-- Events --}}
             <li class="tab nav-item menu-close">
                 <a href="#" class="nav-link">
                   <i class="nav-icon fas fa-calendar"></i>
@@ -136,6 +220,10 @@
 
                 </ul>
            </li>
+            {{-- / Events --}}
+
+
+            {{-- Messaging --}}
             <li class="tab nav-item menu-close">
                         <a href="#" class="nav-link">
                           <i class="nav-icon fas fa-comments"></i>
@@ -175,7 +263,49 @@
                         </ul>
 
             </li>
+            {{-- / Messaging --}}
 
+               {{--  Products Menu --}}
+               <li class="nav-item  menu-close">
+                <a href="#" class="nav-link">
+                  <i class="nav-icon fa fa-shopping-cart"></i>
+                  <p>
+                  Store
+                    <i class="right fas fa-angle-left"></i>
+                  </p>
+                </a>
+                <ul class="nav nav-treeview" style="display: none;">
+                    <li class="nav-item">
+                      <a href="/admin/products" class="nav-link">
+                      <i class="fas fa-gem nav-icon"></i>
+                        <p>Products </p>
+                      </a>
+                    </li>
+                    <li class="nav-item">
+                      <a href="/admin/product/categories" class="nav-link">
+                      <i class="fas fa-shopping-basket nav-icon"></i>
+                        <p>Categories </p>
+                      </a>
+                    </li>
+
+                    <li class="nav-item">
+                      <a href="/admin/product/add" class="nav-link">
+                      <i class="fas fa-upload nav-icon"></i>
+                        <p> Upload Product </p>
+                      </a>
+                    </li>
+
+                    <li class="nav-item">
+                      <a href="/admin/product/category/add" class="nav-link">
+                      <i class="fas fa-plus  nav-icon"></i>
+                        <p> Add Category </p>
+                      </a>
+                    </li>
+                </ul>
+             </li>
+             {{--  End Products Menu --}}
+
+            {{-- Location --}}
             <li class="tab nav-item menu-close">
                         <a href="#" class="nav-link">
                           <i class="nav-icon fas fa-globe-africa "></i>
@@ -221,6 +351,10 @@
                         </ul>
 
             </li>
+            {{-- / Location --}}
+
+
+
 
             {{-- Settings --}}
             <li class="tab nav-item menu-close">
@@ -249,11 +383,41 @@
                           </li>
 
                           <li class="nav-item">
-                            <a href="/national/volunteer/group" class="nav-link">
-                            <i class="fas fa-handshake nav-icon"></i>
-                              <p> Volunteer Settings</p>
+                            <a href="/national/settings/smtp" class="nav-link">
+                            <i class="fas fa-dollar-sign nav-icon"></i>
+                              <p> Payment Settings</p>
                             </a>
                           </li>
+
+                          <li class="nav-item">
+                            <a href="/national/volunteer/group" class="nav-link">
+                            <i class="fas fa-handshake nav-icon"></i>
+                              <p> Volunteer Group Settings</p>
+                            </a>
+                          </li>
+
+
+                          <li class="nav-item">
+                            <a href="/national/community/forum" class="nav-link">
+                            <i class="fas fa-comments nav-icon"></i>
+                              <p> Community Settings</p>
+                            </a>
+                          </li>
+
+                          <li class="nav-item">
+                            <a href="/national/settings/smtp" class="nav-link">
+                            <i class="fas fa-user-graduate nav-icon"></i>
+                              <p> Age Grade Settings</p>
+                            </a>
+                          </li>
+
+                          <li class="nav-item">
+                            <a href="/national/settings/smtp" class="nav-link">
+                            <i class="fas fa-praying-hands nav-icon"></i>
+                              <p> Religion Settings</p>
+                            </a>
+                          </li>
+
                     @endif
 
                           <li class="nav-item">
@@ -266,7 +430,7 @@
 
             </li>
 
-@if(($profileData->hasRole('National ICT/Media Director')))
+        @if(($profileData->hasRole('National ICT/Media Director')))
             {{-- Roles & Permission Menu --}}
             <li class="tab nav-item menu-close">
                 <a href="#" class="nav-link">
@@ -308,7 +472,9 @@
 
             </li>
             {{--  End Roles & Permission Menu  --}}
-@endif
+        @endif
+
+            {{-- Profile Menu --}}
             <li class="tab nav-item menu-close">
                         <a href="#" class="nav-link">
                           <i class="nav-icon fas fa-user-shield"></i>
@@ -327,6 +493,13 @@
                           </li>
 
                           <li class="nav-item">
+                            <a href="/national/bankdetails" class="nav-link">
+                              <i class="fas fa-university nav-icon"></i>
+                              <p> Bank Details</p>
+                            </a>
+                          </li>
+
+                          <li class="nav-item">
                             <a href="/national/change/password" class="nav-link">
                             <i class="fas fa-lock nav-icon"></i>
                               <p>Change Password</p>
@@ -337,12 +510,16 @@
 
                         </ul>
             </li>
+            {{-- End Profile Menu --}}
+
+            {{-- Logout --}}
             <li class="nav-item">
                             <a href="/national/logout" class="nav-link">
                             <i class="fas fa-power-off nav-icon"></i>
                               <p>Logout</p>
                             </a>
             </li>
+            {{-- End Logout --}}
 
       </ul>
 </nav>

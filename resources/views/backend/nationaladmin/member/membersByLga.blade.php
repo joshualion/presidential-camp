@@ -61,7 +61,7 @@
                                         <th>Action</th>
                                     </tr>
                                     </tfoot>
-                    </table>Asiya
+                    </table>
 
                 </div>
                 <!-- /.card-body -->

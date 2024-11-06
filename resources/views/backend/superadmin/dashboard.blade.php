@@ -34,7 +34,7 @@
                                 <div class="icon">
                                   <i class="ion ion-nigeria"></i>
                                 </div>
-                                <a href="#" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
+                                <a href="{{route($profileData->access_level.'.members.byState',$uuid)}}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
                               </div>
                             </div>
                             <!-- ./col -->
@@ -53,7 +53,7 @@
                                 <div class="icon">
                                   <i class="ion ion-lga"></i>
                                 </div>
-                                <a href="#" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
+                                <a href="{{route($profileData->access_level.'.members.byLga',$uuid)}}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
                               </div>
                             </div>
                             <!-- ./col -->
@@ -72,7 +72,7 @@
                                 <div class="icon">
                                   <i class="ion ion-ward"></i>
                                 </div>
-                                <a href="#" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
+                                <a href="{{route($profileData->access_level.'.members.byWard',$uuid)}}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
                               </div>
                             </div>
                             <!-- ./col -->
@@ -91,7 +91,7 @@
                                 <div class="icon">
                                   <i class="ion ion-pu"></i>
                                 </div>
-                                <a href="#" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
+                                <a href="{{route($profileData->access_level.'.members.byPu',$uuid)}}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
                               </div>
                             </div>
                             <!-- ./col -->
@@ -129,7 +129,7 @@
                                 <div class="icon">
                                   <i class="ion ion-person"></i>
                                 </div>
-                                <a href="#" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
+                                <a href="{{route($profileData->access_level.'.leaders',$uuid)}}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
                               </div>
                             </div>
                             <!-- ./col -->

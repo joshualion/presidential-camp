@@ -7,7 +7,7 @@
     </li>
 
     <li class="nav-item">
-        <a class="nav-link" id="community-settings-tab" href="#community-settings" role="tab">Community Forum</a>
+        <a class="nav-link" id="community-settings-tab" href="#community-settings" role="tab">Frontend Settings</a>
     </li>
     <li class="nav-item">
         <a class="nav-link" id="social-media-tab" href="#social-media" role="tab">Social Media </a>

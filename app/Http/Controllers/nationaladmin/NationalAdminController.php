@@ -732,6 +732,7 @@ class NationalAdminController extends Controller
                  $memberCount = User ::where('polling_unit_id', $pu->id)
                  ->where('access_level', '!=', 'superadmin')
                  ->where('access_level', 'user')->count();
+                 
 
                  $eligibleVotersCount = User ::where('polling_unit_id', $pu->id)
                  ->where('access_level', '!=', 'superadmin')

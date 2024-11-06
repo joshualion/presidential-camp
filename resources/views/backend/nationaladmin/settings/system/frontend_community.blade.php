@@ -22,6 +22,31 @@
     @enderror
 </div>
 
+<div class="form-group row">
+    <label for="frontend_registration" class="col-sm-3 col-form-label">Public Registration</label>
+    <div class="col-sm-9">
+        <div class="custom-control custom-switch">
+            <!-- Hidden input to ensure '0' is sent when unchecked -->
+            <input type="hidden" name="frontend_registration" value="0">
+
+            <!-- The actual toggle switch -->
+            <input type="checkbox" class="custom-control-input"
+                   id="frontend_registration"
+                   name="frontend_registration"
+                   value="1"
+                   {{ $SystemSetting->frontend_registration == 1 ? 'checked' : '' }}>
+
+            <label class="custom-control-label" for="frontend_registration" id="frontend_registration_label">
+                {{ $SystemSetting->frontend_registration == 1 ? 'Enabled' : 'Disabled' }}
+            </label>
+        </div>
+    </div>
+    @error('frontend_registration')
+        <div class="alert alert-danger">{{ $message }}</div>
+    @enderror
+</div>
+
+
 <!-- Optional Custom CSS for better visual styling -->
 <style>
     .custom-control-input:checked ~ .custom-control-label::before {
@@ -51,6 +76,23 @@
         transition: transform 0.3s ease-in-out;
     }
 </style>
+
+<!-- JavaScript to update label dynamically -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var frontendCommunityInput = document.getElementById('frontend_registration');
+        var frontendCommunityLabel = document.getElementById('frontend_registration_label');
+
+        // Update label based on the initial state
+        frontendCommunityLabel.textContent = frontendCommunityInput.checked ? 'Enabled' : 'Disabled';
+
+        // Add event listener to update the label when toggled
+        frontendCommunityInput.addEventListener('change', function() {
+            frontendCommunityLabel.textContent = frontendCommunityInput.checked ? 'Enabled' : 'Disabled';
+        });
+    });
+</script>
+
 
 <!-- JavaScript to update label dynamically -->
 <script>

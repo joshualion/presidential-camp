@@ -29,6 +29,7 @@ return new class extends Migration
             $table->string('company_phone')->nullable();
             $table->string('activation_code')->nullable();
             $table->boolean('frontend_community')->default(false);
+            $table->boolean('frontend_registration')->default(false);
             $table->string('facebook')->nullable();
             $table->string('twitter')->nullable();
             $table->string('linkedin')->nullable();

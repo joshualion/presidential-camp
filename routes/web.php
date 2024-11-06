@@ -24,7 +24,7 @@ Route::get('/ward/data', [AjaxController::class, 'getWardData'])->name('wards.da
 Route::get('/pu/data', [AjaxController::class, 'getPUData'])->name('pus.data');
 
 Route::get('/', function () {
-    return view('welcome');
+    return redirect()->route('login');
 });
 
 //Require Super Admin Routes file

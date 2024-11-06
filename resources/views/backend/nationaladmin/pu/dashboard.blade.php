@@ -124,7 +124,7 @@
                                 <div class="icon">
                                   <i class="ion ion-person-add"></i>
                                 </div>
-                                <a href="#" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
+                                <a href="{{route($profileData->access_level.'.regulars', $pu->uuid)}}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
                               </div>
                             </div>
                             <!-- ./col -->
@@ -139,7 +139,7 @@
                                 <div class="icon">
                                   <i class="ion ion-person"></i>
                                 </div>
-                                <a href="/national/members" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
+                                <a href="{{route($profileData->access_level.'.member.pu.view', $pu->uuid)}}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
                               </div>
                             </div> <!-- ./col -->
                   </div><!-- /.row -->

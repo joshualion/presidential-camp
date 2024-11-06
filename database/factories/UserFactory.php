@@ -21,35 +21,63 @@ class UserFactory extends Factory
 
     public function definition()
     {
-        return [
-            'uuid' => Str::uuid(),
-            'username' => $this->faker->unique()->userName,
-            'email' => $this->faker->unique()->safeEmail,
-            'password' => Hash::make('password'), // Default password, replace as needed
-            'firstname' => $this->faker->firstName,
-            'lastname' => $this->faker->lastName,
-            'phone' => $this->faker->unique()->phoneNumber,
-            'vin' => $this->faker->regexify('[A-Z0-9]{17}'), // Example VIN pattern
-            'photo' => '',
-            'address' => $this->faker->address,
-            'occupation' => $this->faker->jobTitle,
-            'qualification' => $this->faker->randomElement(['High School', 'Bachelor\'s', 'Master\'s', 'PhD']),
-            'validVoter' => $this->faker->randomElement(['yes', 'no']),
-            'gender' => $this->faker->randomElement(['male', 'female']),
-            'status' => 'active',
-            'access_level' => $this->faker->randomElement(['user', 'puadmin', 'wardadmin', 'lgaadmin']),
-            'email_verified_at' => now(),
-            'country_id' => Country::inRandomOrder()->first()->id,
-            'region_id' => Region::inRandomOrder()->first()->id,
-            'state_id' => State::inRandomOrder()->first()->id,
-            'lga_id' => LocalGovernmentArea::inRandomOrder()->first()->id,
-            'ward_id' => Ward::inRandomOrder()->first()->id,
-            'polling_unit_id' => PollingUnit::inRandomOrder()->first()->id,
-            'religion_id' => Religion::inRandomOrder()->first()->id,
-            'age_grade_id' => AgeGrade::inRandomOrder()->first()->id,
-            'remember_token' => Str::random(10),
-        ];
+        $country = Country::where('name', 'Nigeria')->first();
+
+        // Get a random region
+        $region = Region::where('country_id', $country->id)->inRandomOrder()->first();
+
+        if ($region) {
+            $state = State::where('region_id', $region->id)->inRandomOrder()->first();
+
+            if ($state) {
+                $lga = LocalGovernmentArea::where('state_id', $state->id)->has('wards')->inRandomOrder()->first();
+
+                if ($lga) {
+                    $ward = Ward::where('lga_id', $lga->id)->has('pollingUnits')->inRandomOrder()->first();
+
+                    if ($ward) {
+                        $pollingUnit = PollingUnit::where('ward_id', $ward->id)->inRandomOrder()->first();
+
+                        if ($pollingUnit) {
+                            return [
+                                'uuid' => Str::uuid(),
+                                'username' => $this->faker->unique()->userName,
+                                'email' => $this->faker->unique()->safeEmail,
+                                'password' => Hash::make('password'), // Default password
+                                'firstname' => $this->faker->firstName,
+                                'lastname' => $this->faker->lastName,
+                                'phone' => $this->faker->unique()->phoneNumber,
+                                'vin' => $this->faker->regexify('[A-Z0-9]{17}'),
+                                'photo' => '',
+                                'address' => $this->faker->address,
+                                'occupation' => $this->faker->jobTitle,
+                                'qualification' => $this->faker->randomElement(['High School', 'Bachelor\'s', 'Master\'s', 'PhD']),
+                                'validVoter' => $this->faker->randomElement(['yes', 'no']),
+                                'gender' => $this->faker->randomElement(['male', 'female']),
+                                'status' => 'active',
+                                'access_level' => $this->faker->randomElement(['user', 'puadmin', 'wardadmin', 'lgaadmin']),
+                                'email_verified_at' => now(),
+                                'country_id' => $country->id,
+                                'region_id' => $region->id,
+                                'state_id' => $state->id,
+                                'lga_id' => $lga->id,
+                                'ward_id' => $ward->id,
+                                'polling_unit_id' => $pollingUnit->id,
+                                'religion_id' => Religion::inRandomOrder()->first()->id ?? null,
+                                'age_grade_id' => AgeGrade::inRandomOrder()->first()->id ?? null,
+                                'remember_token' => Str::random(10),
+                            ];
+                        }
+                    }
+                }
+            }
+        }
+
+        // Return an empty array if any part of the hierarchy is missing
+        return [];
     }
+
+
 
     public function configure()
     {

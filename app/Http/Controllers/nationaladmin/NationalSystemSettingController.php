@@ -92,6 +92,7 @@ class NationalSystemSettingController extends Controller
                                         'dark_theme_color' => $request->dark_theme_color,
                                         'system_email' => $request->system_email,
                                         'frontend_community' => $request->frontend_community,
+                                        'frontend_registration' => $request->frontend_registration,
                                         'system_currency' => $request->system_currency,
                                         'exchange_rate' => $request->exchange_rate,
                                         'company_address' => $request->company_address,

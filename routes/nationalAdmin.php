@@ -84,9 +84,15 @@ Route::get('/national/member/distribution/voter', [NationalAdminController::clas
 // State Distribution
 Route::get('/national/member/distribution/state', [NationalAdminController::class, 'nationaladminStateDistribution'])->name('nationaladmin.member.distribution.state')->middleware('access_level:nationaladmin');
 //Member Management
-Route::get('/national/members/data/', [MembersController::class, 'getMembersData'])->name('nationaladmin.members.data');
+Route::get('/national/members/data/fetch/{uuid?}', [MembersController::class, 'getMembersData'])->name('nationaladmin.members.data');
+Route::get('/national/members/fetch/{uuid?}', [MembersController::class, 'allMembers'])->name('nationaladmin.members');
+//Fetch Excos
+Route::get('/national/leaders/data/fetch/{uuid?}', [MembersController::class, 'getExcoMembersData'])->name('nationaladmin.leaders.data');
+Route::get('/national/leaders/fetch/{uuid?}', [MembersController::class, 'allExcoMembers'])->name('nationaladmin.leaders');
+//Fetch Regulars
+Route::get('/national/regulars/data/fetch/{uuid?}', [MembersController::class, 'getRegularMembersData'])->name('nationaladmin.regulars.data');
+Route::get('/national/regulars/fetch/{uuid?}', [MembersController::class, 'allRegularMembers'])->name('nationaladmin.regulars');
 
-Route::get('/national/members/', [MembersController::class, 'allMembers'])->name('nationaladmin.members');
 Route::get('/national/member/add', [MembersController::class, 'addMember'])->name('nationaladmin.member.add')->middleware('access_level:nationaladmin');
 Route::post('/national/member/store', [MembersController::class, 'storeMember'])->name('nationaladmin.member.store')->middleware('access_level:nationaladmin');
 Route::get('/national/member/edit/{uuid}', [MembersController::class, 'editMember'])->name('nationaladmin.member.edit')->middleware('access_level:nationaladmin');
@@ -95,12 +101,12 @@ Route::get('/national/member/view/{uuid}', [MembersController::class, 'viewMembe
 Route::get('/national/member/suspend/{uuid}', [MembersController::class, 'suspendMember'])->name('nationaladmin.member.suspend')->middleware('access_level:nationaladmin');
 Route::delete('/national/member/delete/{uuid}', [MembersController::class, 'deleteMember'])->name('nationaladmin.member.delete')->middleware('access_level:nationaladmin');
  //Members By region
-Route::get('/national/members/region', [MembersController::class, 'membersByRegions'])->name('nationaladmin.members.region')->middleware('access_level:nationaladmin');
-Route::get('/national/members/region/{uuid}', [MembersController::class, 'ViewMembersByRegion'])->name('nationaladmin.member.region.view')->middleware('access_level:nationaladmin');
+Route::get('/national/members/region', [MembersController::class, 'membersByRegions'])->name('nationaladmin.members.region')->middleware('access_level:nationaladmin,regionaladmin');
+Route::get('/national/members/region/{uuid}', [MembersController::class, 'ViewMembersByRegion'])->name('nationaladmin.member.region.view')->middleware('access_level:nationaladmin,regionaladmin');
 Route::get('/national/region/members/data/{uuid}', [MembersController::class, 'getRegionMembersData'])->name('nationaladmin.region.members.data');
 // Members By State
-Route::get('/national/members/bystate/{uuid?}', [MembersController::class, 'membersByStates'])->name('nationaladmin.members.byState')->middleware('access_level:nationaladmin');
-Route::get('/national/members/state/{uuid}', [MembersController::class, 'ViewMembersByState'])->name('nationaladmin.member.state.view')->middleware('access_level:nationaladmin');
+Route::get('/national/members/bystate/{uuid?}', [MembersController::class, 'membersByStates'])->name('nationaladmin.members.byState')->middleware('access_level:nationaladmin,regionadmin,stateadmin');
+Route::get('/national/members/state/{uuid}', [MembersController::class, 'ViewMembersByState'])->name('nationaladmin.member.state.view')->middleware('access_level:nationaladmin,regionadmin,regionadmin,stateadmin');
 Route::get('/national/state/members/data/{uuid}', [MembersController::class, 'getStateMembersData'])->name('nationaladmin.state.members.data');
 // Members By Local Government
 Route::get('/national/members/bylga/{uuid?}', [MembersController::class, 'membersByLocalGovernments'])->name('nationaladmin.members.byLga')->middleware('access_level:nationaladmin');

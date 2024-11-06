@@ -439,6 +439,4 @@ class AjaxController extends Controller
 
 
 
-
-
 }
