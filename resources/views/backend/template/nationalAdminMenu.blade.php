@@ -390,7 +390,7 @@
                           </li>
 
                           <li class="nav-item">
-                            <a href="/national/volunteer/group" class="nav-link">
+                            <a href="/national/setting/volunteer/group" class="nav-link">
                             <i class="fas fa-handshake nav-icon"></i>
                               <p> Volunteer Group Settings</p>
                             </a>
@@ -405,14 +405,14 @@
                           </li>
 
                           <li class="nav-item">
-                            <a href="/national/settings/smtp" class="nav-link">
+                            <a href="/national/settings/agegrade" class="nav-link">
                             <i class="fas fa-user-graduate nav-icon"></i>
                               <p> Age Grade Settings</p>
                             </a>
                           </li>
 
                           <li class="nav-item">
-                            <a href="/national/settings/smtp" class="nav-link">
+                            <a href="/national/setting/religion" class="nav-link">
                             <i class="fas fa-praying-hands nav-icon"></i>
                               <p> Religion Settings</p>
                             </a>

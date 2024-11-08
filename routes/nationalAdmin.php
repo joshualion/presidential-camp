@@ -1,12 +1,15 @@
 <?php
 
+use App\Http\Controllers\AgeGradeController;
 use App\Http\Controllers\AjaxController;
 use App\Http\Controllers\ChartsController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\MembersController;
 use App\Http\Controllers\nationaladmin\NationalAdminController;
 use App\Http\Controllers\nationaladmin\NationalSystemSettingController;
+use App\Http\Controllers\ReligionController;
 use App\Http\Controllers\RolePermissionController;
+use App\Http\Controllers\VolunteerGroupController;
 use Illuminate\Support\Facades\Route;
 
 
@@ -224,6 +227,35 @@ Route::get('/national/export-polling-units', [LocationController::class, 'export
 
 // Import Route
 Route::post('/national/import-polling-units', [LocationController::class, 'importPollingUnits'])->name('nationaladmin.location.pu.importPollingUnits')->middleware('access_level:nationaladmin');
+
+
+/* MANAGE VOLUNTEER GROUP - CRUD  */
+
+Route::get('/national/setting/volunteer/group', [VolunteerGroupController::class, 'allVolunteerGroup'])->name('nationaladmin.volunteer.group')->middleware('access_level:nationaladmin');
+Route::get('/national/setting/volunteer/group/add', [VolunteerGroupController::class, 'addVolunteerGroup'])->name('nationaladmin.volunteer.group.add')->middleware('access_level:nationaladmin');
+Route::post('/national/setting/volunteer/group/store', [VolunteerGroupController::class, 'storeVolunteerGroup'])->name('nationaladmin.volunteer.group.store')->middleware('access_level:nationaladmin');
+Route::get('/national/setting/volunteer/group/edit/{uuid}', [VolunteerGroupController::class, 'editVolunteerGroup'])->name('nationaladmin.volunteer.group.edit')->middleware('access_level:nationaladmin');
+Route::post('/national/setting/volunteer/group/update/{uuid}', [VolunteerGroupController::class, 'updateVolunteerGroup'])->name('nationaladmin.volunteer.group.update')->middleware('access_level:nationaladmin');
+Route::delete('/national/setting/volunteer/group/delete/{uuid}', [VolunteerGroupController::class, 'deleteVolunteerGroup'])->name('nationaladmin.volunteer.group.delete')->middleware('access_level:nationaladmin');
+
+
+// RELIGION MANAGEMENT CRUD
+
+Route::get('/national/setting/religion', [ReligionController::class, 'allReligions'])->name('nationaladmin.religion')->middleware('access_level:nationaladmin');
+Route::get('/national/setting/religion/add', [ReligionController::class, 'addReligion'])->name('nationaladmin.religion.add')->middleware('access_level:nationaladmin');
+Route::post('/national/setting/religion/store', [ReligionController::class, 'storeReligion'])->name('nationaladmin.religion.store')->middleware('access_level:nationaladmin');
+Route::get('/national/setting/religion/edit/{uuid}', [ReligionController::class, 'editReligion'])->name('nationaladmin.religion.edit')->middleware('access_level:nationaladmin');
+Route::post('/national/setting/religion/update/{uuid}', [ReligionController::class, 'updateReligion'])->name('nationaladmin.religion.update')->middleware('access_level:nationaladmin');
+Route::delete('/national/setting/religion/delete/{uuid}', [ReligionController::class, 'deleteReligion'])->name('nationaladmin.religion.delete')->middleware('access_level:nationaladmin');
+
+// AGE GRADE MANAGEMENT CRUD
+
+Route::get('/national/setting/agegrade', [AgeGradeController::class, 'allAgeGrades'])->name('nationaladmin.agegrade')->middleware('access_level:nationaladmin');
+Route::get('/national/setting/agegrade/add', [AgeGradeController::class, 'addAgeGrade'])->name('nationaladmin.agegrade.add')->middleware('access_level:nationaladmin');
+Route::post('/national/setting/agegrade/store', [AgeGradeController::class, 'storeAgeGrade'])->name('nationaladmin.agegrade.store')->middleware('access_level:nationaladmin');
+Route::get('/national/setting/agegrade/edit/{uuid}', [AgeGradeController::class, 'editAgeGrade'])->name('nationaladmin.agegrade.edit')->middleware('access_level:nationaladmin');
+Route::post('/national/setting/agegrade/update/{uuid}', [AgeGradeController::class, 'updateAgeGrade'])->name('nationaladmin.agegrade.update')->middleware('access_level:nationaladmin');
+Route::delete('/national/setting/agegrade/delete/{uuid}', [AgeGradeController::class, 'deleteAgeGrade'])->name('nationaladmin.agegrade.delete')->middleware('access_level:nationaladmin');
 
 });
 
