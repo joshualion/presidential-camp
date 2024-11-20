@@ -33,14 +33,7 @@ Route::middleware('auth')->group(function () {
   Route::post('/national/settings/terms/update', [NationalSystemSettingController::class,'UpdateTos'])->name('nationaladmin.settings.terms.update')->middleware('access_level:nationaladmin');
 
 
-  // Super Admin Profile & Dashboard Routes
-  Route::get('/national/dashboard', [NationalAdminController::class, 'nationaladminDashBoard'])->name('nationaladmin.dashboard')->middleware('access_level:nationaladmin');
-  Route::get('/national/profile', [NationalAdminController::class, 'nationaladminProfile'])->name('nationaladmin.profile')->middleware('access_level:nationaladmin');
-  Route::post('/national/profile/store', [NationalAdminController::class, 'nationaladminProfileStore'])->name('nationaladmin.profile.store')->middleware('access_level:nationaladmin');
-  Route::get('/national/change/password', [NationalAdminController::class, 'nationaladminChangePassword'])->name('nationaladmin.change.password')->middleware('access_level:nationaladmin');
-  Route::post('/national/update/password', [NationalAdminController::class, 'nationaladminUpdatePassword'])->name('nationaladmin.update.password')->middleware('access_level:nationaladmin');
-  Route::get('/national/logout', [NationalAdminController::class, 'nationaladminLogout'])->name('nationaladmin.logout')->middleware('access_level:nationaladmin');
-
+  
 
 // Permission Routes
 Route::get('/national/settings/permissions', [RolePermissionController::class, 'allpermission'])->name('nationaladmin.settings.permissions')->middleware('access_level:nationaladmin');

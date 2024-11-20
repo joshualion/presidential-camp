@@ -33,5 +33,8 @@ require __DIR__.'/superAdmin.php';
 //Require National Admin Routes file
 require __DIR__.'/nationalAdmin.php';
 
+//Require Regional Admin Routes file
+require __DIR__.'/regionalAdmin.php';
+
 //Require Auth Routes file
 require __DIR__.'/auth.php';

@@ -63,6 +63,12 @@
 @endif
 <!-- /National admin Menu -->
 
+<!-- Regional admin Menu -->
+@if(Auth::user()->access_level == 'regionaladmin')
+ @Include('backend.template.regionalAdminMenu')
+@endif
+<!-- /Regional admin Menu -->
+
 <!-- State admin Menu -->
 @if(Auth::user()->access_level == 'stateadmin')
   <nav class="mt-2">

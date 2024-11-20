@@ -46,6 +46,61 @@ class MembersController extends Controller
          return Country::where('name', $defaultCountry->system_country)->first();
      }
 
+
+     //Filter member by AccessLevel
+
+     private function filterMemberByAccessLevel()
+     {
+        $profileData = $this->getProfileData();
+
+        if($profileData->access_level == 'superadmin') {
+            $members = User::query()->where('access_level', '!=', 'superadmin');
+        }elseif($profileData->access_level == 'nationaladmin') {
+            $members = User::query()->where('access_level', '!=', 'superadmin');
+        }elseif($profileData->access_level == 'regionaladmin') {
+            $members = User::query()->where('access_level', '!=', 'superadmin')
+                                    ->where('access_level', '!=', 'nationaladmin');
+
+        }elseif($profileData->access_level == 'stateadmin') {
+            $members = User::query()->where('access_level', '!=', 'superadmin')
+                                    ->where('access_level', '!=', 'nationaladmin')
+                                    ->where('access_level', '!=', 'regionaladmin');
+
+        }elseif($profileData->access_level == 'lgaadmin') {
+            $members = User::query()->where('access_level', '!=', 'superadmin')
+                                    ->where('access_level', '!=', 'nationaladmin')
+                                    ->where('access_level', '!=', 'regionaladmin')
+                                    ->where('access_level', '!=', 'stateadmin');
+
+
+        }elseif($profileData->access_level == 'wardadmin') {
+            $members = User::query()->where('access_level', '!=', 'superadmin')
+                                    ->where('access_level', '!=', 'nationaladmin')
+                                    ->where('access_level', '!=', 'regionaladmin')
+                                    ->where('access_level', '!=', 'stateadmin')
+                                    ->where('access_level', '!=', 'lgaadmin');
+
+        }elseif($profileData->access_level == 'pollingunitadmin') {
+            $members = User::query()->where('access_level', '!=', 'superadmin')
+                                    ->where('access_level', '!=', 'nationaladmin')
+                                    ->where('access_level', '!=', 'regionaladmin')
+                                    ->where('access_level', '!=', 'stateadmin')
+                                    ->where('access_level', '!=', 'lgaadmin')
+                                    ->where('access_level', '!=', 'wardadmin');
+
+        }else{
+            $members = User::query()->where('access_level', '!=', 'superadmin')
+                                    ->where('access_level', '!=', 'nationaladmin')
+                                    ->where('access_level', '!=', 'regionaladmin')
+                                    ->where('access_level', '!=', 'stateadmin')
+                                    ->where('access_level', '!=', 'lgaadmin')
+                                    ->where('access_level', '!=', 'wardadmin')
+                                    ->where('access_level', '!=', 'pollingunitadmin');
+        }
+
+        return $members;
+     }
+
      //Function to retrieves regions from set country
      public function getRegions()
      {
@@ -84,42 +139,46 @@ class MembersController extends Controller
      public function getMembersData($uuid = null)
      {
 
-        $members = collect();
+
+
+
+        $members = $this->filterMemberByAccessLevel();
 
         if ($uuid) {
             if ($pu = PollingUnit::where('uuid', $uuid)->first()) {
                 // Fetch members directly by Polling Unit ID
-                $members = User::query()->where('access_level', '!=', 'superadmin')
-                               ->where('polling_unit_id', $pu->id);
+                //$members = User::query()->where('access_level', '!=', 'superadmin')
+                $members->where('polling_unit_id', $pu->id);
 
             } elseif ($ward = Ward::where('uuid', $uuid)->first()) {
                 // Fetch members directly by Ward ID
-                $members = User::query()->where('access_level', '!=', 'superadmin')
-                               ->where('ward_id', $ward->id);
+                //$members = User::query()->where('access_level', '!=', 'superadmin')
+                $members->where('ward_id', $ward->id);
 
             } elseif ($lga = LocalGovernmentArea::where('uuid', $uuid)->first()) {
                 // Fetch members directly by LGA ID
-                $members = User::query()->where('access_level', '!=', 'superadmin')
-                               ->where('lga_id', $lga->id);
+               // $members = User::query()->where('access_level', '!=', 'superadmin')
+               $members->where('lga_id', $lga->id);
 
             } elseif ($state = State::where('uuid', $uuid)->first()) {
                 // Fetch members directly by State ID
-                $members = User::query()->where('access_level', '!=', 'superadmin')
-                               ->where('state_id', $state->id);
+                //$members = User::query()->where('access_level', '!=', 'superadmin')
+                $members->where('state_id', $state->id);
 
             } elseif ($region = Region::where('uuid', $uuid)->first()) {
                 // Fetch members directly by Region ID
-                $members = User::query()->where('access_level', '!=', 'superadmin')
-                               ->where('region_id', $region->id);
+                //$members = User::query()->where('access_level', '!=', 'superadmin')
+                $members->where('region_id', $region->id);
 
             } elseif ($country = Country::where('uuid', $uuid)->first()) {
                 // Fetch members directly by Country ID
-                $members = User::query()->where('access_level', '!=', 'superadmin')
-                               ->where('country_id', $country->id);
+                //$members = User::query()->where('access_level', '!=', 'superadmin')
+                $members->where('country_id', $country->id);
             }
         } else {
             // If no UUID is provided, fetch all members excluding superadmins
-            $members = User::query()->where('access_level', '!=', 'superadmin');
+           // $members =  $members; //User::query()->where('access_level', '!=', 'superadmin');
+
         }
 
 
@@ -148,7 +207,7 @@ class MembersController extends Controller
                  // Check if the member is active or not for Suspend/Activate button
                  if ($member->status == 'active') {
                      $button = '
-                         <a href="' . route('nationaladmin.member.suspend', $member->uuid) . '">
+                         <a href="' . route($profileData->access_level.'.member.suspend', $member->uuid) . '">
                              <button class="btn btn-warning btn-sm">
                                  <i class="fas fa-pause"></i> Suspend
                              </button>
@@ -156,7 +215,7 @@ class MembersController extends Controller
                      ';
                  } else {
                      $button = '
-                         <a href="' . route('nationaladmin.member.suspend', $member->uuid) . '">
+                         <a href="' . route($profileData->access_level.'.member.suspend', $member->uuid) . '">
                              <button class="btn btn-success btn-sm">
                                  <i class="fas fa-play"></i> Activate
                              </button>
@@ -166,7 +225,7 @@ class MembersController extends Controller
 
                  // Action buttons visible to all
                  $actionButtons = '
-                     <a href="' . route('nationaladmin.member.view', $member->uuid) . '">
+                     <a href="' . route($profileData->access_level.'.member.view', $member->uuid) . '">
                          <button class="btn btn-primary btn-sm">
                              <i class="fas fa-eye"></i> Show
                          </button>
@@ -185,12 +244,12 @@ class MembersController extends Controller
                      ]) || $profileData->access_level == 'superadmin'
                  ) {
                      $actionButtons .= '
-                         <a href="' . route('nationaladmin.member.edit', $member->uuid) . '">
+                         <a href="' . route($profileData->access_level.'.member.edit', $member->uuid) . '">
                              <button class="btn btn-info btn-sm">
                                  <i class="fas fa-pencil-alt"></i> Edit
                              </button>
                          </a>
-                         <form action="' . route('nationaladmin.member.delete', $member->uuid) . '" method="POST" style="display:inline-block;" data-associated-users="false">
+                         <form action="' . route($profileData->access_level.'.member.delete', $member->uuid) . '" method="POST" style="display:inline-block;" data-associated-users="false">
                              ' . csrf_field() . method_field('DELETE') . '
                              <button type="submit" class="btn btn-danger btn-sm delete-btn">
                                  <i class="fas fa-trash"></i> Delete
@@ -318,7 +377,7 @@ class MembersController extends Controller
                  // Check if the member is active or not for Suspend/Activate button
                  if ($member->status == 'active') {
                      $button = '
-                         <a href="' . route('nationaladmin.member.suspend', $member->uuid) . '">
+                         <a href="' . route($profileData->access_level.'.member.suspend', $member->uuid) . '">
                              <button class="btn btn-warning btn-sm">
                                  <i class="fas fa-pause"></i> Suspend
                              </button>
@@ -326,7 +385,7 @@ class MembersController extends Controller
                      ';
                  } else {
                      $button = '
-                         <a href="' . route('nationaladmin.member.suspend', $member->uuid) . '">
+                         <a href="' . route($profileData->access_level.'.member.suspend', $member->uuid) . '">
                              <button class="btn btn-success btn-sm">
                                  <i class="fas fa-play"></i> Activate
                              </button>
@@ -336,7 +395,7 @@ class MembersController extends Controller
 
                  // Action buttons visible to all
                  $actionButtons = '
-                     <a href="' . route('nationaladmin.member.view', $member->uuid) . '">
+                     <a href="' . route($profileData->access_level.'.member.view', $member->uuid) . '">
                          <button class="btn btn-primary btn-sm">
                              <i class="fas fa-eye"></i> Show
                          </button>
@@ -355,12 +414,12 @@ class MembersController extends Controller
                      ]) || $profileData->access_level == 'superadmin'
                  ) {
                      $actionButtons .= '
-                         <a href="' . route('nationaladmin.member.edit', $member->uuid) . '">
+                         <a href="' . route($profileData->access_level.'.member.edit', $member->uuid) . '">
                              <button class="btn btn-info btn-sm">
                                  <i class="fas fa-pencil-alt"></i> Edit
                              </button>
                          </a>
-                         <form action="' . route('nationaladmin.member.delete', $member->uuid) . '" method="POST" style="display:inline-block;" data-associated-users="false">
+                         <form action="' . route($profileData->access_level.'.member.delete', $member->uuid) . '" method="POST" style="display:inline-block;" data-associated-users="false">
                              ' . csrf_field() . method_field('DELETE') . '
                              <button type="submit" class="btn btn-danger btn-sm delete-btn">
                                  <i class="fas fa-trash"></i> Delete
@@ -489,7 +548,7 @@ class MembersController extends Controller
                  // Check if the member is active or not for Suspend/Activate button
                  if ($member->status == 'active') {
                      $button = '
-                         <a href="' . route('nationaladmin.member.suspend', $member->uuid) . '">
+                         <a href="' . route($profileData->access_level.'.member.suspend', $member->uuid) . '">
                              <button class="btn btn-warning btn-sm">
                                  <i class="fas fa-pause"></i> Suspend
                              </button>
@@ -497,7 +556,7 @@ class MembersController extends Controller
                      ';
                  } else {
                      $button = '
-                         <a href="' . route('nationaladmin.member.suspend', $member->uuid) . '">
+                         <a href="' . route($profileData->access_level.'.member.suspend', $member->uuid) . '">
                              <button class="btn btn-success btn-sm">
                                  <i class="fas fa-play"></i> Activate
                              </button>
@@ -507,7 +566,7 @@ class MembersController extends Controller
 
                  // Action buttons visible to all
                  $actionButtons = '
-                     <a href="' . route('nationaladmin.member.view', $member->uuid) . '">
+                     <a href="' . route($profileData->access_level.'.member.view', $member->uuid) . '">
                          <button class="btn btn-primary btn-sm">
                              <i class="fas fa-eye"></i> Show
                          </button>
@@ -526,12 +585,12 @@ class MembersController extends Controller
                      ]) || $profileData->access_level == 'superadmin'
                  ) {
                      $actionButtons .= '
-                         <a href="' . route('nationaladmin.member.edit', $member->uuid) . '">
+                         <a href="' . route($profileData->access_level.'.member.edit', $member->uuid) . '">
                              <button class="btn btn-info btn-sm">
                                  <i class="fas fa-pencil-alt"></i> Edit
                              </button>
                          </a>
-                         <form action="' . route('nationaladmin.member.delete', $member->uuid) . '" method="POST" style="display:inline-block;" data-associated-users="false">
+                         <form action="' . route($profileData->access_level.'.member.delete', $member->uuid) . '" method="POST" style="display:inline-block;" data-associated-users="false">
                              ' . csrf_field() . method_field('DELETE') . '
                              <button type="submit" class="btn btn-danger btn-sm delete-btn">
                                  <i class="fas fa-trash"></i> Delete
@@ -545,10 +604,6 @@ class MembersController extends Controller
              ->rawColumns(['role', 'action']) // Ensures that HTML in the 'role' and 'action' columns is rendered properly
              ->make(true);
      }
-
-
-
-
 
      public function addMember()
      {
@@ -675,7 +730,7 @@ class MembersController extends Controller
              'lga_id' => 'required|exists:local_government_areas,id',
              'ward_id' => 'required|exists:wards,id',
              'polling_unit_id' => 'required|exists:polling_units,id',
-             'access_level' => 'required',
+             'access_level' => 'nullable|string',
              'religion_id' => 'required|exists:religions,id',
              'address' => 'nullable|string|max:255',
              'occupation' => 'nullable|string|max:255',
@@ -732,7 +787,7 @@ class MembersController extends Controller
                      'alert-type' => 'error'
                  ];
 
-                 return redirect()->back()->withErrors($notification);
+                 return redirect()->back()->with($notification);
              }
              } else {
                  // No role selected, assign default role 'Member' (role ID = 40)
@@ -900,7 +955,7 @@ class MembersController extends Controller
                     // Check if the member is active or not for Suspend/Activate button
                     if ($member->status == 'active') {
                         $button = '
-                            <a href="' . route('nationaladmin.member.suspend', $member->uuid) . '">
+                            <a href="' . route($profileData->access_level.'.member.suspend', $member->uuid) . '">
                                 <button class="btn btn-warning btn-sm">
                                     <i class="fas fa-pause"></i> Suspend
                                 </button>
@@ -908,7 +963,7 @@ class MembersController extends Controller
                         ';
                     } else {
                         $button = '
-                            <a href="' . route('nationaladmin.member.suspend', $member->uuid) . '">
+                            <a href="' . route($profileData->access_level.'.member.suspend', $member->uuid) . '">
                                 <button class="btn btn-success btn-sm">
                                     <i class="fas fa-play"></i> Activate
                                 </button>
@@ -918,7 +973,7 @@ class MembersController extends Controller
 
                     // Action buttons visible to all
                     $actionButtons = '
-                        <a href="' . route('nationaladmin.member.view', $member->uuid) . '">
+                        <a href="' . route($profileData->access_level.'.member.view', $member->uuid) . '">
                             <button class="btn btn-primary btn-sm">
                                 <i class="fas fa-eye"></i> Show
                             </button>
@@ -937,12 +992,12 @@ class MembersController extends Controller
                         ]) || $profileData->access_level == 'superadmin'
                     ) {
                         $actionButtons .= '
-                            <a href="' . route('nationaladmin.member.edit', $member->uuid) . '">
+                            <a href="' . route($profileData->access_level.'.member.edit', $member->uuid) . '">
                                 <button class="btn btn-info btn-sm">
                                     <i class="fas fa-pencil-alt"></i> Edit
                                 </button>
                             </a>
-                            <form action="' . route('nationaladmin.member.delete', $member->uuid) . '" method="POST" style="display:inline-block;" data-associated-users="false">
+                            <form action="' . route($profileData->access_level.'.member.delete', $member->uuid) . '" method="POST" style="display:inline-block;" data-associated-users="false">
                                 ' . csrf_field() . method_field('DELETE') . '
                                 <button type="submit" class="btn btn-danger btn-sm delete-btn">
                                     <i class="fas fa-trash"></i> Delete

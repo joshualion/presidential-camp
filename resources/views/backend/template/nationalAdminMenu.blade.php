@@ -405,7 +405,7 @@
                           </li>
 
                           <li class="nav-item">
-                            <a href="/national/settings/agegrade" class="nav-link">
+                            <a href="/national/setting/agegrade" class="nav-link">
                             <i class="fas fa-user-graduate nav-icon"></i>
                               <p> Age Grade Settings</p>
                             </a>

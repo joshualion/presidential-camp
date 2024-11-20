@@ -127,32 +127,69 @@ class NationalAdminController extends Controller
     }
 
       //Function for admin profile update
-      public function nationalAdminProfileStore(Request $request)
-      {
-          $profileData = $this->getProfileData();
-          $profileData->update($request->only([
-          'username', 'vin','firstname', 'lastname', 'email',
-          'phone', 'address', 'qualification','occupation',
-          'age_grade', 'gender', 'validvoter', 'religion',
-          'supportgroup_id','country_id','region_id','state_id',
-          'lga_id','ward_id','pu_id', 'officer_id'
-          ]));
+    public function nationalAdminProfileStore(Request $request)
+    {
+        $profileData = $this->getProfileData();
+          
+        // Validation rules
+       $validatedData = $request->validate([
+          'firstname' => 'required|string|max:255',
+          'lastname' => 'required|string|max:255',
+          'email' => 'required|email|max:255',
+          'phone' => 'required|string|max:15|unique:users,phone,' .$profileData->id,
+          'validvoter' => 'required|in:yes,no',
+          'vin' => 'nullable|string|max:255',
+          'age_grade_id' => 'required|exists:age_grades,id',
+          'gender' => 'required|in:male,female',
+          'region_id' => 'required|exists:regions,id',
+          'state_id' => 'required|exists:states,id',
+          'lga_id' => 'required|exists:local_government_areas,id',
+          'ward_id' => 'required|exists:wards,id',
+          'polling_unit_id' => 'required|exists:polling_units,id',
+          'religion_id' => 'required|exists:religions,id',
+          'address' => 'nullable|string|max:255',
+          'occupation' => 'nullable|string|max:255',
+          'qualification' => 'nullable|string|max:255',
+          'photo' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+      ]);
 
-          if ($request->hasFile('photo')) {
-              $file = $request->file('photo');
-              $filename = date('YmdHi') . $file->getClientOriginalName();
-              $file->move(public_path('uploads/member_images/'), $filename);
-              @unlink(public_path('uploads/member_images/') . $profileData->photo);
-              $profileData->photo = $filename;
-          }
+      $profileData->update([
+          'firstname' => $validatedData['firstname'],
+          'lastname' => $validatedData['lastname'],
+          'email' => $validatedData['email'],
+          'phone' => $validatedData['phone'],
+          'validVoter' => $validatedData['validvoter'],
+          'vin' => $validatedData['vin'],
+          'age_grade_id' => $validatedData['age_grade_id'],
+          'gender' => $validatedData['gender'],
+          'region_id' => $validatedData['region_id'],
+          'state_id' => $validatedData['state_id'],
+          'lga_id' => $validatedData['lga_id'],
+          'ward_id' => $validatedData['ward_id'],
+          'polling_unit_id' => $validatedData['polling_unit_id'],
+          'religion_id' => $validatedData['religion_id'],
+          'address' => $validatedData['address'],
+          'occupation' => $validatedData['occupation'],
+          'qualification' => $validatedData['qualification'],
+      ]);
 
-          $profileData->save();
-          $notification = [
-              'message' => 'Profile Updated Successfully',
-              'alert-type' => 'success'
-          ];
-          return redirect()->back()->with($notification);
-      }
+        if ($request->hasFile('photo')) {
+            $file = $request->file('photo');
+            $filename = date('YmdHi') . $file->getClientOriginalName();
+            $file->move(public_path('uploads/member_images/'), $filename);
+            @unlink(public_path('uploads/member_images/') . $profileData->photo);
+            $profileData->photo = $filename;
+        }
+
+        $profileData->save();
+        $notification = [
+            'message' => 'Profile Updated Successfully',
+            'alert-type' => 'success'
+        ];
+        return redirect()->back()->with($notification);
+          
+          
+    }
 
 
 
