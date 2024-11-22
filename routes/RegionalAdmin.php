@@ -11,9 +11,9 @@ use Illuminate\Support\Facades\Route;
 
 
 
-Route::middleware('auth')->group(function () {  
+Route::middleware('auth')->group(function () {
 
- // Super Admin Profile & Dashboard Routes
+ // Regional Admin Profile & Dashboard Routes
  Route::get('/regional/dashboard', [RegionalAdminController::class, 'regionalAdminDashBoard'])->name('regionaladmin.dashboard')->middleware('access_level:regionaladmin');
  Route::get('/regional/profile', [RegionalAdminController::class, 'regionaladminProfile'])->name('regionaladmin.profile')->middleware('access_level:regionaladmin');
  Route::post('/regional/profile/store', [RegionalAdminController::class, 'regionaladminProfileStore'])->name('regionaladmin.profile.store')->middleware('access_level:regionaladmin');

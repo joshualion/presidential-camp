@@ -46,61 +46,6 @@ class MembersController extends Controller
          return Country::where('name', $defaultCountry->system_country)->first();
      }
 
-
-     //Filter member by AccessLevel
-
-     private function filterMemberByAccessLevel()
-     {
-        $profileData = $this->getProfileData();
-
-        if($profileData->access_level == 'superadmin') {
-            $members = User::query()->where('access_level', '!=', 'superadmin');
-        }elseif($profileData->access_level == 'nationaladmin') {
-            $members = User::query()->where('access_level', '!=', 'superadmin');
-        }elseif($profileData->access_level == 'regionaladmin') {
-            $members = User::query()->where('access_level', '!=', 'superadmin')
-                                    ->where('access_level', '!=', 'nationaladmin');
-
-        }elseif($profileData->access_level == 'stateadmin') {
-            $members = User::query()->where('access_level', '!=', 'superadmin')
-                                    ->where('access_level', '!=', 'nationaladmin')
-                                    ->where('access_level', '!=', 'regionaladmin');
-
-        }elseif($profileData->access_level == 'lgaadmin') {
-            $members = User::query()->where('access_level', '!=', 'superadmin')
-                                    ->where('access_level', '!=', 'nationaladmin')
-                                    ->where('access_level', '!=', 'regionaladmin')
-                                    ->where('access_level', '!=', 'stateadmin');
-
-
-        }elseif($profileData->access_level == 'wardadmin') {
-            $members = User::query()->where('access_level', '!=', 'superadmin')
-                                    ->where('access_level', '!=', 'nationaladmin')
-                                    ->where('access_level', '!=', 'regionaladmin')
-                                    ->where('access_level', '!=', 'stateadmin')
-                                    ->where('access_level', '!=', 'lgaadmin');
-
-        }elseif($profileData->access_level == 'pollingunitadmin') {
-            $members = User::query()->where('access_level', '!=', 'superadmin')
-                                    ->where('access_level', '!=', 'nationaladmin')
-                                    ->where('access_level', '!=', 'regionaladmin')
-                                    ->where('access_level', '!=', 'stateadmin')
-                                    ->where('access_level', '!=', 'lgaadmin')
-                                    ->where('access_level', '!=', 'wardadmin');
-
-        }else{
-            $members = User::query()->where('access_level', '!=', 'superadmin')
-                                    ->where('access_level', '!=', 'nationaladmin')
-                                    ->where('access_level', '!=', 'regionaladmin')
-                                    ->where('access_level', '!=', 'stateadmin')
-                                    ->where('access_level', '!=', 'lgaadmin')
-                                    ->where('access_level', '!=', 'wardadmin')
-                                    ->where('access_level', '!=', 'pollingunitadmin');
-        }
-
-        return $members;
-     }
-
      //Function to retrieves regions from set country
      public function getRegions()
      {
@@ -116,6 +61,50 @@ class MembersController extends Controller
 
          return($region);
      }
+
+
+     private function filterMemberByAccessLevel()
+        {
+            $profileData = $this->getProfileData();
+
+            // Access level hierarchy
+            $accessLevels = [
+                'superadmin',
+                'nationaladmin',
+                'regionaladmin',
+                'stateadmin',
+                'lgaadmin',
+                'wardadmin',
+                'pollingunitadmin',
+            ];
+
+            // Exclude higher levels
+            $currentLevelIndex = array_search($profileData->access_level, $accessLevels);
+            $excludedLevels = array_slice($accessLevels, 0, $currentLevelIndex); // Exclude only higher levels
+
+            // Include members at the same level and below
+            $members = User::query()->whereNotIn('access_level', $excludedLevels);
+
+            // Apply regional constraints for admins below the national level
+            if (!in_array($profileData->access_level, ['superadmin', 'nationaladmin'])) {
+                $constraints = [
+                    'region_id' => $profileData->region_id,
+                    'state_id' => $profileData->state_id,
+                    'lga_id' => $profileData->lga_id,
+                    'ward_id' => $profileData->ward_id,
+                    'polling_unit_id' => $profileData->polling_unit_id,
+                ];
+
+                foreach ($constraints as $column => $value) {
+                    if ($value) {
+                        $members->where($column, $value);
+                    }
+                }
+            }
+
+            return $members;
+     }
+
 
      public function allMembers($uuid = null)
      {
@@ -146,40 +135,19 @@ class MembersController extends Controller
 
         if ($uuid) {
             if ($pu = PollingUnit::where('uuid', $uuid)->first()) {
-                // Fetch members directly by Polling Unit ID
-                //$members = User::query()->where('access_level', '!=', 'superadmin')
                 $members->where('polling_unit_id', $pu->id);
-
             } elseif ($ward = Ward::where('uuid', $uuid)->first()) {
-                // Fetch members directly by Ward ID
-                //$members = User::query()->where('access_level', '!=', 'superadmin')
                 $members->where('ward_id', $ward->id);
-
             } elseif ($lga = LocalGovernmentArea::where('uuid', $uuid)->first()) {
-                // Fetch members directly by LGA ID
-               // $members = User::query()->where('access_level', '!=', 'superadmin')
-               $members->where('lga_id', $lga->id);
-
+                $members->where('lga_id', $lga->id);
             } elseif ($state = State::where('uuid', $uuid)->first()) {
-                // Fetch members directly by State ID
-                //$members = User::query()->where('access_level', '!=', 'superadmin')
                 $members->where('state_id', $state->id);
-
             } elseif ($region = Region::where('uuid', $uuid)->first()) {
-                // Fetch members directly by Region ID
-                //$members = User::query()->where('access_level', '!=', 'superadmin')
                 $members->where('region_id', $region->id);
-
             } elseif ($country = Country::where('uuid', $uuid)->first()) {
-                // Fetch members directly by Country ID
-                //$members = User::query()->where('access_level', '!=', 'superadmin')
                 $members->where('country_id', $country->id);
             }
-        } else {
-            // If no UUID is provided, fetch all members excluding superadmins
-           // $members =  $members; //User::query()->where('access_level', '!=', 'superadmin');
-
-        }
+        } 
 
 
          return datatables()->eloquent($members)

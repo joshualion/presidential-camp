@@ -27,11 +27,19 @@ class Region extends Model
         return $this->hasMany(User::class);
     }
 
+    public function votes(){
+        return $this->hasMany(Vote::class);
+    }
+
+    public function incidents(){
+        return $this->hasMany(ElectionIncident::class);
+    }
+
      // Automatically generate UUID when creating a new region
      protected static function boot()
      {
          parent::boot();
- 
+
          static::creating(function ($region) {
              $region->uuid = (string) Str::uuid();
          });

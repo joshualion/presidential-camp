@@ -19,7 +19,7 @@ class DatabaseSeeder extends Seeder
         $this->call(CountrySeeder::class);
         $this->call(RegionSeeder::class);
         $this->call(StateSeeder::class);
-       
+
 
        /* //LGA Factory
        \App\Models\LocalGovernmentArea::factory()->count(774)->create();
@@ -37,6 +37,9 @@ class DatabaseSeeder extends Seeder
         $this->call(AgeGradeTableSeeder::class);
         $this->call(SupportGroupSeeder::class);
         $this->call(ReligionTableSeeder::class);
+        $this->call(PoliticalPartiesSeeder::class);
+
+
 
         // Settings Seeders
         $this->call(SystemSettingsSeeder::class);

@@ -23,6 +23,14 @@ class LocalGovernmentArea extends Model
         return $this->hasMany(User::class, 'lga_id');
     }
 
+    public function votes(){
+        return $this->hasMany(Vote::class, 'lga_id');
+    }
+
+    public function incidents(){
+        return $this->hasMany(ElectionIncident::class, 'lga_id');
+    }
+
     // Automatically generate UUID when creating a new LGA
    protected static function boot()
    {

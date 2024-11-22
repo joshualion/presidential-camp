@@ -3,10 +3,12 @@
 use App\Http\Controllers\AgeGradeController;
 use App\Http\Controllers\AjaxController;
 use App\Http\Controllers\ChartsController;
+use App\Http\Controllers\ElectionController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\MembersController;
 use App\Http\Controllers\nationaladmin\NationalAdminController;
 use App\Http\Controllers\nationaladmin\NationalSystemSettingController;
+use App\Http\Controllers\PoliticalPartyController;
 use App\Http\Controllers\ReligionController;
 use App\Http\Controllers\RolePermissionController;
 use App\Http\Controllers\VolunteerGroupController;
@@ -16,6 +18,17 @@ use Illuminate\Support\Facades\Route;
 
 
 Route::middleware('auth')->group(function () {
+
+ // national Admin Profile & Dashboard Routes
+ Route::get('/national/dashboard', [NationalAdminController::class, 'nationalAdminDashBoard'])->name('nationaladmin.dashboard')->middleware('access_level:nationaladmin');
+ Route::get('/national/profile', [NationalAdminController::class, 'nationaladminProfile'])->name('nationaladmin.profile')->middleware('access_level:nationaladmin');
+ Route::post('/national/profile/store', [NationalAdminController::class, 'nationaladminProfileStore'])->name('nationaladmin.profile.store')->middleware('access_level:nationaladmin');
+ Route::get('/national/change/password', [NationalAdminController::class, 'nationaladminChangePassword'])->name('nationaladmin.change.password')->middleware('access_level:nationaladmin');
+ Route::post('/national/update/password', [NationalAdminController::class, 'nationaladminUpdatePassword'])->name('nationaladmin.update.password')->middleware('access_level:nationaladmin');
+ Route::get('/national/logout', [NationalAdminController::class, 'nationaladminLogout'])->name('nationaladmin.logout')->middleware('access_level:nationaladmin');
+
+
+
     //nationaladmin system Setting
     Route::get('/national/system/settings/', [NationalSystemSettingController::class,'SystemSettings'])->name('nationaladmin.settings.system')->middleware('access_level:nationaladmin');
     Route::post('/national/settings/system/update', [NationalSystemSettingController::class,'updateSystemsSettings'])->name('nationaladmin.settings.system.update')->middleware('access_level:nationaladmin');
@@ -33,7 +46,7 @@ Route::middleware('auth')->group(function () {
   Route::post('/national/settings/terms/update', [NationalSystemSettingController::class,'UpdateTos'])->name('nationaladmin.settings.terms.update')->middleware('access_level:nationaladmin');
 
 
-  
+
 
 // Permission Routes
 Route::get('/national/settings/permissions', [RolePermissionController::class, 'allpermission'])->name('nationaladmin.settings.permissions')->middleware('access_level:nationaladmin');
@@ -97,8 +110,8 @@ Route::get('/national/member/view/{uuid}', [MembersController::class, 'viewMembe
 Route::get('/national/member/suspend/{uuid}', [MembersController::class, 'suspendMember'])->name('nationaladmin.member.suspend')->middleware('access_level:nationaladmin');
 Route::delete('/national/member/delete/{uuid}', [MembersController::class, 'deleteMember'])->name('nationaladmin.member.delete')->middleware('access_level:nationaladmin');
  //Members By region
-Route::get('/national/members/region', [MembersController::class, 'membersByRegions'])->name('nationaladmin.members.region')->middleware('access_level:nationaladmin,regionaladmin');
-Route::get('/national/members/region/{uuid}', [MembersController::class, 'ViewMembersByRegion'])->name('nationaladmin.member.region.view')->middleware('access_level:nationaladmin,regionaladmin');
+Route::get('/national/members/region', [MembersController::class, 'membersByRegions'])->name('nationaladmin.members.region')->middleware('access_level:nationaladmin,nationaladmin');
+Route::get('/national/members/region/{uuid}', [MembersController::class, 'ViewMembersByRegion'])->name('nationaladmin.member.region.view')->middleware('access_level:nationaladmin,nationaladmin');
 Route::get('/national/region/members/data/{uuid}', [MembersController::class, 'getRegionMembersData'])->name('nationaladmin.region.members.data');
 // Members By State
 Route::get('/national/members/bystate/{uuid?}', [MembersController::class, 'membersByStates'])->name('nationaladmin.members.byState')->middleware('access_level:nationaladmin,regionadmin,stateadmin');
@@ -250,5 +263,25 @@ Route::get('/national/setting/agegrade/edit/{uuid}', [AgeGradeController::class,
 Route::post('/national/setting/agegrade/update/{uuid}', [AgeGradeController::class, 'updateAgeGrade'])->name('nationaladmin.agegrade.update')->middleware('access_level:nationaladmin');
 Route::delete('/national/setting/agegrade/delete/{uuid}', [AgeGradeController::class, 'deleteAgeGrade'])->name('nationaladmin.agegrade.delete')->middleware('access_level:nationaladmin');
 
+// Political Party Management CRUD
+
+Route::get('/national/election/setting/politicalparty', [PoliticalPartyController::class, 'allPoliticalParties'])->name('nationaladmin.election.politicalparty')->middleware('access_level:nationaladmin');
+Route::get('/national/election/setting/politicalparty/add', [PoliticalPartyController::class, 'addPoliticalParty'])->name('nationaladmin.election.politicalparty.add')->middleware('access_level:nationaladmin');
+Route::post('/national/election/setting/politicalparty/store', [PoliticalPartyController::class, 'storePoliticalParty'])->name('nationaladmin.election.politicalparty.store')->middleware('access_level:nationaladmin');
+Route::get('/national/election/setting/politicalparty/edit/{uuid}', [PoliticalPartyController::class, 'editPoliticalParty'])->name('nationaladmin.election.politicalparty.edit')->middleware('access_level:nationaladmin');
+Route::post('/national/election/setting/politicalparty/update/{uuid}', [PoliticalPartyController::class, 'updatePoliticalParty'])->name('nationaladmin.election.politicalparty.update')->middleware('access_level:nationaladmin');
+Route::delete('/national/election/setting/politicalparty/delete/{uuid}', [PoliticalPartyController::class, 'deletePoliticalParty'])->name('nationaladmin.election.politicalparty.delete')->middleware('access_level:nationaladmin');
+// Election Management CRUD
+
+Route::get('/national/elections', [ElectionController::class, 'allElections'])->name('nationaladmin.elections')->middleware('access_level:nationaladmin');
+Route::get('/national/election/add', [ElectionController::class, 'addElection'])->name('nationaladmin.election.add')->middleware('access_level:nationaladmin');
+Route::post('/national/election/store', [ElectionController::class, 'storeElection'])->name('nationaladmin.election.store')->middleware('access_level:nationaladmin');
+Route::get('/national/election/edit/{uuid}', [ElectionController::class, 'editElection'])->name('nationaladmin.election.edit')->middleware('access_level:nationaladmin');
+Route::post('/national/election/update/{uuid}', [ElectionController::class, 'updateElection'])->name('nationaladmin.election.update')->middleware('access_level:nationaladmin');
+Route::delete('/national/election/delete/{uuid}', [ElectionController::class, 'deleteElection'])->name('nationaladmin.election.delete')->middleware('access_level:nationaladmin');
+// Election Result
+Route::get('/national/election/result/{uuid}', [ElectionController::class, 'electionResult'])->name('nationaladmin.election.results')->middleware('access_level:nationaladmin');
+// Election Incident
+Route::get('/national/election/incident/{uuid}', [ElectionController::class, 'electionIncident'])->name('nationaladmin.election.incidents')->middleware('access_level:nationaladmin');
 });
 

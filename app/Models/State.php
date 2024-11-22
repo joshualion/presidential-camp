@@ -26,7 +26,13 @@ class State extends Model
         return $this->hasMany(User::class);
     }
 
+    public function votes(){
+        return $this->hasMany(Vote::class);
+    }
 
+    public function incidents(){
+        return $this->hasMany(ElectionIncident::class);
+    }
    // Automatically generate UUID when creating a new state
    protected static function boot()
    {
@@ -36,7 +42,7 @@ class State extends Model
            $state->uuid = (string) Str::uuid();
        });
    }
-   
+
 
 
 

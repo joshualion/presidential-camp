@@ -88,16 +88,16 @@
                             <ul class="nav nav-treeview">
 
                             <li class="nav-item">
-                                <a href="/national/dashboard" class="nav-link">
+                                <a href="/national/elections" class="nav-link">
                                   <i class="fas fa-award nav-icon"></i>
                                   <p>Manage Elections</p>
                                 </a>
                               </li>
 
                               <li class="nav-item">
-                                <a href="/national/dashboard" class="nav-link">
+                                <a href="/national/election/setting/politicalparty" class="nav-link">
                                   <i class="fas fa-vote-yea nav-icon"></i>
-                                  <p>Manage Political parties</p>
+                                  <p>Political Parties</p>
                                 </a>
                               </li>
 

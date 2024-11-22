@@ -21,6 +21,14 @@ class PollingUnit extends Model
         return $this->hasMany(User::class);
     }
 
+    public function votes(){
+        return $this->hasMany(Vote::class);
+    }
+
+    public function incidents(){
+        return $this->hasMany(ElectionIncident::class);
+    }
+
     //boot method for uuid
 
     public static function boot()
