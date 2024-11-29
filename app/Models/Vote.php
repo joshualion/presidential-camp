@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 
 class Vote extends Model
 {
@@ -44,4 +45,20 @@ class Vote extends Model
     public function pollingUnit(){
         return $this->belongsTo(PollingUnit::class);
     }
+
+    public function pollingUnitResult()
+{
+    return $this->belongsTo(PollingUnitResult::class, 'polling_unit_result_id');
+}
+
+
+//Auto generate UUID when creating a new religion
+public static function boot()
+{
+    parent::boot();
+    static::creating(function ($model) {
+        $model->uuid = (string) Str::uuid();
+    });
+}
+
 }

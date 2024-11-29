@@ -6,15 +6,19 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\AgeGrade;
 use App\Models\Country;
+use App\Models\Election;
 use App\Models\LocalGovernmentArea;
+use App\Models\PoliticalParty;
 use App\Models\PollingUnit;
 use App\Models\Region;
 use App\Models\Religion;
 use App\Models\State;
 use App\Models\SystemSetting;
+use App\Models\Vote;
 use App\Models\Ward;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\View;
 use App\Models\User;
@@ -620,5 +624,57 @@ class ChartsController extends Controller
         ];
 
         return response()->json($wardData);
+    }
+
+
+    //Election Results Charts
+
+    public function getElectionResultChartData($uuid)
+    {
+        // Fetch the election based on the UUID
+        $election = Election::where('uuid', $uuid)->firstOrFail();
+        $profileData = $this->getProfileData();
+
+        // Query the votes grouped by party
+        $voteQuery = Vote::query()
+            ->select('party_id', DB::raw('SUM(quantity) as total_votes'))
+            ->where('election_id', $election->id)
+            ->groupBy('party_id');
+
+        // Apply regional constraints based on user's access level
+        switch ($profileData->access_level) {
+            case 'regionaladmin':
+                $voteQuery->where('region_id', $profileData->region_id);
+                break;
+            case 'stateadmin':
+                $voteQuery->where('state_id', $profileData->state_id);
+                break;
+            case 'lgaadmin':
+                $voteQuery->where('lga_id', $profileData->lga_id);
+                break;
+            case 'wardadmin':
+                $voteQuery->where('ward_id', $profileData->ward_id);
+                break;
+            case 'pollingunitadmin':
+                $voteQuery->where('polling_unit_id', $profileData->polling_unit_id);
+                break;
+            default:
+                // Superadmin and Nationaladmin have no additional constraints
+                break;
+        }
+
+        $results = $voteQuery->get();
+
+        // Transform the data for Chart.js
+        $chartData = $results->map(function ($result) {
+            $party = PoliticalParty::find($result->party_id);
+
+            return [
+                'party' => $party ? "{$party->name} ({$party->acronym})" : 'Unknown Party',
+                'total_votes' => $result->total_votes,
+            ];
+        });
+
+        return response()->json($chartData);
     }
 }

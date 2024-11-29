@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ElectionController;
 use Illuminate\Support\Facades\Route;
 
 use App\Http\Controllers\AjaxController;
@@ -22,6 +23,9 @@ Route::get('/lga/data', [AjaxController::class, 'getLgaData'])->name('lgas.data'
 Route::get('/ward/data', [AjaxController::class, 'getWardData'])->name('wards.data');
 
 Route::get('/pu/data', [AjaxController::class, 'getPUData'])->name('pus.data');
+
+Route::get('/election/{uuid}/chart-data', [ElectionController::class, 'getElectionResultChartData'])
+    ->name('election.chart.data');
 
 Route::get('/', function () {
     return redirect()->route('login');

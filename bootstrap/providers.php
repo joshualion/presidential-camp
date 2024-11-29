@@ -3,5 +3,7 @@
 return [
     App\Providers\AppServiceProvider::class,
     App\Providers\SystemSettingServiceProvider::class,
-    Spatie\Permission\PermissionServiceProvider::class
+    App\Providers\RouteServiceProvider::class,
+    Spatie\Permission\PermissionServiceProvider::class,
+
 ];

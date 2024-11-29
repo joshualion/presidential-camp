@@ -2,7 +2,7 @@
 
 namespace App\Providers;
 
-
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\View;
 use App\Models\SystemSetting;
@@ -22,9 +22,20 @@ class SystemSettingServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // View::composer('*', function ($view) {
+        //     $SystemSetting = SystemSetting::first();
+        //     $view->with('SystemSetting', $SystemSetting);
+        // });
+
         View::composer('*', function ($view) {
-            $SystemSetting = SystemSetting::first();
-            $view->with('SystemSetting', $SystemSetting);
+            if (Schema::hasTable('system_settings')) {
+                // Only try to fetch the first record if the table exists
+                $SystemSetting = SystemSetting::first();
+                $view->with('SystemSetting', $SystemSetting);
+            } else {
+                // Optionally, provide a fallback or leave it as null
+                $view->with('SystemSetting', null);
+            }
         });
 
 

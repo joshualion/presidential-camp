@@ -279,9 +279,21 @@ Route::post('/national/election/store', [ElectionController::class, 'storeElecti
 Route::get('/national/election/edit/{uuid}', [ElectionController::class, 'editElection'])->name('nationaladmin.election.edit')->middleware('access_level:nationaladmin');
 Route::post('/national/election/update/{uuid}', [ElectionController::class, 'updateElection'])->name('nationaladmin.election.update')->middleware('access_level:nationaladmin');
 Route::delete('/national/election/delete/{uuid}', [ElectionController::class, 'deleteElection'])->name('nationaladmin.election.delete')->middleware('access_level:nationaladmin');
-// Election Result
+
+// Election Result Route
 Route::get('/national/election/result/{uuid}', [ElectionController::class, 'electionResult'])->name('nationaladmin.election.results')->middleware('access_level:nationaladmin');
+
 // Election Incident
 Route::get('/national/election/incident/{uuid}', [ElectionController::class, 'electionIncident'])->name('nationaladmin.election.incidents')->middleware('access_level:nationaladmin');
+
+//Manage Votes
+Route::get('/national/votes', [ElectionController::class, 'allVotes'])->name('nationaladmin.votes')->middleware('access_level:nationaladmin');
+Route::get('/national/vote/add', [ElectionController::class, 'addVote'])->name('nationaladmin.vote.add')->middleware('access_level:nationaladmin');
+Route::post('/national/vote/store', [ElectionController::class, 'storeVote'])->name('nationaladmin.vote.store')->middleware('access_level:nationaladmin');
+Route::get('/national/vote/edit/{uuid}', [ElectionController::class, 'editVote'])->name('nationaladmin.vote.edit')->middleware('access_level:nationaladmin');
+Route::post('/national/vote/update/{uuid}', [ElectionController::class, 'updateVote'])->name('nationaladmin.vote.update')->middleware('access_level:nationaladmin');
+Route::delete('/national/vote/delete/{uuid}', [ElectionController::class, 'deleteVote'])->name('nationaladmin.vote.delete')->middleware('access_level:nationaladmin');
+
+
 });
 

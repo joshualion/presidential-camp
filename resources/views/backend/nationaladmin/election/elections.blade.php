@@ -48,7 +48,7 @@ $badgeClasses = [
                         <td>{{ \Carbon\Carbon::parse($election->year)->year }} - {{ $election->name }}</td>
                         <td title="{{ $election->party->name }}">{{ $election->party->acronym }}</td>
                         <td>{{ number_format($election->votes->where('party_id', $election->party_id)->sum('quantity')) }}</td>
-                        <td>{{ number_format($election->votes->count()) }}</td>
+                        <td>{{ number_format($election->votes->sum('quantity')) }}</td>
                         <td> <span class="{{ $badgeClasses[$election->dynamic_status] ?? 'badge badge-secondary' }}">
                             {{ ucfirst($election->dynamic_status) }}
                         </span>
