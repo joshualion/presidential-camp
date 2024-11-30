@@ -77,17 +77,17 @@
                             <div class="card-header">
                                 <h3 class="card-title">
                                     @if($profileData->access_level == 'superadmin' || $profileData->access_level == 'nationaladmin')
-                                    Nationwide Polls Distribution
+                                    Nationwide Votes Distribution
                                 @elseif($profileData->access_level == 'regionaladmin')
-                                    Regional Polls Distribution for {{ $profileData->region->name ?? 'Your Region' }}
+                                    Regional Votes Distribution for {{ $profileData->region->name ?? 'Your Region' }}
                                 @elseif($profileData->access_level == 'stateadmin')
-                                    State Polls Distribution for {{ $profileData->state->name ?? 'Your State' }}
+                                    State Votes Distribution for {{ $profileData->state->name ?? 'Your State' }}
                                 @elseif($profileData->access_level == 'lgaadmin')
-                                    Local Government Area (LGA) Polls Distribution for {{ $profileData->lga->name ?? 'Your LGA' }}
+                                    Local Government Area (LGA) Votes Distribution for {{ $profileData->lga->name ?? 'Your LGA' }}
                                 @elseif($profileData->access_level == 'wardadmin')
-                                    Ward Polls Distribution for {{ $profileData->ward->name ?? 'Your Ward' }}
+                                    Ward Votes Distribution for {{ $profileData->ward->name ?? 'Your Ward' }}
                                 @elseif($profileData->access_level == 'pollingunitadmin')
-                                    Polling Unit Polls Distribution for {{ $profileData->pollingUnit->name ?? 'Your Polling Unit' }}
+                                    Polling Unit Votes Distribution for {{ $profileData->pollingUnit->name ?? 'Your Polling Unit' }}
                                 @endif
                                 </h3>
                                 <div class="card-tools">
