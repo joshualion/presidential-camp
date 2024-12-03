@@ -28,7 +28,7 @@ class NationalAdminController extends Controller
     public function __construct()
     {
 
-        $pageTitle = 'Admin Dashboard';
+        $pageTitle = 'National Dashboard';
         View::share('pageTitle', $pageTitle);
     }
 

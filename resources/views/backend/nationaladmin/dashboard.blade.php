@@ -148,7 +148,7 @@
                                 <div class="inner">
                                   <h3>{{$excoCount}}</h3>
 
-                                  <p>Team Leaders</p>
+                                  <p>Executive Members</p>
                                 </div>
                                 <div class="icon">
                                   <i class="ion ion-person"></i>

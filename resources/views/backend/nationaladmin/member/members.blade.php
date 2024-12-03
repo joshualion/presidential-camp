@@ -2,7 +2,6 @@
 @section('content')
 
 
-
     <!-- Main content -->
     <section class="content">
         <div class="container-fluid">
@@ -12,7 +11,18 @@
                 <div class="card-header">
                     <h3 class="card-title">All Members</h3>
                     <div class="card-tools">
-                        <a href="{{ route($profileData->access_level.'.member.add') }}"><button class="btn btn-default"> <i class="fa fa-plus-square"></i> Add New Member</button></a>
+                        @if(
+                            $profileData->hasAnyRole([
+                                'National ICT/Media Director',
+                                'Regional ICT/Media Director',
+                                'State ICT/Media Director',
+                                'LGA ICT/Media Director',
+                                'Ward ICT/Media Director',
+                                'PU ICT/Media Director',
+                                'Pu Agent'
+                            ]) || $profileData->access_level == 'superadmin')
+                                <a href="{{ route($profileData->access_level.'.member.add') }}"><button class="btn btn-default"> <i class="fa fa-plus-square"></i> Add New Member</button></a>
+                        @endif
                     </div>
                 </div>
                 <!-- /.card-header -->

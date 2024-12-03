@@ -48,7 +48,7 @@ class RolesTableSeeder extends Seeder
             ['id' => 34, 'name' => 'Ward Women Leader', 'guard_name' => 'web', 'group_name' => 'wardadmin', 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
             ['id' => 35, 'name' => 'Ward Youth Leader', 'guard_name' => 'web', 'group_name' => 'wardadmin', 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
             ['id' => 36, 'name' => 'Ward ICT/Media Director', 'guard_name' => 'web', 'group_name' => 'wardadmin', 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
-            ['id' => 37, 'name' => 'PU Team Leader', 'guard_name' => 'web', 'group_name' => 'puadmin', 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
+            ['id' => 37, 'name' => 'PU Agent', 'guard_name' => 'web', 'group_name' => 'puadmin', 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
             ['id' => 38, 'name' => 'PU Voter Mobilizer', 'guard_name' => 'web', 'group_name' => 'puadmin', 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
             ['id' => 39, 'name' => 'PU ICT/Media Director', 'guard_name' => 'web', 'group_name' => 'puadmin', 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
             ['id' => 40, 'name' => 'Member', 'guard_name' => 'web', 'group_name' => 'user', 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],

@@ -76,6 +76,8 @@
             </li>
             {{-- / Members --}}
 
+
+
             {{-- Election --}}
             <li class="tab nav-item menu-close">
                             <a href="#" class="nav-link">
@@ -93,20 +95,30 @@
                                   <p>Manage Elections</p>
                                 </a>
                               </li>
-
+                              @if(
+                                $profileData->hasAnyRole([
+                                    'National ICT/Media Director',
+                                    'Regional ICT/Media Director',
+                                    'State ICT/Media Director',
+                                    'LGA ICT/Media Director',
+                                    'Ward ICT/Media Director',
+                                    'PU ICT/Media Director',
+                                    'Pu Agent'
+                                ]) || $profileData->access_level == 'superadmin' )
                               <li class="nav-item">
-                                <a href="/national/election/setting/politicalparty" class="nav-link">
-                                  <i class="fas fa-vote-yea nav-icon"></i>
-                                  <p>Political Parties</p>
+                                <a href="/national/vote/add" class="nav-link">
+                                <i class="fa fa-cloud nav-icon"></i>
+                                  <p>Upload Polls Result</p>
                                 </a>
                               </li>
 
                               <li class="nav-item">
-                                <a href="/national/state/dashboard" class="nav-link">
-                                <i class="fa fa-thumbs-up nav-icon"></i>
-                                  <p>Votes &  Incidents</p>
+                                <a href="/national/incident/add" class="nav-link">
+                                <i class="fa fa-book nav-icon"></i>
+                                  <p>Log  Incidents</p>
                                 </a>
                               </li>
+                              @endif
                             </ul>
             </li>
             {{-- / Election --}}
@@ -125,21 +137,21 @@
                         <li class="nav-item">
                             <a href="/national/dashboard" class="nav-link">
                               <i class="fas fa-award nav-icon"></i>
-                              <p>Election Results</p>
+                              <p>Elections</p>
                             </a>
                           </li>
 
                           <li class="nav-item">
                             <a href="/national/dashboard" class="nav-link">
                               <i class="fas fa-vote-yea nav-icon"></i>
-                              <p>Election Incident Reports</p>
+                              <p>Members</p>
                             </a>
                           </li>
 
                           <li class="nav-item">
                             <a href="/national/state/dashboard" class="nav-link">
                             <i class="fa fa-thumbs-up nav-icon"></i>
-                              <p>Financial Reports</p>
+                              <p>Finances</p>
                             </a>
                           </li>
                         </ul>
@@ -151,7 +163,7 @@
                 <a href="#" class="nav-link">
                   <i class="nav-icon fas fa-money-bill"></i>
                   <p>
-                    Accounting
+                    Financing
                     <i class="right fas fa-angle-left"></i>
                   </p>
                 </a>
@@ -173,12 +185,12 @@
                     </a>
                   </li>
 
-                  <li class="nav-item">
+                  {{-- <li class="nav-item">
                     <a href="/national/dashboard" class="nav-link">
                       <i class="fas fa-shopping-cart nav-icon"></i>
                       <p>Sales Records</p>
                     </a>
-                  </li>
+                  </li> --}}
 
                   <li class="nav-item">
                     <a href="/national/state/dashboard" class="nav-link">
@@ -193,7 +205,7 @@
 
 
             {{-- Events --}}
-            <li class="tab nav-item menu-close">
+            {{-- <li class="tab nav-item menu-close">
                 <a href="#" class="nav-link">
                   <i class="nav-icon fas fa-calendar"></i>
                   <p>
@@ -219,7 +231,7 @@
 
 
                 </ul>
-           </li>
+           </li> --}}
             {{-- / Events --}}
 
 
@@ -266,7 +278,7 @@
             {{-- / Messaging --}}
 
                {{--  Products Menu --}}
-               <li class="nav-item  menu-close">
+               {{-- <li class="nav-item  menu-close">
                 <a href="#" class="nav-link">
                   <i class="nav-icon fa fa-shopping-cart"></i>
                   <p>
@@ -302,7 +314,7 @@
                       </a>
                     </li>
                 </ul>
-             </li>
+             </li> --}}
              {{--  End Products Menu --}}
 
             {{-- Location --}}
@@ -353,9 +365,6 @@
             </li>
             {{-- / Location --}}
 
-
-
-
             {{-- Settings --}}
             <li class="tab nav-item menu-close">
                         <a href="#" class="nav-link">
@@ -393,6 +402,15 @@
                             <a href="/national/setting/volunteer/group" class="nav-link">
                             <i class="fas fa-handshake nav-icon"></i>
                               <p> Volunteer Group Settings</p>
+                            </a>
+                          </li>
+
+                          
+
+                          <li class="nav-item">
+                            <a href="/national/election/setting/politicalparty" class="nav-link">
+                              <i class="fas fa-vote-yea nav-icon"></i>
+                              <p>Political Parties</p>
                             </a>
                           </li>
 

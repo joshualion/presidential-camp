@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\Country;
+use App\Models\Election;
 use App\Models\Region;
 use App\Models\User;
+use App\Models\Vote;
 use Illuminate\Http\Request;
 use App\Models\State;
 use App\Models\LGA;
@@ -13,6 +15,7 @@ use App\Models\LocalGovernmentArea;
 use App\Models\Ward;
 use App\Models\PollingUnit;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Role;
 
 class AjaxController extends Controller
@@ -436,6 +439,13 @@ class AjaxController extends Controller
                 ->make(true);
 
     }
+
+
+
+    //Elections Ajax Methods
+
+    
+    
 
 
 
