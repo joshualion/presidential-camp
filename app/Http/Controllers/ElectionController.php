@@ -234,178 +234,215 @@ class ElectionController extends Controller
         
             return redirect()->back()->with($notification);
         }
-        
-    public function electionResult($uuid)
-    {
-        $pageTitle = 'Election Result';
-        // Fetch the election by UUID
-        $election = Election::where('uuid', $uuid)->firstOrFail();
-        $profileData = $this->getProfileData();
 
-        // Base query for votes, scoped by the user's access level
-        $query = Vote::select('party_id', DB::raw('SUM(quantity) as total_votes'))
-            ->where('election_id', $election->id)
-            ->groupBy('party_id');
+        public function addIncident()
+        {
+            $profileData = $this->getProfileData();
 
-        // Apply access-level-specific filters
-        if ($profileData->access_level === 'regionaladmin') {
-            $query->where('region_id', $profileData->region_id);
-        } elseif ($profileData->access_level === 'stateadmin') {
-            $query->where('state_id', $profileData->state_id);
-        } elseif ($profileData->access_level === 'lgaadmin') {
-            $query->where('lga_id', $profileData->lga_id);
-        } elseif ($profileData->access_level === 'wardadmin') {
-            $query->where('ward_id', $profileData->ward_id);
-        } elseif ($profileData->access_level === 'pollingunitadmin') {
-            $query->where('polling_unit_id', $profileData->polling_unit_id);
+            // Fetch the ongoing or current election
+            $election = Election::whereDate('year', now())
+                ->orWhere('status', 'ongoing')
+                ->first();
+
+            if (!$election) {
+                $notification = [
+                    'message' => 'No ongoing or current election found.',
+                    'alert-type' => 'info',
+                ];
+                return redirect()->route($profileData->access_level . '.elections')->with($notification);
+            }
+
+            // Fetch the logged-in user's associated location data
+            $regionId = $profileData->region_id;
+            $stateId = $profileData->state_id;
+            $lgaId = $profileData->lga_id;
+            $wardId = $profileData->ward_id;
+            $pollingUnitId = $profileData->polling_unit_id;
+
+            return view('backend.incidents.add', compact(
+                'election',
+                'profileData',
+                'regionId',
+                'stateId',
+                'lgaId',
+                'wardId',
+                'pollingUnitId'
+            ));
         }
 
-        // Retrieve results and rank them
-        $results = $query->with('politicalParty')
-            ->orderByDesc('total_votes')
-            ->get();
 
-        // Prepare rank and comments
-        $summary = $results
-        ->sortByDesc('total_votes') // Sort by total_votes in descending order
-        ->values() // Reset the keys to ensure correct indexing after sorting
-        ->map(function ($result, $index) {
-            $party = PoliticalParty::find($result->party_id);
-            $rank = $index + 1; // Rank based on the position in the sorted array
-    
-            // Update the comment to include "4th Place"
-            $comment = match ($rank) {
-                1 => '1st Place',
-                2 => '2nd Place',
-                3 => '3rd Place',
-                4 => '4th Place',
-                default => "Below 4th",
-            };
-    
-            return [
-                'sn' => $rank, // Add serial number
-                'party_name' => $party ? $party->name . ' (' . $party->acronym . ')' : 'No Party Assigned',
-                'total_votes' => $result->total_votes,
-                'rank' => $rank,
-                'comment' => $comment,
-            ];
-        });
-    
-       
-
-
-        return view('backend.' . $profileData->access_level . '.election.election_results', compact('summary', 'profileData', 'election','pageTitle'));
-    }
-
-
-    
-    public function getElectionResultChartData($uuid)
-    {
-        // Fetch the election based on the UUID
-        $election = Election::where('uuid', $uuid)->firstOrFail();
-        $profileData = $this->getProfileData();
-
-        // Query the votes grouped by party
-        $voteQuery = Vote::query()
-            ->select('party_id', DB::raw('SUM(quantity) as total_votes'))
-            ->where('election_id', $election->id)
-            ->where('quantity', '>', 0)
-            ->groupBy('party_id');
-
-        // Apply regional constraints based on user's access level
-        switch ($profileData->access_level) {
-            case 'regionaladmin':
-                $voteQuery->where('region_id', $profileData->region_id);
-                break;
-            case 'stateadmin':
-                $voteQuery->where('state_id', $profileData->state_id);
-                break;
-            case 'lgaadmin':
-                $voteQuery->where('lga_id', $profileData->lga_id);
-                break;
-            case 'wardadmin':
-                $voteQuery->where('ward_id', $profileData->ward_id);
-                break;
-            case 'pollingunitadmin':
-                $voteQuery->where('polling_unit_id', $profileData->polling_unit_id);
-                break;
-            default:
-                // Superadmin and Nationaladmin have no additional constraints
-                break;
-        }
-
-        $results = $voteQuery->get();
-
-        // Transform the data for Chart.js
-        $chartDataResults = $results->map(function ($result) {
-            $party = PoliticalParty::find($result->party_id);
-            return [
-                'party_name' => $party ? "{$party->acronym}" : 'Unknown Party',
-                'total_votes' => $result->total_votes,
-            ];
-        });
-
-        // Extract labels and data
-        $labels = $chartDataResults->pluck('party_name')->toArray();
-        $data = $chartDataResults->pluck('total_votes')->toArray();
-
-        // Define an array of colors
-        $colors = [
-            '#3498db', // Blue
-            '#e74c3c', // Red
-            '#2ecc71', // Green
-            '#f39c12', // Orange
-            '#9b59b6', // Purple
-            '#1abc9c', // Teal
-            '#d35400', // Dark Orange
-            '#c0392b', // Crimson
-            '#34495e', // Dark Blue-Grey
-            '#27ae60', // Emerald Green
-            '#2980b9', // Strong Blue
-            '#8e44ad', // Dark Purple
-            '#e67e22', // Bright Orange
-            '#16a085', // Aquamarine
-            '#bdc3c7', // Light Grey
-            '#f1c40f', // Yellow
-            '#95a5a6', // Grey-Blue
-            '#2c3e50', // Navy Blue
-            '#ec7063', // Soft Red
-            '#7dcea0'  // Light Green
-        ];
         
-        $backgroundColors = array_slice($colors, 0, count($labels));
-
-        // Prepare the data structure for the bar chart
-        $chartData = [
-            'labels' => $labels,
-            'datasets' => [
-                [
-                    'label' => 'Election Results',
-                    'data' => $data,
-                    'backgroundColor' => $backgroundColors,
-                    'borderColor' => '#2c3e50',
-                    'borderWidth' => 1,
-                ]
-            ],
-        ];
-
-        // Return the bar chart data as JSON
-        return response()->json($chartData);
-    }
-
-    public function manageVotesByPu($uuid){
-
+        public function electionResult($uuid)
+        {
+            $pageTitle = 'Election Result';
             // Fetch the election by UUID
             $election = Election::where('uuid', $uuid)->firstOrFail();
-
-            $pageTitle = 'Report: Votes & Election Incidents';
-
-           // Fetch the logged-in user's profile data
             $profileData = $this->getProfileData();
-           
-            return view('backend.'.$profileData->access_level.'.election.puVotesObtained', compact(  'profileData', 'election'));
 
-    }
+            // Base query for votes, scoped by the user's access level
+            $query = Vote::select('party_id', DB::raw('SUM(quantity) as total_votes'))
+                ->where('election_id', $election->id)
+                ->groupBy('party_id');
+
+            // Apply access-level-specific filters
+            if ($profileData->access_level === 'regionaladmin') {
+                $query->where('region_id', $profileData->region_id);
+            } elseif ($profileData->access_level === 'stateadmin') {
+                $query->where('state_id', $profileData->state_id);
+            } elseif ($profileData->access_level === 'lgaadmin') {
+                $query->where('lga_id', $profileData->lga_id);
+            } elseif ($profileData->access_level === 'wardadmin') {
+                $query->where('ward_id', $profileData->ward_id);
+            } elseif ($profileData->access_level === 'pollingunitadmin') {
+                $query->where('polling_unit_id', $profileData->polling_unit_id);
+            }
+
+            // Retrieve results and rank them
+            $results = $query->with('politicalParty')
+                ->orderByDesc('total_votes')
+                ->get();
+
+            // Prepare rank and comments
+            $summary = $results
+            ->sortByDesc('total_votes') // Sort by total_votes in descending order
+            ->values() // Reset the keys to ensure correct indexing after sorting
+            ->map(function ($result, $index) {
+                $party = PoliticalParty::find($result->party_id);
+                $rank = $index + 1; // Rank based on the position in the sorted array
+        
+                // Update the comment to include "4th Place"
+                $comment = match ($rank) {
+                    1 => '1st Place',
+                    2 => '2nd Place',
+                    3 => '3rd Place',
+                    4 => '4th Place',
+                    default => "Below 4th",
+                };
+        
+                return [
+                    'sn' => $rank, // Add serial number
+                    'party_name' => $party ? $party->name . ' (' . $party->acronym . ')' : 'No Party Assigned',
+                    'total_votes' => $result->total_votes,
+                    'rank' => $rank,
+                    'comment' => $comment,
+                ];
+            });
+        
+        
+
+
+            return view('backend.' . $profileData->access_level . '.election.election_results', compact('summary', 'profileData', 'election','pageTitle'));
+        }
+
+
+    
+        public function getElectionResultChartData($uuid)
+        {
+            // Fetch the election based on the UUID
+            $election = Election::where('uuid', $uuid)->firstOrFail();
+            $profileData = $this->getProfileData();
+
+            // Query the votes grouped by party
+            $voteQuery = Vote::query()
+                ->select('party_id', DB::raw('SUM(quantity) as total_votes'))
+                ->where('election_id', $election->id)
+                ->where('quantity', '>', 0)
+                ->groupBy('party_id');
+
+            // Apply regional constraints based on user's access level
+            switch ($profileData->access_level) {
+                case 'regionaladmin':
+                    $voteQuery->where('region_id', $profileData->region_id);
+                    break;
+                case 'stateadmin':
+                    $voteQuery->where('state_id', $profileData->state_id);
+                    break;
+                case 'lgaadmin':
+                    $voteQuery->where('lga_id', $profileData->lga_id);
+                    break;
+                case 'wardadmin':
+                    $voteQuery->where('ward_id', $profileData->ward_id);
+                    break;
+                case 'pollingunitadmin':
+                    $voteQuery->where('polling_unit_id', $profileData->polling_unit_id);
+                    break;
+                default:
+                    // Superadmin and Nationaladmin have no additional constraints
+                    break;
+            }
+
+            $results = $voteQuery->get();
+
+            // Transform the data for Chart.js
+            $chartDataResults = $results->map(function ($result) {
+                $party = PoliticalParty::find($result->party_id);
+                return [
+                    'party_name' => $party ? "{$party->acronym}" : 'Unknown Party',
+                    'total_votes' => $result->total_votes,
+                ];
+            });
+
+            // Extract labels and data
+            $labels = $chartDataResults->pluck('party_name')->toArray();
+            $data = $chartDataResults->pluck('total_votes')->toArray();
+
+            // Define an array of colors
+            $colors = [
+                '#3498db', // Blue
+                '#e74c3c', // Red
+                '#2ecc71', // Green
+                '#f39c12', // Orange
+                '#9b59b6', // Purple
+                '#1abc9c', // Teal
+                '#d35400', // Dark Orange
+                '#c0392b', // Crimson
+                '#34495e', // Dark Blue-Grey
+                '#27ae60', // Emerald Green
+                '#2980b9', // Strong Blue
+                '#8e44ad', // Dark Purple
+                '#e67e22', // Bright Orange
+                '#16a085', // Aquamarine
+                '#bdc3c7', // Light Grey
+                '#f1c40f', // Yellow
+                '#95a5a6', // Grey-Blue
+                '#2c3e50', // Navy Blue
+                '#ec7063', // Soft Red
+                '#7dcea0'  // Light Green
+            ];
+            
+            $backgroundColors = array_slice($colors, 0, count($labels));
+
+            // Prepare the data structure for the bar chart
+            $chartData = [
+                'labels' => $labels,
+                'datasets' => [
+                    [
+                        'label' => 'Election Results',
+                        'data' => $data,
+                        'backgroundColor' => $backgroundColors,
+                        'borderColor' => '#2c3e50',
+                        'borderWidth' => 1,
+                    ]
+                ],
+            ];
+
+            // Return the bar chart data as JSON
+            return response()->json($chartData);
+        }
+
+        public function manageVotesByPu($uuid){
+
+                // Fetch the election by UUID
+                $election = Election::where('uuid', $uuid)->firstOrFail();
+
+                $pageTitle = 'Report: Votes & Election Incidents';
+
+            // Fetch the logged-in user's profile data
+                $profileData = $this->getProfileData();
+            
+                return view('backend.'.$profileData->access_level.'.election.puVotesObtained', compact(  'profileData', 'election'));
+
+        }
 
 
     public function VotesByPuData($uuid)

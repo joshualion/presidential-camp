@@ -39,6 +39,13 @@ return new class extends Migration
             $table->text('disclaimer')->nullable();
             $table->text('tos')->nullable();
             $table->text('privacy_policy')->nullable();
+             // New Columns for Cloud Storage
+            $table->boolean('enable_local_storage')->default(true);
+            $table->boolean('enable_s3_storage')->default(false);
+            $table->string('s3_key')->nullable();
+            $table->string('s3_secret')->nullable();
+            $table->string('s3_region')->nullable();
+            $table->string('s3_bucket')->nullable();
             $table->timestamps();
         });
     }

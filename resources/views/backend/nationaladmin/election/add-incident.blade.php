@@ -8,7 +8,7 @@
             <div class="col-12">
                 <div class="card card-primary">
                     <div class="card-header">
-                        <h3 class="card-title">{{$profileData->pollingUnit->name }}- Vote Records </h3>
+                        <h3 class="card-title">{{$profileData->pollingUnit->name }}- Incidents Record </h3>
                     </div>
                     <div class="card-body">
 
@@ -21,8 +21,14 @@
                                     </ul>
                                 </div>
                             @endif
-                            <form action="{{ route($profileData->access_level.'.vote.store') }}" method="POST" enctype="multipart/form-data">
+                            <form action="{{ route($profileData->access_level.'.incident.store') }}" method="POST" enctype="multipart/form-data">
                                 @csrf
+
+                                <input type="hidden" name="region_id" value="{{ $regionId }}">
+                                <input type="hidden" name="state_id" value="{{ $stateId }}">
+                                <input type="hidden" name="lga_id" value="{{ $lgaId }}">
+                                <input type="hidden" name="ward_id" value="{{ $wardId }}">
+                                <input type="hidden" name="polling_unit_id" value="{{ $pollingUnitId }}">
 
                                 <div class="form-group row">
                                     <label for="election" class="col-sm-4 col-form-label">Election</label>
@@ -32,68 +38,38 @@
                                     </div>
                                 </div>
 
-                                @foreach ($parties as $party)
-                                    <div class="form-group row">
-                                        <label for="party_{{ $party->id }}" class="col-sm-4 col-form-label">
-                                            {{ $party->name }} ({{ $party->acronym }})
-                                        </label>
-                                        <div class="col-sm-6">
-                                            <input
-                                                type="number"
-                                                class="form-control party-vote"
-                                                name="votes[{{ $party->id }}]"
-                                                id="party_{{ $party->id }}"
-                                                min="0"
-                                                value="{{ $votes[$party->id] ?? 0 }}"
-                                            >
-                                        </div>
-                                    </div>
-                                @endforeach
-
+                               
                                 <div class="form-group row">
-                                    <label for="total_votes" class="col-sm-4 col-form-label">Total Valid Votes</label>
+                                    <label for="remarks" class="col-sm-4 col-form-label">Remarks</label>
                                     <div class="col-sm-6">
-                                        <input
-                                            type="text"
-                                            class="form-control"
-                                            id="total_votes"
-                                            value="0"
-                                            readonly
-                                        >
+                                        <textarea name="remarks" class="form-control" rows="3" placeholder="Enter any additional details (optional)"></textarea>
                                     </div>
                                 </div>
 
-                                <div class="form-group row">
-                                    <label for="result_sheet" class="col-sm-4 col-form-label">PU Result Sheet</label>
-                                    <div class="col-sm-6">
-                                        @if ($pollingUnitResult && $pollingUnitResult->result_sheet)
-                                            <img
-                                                id="result_sheet-image-preview"
-                                                src="{{ asset('uploads/system_images/election_result_sheets/' . $pollingUnitResult->result_sheet) }}"
-                                                alt="Result Sheet"
-                                                style="width: 50%; height: auto; border: 1px solid #ddd; padding: 5px;"
-                                            >
-                                        @endif
+                                @if ($errors->has('pictures'))
+                                    <div class="alert alert-danger">
+                                        {{ $errors->first('pictures') }}
+                                    </div>
+                                @endif
 
-                                        <div class="custom-file">
-                                            <input
-                                                type="file"
-                                                class="custom-file-input @error('result_sheet') is-invalid @enderror"
-                                                id="result_sheet"
-                                                name="result_sheet"
-                                                onchange="previewresult_sheet(this)"
-                                            >
-                                            <label class="custom-file-label" for="result_sheet">Attach Result Sheet</label>
+                                <div class="form-group row">
+                                    <label for="pictures" class="col-sm-4 col-form-label">Picture Evidences</label>
+                                    <div class="col-sm-6">
+                                        <div id="picture-evidence-container">
+                                            <input type="file" name="pictures[]" accept="image/*" class="form-control mb-2 picture-input">
                                         </div>
-                                        @error('result_sheet')
-                                            <div class="invalid-feedback">{{ $message }}</div>
-                                        @enderror
+                                        <button type="button" class="btn btn-sm btn-secondary" id="add-picture-input">Add Another Picture</button>
+                                        <small class="form-text text-muted">Maximum 3 images allowed.</small>
+                                        <div id="preview-container" class="mt-3"></div>
                                     </div>
                                 </div>
+                                
+                                
+                               
 
                                 <div class="form-group row">
                                     <div class="offset-sm-4 col-sm-4">
-                                        <button type="submit" class="btn btn-primary btn-block">Record Votes</button>
+                                        <button type="submit" class="btn btn-primary btn-block">Add Record</button>
                                     </div>
                                 </div>
                             </form>
@@ -107,88 +83,55 @@
 </section>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        // Select all party vote inputs
-        const voteInputs = document.querySelectorAll('.party-vote');
-        const totalVotesField = document.getElementById('total_votes');
+    document.addEventListener('DOMContentLoaded', () => {
+        const maxUploads = 3;
+        const pictureContainer = document.getElementById('picture-evidence-container');
+        const previewContainer = document.getElementById('preview-container');
+        const addPictureButton = document.getElementById('add-picture-input');
 
-        // Add event listeners to recalculate total votes and handle focus/blur
-        voteInputs.forEach(input => {
-            input.addEventListener('input', calculateTotalVotes);
-            input.addEventListener('focus', clearInitialValue);
-            input.addEventListener('blur', setInitialValue);
+        // Add new file input dynamically
+        addPictureButton.addEventListener('click', () => {
+            const inputs = document.querySelectorAll('.picture-input');
+            if (inputs.length >= maxUploads) {
+                alert(`You can upload a maximum of ${maxUploads} images.`);
+                return;
+            }
+
+            const newInput = document.createElement('input');
+            newInput.type = 'file';
+            newInput.name = 'pictures[]';
+            newInput.accept = 'image/*';
+            newInput.className = 'form-control mb-2 picture-input';
+
+            // Add change event listener for preview
+            newInput.addEventListener('change', handleFilePreview);
+
+            pictureContainer.appendChild(newInput);
         });
 
-        // Clear initial value when input is focused
-        function clearInitialValue(event) {
-            if (event.target.value === '0') {
-                event.target.value = '';
-            }
-        }
-
-        // Set initial value when input is blurred
-        function setInitialValue(event) {
-            if (event.target.value === '') {
-                event.target.value = '0';
-            }
-        }
-
-        // Recalculate total votes
-        function calculateTotalVotes() {
-            let total = 0;
-            voteInputs.forEach(input => {
-                const value = parseInt(input.value) || 0; // Default to 0 if empty
-                total += value;
-            });
-            totalVotesField.value = total; // Update the readonly field
-        }
-    });
-</script>
-
-<script>
-    function previewresult_sheet(input) {
-        const imagePreview = document.getElementById('result_sheet-image-preview');
-        const pdfPreview = document.getElementById('result_sheet-pdf-preview');
-        const label = input.nextElementSibling;
-        const file = input.files[0];
-
-        if (file) {
-            // Update the label with the selected file name
-            label.innerText = file.name;
-
-            // Check the file type
-            const fileType = file.type;
-
-            // Reset the previews before showing the new one
-            imagePreview.classList.add('d-none');
-            pdfPreview.classList.add('d-none');
-
-            // Handle image preview
-            if (fileType.startsWith('image/')) {
+        // Handle file preview
+        const handleFilePreview = (event) => {
+            const file = event.target.files[0];
+            if (file) {
                 const reader = new FileReader();
-                reader.onload = function (e) {
-                    imagePreview.src = e.target.result;
-                    imagePreview.classList.remove('d-none'); // Show the image preview
+                reader.onload = (e) => {
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    img.alt = 'Preview';
+                    img.className = 'img-thumbnail';
+                    img.style.width = '150px';
+                    img.style.margin = '5px';
+
+                    previewContainer.appendChild(img);
                 };
                 reader.readAsDataURL(file);
             }
-            // Handle PDF preview
-            else if (fileType === 'application/pdf') {
-                const fileURL = URL.createObjectURL(file);
-                pdfPreview.src = fileURL;
-                pdfPreview.classList.remove('d-none'); // Show the PDF preview
-            }
-        } else {
-            // Reset the preview if no file is selected
-            imagePreview.src = '#';
-            pdfPreview.src = '#';
-            imagePreview.classList.add('d-none'); // Hide the image preview
-            pdfPreview.classList.add('d-none'); // Hide the PDF preview
-            label.innerText = 'Choose result_sheet File'; // Reset label text
-        }
-    }
-</script>
+        };
 
+        // Add initial change event listener to the first input
+        document.querySelector('.picture-input').addEventListener('change', handleFilePreview);
+    });
+</script>
 
 
 

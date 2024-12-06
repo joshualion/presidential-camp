@@ -47,6 +47,23 @@ class SystemSettingController extends Controller
 
         public function updateSystemsSettings(Request $request){
 
+            $request->validate([
+                'enable_s3_storage' => 'boolean',                
+                'enable_local_storage'=> 'boolean',
+                's3_key' => 'required_if:enable_s3_storage,1',
+                's3_secret' => 'required_if:enable_s3_storage,1',
+                's3_region' => 'required_if:enable_s3_storage,1',
+                's3_bucket' => 'required_if:enable_s3_storage,1',
+            ]);
+
+             // Enforce mutual exclusivity
+                $enableLocalStorage = $request->has('enable_local_storage') && $request->enable_local_storage;
+                $enableS3Storage = $request->has('enable_s3_storage') && $request->enable_s3_storage;
+
+                if ($enableLocalStorage && $enableS3Storage) {
+                    $enableLocalStorage = !$enableS3Storage;
+                }
+
                                 $site_id = $request->id;
                                 $SystemSetting= $this->getSystemSettings();
 
@@ -109,6 +126,12 @@ class SystemSettingController extends Controller
                                         'logo' => $logofilename,
                                         'login_page_background' => $loginPageBg,
                                         'favicon' => $favicon,
+                                        'enable_local_storage' => $enableLocalStorage ,
+                                        'enable_s3_storage' => $enableS3Storage ,
+                                        's3_key' => $request->s3_key,
+                                        's3_secret' => $request->s3_secret,
+                                        's3_region' => $request->s3_region,
+                                        's3_bucket' => $request->s3_bucket,
                                     ]);
 
                                     $notification = array(

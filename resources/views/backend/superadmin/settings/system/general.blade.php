@@ -57,6 +57,12 @@
 
                                             </div>
 
+                                            <div class="tab-pane fade show" id="cloud_storage-settings" role="tabpanel">
+
+                                                @include('backend.superadmin.settings.system.cloud_storage')
+
+                                            </div>
+
                                             <div class="tab-pane fade show" id="social-media" role="tabpanel">
 
                                                 @include('backend.superadmin.settings.system.social_media')
