@@ -75,40 +75,50 @@ $region = \App\Models\Region::find(Auth::user()->region_id);
             </li>
             {{-- / Members --}}
 
-            {{-- Election --}}
-            <li class="tab nav-item menu-close">
-                            <a href="#" class="nav-link">
-                              <i class="nav-icon fas fa-award"></i>
-                              <p>
-                                Elections
-                                <i class="right fas fa-angle-left"></i>
-                              </p>
-                            </a>
-                            <ul class="nav nav-treeview">
+                   {{-- Election --}}
+        <li class="tab nav-item menu-close">
+          <a href="#" class="nav-link">
+            <i class="nav-icon fas fa-award"></i>
+            <p>
+              Elections
+              <i class="right fas fa-angle-left"></i>
+            </p>
+          </a>
+          <ul class="nav nav-treeview">
 
-                            <li class="nav-item">
-                                <a href="/regional/dashboard" class="nav-link">
-                                  <i class="fas fa-award nav-icon"></i>
-                                  <p>Elections</p>
-                                </a>
-                              </li>
-
-                              <li class="nav-item">
-                                <a href="/regional/dashboard" class="nav-link">
-                                  <i class="fas fa-vote-yea nav-icon"></i>
-                                  <p>Political parties</p>
-                                </a>
-                              </li>
-
-                              <li class="nav-item">
-                                <a href="/regional/state/dashboard" class="nav-link">
-                                <i class="fa fa-thumbs-up nav-icon"></i>
-                                  <p>Votes Records</p>
-                                </a>
-                              </li>
-                            </ul>
+          <li class="nav-item">
+              <a href="/regional/elections" class="nav-link">
+                <i class="fas fa-award nav-icon"></i>
+                <p>Manage Elections</p>
+              </a>
             </li>
-            {{-- / Election --}}
+            @if(
+              $profileData->hasAnyRole([
+                  'National ICT/Media Director',
+                  'Regional ICT/Media Director',
+                  'State ICT/Media Director',
+                  'LGA ICT/Media Director',
+                  'Ward ICT/Media Director',
+                  'PU ICT/Media Director',
+                  'Pu Agent'
+              ]) || $profileData->access_level == 'superadmin' )
+            <li class="nav-item">
+              <a href="/regional/vote/add" class="nav-link">
+              <i class="fa fa-cloud nav-icon"></i>
+                <p>Upload Polls Result</p>
+              </a>
+            </li>
+
+            <li class="nav-item">
+              <a href="/regional/incident/add" class="nav-link">
+              <i class="fa fa-book nav-icon"></i>
+                <p>Report  Incidents</p>
+              </a>
+            </li>
+            @endif
+          </ul>
+</li>
+{{-- / Election --}}
 
             {{-- Reports --}}
             <li class="tab nav-item menu-close">

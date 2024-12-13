@@ -172,69 +172,70 @@ class ElectionController extends Controller
             return view('backend.' . $profileData->access_level . '.election.add-vote', compact('election', 'parties', 'profileData', 'pollingUnitResult', 'votes'));
         }
         
-
         public function storeVote(Request $request)
         {
-            $profileData = $this->getProfileData();
+                $profileData = $this->getProfileData();
+            
+                $data = $request->validate([
+                    'election_id' => 'required|exists:elections,id',
+                    'votes' => 'required|array',
+                    'votes.*' => 'nullable|integer|min:0',
+                    'result_sheet' => 'nullable|file|mimes:pdf,png,jpg,jpeg|max:2048',
+                ]);
         
-            $data = $request->validate([
-                'election_id' => 'required|exists:elections,id',
-                'votes' => 'required|array',
-                'votes.*' => 'nullable|integer|min:0',
-                'result_sheet' => 'nullable|file|mimes:pdf,png,jpg,jpeg|max:2048',
-            ]);
-        
-            $pollingUnitResult = PollingUnitResult::firstOrCreate(
-                [
-                    'election_id' => $data['election_id'],
-                    'polling_unit_id' => $profileData->polling_unit_id,
-                     'result_sheet'=> $data['result_sheet'],
-                ]
-            );
-        
-            if ($request->hasFile('result_sheet')) {
-                $file = $request->file('result_sheet');
-                $result_sheet_filename = date('YmdHi') . $file->getClientOriginalName();
-                $file->move(public_path('uploads/system_images/election_result_sheets/'), $result_sheet_filename);
-        
-                if ($pollingUnitResult->result_sheet) {
-                    $oldFilePath = public_path('uploads/system_images/election_result_sheets/') . $pollingUnitResult->result_sheet;
-                    if (file_exists($oldFilePath)) {
-                        unlink($oldFilePath);
-                    }
-                }
-        
-                $pollingUnitResult->result_sheet = $result_sheet_filename;
-                $pollingUnitResult->save();
-            }
-        
-            foreach ($data['votes'] as $partyId => $quantity) {
-                Vote::updateOrCreate(
+                $pollingUnitResult = PollingUnitResult::firstOrCreate(
                     [
                         'election_id' => $data['election_id'],
-                        'party_id' => $partyId,
                         'polling_unit_id' => $profileData->polling_unit_id,
-                    ],
-                    [
-                        'agent_id' => $profileData->id,
-                        'region_id' => $profileData->region_id,
-                        'state_id' => $profileData->state_id,
-                        'lga_id' => $profileData->lga_id,
-                        'ward_id' => $profileData->ward_id,
-                        'quantity' => $quantity,
-                        'polling_unit_result_id' => $pollingUnitResult->id,
                     ]
                 );
-            }
         
-            $notification = [
-                'message' => $profileData->pollingUnit->name . ' votes uploaded successfully',
-                'alert-type' => 'success',
-            ];
-        
-            return redirect()->back()->with($notification);
+                if ($request->hasFile('result_sheet')) {
+                    $file = $request->file('result_sheet');
+                    $result_sheet_filename = date('YmdHi') . $file->getClientOriginalName();
+                    $file->move(public_path('uploads/system_images/election_result_sheets/'), $result_sheet_filename);
+            
+                    if ($pollingUnitResult->result_sheet) {
+                        $oldFilePath = public_path('uploads/system_images/election_result_sheets/') . $pollingUnitResult->result_sheet;
+                        if (file_exists($oldFilePath)) {
+                            unlink($oldFilePath);
+                        }
+                    }
+            
+                    $pollingUnitResult->result_sheet = $result_sheet_filename;
+                    $pollingUnitResult->save();
+                }
+            
+                foreach ($data['votes'] as $partyId => $quantity) {
+                    Vote::updateOrCreate(
+                        [
+                            'election_id' => $data['election_id'],
+                            'party_id' => $partyId,
+                            'polling_unit_id' => $profileData->polling_unit_id,
+                        ],
+                        [
+                            'agent_id' => $profileData->id,
+                            'region_id' => $profileData->region_id,
+                            'state_id' => $profileData->state_id,
+                            'lga_id' => $profileData->lga_id,
+                            'ward_id' => $profileData->ward_id,
+                            'quantity' => $quantity,
+                            'polling_unit_result_id' => $pollingUnitResult->id,
+                        ]
+                    );
+                }
+            
+                $redirectTo = $request->input('redirect_to'); // Fetch user decision from hidden field
+                if ($redirectTo === 'incident') {
+                    return redirect()->route($profileData->access_level . '.incident.add')->with('message', 'Votes recorded. Proceed to report the incident.');
+                }
+            
+                return redirect()->back()->with([
+                    'message' => $profileData->pollingUnit->name . ' votes uploaded successfully',
+                    'alert-type' => 'success',
+                ]);
         }
-
+        
         public function addIncident()
         {
             $profileData = $this->getProfileData();
@@ -445,106 +446,106 @@ class ElectionController extends Controller
         }
 
 
-    public function VotesByPuData($uuid)
-{
-    $pageTitle = 'Report: Votes & Election Incidents';
+        public function VotesByPuData($uuid)
+        {
+            $pageTitle = 'Report: Votes & Election Incidents';
 
-    // Fetch the election by UUID
-    $election = Election::where('uuid', $uuid)->firstOrFail();
+            // Fetch the election by UUID
+            $election = Election::where('uuid', $uuid)->firstOrFail();
 
-    // Fetch the logged-in user's profile data
-    $profileData = $this->getProfileData();
+            // Fetch the logged-in user's profile data
+            $profileData = $this->getProfileData();
 
-    // Base query for votes with incidents
-    $query = Vote::join('polling_units', 'votes.polling_unit_id', '=', 'polling_units.id')
-        ->leftJoin('polling_unit_results', 'votes.polling_unit_result_id', '=', 'polling_unit_results.id')
-        ->leftJoin('election_incidents', function ($join) use ($election) {
-            $join->on('election_incidents.polling_unit_id', '=', 'votes.polling_unit_id')
-                ->where('election_incidents.election_id', '=', $election->id);
-        })
-        ->select(
-            'votes.polling_unit_id',
-            'polling_units.name as polling_unit_name',
-            DB::raw("SUM(CASE WHEN votes.party_id = {$election->party_id} THEN votes.quantity ELSE 0 END) as votes_obtained"),
-            DB::raw('SUM(votes.quantity) as total_votes_cast'),
-            'polling_unit_results.result_sheet',
-            DB::raw("GROUP_CONCAT(election_incidents.remarks SEPARATOR ', ') as incident_report")
-        )
-        ->where('votes.election_id', $election->id)
-        ->groupBy('votes.polling_unit_id', 'polling_units.name', 'polling_unit_results.result_sheet');
+            // Base query for votes with incidents
+            $query = Vote::join('polling_units', 'votes.polling_unit_id', '=', 'polling_units.id')
+                ->leftJoin('polling_unit_results', 'votes.polling_unit_result_id', '=', 'polling_unit_results.id')
+                ->leftJoin('election_incidents', function ($join) use ($election) {
+                    $join->on('election_incidents.polling_unit_id', '=', 'votes.polling_unit_id')
+                        ->where('election_incidents.election_id', '=', $election->id);
+                })
+                ->select(
+                    'votes.polling_unit_id',
+                    'polling_units.name as polling_unit_name',
+                    DB::raw("SUM(CASE WHEN votes.party_id = {$election->party_id} THEN votes.quantity ELSE 0 END) as votes_obtained"),
+                    DB::raw('SUM(votes.quantity) as total_votes_cast'),
+                    'polling_unit_results.result_sheet',
+                    DB::raw("GROUP_CONCAT(election_incidents.remarks SEPARATOR ', ') as incident_report")
+                )
+                ->where('votes.election_id', $election->id)
+                ->groupBy('votes.polling_unit_id', 'polling_units.name', 'polling_unit_results.result_sheet');
 
-    // Apply filters based on access level
-    if ($profileData->access_level === 'regionaladmin') {
-        $query->where('votes.region_id', $profileData->region_id);
-    } elseif ($profileData->access_level === 'stateadmin') {
-        $query->where('votes.state_id', $profileData->state_id);
-    } elseif ($profileData->access_level === 'lgaadmin') {
-        $query->where('votes.lga_id', $profileData->lga_id);
-    } elseif ($profileData->access_level === 'wardadmin') {
-        $query->where('votes.ward_id', $profileData->ward_id);
-    } elseif ($profileData->access_level === 'pollingunitadmin') {
-        $query->where('votes.polling_unit_id', $profileData->polling_unit_id);
-    }
-
-    // Return server-side response for DataTables
-    return datatables()->eloquent($query)
-        ->filterColumn('polling_unit_name', function ($query, $keyword) {
-            $query->where('polling_units.name', 'like', "%{$keyword}%");
-        })
-        ->filterColumn('incident_report', function ($query, $keyword) {
-            $query->havingRaw("GROUP_CONCAT(election_incidents.remarks SEPARATOR ', ') LIKE ?", ["%{$keyword}%"]);
-        })
-        ->addIndexColumn()
-        ->addColumn('result_sheet', function ($row) {
-            return $row->result_sheet
-                ? '<a class="btn btn-success btn-sm text-white" href="' . asset('uploads/system_images/election_result_sheets/'.$row->result_sheet) . '" target="_blank"> <i class="fas fa-eye"> </i> Form EC8A</a>'
-                : 'No File';
-        })
-        ->addColumn('incident_report', function ($row) {
-            if ($row->incident_report) {
-                $profileData = $this->getProfileData();
-                $incidentRoute = route($profileData->access_level.'.election.incident', [
-                    'uuid' => $row->uuid,
-                    'polling_unit_id' => $row->polling_unit_id,
-                ]);
-
-                return "<a class='btn btn-info btn-sm' href='{$incidentRoute}' target='_blank'>
-                            View Incident Report
-                        </a>";
+            // Apply filters based on access level
+            if ($profileData->access_level === 'regionaladmin') {
+                $query->where('votes.region_id', $profileData->region_id);
+            } elseif ($profileData->access_level === 'stateadmin') {
+                $query->where('votes.state_id', $profileData->state_id);
+            } elseif ($profileData->access_level === 'lgaadmin') {
+                $query->where('votes.lga_id', $profileData->lga_id);
+            } elseif ($profileData->access_level === 'wardadmin') {
+                $query->where('votes.ward_id', $profileData->ward_id);
+            } elseif ($profileData->access_level === 'pollingunitadmin') {
+                $query->where('votes.polling_unit_id', $profileData->polling_unit_id);
             }
-            return 'None';
-        })
-        ->rawColumns(['result_sheet', 'incident_report'])
-        ->make(true);
-}
+
+            // Return server-side response for DataTables
+            return datatables()->eloquent($query)
+                ->filterColumn('polling_unit_name', function ($query, $keyword) {
+                    $query->where('polling_units.name', 'like', "%{$keyword}%");
+                })
+                ->filterColumn('incident_report', function ($query, $keyword) {
+                    $query->havingRaw("GROUP_CONCAT(election_incidents.remarks SEPARATOR ', ') LIKE ?", ["%{$keyword}%"]);
+                })
+                ->addIndexColumn()
+                ->addColumn('result_sheet', function ($row) {
+                    return $row->result_sheet
+                        ? '<a class="btn btn-success btn-sm text-white" href="' . asset('uploads/system_images/election_result_sheets/'.$row->result_sheet) . '" target="_blank"> <i class="fas fa-eye"> </i> Form EC8A</a>'
+                        : 'No File';
+                })
+                ->addColumn('incident_report', function ($row) {
+                    if ($row->incident_report) {
+                        $profileData = $this->getProfileData();
+                        $incidentRoute = route($profileData->access_level.'.election.incident', [
+                            'uuid' => $row->uuid,
+                            'polling_unit_id' => $row->polling_unit_id,
+                        ]);
+
+                        return "<a class='btn btn-info btn-sm' href='{$incidentRoute}' target='_blank'>
+                                    View Incident Report
+                                </a>";
+                    }
+                    return 'None';
+                })
+                ->rawColumns(['result_sheet', 'incident_report'])
+                ->make(true);
+        }
 
     
 
-    public function manageIncidentByPu($uuid, $polling_unit_id)
-    {
-        $profileData = $this->getProfileData();
-        // Fetch the election using the UUID
-        $election = Election::where('uuid', $uuid)->firstOrFail();
+        public function manageIncidentByPu($uuid, $polling_unit_id)
+        {
+            $profileData = $this->getProfileData();
+            // Fetch the election using the UUID
+            $election = Election::where('uuid', $uuid)->firstOrFail();
 
-           // Fetch the polling unit with its related ward, LGA, and state
-        $pollingUnit = PollingUnit::with('ward.localGovernmentArea.state')->findOrFail($polling_unit_id);
+            // Fetch the polling unit with its related ward, LGA, and state
+            $pollingUnit = PollingUnit::with('ward.localGovernmentArea.state')->findOrFail($polling_unit_id);
 
-        $pageTitle = $election->name;
+            $pageTitle = $election->name;
 
-            // Fetch the incidents for the specific polling unit and election
-        $incidents = ElectionIncident::with(['pictureEvidences', 'videoEvidences', 'agent'])
-        ->where('election_id', $election->id)
-        ->where('polling_unit_id', $polling_unit_id)
-        ->get();
+                // Fetch the incidents for the specific polling unit and election
+            $incidents = ElectionIncident::with(['pictureEvidences', 'videoEvidences', 'agent'])
+            ->where('election_id', $election->id)
+            ->where('polling_unit_id', $polling_unit_id)
+            ->get();
 
-        // Return a view to display the incidents
-        return view('backend'.$profileData->access_level.'.election.incident_report', [
-            'election' => $election,
-            'pollingUnit' => $pollingUnit,
-            'incidents' => $incidents,
-            'pageTitle' => $pageTitle,
-        ]);
-    }
+            // Return a view to display the incidents
+            return view('backend'.$profileData->access_level.'.election.incident_report', [
+                'election' => $election,
+                'pollingUnit' => $pollingUnit,
+                'incidents' => $incidents,
+                'pageTitle' => $pageTitle,
+            ]);
+        }
 
 
     

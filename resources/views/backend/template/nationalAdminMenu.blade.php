@@ -79,7 +79,7 @@
 
 
             {{-- Election --}}
-            <li class="tab nav-item menu-close">
+        <li class="tab nav-item menu-close">
                             <a href="#" class="nav-link">
                               <i class="nav-icon fas fa-award"></i>
                               <p>
@@ -115,12 +115,12 @@
                               <li class="nav-item">
                                 <a href="/national/incident/add" class="nav-link">
                                 <i class="fa fa-book nav-icon"></i>
-                                  <p>Log  Incidents</p>
+                                  <p>Report  Incidents</p>
                                 </a>
                               </li>
                               @endif
                             </ul>
-            </li>
+        </li>
             {{-- / Election --}}
 
             {{-- Reports --}}

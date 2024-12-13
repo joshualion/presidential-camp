@@ -3,6 +3,7 @@
 
 use App\Http\Controllers\AjaxController;
 use App\Http\Controllers\ChartsController;
+use App\Http\Controllers\ElectionController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\MembersController;
 use App\Http\Controllers\regionaladmin\RegionalAdminController;
@@ -186,6 +187,48 @@ Route::get('/regional/export-polling-units', [LocationController::class, 'export
 // Import Route
 Route::post('/regional/import-polling-units', [LocationController::class, 'importPollingUnits'])->name('regionaladmin.location.pu.importPollingUnits')->middleware('access_level:regionaladmin');
 
+
+// Political Party Management CRUD
+
+Route::get('/regional/election/setting/politicalparty', [PoliticalPartyController::class, 'allPoliticalParties'])->name('regionaladmin.election.politicalparty')->middleware('access_level:regionaladmin');
+Route::get('/regional/election/setting/politicalparty/add', [PoliticalPartyController::class, 'addPoliticalParty'])->name('regionaladmin.election.politicalparty.add')->middleware('access_level:regionaladmin');
+Route::post('/regional/election/setting/politicalparty/store', [PoliticalPartyController::class, 'storePoliticalParty'])->name('regionaladmin.election.politicalparty.store')->middleware('access_level:regionaladmin');
+Route::get('/regional/election/setting/politicalparty/edit/{uuid}', [PoliticalPartyController::class, 'editPoliticalParty'])->name('regionaladmin.election.politicalparty.edit')->middleware('access_level:regionaladmin');
+Route::post('/regional/election/setting/politicalparty/update/{uuid}', [PoliticalPartyController::class, 'updatePoliticalParty'])->name('regionaladmin.election.politicalparty.update')->middleware('access_level:regionaladmin');
+Route::delete('/regional/election/setting/politicalparty/delete/{uuid}', [PoliticalPartyController::class, 'deletePoliticalParty'])->name('regionaladmin.election.politicalparty.delete')->middleware('access_level:regionaladmin');
+// Election Management CRUD
+
+Route::get('/regional/elections', [ElectionController::class, 'allElections'])->name('regionaladmin.elections')->middleware('access_level:regionaladmin');
+Route::get('/regional/election/add', [ElectionController::class, 'addElection'])->name('regionaladmin.election.add')->middleware('access_level:regionaladmin');
+Route::post('/regional/election/store', [ElectionController::class, 'storeElection'])->name('regionaladmin.election.store')->middleware('access_level:regionaladmin');
+Route::get('/regional/election/edit/{uuid}', [ElectionController::class, 'editElection'])->name('regionaladmin.election.edit')->middleware('access_level:regionaladmin');
+Route::post('/regional/election/update/{uuid}', [ElectionController::class, 'updateElection'])->name('regionaladmin.election.update')->middleware('access_level:regionaladmin');
+Route::delete('/regional/election/delete/{uuid}', [ElectionController::class, 'deleteElection'])->name('regionaladmin.election.delete')->middleware('access_level:regionaladmin');
+
+// Election Result Route
+Route::get('/regional/election/result/{uuid}', [ElectionController::class, 'electionResult'])->name('regionaladmin.election.results')->middleware('access_level:regionaladmin');
+
+// Election PU Votes Report
+Route::get('/regional/election/votes/{uuid}', [ElectionController::class, 'manageVotesByPu'])->name('regionaladmin.election.votesByPu')->middleware('access_level:regionaladmin');
+Route::get('/regional/election/votes/data/{uuid}', [ElectionController::class, 'VotesByPuData'])->name('regionaladmin.election.votesByPuData')->middleware('access_level:regionaladmin');
+
+
+// Election Incident Report
+Route::get('/regional/election/incident/{uuid}/{polling_unit_id}', [ElectionController::class, 'manageIncidentByPu'])
+    ->name('regionaladmin.election.incident')
+    ->middleware('access_level:regionaladmin');
+
+    Route::get('/regional/incident/add', [ElectionController::class, 'addIncident'])->name('regionaladmin.incident.add')->middleware('access_level:regionaladmin');
+    Route::post('/regional/incident/store', [ElectionController::class, 'storeIcident'])->name('regionaladmin.incident.store')->middleware('access_level:regionaladmin');
+    
+
+//Manage Votes
+Route::get('/regional/votes', [ElectionController::class, 'allVotes'])->name('regionaladmin.votes')->middleware('access_level:regionaladmin');
+Route::get('/regional/vote/add', [ElectionController::class, 'addVote'])->name('regionaladmin.vote.add')->middleware('access_level:regionaladmin');
+Route::post('/regional/vote/store', [ElectionController::class, 'storeVote'])->name('regionaladmin.vote.store')->middleware('access_level:regionaladmin');
+Route::get('/regional/vote/edit/{uuid}', [ElectionController::class, 'editVote'])->name('regionaladmin.vote.edit')->middleware('access_level:regionaladmin');
+Route::post('/regional/vote/update/{uuid}', [ElectionController::class, 'updateVote'])->name('regionaladmin.vote.update')->middleware('access_level:regionaladmin');
+Route::delete('/regional/vote/delete/{uuid}', [ElectionController::class, 'deleteVote'])->name('regionaladmin.vote.delete')->middleware('access_level:regionaladmin');
 
 
 

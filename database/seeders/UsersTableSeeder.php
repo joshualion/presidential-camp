@@ -43,7 +43,7 @@ class UsersTableSeeder extends Seeder
                 'email_verified_at' => now(),
                 'country_id' => 1,
                 'region_id' => 5,
-                'state_id' => 28,
+                'state_id' => 26,
                 'lga_id' => null,
                 'ward_id' => null,
                 'polling_unit_id' => null,
