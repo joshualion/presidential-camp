@@ -8,7 +8,7 @@
             <div class="col-12">
                 <div class="card card-primary">
                     <div class="card-header">
-                        <h3 class="card-title">{{$profileData->pollingUnit->name }}- Incidents Record </h3>
+                        <h3 class="card-title"> Record Incident   For {{optional($profileData->pollingUnit)->name;}} </h3>
                     </div>
                     <div class="card-body">
 

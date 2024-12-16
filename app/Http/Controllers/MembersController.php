@@ -576,13 +576,25 @@ class MembersController extends Controller
      public function addMember()
      {
          $profileData = $this->getProfileData();
-         $pageTitle = 'Team Members';
-         $roles = Role::all();
+         $pageTitle = 'Add Member';
          $countries = Country::all();
          $regions = $this->getRegions();
          $states = State::all();
          $lgas =   LocalGovernmentArea::all();
          $wards = Ward::all();
+
+
+                // Fetch all roles
+            $allRoles = Role::all();
+
+            // Filter roles based on active user's access level
+            $roles = $allRoles->filter(function ($role) use ($profileData) {
+                // Include roles that match the active user's access_level
+                // OR roles that can be assigned to members (like 'user')
+                return $role->group_name === $profileData->access_level || $role->group_name === 'user';
+            });
+
+
          return view('backend.'.$profileData->access_level.'.member.add', compact( 'profileData', 'pageTitle', 'roles', 'countries', 'regions', 'states', 'lgas', 'wards'));
      }
 
@@ -612,6 +624,7 @@ class MembersController extends Controller
              'email' => $request->email,
              'password' => Hash::make($request->password),
              'access_level' => $access_level,
+             'country_id' => $request->country_id,
              'region_id' => $request->region_id,
              'state_id' => $request->state_id,
              'lga_id' => $request->lga_id,
@@ -657,9 +670,9 @@ class MembersController extends Controller
      public function editMember($uuid)
      {
          $profileData = $this->getProfileData();
-         $pageTitle = 'Edit Team Member';
-         $member = User::where('uuid', $uuid)->first();
-         $roles = Role::all();  // Assuming a member can have multiple roles
+         $pageTitle = 'Edit Member';
+         $member = User::with('roles')->where('uuid', $uuid)->first(); // Fetch member with roles
+         // $roles = Role::all();  // Assuming a member can have multiple roles
          $countries = Country::all();
          $regions = $this->getRegions();
          $states = State::all();
@@ -669,6 +682,17 @@ class MembersController extends Controller
          $religions = Religion::all();
          $ageGrades = AgeGrade::all();
 
+
+         // Fetch all roles
+            $allRoles = Role::all();
+
+           // Filter roles based on the active user's access level
+        $roles = $allRoles->filter(function ($role) use ($profileData, $member) {
+            // Include roles matching the active user's access level
+            // OR roles already assigned to the member
+            return  $member->roles->contains('id', $role->id);
+        });
+ 
          return view('backend.'.$profileData->access_level.'.member.member', compact(
              'profileData', 'pageTitle', 'member', 'roles', 'countries',
              'regions', 'states', 'lgas', 'wards', 'pollingUnits', 'religions', 'ageGrades'

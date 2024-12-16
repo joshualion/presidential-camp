@@ -450,7 +450,7 @@
 
         @if(($profileData->hasRole('National ICT/Media Director')))
             {{-- Roles & Permission Menu --}}
-            <li class="tab nav-item menu-close">
+            {{-- <li class="tab nav-item menu-close">
                 <a href="#" class="nav-link">
                   <i class="fas fa-tools nav-icon"></i>
                   <p>
@@ -488,7 +488,7 @@
                 </li>
               </ul>
 
-            </li>
+            </li> --}}
             {{--  End Roles & Permission Menu  --}}
         @endif
 

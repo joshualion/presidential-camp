@@ -5,14 +5,17 @@ namespace App\Http\Controllers;
 use App\Models\ElectionIncident;
 use App\Models\PoliticalParty;
 use App\Models\PollingUnit;
+use App\Models\SystemSetting;
 use App\Models\Vote;
 use App\Models\PollingUnitResult;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\View;
 use App\Models\Election;
 use App\Models\User;
+use App\Services\FileStorageService;
 use Illuminate\Validation\Rule;
 class ElectionController extends Controller
 {
@@ -42,9 +45,17 @@ class ElectionController extends Controller
      // Election Add
      public function addElection(){
          $profileData = $this->getProfileData();
+         if(empty($profileData->lga_id) || empty($profileData->ward_id) || empty($profileData->polling_unit_id )){
+            $notification =[
+                'type'=> 'error',
+                'message'=> 'You need to complete you Profile before accessing election data',
+            ];
+            return redirect()->route($profileData->access_level.'.profile')->with($notification);
+        }else{
          $parties = PoliticalParty::all();
          return view('backend.'.$profileData->access_level.'.election.add', compact('profileData', 'parties'));
-     }
+        }  
+    }
 
      // Election Store
         public function storeElection(Request $request){
@@ -144,6 +155,14 @@ class ElectionController extends Controller
         public function addVote()
         {
             $profileData = $this->getProfileData();
+
+            if(empty($profileData->lga_id) || empty($profileData->ward_id) || empty($profileData->polling_unit_id )){
+                $notification =[
+                    'type'=> 'error',
+                    'message'=> 'You need to complete you Profile before accessing election data',
+                ];
+                return redirect()->route($profileData->access_level.'.profile')->with($notification);
+            }
         
             $election = Election::whereDate('year', now())
                 ->orWhere('status', 'ongoing')
@@ -172,73 +191,154 @@ class ElectionController extends Controller
             return view('backend.' . $profileData->access_level . '.election.add-vote', compact('election', 'parties', 'profileData', 'pollingUnitResult', 'votes'));
         }
         
+        // public function storeVote(Request $request)
+        // {
+        //         $profileData = $this->getProfileData();
+            
+        //         $data = $request->validate([
+        //             'election_id' => 'required|exists:elections,id',
+        //             'votes' => 'required|array',
+        //             'votes.*' => 'nullable|integer|min:0',
+        //             'result_sheet' => 'nullable|file|mimes:pdf,png,jpg,jpeg|max:2048',
+        //         ]);
+        
+        //         $pollingUnitResult = PollingUnitResult::firstOrCreate(
+        //             [
+        //                 'election_id' => $data['election_id'],
+        //                 'polling_unit_id' => $profileData->polling_unit_id,
+        //             ]
+        //         );
+        
+        //         if ($request->hasFile('result_sheet')) {
+        //             $file = $request->file('result_sheet');
+        //             $result_sheet_filename = date('YmdHi') . $file->getClientOriginalName();
+        //             $file->move(public_path('uploads/system_images/election_result_sheets/'), $result_sheet_filename);
+            
+        //             if ($pollingUnitResult->result_sheet) {
+        //                 $oldFilePath = public_path('uploads/system_images/election_result_sheets/') . $pollingUnitResult->result_sheet;
+        //                 if (file_exists($oldFilePath)) {
+        //                     unlink($oldFilePath);
+        //                 }
+        //             }
+            
+        //             $pollingUnitResult->result_sheet = $result_sheet_filename;
+        //             $pollingUnitResult->save();
+        //         }
+            
+        //         foreach ($data['votes'] as $partyId => $quantity) {
+        //             Vote::updateOrCreate(
+        //                 [
+        //                     'election_id' => $data['election_id'],
+        //                     'party_id' => $partyId,
+        //                     'polling_unit_id' => $profileData->polling_unit_id,
+        //                 ],
+        //                 [
+        //                     'agent_id' => $profileData->id,
+        //                     'region_id' => $profileData->region_id,
+        //                     'state_id' => $profileData->state_id,
+        //                     'lga_id' => $profileData->lga_id,
+        //                     'ward_id' => $profileData->ward_id,
+        //                     'quantity' => $quantity,
+        //                     'polling_unit_result_id' => $pollingUnitResult->id,
+        //                 ]
+        //             );
+        //         }
+            
+        //         $redirectTo = $request->input('redirect_to'); // Fetch user decision from hidden field
+        //         if ($redirectTo === 'incident') {
+        //             return redirect()->route($profileData->access_level . '.incident.add')->with('message', 'Votes recorded. Proceed to report the incident.');
+        //         }
+            
+        //         return redirect()->back()->with([
+        //             'message' => $profileData->pollingUnit->name . ' votes uploaded successfully',
+        //             'alert-type' => 'success',
+        //         ]);
+        // }
+        
+        
+
         public function storeVote(Request $request)
         {
-                $profileData = $this->getProfileData();
-            
-                $data = $request->validate([
-                    'election_id' => 'required|exists:elections,id',
-                    'votes' => 'required|array',
-                    'votes.*' => 'nullable|integer|min:0',
-                    'result_sheet' => 'nullable|file|mimes:pdf,png,jpg,jpeg|max:2048',
-                ]);
-        
-                $pollingUnitResult = PollingUnitResult::firstOrCreate(
-                    [
-                        'election_id' => $data['election_id'],
-                        'polling_unit_id' => $profileData->polling_unit_id,
-                    ]
-                );
-        
-                if ($request->hasFile('result_sheet')) {
-                    $file = $request->file('result_sheet');
-                    $result_sheet_filename = date('YmdHi') . $file->getClientOriginalName();
-                    $file->move(public_path('uploads/system_images/election_result_sheets/'), $result_sheet_filename);
-            
-                    if ($pollingUnitResult->result_sheet) {
-                        $oldFilePath = public_path('uploads/system_images/election_result_sheets/') . $pollingUnitResult->result_sheet;
-                        if (file_exists($oldFilePath)) {
-                            unlink($oldFilePath);
-                        }
-                    }
-            
-                    $pollingUnitResult->result_sheet = $result_sheet_filename;
+            // Fetch user profile data
+            $profileData = $this->getProfileData();
+
+            // Validate incoming request
+            $data = $request->validate([
+                'election_id' => 'required|exists:elections,id',
+                'votes' => 'required|array',
+                'votes.*' => 'nullable|integer|min:0',
+                'result_sheet' => 'nullable|file|mimes:pdf,png,jpg,jpeg|max:2048',
+            ]);
+
+            // Find or create the polling unit result record
+            $pollingUnitResult = PollingUnitResult::firstOrCreate(
+                [
+                    'election_id' => $data['election_id'],
+                    'polling_unit_id' => $profileData->polling_unit_id,
+                ]
+            );
+
+            // Handle result sheet file upload using FileStorageService
+            if ($request->hasFile('result_sheet')) {
+                $fileStorageService = new FileStorageService();
+
+                // Define storage path and old file name
+                $storagePath = 'system_images/election_result_sheets';
+                $oldFile = $pollingUnitResult->result_sheet;
+
+                // Store new file and get its filename
+                $newFilename = $fileStorageService->storeFile($request->file('result_sheet'), $storagePath, $oldFile);
+
+                if ($newFilename) {
+                    $pollingUnitResult->result_sheet = $newFilename;
                     $pollingUnitResult->save();
                 }
-            
-                foreach ($data['votes'] as $partyId => $quantity) {
-                    Vote::updateOrCreate(
-                        [
-                            'election_id' => $data['election_id'],
-                            'party_id' => $partyId,
-                            'polling_unit_id' => $profileData->polling_unit_id,
-                        ],
-                        [
-                            'agent_id' => $profileData->id,
-                            'region_id' => $profileData->region_id,
-                            'state_id' => $profileData->state_id,
-                            'lga_id' => $profileData->lga_id,
-                            'ward_id' => $profileData->ward_id,
-                            'quantity' => $quantity,
-                            'polling_unit_result_id' => $pollingUnitResult->id,
-                        ]
-                    );
-                }
-            
-                $redirectTo = $request->input('redirect_to'); // Fetch user decision from hidden field
-                if ($redirectTo === 'incident') {
-                    return redirect()->route($profileData->access_level . '.incident.add')->with('message', 'Votes recorded. Proceed to report the incident.');
-                }
-            
-                return redirect()->back()->with([
-                    'message' => $profileData->pollingUnit->name . ' votes uploaded successfully',
-                    'alert-type' => 'success',
-                ]);
+            }
+
+            // Update or create votes for each party
+            foreach ($data['votes'] as $partyId => $quantity) {
+                Vote::updateOrCreate(
+                    [
+                        'election_id' => $data['election_id'],
+                        'party_id' => $partyId,
+                        'polling_unit_id' => $profileData->polling_unit_id,
+                    ],
+                    [
+                        'agent_id' => $profileData->id,
+                        'region_id' => $profileData->region_id,
+                        'state_id' => $profileData->state_id,
+                        'lga_id' => $profileData->lga_id,
+                        'ward_id' => $profileData->ward_id,
+                        'quantity' => $quantity,
+                        'polling_unit_result_id' => $pollingUnitResult->id,
+                    ]
+                );
+            }
+
+            // Redirect based on user action
+            $redirectTo = $request->input('redirect_to'); // Fetch user decision from hidden field
+            if ($redirectTo === 'incident') {
+                return redirect()
+                    ->route($profileData->access_level . '.incident.add')
+                    ->with('message', 'Votes recorded. Proceed to report the incident.');
+            }
+
+            return redirect()->back()->with([
+                'message' => $profileData->pollingUnit->name . ' votes uploaded successfully',
+                'alert-type' => 'success',
+            ]);
         }
-        
+
         public function addIncident()
         {
             $profileData = $this->getProfileData();
+                if(empty($profileData->lga_id) || empty($profileData->ward_id) || empty($profileData->polling_unit_id )){
+                    $notification =[
+                        'type'=> 'error',
+                        'message'=> 'You need to complete you Profile before accessing election data',
+                    ];
+                    return redirect()->route($profileData->access_level.'.profile')->with($notification);
+                }
 
             // Fetch the ongoing or current election
             $election = Election::whereDate('year', now())
@@ -260,7 +360,7 @@ class ElectionController extends Controller
             $wardId = $profileData->ward_id;
             $pollingUnitId = $profileData->polling_unit_id;
 
-            return view('backend.incidents.add', compact(
+            return view('backend.'.$profileData->access_level.'.election.add-incident', compact(
                 'election',
                 'profileData',
                 'regionId',
@@ -337,6 +437,7 @@ class ElectionController extends Controller
 
 
     
+
         public function getElectionResultChartData($uuid)
         {
             // Fetch the election based on the UUID
@@ -378,7 +479,7 @@ class ElectionController extends Controller
             $chartDataResults = $results->map(function ($result) {
                 $party = PoliticalParty::find($result->party_id);
                 return [
-                    'party_name' => $party ? "{$party->acronym}" : 'Unknown Party',
+                    'party_name' => $party ? " $party->acronym" : 'Unknown Party',
                     'total_votes' => $result->total_votes,
                 ];
             });
@@ -389,28 +490,11 @@ class ElectionController extends Controller
 
             // Define an array of colors
             $colors = [
-                '#3498db', // Blue
-                '#e74c3c', // Red
-                '#2ecc71', // Green
-                '#f39c12', // Orange
-                '#9b59b6', // Purple
-                '#1abc9c', // Teal
-                '#d35400', // Dark Orange
-                '#c0392b', // Crimson
-                '#34495e', // Dark Blue-Grey
-                '#27ae60', // Emerald Green
-                '#2980b9', // Strong Blue
-                '#8e44ad', // Dark Purple
-                '#e67e22', // Bright Orange
-                '#16a085', // Aquamarine
-                '#bdc3c7', // Light Grey
-                '#f1c40f', // Yellow
-                '#95a5a6', // Grey-Blue
-                '#2c3e50', // Navy Blue
-                '#ec7063', // Soft Red
-                '#7dcea0'  // Light Green
+                '#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c', '#d35400', '#c0392b',
+                '#34495e', '#27ae60', '#2980b9', '#8e44ad', '#e67e22', '#16a085', '#bdc3c7', '#f1c40f',
+                '#95a5a6', '#2c3e50', '#ec7063', '#7dcea0'
             ];
-            
+
             $backgroundColors = array_slice($colors, 0, count($labels));
 
             // Prepare the data structure for the bar chart
@@ -430,7 +514,6 @@ class ElectionController extends Controller
             // Return the bar chart data as JSON
             return response()->json($chartData);
         }
-
         public function manageVotesByPu($uuid){
 
                 // Fetch the election by UUID
@@ -487,6 +570,8 @@ class ElectionController extends Controller
                 $query->where('votes.polling_unit_id', $profileData->polling_unit_id);
             }
 
+            
+
             // Return server-side response for DataTables
             return datatables()->eloquent($query)
                 ->filterColumn('polling_unit_name', function ($query, $keyword) {
@@ -497,10 +582,22 @@ class ElectionController extends Controller
                 })
                 ->addIndexColumn()
                 ->addColumn('result_sheet', function ($row) {
-                    return $row->result_sheet
-                        ? '<a class="btn btn-success btn-sm text-white" href="' . asset('uploads/system_images/election_result_sheets/'.$row->result_sheet) . '" target="_blank"> <i class="fas fa-eye"> </i> Form EC8A</a>'
-                        : 'No File';
+                    $fileStorageService = new FileStorageService();
+                    
+                    if ($row->result_sheet) {
+                        try {
+                            $fileUrl = $fileStorageService->getFileUrl('system_images/election_result_sheets/' . $row->result_sheet);
+                            return '<a class="btn btn-success btn-sm text-white" href="' . $fileUrl . '" target="_blank">
+                                        <i class="fas fa-eye"></i> Form EC8A
+                                    </a>';
+                        } catch (\Exception $e) {
+                            return 'No File (Error)';
+                        }
+                    }
+                
+                    return 'No File';
                 })
+                
                 ->addColumn('incident_report', function ($row) {
                     if ($row->incident_report) {
                         $profileData = $this->getProfileData();
@@ -515,6 +612,7 @@ class ElectionController extends Controller
                     }
                     return 'None';
                 })
+                
                 ->rawColumns(['result_sheet', 'incident_report'])
                 ->make(true);
         }

@@ -552,8 +552,7 @@
     updateDonutChart();
 </script>
 
-<!-- Religion Distribution of Member -->
-
+<!-- Distribution of Members by Religion -->
 <script>
     var religionBarChartCanvas = document.getElementById('religionBarChart').getContext('2d');
     var religionBarChart;
@@ -602,6 +601,7 @@
     // Call the function to initialize the bar chart for religion distribution
     updateReligionBarChart();
 </script>
+<!-- Distribution of Members by Religion -->
 
 <!-- Voter Eligibility -->
 <script>
@@ -675,46 +675,6 @@
     updateStateDonutChart();
 </script>
 
-<!-- Volunteer Group Distribution -->
-<script>
-    var volunteerGroupDonutChartCanvas = document.getElementById('volunteerGroupDonutChart').getContext('2d');
-    var volunteerGroupDonutChart;
 
-    function updateVolunteerGroupDonutChart() {
-        $.ajax({
-            url: '/admin/member/distribution/volunteergroup', // Update with your route URL
-            method: 'GET',
-            success: function(data) {
-
-                if (volunteerGroupDonutChart) {
-                    volunteerGroupDonutChart.destroy();
-                }
-                // Calculate total count to calculate percentages
-                var totalCount = data.datasets[0].data.reduce((a, b) => a + b, 0);
-                // Calculate and update the labels with percentages
-                data.labels = data.labels.map((label, index) => `${label} (${((data.datasets[0].data[index] / totalCount) * 100).toFixed(2)}%)`);
-                volunteerGroupDonutChart = new Chart(volunteerGroupDonutChartCanvas, {
-                    type: 'pie', // Use 'doughnut' for a donut chart
-                    data: data,
-                    options: {
-                        responsive: true,
-                        //cutoutPercentage: 20, // Make the chart doughnut hole 20% of the radius
-                        maintainAspectRatio: false,
-                        legend: {
-                            position: 'right' // Position the legend to the right
-                        }
-                        // Add more options as needed
-                    }
-                });
-            },
-            error: function(error) { // Add error handling
-                console.error('Error:', error);
-            }
-        });
-    }
-
-    // Call the function to initialize the donut chart
-    updateVolunteerGroupDonutChart();
-</script>
 
 @endsection

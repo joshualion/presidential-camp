@@ -65,7 +65,7 @@
     </div>
 
     <div class="form-group row">
-        <label for="s3_secret" class="col-sm-3 col-form-label">AWS Secret Key</label>
+        <label for="s3_secret" class="col-sm-3 col-form-label">AWS Secret Key Id</label>
         <div class="col-sm-9">
             <input type="password" class="form-control" id="s3_secret" name="s3_secret"
                    value="{{ $SystemSetting->s3_secret }}" placeholder="Enter AWS Secret Key">
@@ -82,6 +82,17 @@
                    value="{{ $SystemSetting->s3_region }}" placeholder="Enter AWS Region">
         </div>
         @error('s3_region')
+            <div class="alert alert-danger">{{ $message }}</div>
+        @enderror
+    </div>
+
+    <div class="form-group row">
+        <label for="s3_endpoint" class="col-sm-3 col-form-label">AWS S3 Endpoint</label>
+        <div class="col-sm-9">
+            <input type="text" class="form-control" id="s3_endpoint" name="s3_endpoint"
+                   value="{{ $SystemSetting->s3_endpoint }}" placeholder="Enter S3 Endpoint">
+        </div>
+        @error('s3_endpoint')
             <div class="alert alert-danger">{{ $message }}</div>
         @enderror
     </div>

@@ -288,14 +288,9 @@ Route::get('/national/election/votes/{uuid}', [ElectionController::class, 'manag
 Route::get('/national/election/votes/data/{uuid}', [ElectionController::class, 'VotesByPuData'])->name('nationaladmin.election.votesByPuData')->middleware('access_level:nationaladmin');
 
 
-// Election Incident Report
-Route::get('/national/election/incident/{uuid}/{polling_unit_id}', [ElectionController::class, 'manageIncidentByPu'])
-    ->name('nationaladmin.election.incident')
-    ->middleware('access_level:nationaladmin');
-
-    Route::get('/national/incident/add', [ElectionController::class, 'addIncident'])->name('nationaladmin.incident.add')->middleware('access_level:nationaladmin');
-    Route::post('/national/incident/store', [ElectionController::class, 'storeIcident'])->name('nationaladmin.incident.store')->middleware('access_level:nationaladmin');
-    
+// Election PU Incident Report
+Route::get('/national/election/incident/{uuid}/{polling_unit_id}', [ElectionController::class, 'manageIncidentByPu'])->name('nationaladmin.election.incident')->middleware('access_level:nationaladmin');
+   
 
 //Manage Votes
 Route::get('/national/votes', [ElectionController::class, 'allVotes'])->name('nationaladmin.votes')->middleware('access_level:nationaladmin');
@@ -305,6 +300,10 @@ Route::get('/national/vote/edit/{uuid}', [ElectionController::class, 'editVote']
 Route::post('/national/vote/update/{uuid}', [ElectionController::class, 'updateVote'])->name('nationaladmin.vote.update')->middleware('access_level:nationaladmin');
 Route::delete('/national/vote/delete/{uuid}', [ElectionController::class, 'deleteVote'])->name('nationaladmin.vote.delete')->middleware('access_level:nationaladmin');
 
+//Manage Incidents
+Route::get('/national/incident/add', [ElectionController::class, 'addIncident'])->name('nationaladmin.incident.add')->middleware('access_level:nationaladmin');
+Route::post('/national/incident/store', [ElectionController::class, 'storeIcident'])->name('nationaladmin.incident.store')->middleware('access_level:nationaladmin');
+ 
 
 });
 

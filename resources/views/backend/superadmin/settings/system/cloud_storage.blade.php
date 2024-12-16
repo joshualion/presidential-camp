@@ -85,6 +85,17 @@
             <div class="alert alert-danger">{{ $message }}</div>
         @enderror
     </div>
+
+    <div class="form-group row">
+        <label for="s3_endpoint" class="col-sm-3 col-form-label">AWS S3 Endpoint</label>
+        <div class="col-sm-9">
+            <input type="text" class="form-control" id="s3_endpoint" name="s3_endpoint"
+                   value="{{ $SystemSetting->s3_endpoint }}" placeholder="Enter S3 Endpoint">
+        </div>
+        @error('s3_endpoint')
+            <div class="alert alert-danger">{{ $message }}</div>
+        @enderror
+    </div>
 </div>
 
 <!-- JavaScript for Toggling Storage Options -->

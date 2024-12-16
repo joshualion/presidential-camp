@@ -46,6 +46,8 @@ return new class extends Migration
             $table->string('s3_secret')->nullable();
             $table->string('s3_region')->nullable();
             $table->string('s3_bucket')->nullable();
+            $table->string(' s3_endpoint')->nullable();
+           
             $table->timestamps();
         });
     }

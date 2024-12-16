@@ -23,10 +23,10 @@ class SystemSettingController extends Controller
     // Function to get the profile data
     private function getProfileData()
     {
-        //$id = Auth::user()->id;
-        $id = 1;
+        $id = Auth::user()->id;
         return User::find($id);
     }
+   
 
 
         private function getSystemSettings(){
@@ -37,11 +37,11 @@ class SystemSettingController extends Controller
         }// End Method
 
         public function systemSettings(){
-
+               $profileData = $this->getProfileData();
                 $SystemSetting = SystemSetting::first();
                 $countries = Country::all();
                 $profileData = $this->getProfileData();
-            return view('backend.superadmin.settings.system.general',compact('SystemSetting','countries','profileData'));
+            return view('backend.'.$profileData->access_level.'.settings.system.general',compact('SystemSetting','countries','profileData'));
 
         }// End Method
 
@@ -54,6 +54,7 @@ class SystemSettingController extends Controller
                 's3_secret' => 'required_if:enable_s3_storage,1',
                 's3_region' => 'required_if:enable_s3_storage,1',
                 's3_bucket' => 'required_if:enable_s3_storage,1',
+                's3_endpoint' =>'required_if:enable_s3_storage,1',
             ]);
 
              // Enforce mutual exclusivity
@@ -132,6 +133,7 @@ class SystemSettingController extends Controller
                                         's3_secret' => $request->s3_secret,
                                         's3_region' => $request->s3_region,
                                         's3_bucket' => $request->s3_bucket,
+                                        's3_endpoint'=> $request->s3_endpoint,
                                     ]);
 
                                     $notification = array(

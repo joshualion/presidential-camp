@@ -42,7 +42,7 @@ class NationalSystemSettingController extends Controller
                 $SystemSetting = SystemSetting::first();
                 $countries = Country::all();
                 $profileData = $this->getProfileData();
-            return view('backend.nationaladmin.settings.system.general',compact('SystemSetting','countries','profileData'));
+            return view('backend.'.$profileData->access_level.'.settings.system.general',compact('SystemSetting','countries','profileData'));
 
         }// End Method
 
@@ -55,6 +55,7 @@ class NationalSystemSettingController extends Controller
                 's3_secret' => 'required_if:enable_s3_storage,1',
                 's3_region' => 'required_if:enable_s3_storage,1',
                 's3_bucket' => 'required_if:enable_s3_storage,1',
+                's3_endpoint'=> 'required_if:enable_s3_storage,1',
             ]);
 
 
@@ -133,6 +134,7 @@ class NationalSystemSettingController extends Controller
                                         's3_secret' => $request->s3_secret,
                                         's3_region' => $request->s3_region,
                                         's3_bucket' => $request->s3_bucket,
+                                        's3_endpoint' => $request->s3_endpoint,
                                     ]);
 
                                     $notification = array(
@@ -149,7 +151,7 @@ class NationalSystemSettingController extends Controller
         public function SmtpSettings(){
                 $profileData = $this->getProfileData();
                 $smtpsettings = SMTPSetting::find(1);
-                return view('backend.nationaladmin.settings.smtp.update_smtp', compact('smtpsettings','profileData'));
+                return view('backend.'.$profileData->access_level.'.settings.smtp.update_smtp', compact('smtpsettings','profileData'));
         }
 
         public function UpdateSmtpSettings(Request $request){
