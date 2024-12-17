@@ -2,6 +2,8 @@
 
 
 use App\Http\Controllers\AjaxController;
+use App\Http\Controllers\BulksmsController;
+use App\Http\Controllers\BulkSmsSettingController;
 use App\Http\Controllers\ChartsController;
 use App\Http\Controllers\ElectionController;
 use App\Http\Controllers\LocationController;
@@ -231,6 +233,13 @@ Route::post('/regional/vote/update/{uuid}', [ElectionController::class, 'updateV
 Route::delete('/regional/vote/delete/{uuid}', [ElectionController::class, 'deleteVote'])->name('regionaladmin.vote.delete')->middleware('access_level:regionaladmin');
 
 
+// Bulksms Settings Routes
+Route::get('/regional/bulksms/setting', [BulkSmsSettingController::class, 'index'])->name('regionaladmin.bulksms.setting')->middleware('access_level:regionaladmin');
+Route::post('/regional/bulksms/setting/store', [BulkSmsSettingController::class, 'store'])->name('regionaladmin.bulksms.setting.store')->middleware('access_level:regionaladmin');
+Route::post('/regional/bulksms/setting/update/', [BulkSmsSettingController::class, 'update'])->name('regionaladmin.bulksms.setting.update')->middleware('access_level:regionaladmin');
+// Send Bulksms Routes
+Route::get('/regional/bulksms/send', [BulksmsController::class, 'index'])->name('regionaladmin.bulksms.send')->middleware('access_level:regionaladmin');
+Route::post('/regional/bulksms/send/sms', [BulkSmsController::class, 'sendsms'])->name('regionaladmin.bulksms.send.sms')->middleware('access_level:regionaladmin');
 
 });
 

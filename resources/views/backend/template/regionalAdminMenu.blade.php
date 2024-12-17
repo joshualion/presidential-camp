@@ -121,7 +121,7 @@ $region = \App\Models\Region::find(Auth::user()->region_id);
 {{-- / Election --}}
 
             {{-- Reports --}}
-            <li class="tab nav-item menu-close">
+            {{-- <li class="tab nav-item menu-close">
                         <a href="#" class="nav-link">
                           <i class="nav-icon fas fa-book"></i>
                           <p>
@@ -152,7 +152,7 @@ $region = \App\Models\Region::find(Auth::user()->region_id);
                             </a>
                           </li>
                         </ul>
-            </li>
+            </li> --}}
             {{-- / Reports --}}
 
             {{-- Finances --}}
@@ -160,7 +160,7 @@ $region = \App\Models\Region::find(Auth::user()->region_id);
                 <a href="#" class="nav-link">
                   <i class="nav-icon fas fa-money-bill"></i>
                   <p>
-                    Accounting
+                    Finance
                     <i class="right fas fa-angle-left"></i>
                   </p>
                 </a>
@@ -193,7 +193,7 @@ $region = \App\Models\Region::find(Auth::user()->region_id);
 
 
             {{-- Events --}}
-            <li class="tab nav-item menu-close">
+            {{-- <li class="tab nav-item menu-close">
                 <a href="#" class="nav-link">
                   <i class="nav-icon fas fa-calendar"></i>
                   <p>
@@ -219,7 +219,7 @@ $region = \App\Models\Region::find(Auth::user()->region_id);
 
 
                 </ul>
-           </li>
+           </li> --}}
             {{-- / Events --}}
 
 

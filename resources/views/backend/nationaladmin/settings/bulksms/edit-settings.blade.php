@@ -26,6 +26,7 @@
                     <label for="sender_id">WiredirectSMS Registered Sender ID</label>
                     <input type="text" class="form-control" id="sender_id" name="sender_id" value="{{$bulksms->sender_id}}"  maxlength="10">
                     <input type="hidden" name="smsgateway_provider" value="wiredirectsms">
+                    <input type="hidden" name="smsgateway_endpoint" value="https://wiredirectsms.com/api/v3/">
                 </div>
                   <div class="form-group">
                     <label for="sms_api_key">WiredirectSMS API Token</label>

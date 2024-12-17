@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\AgeGradeController;
 use App\Http\Controllers\AjaxController;
+use App\Http\Controllers\BulksmsController;
+use App\Http\Controllers\BulkSmsSettingController;
 use App\Http\Controllers\ChartsController;
 use App\Http\Controllers\ElectionController;
 use App\Http\Controllers\LocationController;
@@ -304,6 +306,13 @@ Route::delete('/national/vote/delete/{uuid}', [ElectionController::class, 'delet
 Route::get('/national/incident/add', [ElectionController::class, 'addIncident'])->name('nationaladmin.incident.add')->middleware('access_level:nationaladmin');
 Route::post('/national/incident/store', [ElectionController::class, 'storeIcident'])->name('nationaladmin.incident.store')->middleware('access_level:nationaladmin');
  
+  // Bulksms Settings Routes
+  Route::get('/national/bulksms/setting', [BulkSmsSettingController::class, 'index'])->name('nationaladmin.bulksms.setting')->middleware('access_level:nationaladmin');
+  Route::post('/national/bulksms/setting/store', [BulkSmsSettingController::class, 'store'])->name('nationaladmin.bulksms.setting.store')->middleware('access_level:nationaladmin');
+  Route::post('/national/bulksms/setting/update/', [BulkSmsSettingController::class, 'update'])->name('nationaladmin.bulksms.setting.update')->middleware('access_level:nationaladmin');
+  // Send Bulksms Routes
+  Route::get('/national/bulksms/send', [BulksmsController::class, 'index'])->name('nationaladmin.bulksms.send')->middleware('access_level:nationaladmin');
+  Route::post('/national/bulksms/send/sms', [BulkSmsController::class, 'sendsms'])->name('nationaladmin.bulksms.send.sms')->middleware('access_level:nationaladmin');
 
 });
 

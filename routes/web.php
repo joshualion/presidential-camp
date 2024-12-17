@@ -9,6 +9,7 @@ use App\Http\Controllers\AjaxController;
 
 
 
+
 // Ajax Routes
 Route::get('/get-regions', [AjaxController::class, 'getRegions'])->name('getRegions');
 Route::post('/get-states', [AjaxController::class, 'ajaxGetStates'])->name('getStates');

@@ -87,6 +87,11 @@ class User extends Authenticatable
         return $this->belongsTo(AgeGrade::class);
     }
 
+    public function bulkSmsSetting()
+    {
+        return $this->hasOne(BulkSmsSetting::class, 'user_id');
+    }
+
     public static function getPermissionGroups()
     {
         $permission_groups = DB::table('permissions')->select('group_name')->groupBy('group_name')->get();

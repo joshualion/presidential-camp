@@ -32,13 +32,14 @@ class BulkSmsSettingController extends Controller
         $profileData = $this->getProfileData();
         $bulksms = BulkSmsSetting::where('user_id', Auth::user()->id)->first();
         if (!empty($bulksms->sender_id) && !empty($bulksms->sms_api_key)) {
-                return view('admin.bulksms.editSettings', compact('profileData', 'bulksms'));
+                return view('backend.'.$profileData->access_level.'.settings.bulksms.edit-settings', compact('profileData', 'bulksms'));
         }else{
-                return view('admin.bulksms.settings', compact('profileData'));
+                return view('backend.'.$profileData->access_level.'.settings.bulksms.settings', compact('profileData'));
             }
     }
 
     public function store(Request $request){
+        $profileData = $this->getProfileData();
        // Validate the request data
        $validator = Validator::make($request->all(), [
             'user_id' => 'required',
@@ -55,6 +56,7 @@ class BulkSmsSettingController extends Controller
         $bulksms = new BulkSmsSetting();
         $bulksms->user_id = Auth::user()->id;
         $bulksms->smsgateway_provider = request()->smsgateway_provider;
+        $bulksms->smsgateway_endpoint = request()->smsgateway_endpoint;
         $bulksms->sender_id = request()->sender_id;
         $bulksms->sms_api_key = request()->sms_api_key;
         $bulksms->save();
@@ -63,12 +65,13 @@ class BulkSmsSettingController extends Controller
             'message' => 'Bulk SMS Settings Saved Successfully',
             'alert-type' => 'success'
         );
-        return redirect()->route('admin.bulksms.setting')->with($notification);
+        return redirect()->route($profileData->access_level.'.bulksms.setting')->with($notification);
 
    }
 
     public function update(Request $request)
     {
+        $profileData = $this->getProfileData();
         $validator = Validator::make($request->all(), [
               'user_id' => 'required',
               'smsgateway_provider' => 'required',
@@ -83,7 +86,8 @@ class BulkSmsSettingController extends Controller
 
          $bulksms = BulkSmsSetting::where('user_id', Auth::user()->id)->first();
          $bulksms->user_id = Auth::user()->id;
-         $bulksms->smsgateway_provider = request()->smsgateway_provider;
+         $bulksms->smsgateway_provider = request()->smsgateway_provider;         
+        $bulksms->smsgateway_endpoint = request()->smsgateway_endpoint;
          $bulksms->sender_id = request()->sender_id;
          $bulksms->sms_api_key = request()->sms_api_key;
          $bulksms->save();
@@ -92,7 +96,7 @@ class BulkSmsSettingController extends Controller
               'message' => 'Bulk SMS Settings Updated Successfully',
               'alert-type' => 'success'
          );
-         return redirect()->route('admin.bulksms.setting')->with($notification);
+         return redirect()->route($profileData->access_level.'.bulksms.setting')->with($notification);
     }
 
 

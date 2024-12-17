@@ -18,12 +18,13 @@
               <div class="card-body">
 
               <!-- form start -->
-              <form class="form" action="{{route('admin.bulksms.setting.store')}}" method="POST">
+              <form class="form" action="{{route($profileData->access_level.'.bulksms.setting.store')}}" method="POST">
                 @csrf
                 <div class="card-body">
                    <div class="form-group">
                    <input type="hidden" name="user_id" value="{{Auth::user()->id}}">
                    <input type="hidden" name="smsgateway_provider" value="wiredirectsms">
+                   <input type="hidden" name="smsgateway_endpoint" value="https://wiredirectsms.com/api/v3/">
                   </div>
                   <div class="form-group">
                     <label for="sender_id">WiredirectSMS Registered Sender ID</label>
