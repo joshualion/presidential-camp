@@ -668,10 +668,49 @@ class MembersController extends Controller
      }
 
      public function editMember($uuid)
-     {
-         $profileData = $this->getProfileData();
+     {        
+
          $pageTitle = 'Edit Member';
-         $member = User::with('roles')->where('uuid', $uuid)->first(); // Fetch member with roles
+        //$member = User::with('roles')->where('uuid', $uuid)->first(); // Fetch member with roles
+
+         // Access level hierarchy
+            $accessLevels = [
+                'superadmin' => 1,
+                'nationaladmin' => 2,
+                'regionaladmin' => 3,
+                'stateadmin' => 4,
+                'lgaadmin' => 5,
+                'wardadmin' => 6,
+                'pollingunitadmin' => 7,
+            ];
+
+        // Fetch the logged-in user's profile data
+        $profileData = $this->getProfileData();
+
+        // Fetch the member's data with roles
+        $member = User::with('roles')->where('uuid', $uuid)->first();
+
+        // Get the numeric values for both access levels
+        $userAccessLevel = $accessLevels[$profileData->access_level] ?? null; // Logged-in user
+        $memberAccessLevel = $accessLevels[$member->access_level] ?? null; // Target member
+
+        // Check if either access level is undefined
+        if ($userAccessLevel === null || $memberAccessLevel === null) {
+            $notification = [
+                "message" => "An invalid access level was detected. Please contact the administrator.",
+                "type" => "error", // This can be 'error', 'success', 'info', or 'warning'
+            ];
+            return redirect()->back()->with($notification);
+        }
+
+        // Compare access levels
+        if ($userAccessLevel > $memberAccessLevel) {
+            $notification = [
+                "message" => "You do not have permission to view or edit a profile with higher privileges than yours.",
+                "type" => "warning", // Indicates a permissions issue
+            ];
+            return redirect()->back()->with($notification);
+        }
          // $roles = Role::all();  // Assuming a member can have multiple roles
          $countries = Country::all();
          $regions = $this->getRegions();
@@ -692,6 +731,8 @@ class MembersController extends Controller
             // OR roles already assigned to the member
             return  $member->roles->contains('id', $role->id);
         });
+
+      
  
          return view('backend.'.$profileData->access_level.'.member.member', compact(
              'profileData', 'pageTitle', 'member', 'roles', 'countries',
@@ -804,6 +845,46 @@ class MembersController extends Controller
          $profileData = $this->getProfileData();
          $pageTitle = 'Team Member';
          $member = User::where('uuid', $uuid)->first();
+
+          // Access level hierarchy
+          $accessLevels = [
+            'superadmin' => 1,
+            'nationaladmin' => 2,
+            'regionaladmin' => 3,
+            'stateadmin' => 4,
+            'lgaadmin' => 5,
+            'wardadmin' => 6,
+            'pollingunitadmin' => 7,
+        ];
+
+
+    // Get the numeric values for both access levels
+    $userAccessLevel = $accessLevels[$profileData->access_level] ?? null; // Logged-in user
+    $memberAccessLevel = $accessLevels[$member->access_level] ?? null; // Target member
+
+    // Check if either access level is undefined
+    if ($userAccessLevel === null || $memberAccessLevel === null) {
+        $notification = [
+            "message" => "An invalid access level was detected. Please contact the administrator.",
+            "type" => "error", // This can be 'error', 'success', 'info', or 'warning'
+        ];
+        return redirect()->back()->with($notification);
+    }
+
+    // Compare access levels
+    if ($userAccessLevel > $memberAccessLevel) {
+        $notification = [
+            "message" => "You do not have permission to view or edit a profile with higher privileges than yours.",
+            "type" => "error", // Indicates a permissions issue
+        ];
+        return redirect()->back()->with($notification);
+    }
+
+
+
+
+
+
          $roles = Role::all();  // Assuming a member can have multiple roles
          $countries = Country::all();
          $regions = $this->getRegions();
@@ -822,7 +903,43 @@ class MembersController extends Controller
      }
 
      public function suspendMember($uuid){
+         $profileData = $this->getProfileData();
          $member = User::where('uuid', $uuid)->first();
+
+
+         // Access level hierarchy
+         $accessLevels = [
+            'superadmin' => 1,
+            'nationaladmin' => 2,
+            'regionaladmin' => 3,
+            'stateadmin' => 4,
+            'lgaadmin' => 5,
+            'wardadmin' => 6,
+            'pollingunitadmin' => 7,
+        ];
+
+
+    // Get the numeric values for both access levels
+    $userAccessLevel = $accessLevels[$profileData->access_level] ?? null; // Logged-in user
+    $memberAccessLevel = $accessLevels[$member->access_level] ?? null; // Target member
+
+    // Check if either access level is undefined
+    if ($userAccessLevel === null || $memberAccessLevel === null) {
+        $notification = [
+            "message" => "An invalid access level was detected. Please contact the administrator.",
+            "type" => "error", // This can be 'error', 'success', 'info', or 'warning'
+        ];
+        return redirect()->back()->with($notification);
+    }
+
+    // Compare access levels
+    if ($userAccessLevel > $memberAccessLevel) {
+        $notification = [
+            "message" => "You do not have permission to suspend or delete a profile with higher privileges than yours.",
+            "type" => "error", // Indicates a permissions issue
+        ];
+        return redirect()->back()->with($notification);
+    }
 
          //check status and suspend or activated accordingly
          if($member->status == 'inactive'){
@@ -851,8 +968,48 @@ class MembersController extends Controller
 
      public function deleteMember(Request $request, $uuid)
      {
+
+        $profileData = $this->getProfileData();
          // Find the member by uuid
          $member = User::where('uuid', $uuid)->first();
+
+
+         
+         // Access level hierarchy
+         $accessLevels = [
+            'superadmin' => 1,
+            'nationaladmin' => 2,
+            'regionaladmin' => 3,
+            'stateadmin' => 4,
+            'lgaadmin' => 5,
+            'wardadmin' => 6,
+            'pollingunitadmin' => 7,
+        ];
+
+
+    // Get the numeric values for both access levels
+    $userAccessLevel = $accessLevels[$profileData->access_level] ?? null; // Logged-in user
+    $memberAccessLevel = $accessLevels[$member->access_level] ?? null; // Target member
+
+    // Check if either access level is undefined
+    if ($userAccessLevel === null || $memberAccessLevel === null) {
+        $notification = [
+            "message" => "An invalid access level was detected. Please contact the administrator.",
+            "type" => "error", // This can be 'error', 'success', 'info', or 'warning'
+        ];
+        return redirect()->back()->with($notification);
+    }
+
+    // Compare access levels
+    if ($userAccessLevel > $memberAccessLevel) {
+        $notification = [
+            "message" => "You do not have permission to suspend or delete a profile with higher privileges than yours.",
+            "type" => "error", // Indicates a permissions issue
+        ];
+        return redirect()->back()->with($notification);
+    }
+
+
 
          // Check if the member exists
          if (!$member) {

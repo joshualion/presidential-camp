@@ -71,59 +71,8 @@
 
 <!-- State admin Menu -->
 @if(Auth::user()->access_level == 'stateadmin')
-  <nav class="mt-2">
-        <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
-
-              <li class="nav-item menu-open">
-                          <a href="#" class="nav-link">
-                            <i class="nav-icon fas fa-users"></i>
-                            <p>
-                              Members
-                              <i class="right fas fa-angle-left"></i>
-                            </p>
-                          </a>
-                          <ul class="nav nav-treeview">
-
-                            <li class="nav-item">
-                              <a href="/admin/dashboard" class="nav-link">
-                                <i class="fas fa-user nav-icon"></i>
-                                <p>All Members</p>
-                              </a>
-                            </li>
-
-                            <li class="nav-item">
-                              <a href="/admin/state/dashboard" class="nav-link">
-                              <i class="fas fa-user nav-icon"></i>
-                                <p>members by States</p>
-                              </a>
-                            </li>
-
-                            <li class="nav-item">
-                              <a href="./index2.html" class="nav-link">
-                              <i class="fas fa-user nav-icon"></i>
-                                <p>Members by LGA</p>
-                              </a>
-                            </li>
-
-                            <li class="nav-item">
-                              <a href="./index3.html" class="nav-link">
-                              <i class="fas fa-user nav-icon"></i>
-                                <p>Members By Wards</p>
-                              </a>
-                            </li>
-
-                            <li class="nav-item">
-                              <a href="./index3.html" class="nav-link">
-                              <i class="fas fa-user nav-icon"></i>
-                                <p>Memberss By PU</p>
-                              </a>
-                            </li>
-
-                          </ul>
-              </li>
-        </ul>
-  </nav>
-  @endif
+@Include('backend.template.stateAdminMenu') 
+@endif
 <!-- /State admin Menu -->
 
 

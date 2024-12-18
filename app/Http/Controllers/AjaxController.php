@@ -442,7 +442,127 @@ class AjaxController extends Controller
 
 
 
-    //Elections Ajax Methods
+    //SMS Ajax Methods
+
+    // public function getGroupRecipients(Request $request)
+    // {
+    //     $users = User::query();
+    
+    //     // Apply location filters
+    //     if ($request->filled('country_id')) {
+    //         $users->whereHas('country', function ($query) use ($request) {
+    //             $query->where('id', $request->country_id);
+    //         });
+    //     }
+    //     if ($request->filled('region_id')) {
+    //         $users->whereHas('region', function ($query) use ($request) {
+    //             $query->where('id', $request->region_id);
+    //         });
+    //     }
+    //     if ($request->filled('state_id')) {
+    //         $users->whereHas('state', function ($query) use ($request) {
+    //             $query->where('id', $request->state_id);
+    //         });
+    //     }
+    //     if ($request->filled('lga_id')) {
+    //         $users->whereHas('lga', function ($query) use ($request) {
+    //             $query->where('id', $request->lga_id);
+    //         });
+    //     }
+    //     if ($request->filled('ward_id')) {
+    //         $users->whereHas('ward', function ($query) use ($request) {
+    //             $query->where('id', $request->ward_id);
+    //         });
+    //     }
+    //     if ($request->filled('pu_id')) {
+    //         $users->whereHas('pollingUnit', function ($query) use ($request) {
+    //             $query->where('id', $request->pu_id);
+    //         });
+    //     }
+    
+    //     // Apply group filter if selected
+    //     if ($request->filled('group_id')) {
+    //         $users->whereHas('supportGroups', function ($query) use ($request) {
+    //             $query->where('id', $request->group_id);
+    //         });
+    //     }
+    
+    //     // Get the total count of recipients
+    //     $totalRecipients = $users->count();
+    
+    //     return response()->json(['total' => $totalRecipients]);
+    // }
+
+    // public function getGroupRecipients(Request $request)
+    // {
+    //     \Log::info('Incoming request filters:', $request->all());
+
+    //     $countryId = $request->input('country_id');
+    //     $regionId = $request->input('region_id');
+    //     $stateId = $request->input('state_id');
+    //     $lgaId = $request->input('lga_id');
+    //     $wardId = $request->input('ward_id');
+    //     $puId = $request->input('pu_id');
+
+    //     // Apply filters based on these parameters to fetch the recipients
+    //     $recipientsQuery = User::query();
+
+    //     if ($countryId) {
+    //         $recipientsQuery->where('country_id', $countryId);
+    //     }
+    //     if ($regionId) {
+    //         $recipientsQuery->where('region_id', $regionId);
+    //     }
+    //     if ($stateId) {
+    //         $recipientsQuery->where('state_id', $stateId);
+    //     }
+    //     if ($lgaId) {
+    //         $recipientsQuery->where('lga_id', $lgaId);
+    //     }
+    //     if ($wardId) {
+    //         $recipientsQuery->where('ward_id', $wardId);
+    //     }
+    //     if ($puId) {
+    //         $recipientsQuery->where('pu_id', $puId);
+    //     }
+
+    //     $total = $recipientsQuery->count();
+
+    //     return response()->json(['total' => $total]);
+    // }
+
+    public function getGroupRecipients(Request $request)
+{
+    
+    $recipientsQuery = User::query()
+    ->where('access_level' ,'!=', 'superadmin')
+    ->whereNotNull('phone');
+
+    if ($request->filled('country_id')) {
+        $recipientsQuery->where('country_id', $request->country_id);
+    }
+    if ($request->filled('region_id')) {
+        $recipientsQuery->where('region_id', $request->region_id);
+    }
+    if ($request->filled('state_id')) {
+        $recipientsQuery->where('state_id', $request->state_id);
+    }
+    if ($request->filled('lga_id')) {
+        $recipientsQuery->where('lga_id', $request->lga_id);
+    }
+    if ($request->filled('ward_id')) {
+        $recipientsQuery->where('ward_id', $request->ward_id);
+    }
+    if ($request->filled('pu_id')) {
+        $recipientsQuery->where('pu_id', $request->pu_id);
+    }
+
+    $total = $recipientsQuery->count();
+
+    return response()->json(['total' => $total]);
+}
+
+
 
     
     

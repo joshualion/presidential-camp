@@ -160,7 +160,7 @@ $region = \App\Models\Region::find(Auth::user()->region_id);
                 <a href="#" class="nav-link">
                   <i class="nav-icon fas fa-money-bill"></i>
                   <p>
-                    Finance
+                    Finances
                     <i class="right fas fa-angle-left"></i>
                   </p>
                 </a>

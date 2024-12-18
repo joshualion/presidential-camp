@@ -314,5 +314,7 @@ Route::post('/national/incident/store', [ElectionController::class, 'storeIciden
   Route::get('/national/bulksms/send', [BulksmsController::class, 'index'])->name('nationaladmin.bulksms.send')->middleware('access_level:nationaladmin');
   Route::post('/national/bulksms/send/sms', [BulkSmsController::class, 'sendsms'])->name('nationaladmin.bulksms.send.sms')->middleware('access_level:nationaladmin');
 
+ 
+
 });
 

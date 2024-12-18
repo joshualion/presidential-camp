@@ -4,7 +4,7 @@
 
 <div class="card card-primary">
               <div class="card-header">
-                    <h3 class="card-title">{{$region->name}} Statistics</h3>
+                    <h3 class="card-title">{{$state->name}} Statistics</h3>
                     <div class="card-tools">
                     <button type="button" class="btn btn-tool" data-card-widget="collapse">
                         <i class="fas fa-minus"></i>
@@ -18,44 +18,19 @@
 
                    <!-- Small boxes (Stat box) -->
                   <div class="row">
-                            <div class="col-lg-3 col-6">
-                              <!-- small box -->
-                              <div class="small-box bg-primary">
-                                <div class="inner">
-                                  <h3>{{ $statesWithUsersCount }}</h3>
 
-                                  <p>Out of <strong> {{ $stateCount }}</strong> States in {{$region->name}}</p>
-                                  <p style="float: right;">
-                                    <b>
-                                        @php
-                                            if ($stateCount > 0) {
-                                                echo number_format(($statesWithUsersCount / $stateCount) * 100, 2);
-                                            } else {
-                                                echo '0.00'; // Handle the case where $stateCount is zero
-                                            }
-                                        @endphp %
-                                    </b>
-                                  </p>
-                                </div>
-                                <div class="icon">
-                                  <i class="ion ion-nigeria"></i>
-                                </div>
-                                <a href="{{ route($profileData->access_level.'.members.byState', $region->uuid) }}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
-
-                              </div>
-                            </div>
                             <!-- ./col -->
-                            <div class="col-lg-3 col-6">
+                            <div class="col-lg-4 col-6">
                               <!-- small box -->
                               <div class="small-box bg-success">
                                 <div class="inner">
-                                  <h3>{{$lgaWithUsersCount}}</h3>
-                                  <p>Out of <strong>{{$lgaCount}}</strong> LGAs in {{$region->name}}</p>
+                                  <h3>{{$lgasWithUsersCount}}</h3>
+                                  <p>Out of <strong>{{$lgaCount}}</strong> LGAs in {{$state->name}}</p>
                                   <p style="float: right;">
                                     <b>
                                         @php
                                             if ($lgaCount > 0) {
-                                                echo number_format(($lgaWithUsersCount / $lgaCount) * 100, 2);
+                                                echo number_format(($lgasWithUsersCount / $lgaCount) * 100, 2);
                                             } else {
                                                 echo '0.00'; // Handle the case where $lgaCount is zero
                                             }
@@ -66,16 +41,16 @@
                                 <div class="icon">
                                   <i class="ion ion-lga"></i>
                                 </div>
-                                <a href="{{route($profileData->access_level.'.members.byLga', $region->uuid)}}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
+                                <a href="{{route($profileData->access_level.'.members.byLga', $state->uuid)}}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
                               </div>
                             </div>
                             <!-- ./col -->
-                            <div class="col-lg-3 col-6">
+                            <div class="col-lg-4 col-6">
                               <!-- small box -->
                               <div class="small-box bg-info">
                                 <div class="inner">
                                 <h3>{{$wardWithUsersCount}}</h3>
-                                  <p><small>Out of {{$wardCount}} Wards in {{$region->name}} </small></p>
+                                  <p>Out of <strong>{{$wardCount}}</strong> Wards in {{$state->name}}</p>
                                   <p style="float: right;">
                                     <b>
                                         @php
@@ -91,16 +66,16 @@
                                 <div class="icon">
                                   <i class="ion ion-ward"></i>
                                 </div>
-                                <a href="{{route($profileData->access_level.'.members.byWard', $region->uuid)}}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
+                                <a href="{{route($profileData->access_level.'.members.byWard', $state->uuid)}}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
                               </div>
                             </div>
                             <!-- ./col -->
-                            <div class="col-lg-3 col-6">
+                            <div class="col-lg-4 col-6">
                               <!-- small box -->
                               <div class="small-box bg-danger">
                                 <div class="inner">
                                 <h3>{{$puWithUsersCount}}</h3>
-                                  <p>Out of <strong>{{$puCount}}</strong> PUs in {{$region->name}}</p>
+                                  <p>Out of <strong>{{$puCount}}</strong> PUs in {{$state->name}}</p>
                                   <p style="float: right;">
                                     <b>
                                         @php
@@ -116,7 +91,7 @@
                                 <div class="icon">
                                   <i class="ion ion-pu"></i>
                                 </div>
-                                <a href="{{route($profileData->access_level.'.members.byPu', $region->uuid)}}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
+                                <a href="{{route($profileData->access_level.'.members.byPu', $state->uuid)}}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
                               </div>
                             </div>
                             <!-- ./col -->
@@ -154,7 +129,7 @@
                                 <div class="icon">
                                   <i class="ion ion-person"></i>
                                 </div>
-                                <a href="{{route($profileData->access_level.'.leaders', $region->uuid)}}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
+                                <a href="{{route($profileData->access_level.'.leaders', $state->uuid)}}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
                               </div>
                             </div>
                             <!-- ./col -->
@@ -168,7 +143,7 @@
                                 <div class="icon">
                                   <i class="ion ion-person-add"></i>
                                 </div>
-                                <a href="{{route($profileData->access_level.'.regulars', $region->uuid)}}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
+                                <a href="{{route($profileData->access_level.'.regulars', $state->uuid)}}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
                               </div>
                             </div>
                             <!-- ./col -->
@@ -183,7 +158,7 @@
                                 <div class="icon">
                                   <i class="ion ion-person"></i>
                                 </div>
-                                <a href="{{route($profileData->access_level.'.member.region.view', $region->uuid)}}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
+                                <a href="{{route($profileData->access_level.'.member.state.view', $state->uuid)}}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
                               </div>
                             </div> <!-- ./col -->
                   </div><!-- /.row -->
@@ -196,7 +171,7 @@
     <!-- PIE CHART -->
         <div class="card card-primary">
           <div class="card-header">
-            <h3 class="card-title">MEMBER DISTRIBUTION BY GENDER</h3>
+            <h3 class="card-title">DISTRIBUTION BY GENDER</h3>
 
             <div class="card-tools">
               <button type="button" class="btn btn-tool" data-card-widget="collapse">
@@ -220,7 +195,7 @@
   <!-- BAR CHART -->
   <div class="card card-primary ">
           <div class="card-header">
-            <h3 class="card-title">MEMBER DISTRIBUTION BY AGE BRACKET</h3>
+            <h3 class="card-title">DISTRIBUTION BY AGE BRACKET</h3>
 
             <div class="card-tools">
               <button type="button" class="btn btn-tool" data-card-widget="collapse">
@@ -243,13 +218,13 @@
 <!-- End Demographics -->
 
 
-<!-- Member MEMBER distribution by State and Voter Eligibility -->
+<!-- Member distribution by State and Voter Eligibility -->
 <div class="row">
     <div class="col-md-6">
         <!-- PIE CHART -->
         <div class="card card-primary">
             <div class="card-header">
-                <h3 class="card-title">MEMBER DISTRIBUTION BY VOTE ELIGIBILITY</h3>
+                <h3 class="card-title">DISTRIBUTION BY VOTE ELIGIBILITY</h3>
 
                 <div class="card-tools">
                 <button type="button" class="btn btn-tool" data-card-widget="collapse">
@@ -271,7 +246,7 @@
             <!-- DONUT CHART -->
             <div class="card card-primary ">
                 <div class="card-header">
-                <h3 class="card-title">MEMBER DISTRIBUTION BY STATES</h3>
+                <h3 class="card-title">DISTRIBUTION BY LGA</h3>
 
                 <div class="card-tools">
                     <button type="button" class="btn btn-tool" data-card-widget="collapse">
@@ -284,7 +259,7 @@
                 </div>
                 <div class="card-body" style="display: block;">
                     <div class="chart"><div class="chartjs-size-monitor"><div class="chartjs-size-monitor-expand"><div class=""></div></div><div class="chartjs-size-monitor-shrink"><div class=""></div></div></div>
-                    <canvas id="stateDonutChart" style="min-height: 250px; height: 241px; max-height: 250px; max-width: 100%; display: block; width: 470px;" width="470" height="241" class="chartjs-render-monitor"></canvas>
+                    <canvas id="lgaDonutChart" style="min-height: 250px; height: 241px; max-height: 250px; max-width: 100%; display: block; width: 470px;" width="470" height="241" class="chartjs-render-monitor"></canvas>
                     </div>
                 </div> <!-- /.card-body -->
             </div>  <!-- /.card -->
@@ -292,7 +267,7 @@
     </div>
 
 
-<!-- End Member MEMBER Distribution by State and Eligibility -->
+<!-- End Member Distribution by State and Eligibility -->
 
 
 
@@ -301,7 +276,7 @@
 <!-- AdminLTE ChartJS -->
 <script src="{{asset('assets/plugins/chart.js/Chart.min.js')}}"></script>
 
-<!-- MEMBER Distribution By Gender -->
+<!-- Distribution By Gender -->
 <script>
     // Get the canvas element and create a pie chart
     var pieChartCanvas = document.getElementById('pieChart').getContext('2d');
@@ -309,7 +284,7 @@
 
     function updatePieChart() {
         $.ajax({
-            url:"{{route($profileData->access_level.'.region.member.distribution.gender',$region->uuid)}}", // Ensure URL is a string
+            url:"{{route($profileData->access_level.'.state.member.distribution.gender',$state->uuid)}}", // Ensure URL is a string
             method: 'GET',
             success: function(data) {
                 if (pieChart) {
@@ -382,14 +357,14 @@
     updatePieChart();
 </script>
 
-<!-- MEMBER Distribution By Age Grade -->
+<!-- Distribution By Age Grade -->
 <script>
     var barChartCanvas = document.getElementById('barChart').getContext('2d');
     var barChart;
 
     function updateBarChart() {
         $.ajax({
-            url: "{{route($profileData->access_level.'.region.member.distribution.age', $region->uuid)}}", // Update with your route URL
+            url: "{{route($profileData->access_level.'.state.member.distribution.age', $state->uuid)}}", // Update with your route URL
             method: 'GET',
             success: function(data) {
                 if (barChart) {
@@ -464,7 +439,7 @@
 
     function updateValidVoterPieChart() {
         $.ajax({
-            url: "{{route($profileData->access_level.'.region.member.distribution.voter', $region->uuid)}}", // Update with your route URL
+            url: "{{route($profileData->access_level.'.state.member.distribution.voter', $state->uuid)}}", // Update with your route URL
             method: 'GET',
             success: function(data) {
                 if (validVoterPieChart) {
@@ -491,24 +466,24 @@
 </script>
 
 
-<!-- State Distribution -->
+<!-- lga Distribution -->
 <script>
-    var stateDonutChartCanvas = document.getElementById('stateDonutChart').getContext('2d');
-    var stateDonutChart;
+    var lgaDonutChartCanvas = document.getElementById('lgaDonutChart').getContext('2d');
+    var lgaDonutChart;
 
-    function updateStateDonutChart() {
+    function updatelgaDonutChart() {
         $.ajax({
-            url: "{{route($profileData->access_level.'.region.member.distribution.state', $region->uuid)}}", // Update with your route URL
+            url: "{{route($profileData->access_level.'.state.member.distribution.lga', $state->uuid)}}", // Update with your route URL
             method: 'GET',
             success: function(data) {
-                if (stateDonutChart) {
-                    stateDonutChart.destroy();
+                if (lgaDonutChart) {
+                    lgaDonutChart.destroy();
                 }
                 // Calculate total count to calculate percentages
                 var totalCount = data.datasets[0].data.reduce((a, b) => a + b, 0);
                 // Calculate and update the labels with percentages
                 data.labels = data.labels.map((label, index) => `${label} (${((data.datasets[0].data[index] / totalCount) * 100).toFixed(2)}%)`);
-                stateDonutChart = new Chart(stateDonutChartCanvas, {
+                lgaDonutChart = new Chart(lgaDonutChartCanvas, {
                     type: 'doughnut', // Use 'doughnut' for a donut chart
                     data: data,
                     options: {
@@ -526,7 +501,7 @@
     }
 
     // Call the function to initialize the donut chart
-    updateStateDonutChart();
+    updatelgaDonutChart();
 </script>
 
 

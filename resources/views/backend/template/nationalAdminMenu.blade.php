@@ -76,55 +76,53 @@
             </li>
             {{-- / Members --}}
 
-
-
             {{-- Election --}}
-        <li class="tab nav-item menu-close">
-                            <a href="#" class="nav-link">
-                              <i class="nav-icon fas fa-award"></i>
-                              <p>
-                                Elections
-                                <i class="right fas fa-angle-left"></i>
-                              </p>
-                            </a>
-                            <ul class="nav nav-treeview">
+            <li class="tab nav-item menu-close">
+                                <a href="#" class="nav-link">
+                                  <i class="nav-icon fas fa-award"></i>
+                                  <p>
+                                    Elections
+                                    <i class="right fas fa-angle-left"></i>
+                                  </p>
+                                </a>
+                                <ul class="nav nav-treeview">
 
-                            <li class="nav-item">
-                                <a href="/national/elections" class="nav-link">
-                                  <i class="fas fa-award nav-icon"></i>
-                                  <p>Manage Elections</p>
-                                </a>
-                              </li>
-                              @if(
-                                $profileData->hasAnyRole([
-                                    'National ICT/Media Director',
-                                    'Regional ICT/Media Director',
-                                    'State ICT/Media Director',
-                                    'LGA ICT/Media Director',
-                                    'Ward ICT/Media Director',
-                                    'PU ICT/Media Director',
-                                    'Pu Agent'
-                                ]) || $profileData->access_level == 'superadmin' )
-                              <li class="nav-item">
-                                <a href="/national/vote/add" class="nav-link">
-                                <i class="fa fa-cloud nav-icon"></i>
-                                  <p>Upload Polls Result</p>
-                                </a>
-                              </li>
+                                <li class="nav-item">
+                                    <a href="/national/elections" class="nav-link">
+                                      <i class="fas fa-award nav-icon"></i>
+                                      <p>Manage Elections</p>
+                                    </a>
+                                  </li>
+                                  @if(
+                                    $profileData->hasAnyRole([
+                                        'National ICT/Media Director',
+                                        'Regional ICT/Media Director',
+                                        'State ICT/Media Director',
+                                        'LGA ICT/Media Director',
+                                        'Ward ICT/Media Director',
+                                        'PU ICT/Media Director',
+                                        'Pu Agent'
+                                    ]) || $profileData->access_level == 'superadmin' )
+                                  <li class="nav-item">
+                                    <a href="/national/vote/add" class="nav-link">
+                                    <i class="fa fa-cloud nav-icon"></i>
+                                      <p>Upload Polls Result</p>
+                                    </a>
+                                  </li>
 
-                              <li class="nav-item">
-                                <a href="/national/incident/add" class="nav-link">
-                                <i class="fa fa-book nav-icon"></i>
-                                  <p>Report  Incidents</p>
-                                </a>
-                              </li>
-                              @endif
-                            </ul>
-        </li>
+                                  <li class="nav-item">
+                                    <a href="/national/incident/add" class="nav-link">
+                                    <i class="fa fa-book nav-icon"></i>
+                                      <p>Report  Incidents</p>
+                                    </a>
+                                  </li>
+                                  @endif
+                                </ul>
+            </li>
             {{-- / Election --}}
 
             {{-- Reports --}}
-            <li class="tab nav-item menu-close">
+            {{-- <li class="tab nav-item menu-close">
                         <a href="#" class="nav-link">
                           <i class="nav-icon fas fa-book"></i>
                           <p>
@@ -155,7 +153,7 @@
                             </a>
                           </li>
                         </ul>
-            </li>
+            </li> --}}
             {{-- / Reports --}}
 
             {{-- Finances --}}
@@ -163,7 +161,7 @@
                 <a href="#" class="nav-link">
                   <i class="nav-icon fas fa-money-bill"></i>
                   <p>
-                    Financing
+                    Finances
                     <i class="right fas fa-angle-left"></i>
                   </p>
                 </a>

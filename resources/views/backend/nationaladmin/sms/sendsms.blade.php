@@ -1,5 +1,17 @@
 @extends('backend.template.backend-master')
 @section('content')
+<style>
+    .blinking-text {
+        animation: blink-animation 1s steps(5, start) infinite;
+        color: {{ $SystemSetting->dark_theme_color ?? ' #008751'}} !important;
+    }
+
+    @keyframes blink-animation {
+        50% {
+            visibility: hidden;
+        }
+    }
+</style>
 
 <section class="content">
     <div class="container-fluid">
@@ -14,20 +26,21 @@
                             @csrf
                             
                             <div class="form-group">
-                                <label for="recipient-location">Filter Recipient(s) By Location</label>
+                                <label for="">Filter Recipient(s) By Location</label>
                                 <div class="row">
                                     <!-- Country Field -->
                                     <div class="col-md-12">
                                         <label>Country</label>
-                                        <select class="form-control" disabled>
+                                        <select class="form-control" id="country_id" disabled>
                                             <option value="{{ $profileData->country_id }}" selected>
                                                 {{ $profileData->country->name }}
                                             </option>
                                         </select>
-                                        <input type="hidden" name="country_id" value="{{ $profileData->country_id }}">
+                                        <input type="hidden"  name="country_id" value="{{ $profileData->country_id }}">
                                         <small class="form-text text-muted text-danger">
+                                            <code>
                                             No Change Required.
-                                        </small>
+                                        </code></small>
                                     </div>
 
                                 </div>
@@ -44,9 +57,10 @@
                                                     <option value="{{ $region->id }}">{{ $region->name }}</option>
                                                 @endforeach
                                             </select>
-                                            <small class="form-text text-muted text-primary">
+                                            <small class="form-text text-muted text-danger">
+                                                <code>
                                                 If no region is selected, the SMS will be sent to everyone in the country.
-                                            </small>
+                                            </code></small>
                                         </div>
                                     @elseif($profileData->access_level == "regionaladmin")
                                         <input type="hidden" name="region_id" value="{{ $profileData->region_id }}">
@@ -60,7 +74,7 @@
                                             </select>
                                             <small class="form-text text-muted text-primary">
                                                 If no state is selected, the SMS will be sent to everyone in your region.
-                                            </small>
+                                            </code></small>
                                         </div>
                                     @endif
                                 </div>
@@ -74,8 +88,9 @@
                                                 <option value="" disabled selected>Select State</option>
                                             </select>
                                             <small class="form-text text-muted text-danger">
+                                                <code>
                                                 If no state is selected, the SMS will be sent to everyone in the selected region.
-                                            </small>
+                                            </code></small>
                                         </div>
                                     </div>
                                 @elseif($profileData->access_level == "regionaladmin")
@@ -86,8 +101,9 @@
                                                 <option value="" disabled selected>Select State</option>
                                             </select>
                                             <small class="form-text text-muted text-danger">
+                                                <code>
                                                 If no state is selected, the SMS will be sent to everyone in your region.
-                                            </small>
+                                            </code></small>
                                         </div>
                                     </div>
                                     <script>
@@ -105,8 +121,9 @@
                                                 <option value="" disabled selected>Select LGA</option>
                                             </select>
                                             <small class="form-text text-muted text-danger">
+                                                <code>
                                                 If no LGA is selected, the SMS will be sent to everyone in the selected state.
-                                            </small>
+                                            </code></small>
                                         </div>
                                     </div>
                                     <script>
@@ -126,8 +143,9 @@
                                                 <option value="" disabled selected>Select LGA</option>
                                             </select>
                                             <small class="form-text text-muted text-danger">
+                                                <code>
                                                 If no LGA is selected, the SMS will be sent to everyone in the selected state.
-                                            </small>
+                                            </code></small>
                                         </div>
                                     </div>
                                 @endif
@@ -141,8 +159,9 @@
                                                 <option value="" disabled selected>Select Ward</option>
                                             </select>
                                             <small class="form-text text-muted text-danger">
+                                                <code>
                                                 If no ward is selected, the SMS will be sent to everyone in the selected LGA.
-                                            </small>
+                                            </code></small>
                                         </div>
                                     </div>
                                 @endif
@@ -156,20 +175,46 @@
                                                 <option value="" disabled selected>Select Polling Unit</option>
                                             </select>
                                             <small class="form-text text-muted text-danger">
+                                                <code>
                                                 If no polling unit is selected, the SMS will be sent to everyone in the selected ward.
-                                            </small>
+                                            </code></small>
                                         </div>
                                     </div>
                                 @endif
                             </div>
+
+                            <div class="col-lg-12 col-12">
+                                <div class="form-group">
+                                    <label for="support_group_id">Recipient Group</label>
+                                    <div style="float:right;" class="blinking-text  text-upper">
+                                        <small>Estimated Number of Recipients:</small>
+                                        <span id="total-recipients-count">0</span>
+                                    </div>
+                                    <select class="form-control" name="support_group_id" id="support_group_id">
+                                        <option value="">Choose Recipient Group</option>
+                                        @foreach($supportGroups as $supportGroup)
+                                            <option value="{{ $supportGroup->id }}">
+                                                {{ $supportGroup->name }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    <small class="form-text text-muted text-danger">
+                                        
+                                        <code>No change is required if sending to all Groups</code>
+                                    </small>
+                                    
+                                </div>
+                            </div>
+                            
                             
 
                             <div class="form-group mt-4">
                                 <label for="message">Message</label>
                                 <textarea name="message" class="form-control" rows="5" id="message"></textarea>
                                 <small class="form-text text-muted text-danger">
+                                    <code>
                                     <span id="count">0</span>/160 characters | Pages: <span id="pageCount">1</span>
-                                </small>
+                                </code></small>
                             </div>
 
                             <div class="form-group mt-4">
@@ -201,110 +246,154 @@ document.addEventListener('DOMContentLoaded', function() {
 <!-- jQuery -->
 <script src="{{asset('assets/plugins/jquery/jquery.min.js')}}"></script>
 <script>
-$(document).ready(function () {
-    const userAccessLevel = "{{ $profileData->access_level }}"; // Example: 'superadmin', 'regionaladmin', etc.
-    const userRegionId = "{{ $profileData->region_id ?? '' }}";
-    const userStateId = "{{ $profileData->state_id ?? '' }}";
-    const userLgaId = "{{ $profileData->lga_id ?? '' }}";
-    const userWardId = "{{ $profileData->ward_id ?? '' }}";
-    const userPuId = "{{ $profileData->pu_id ?? '' }}";
+    $(document).ready(function () {
+        const userAccessLevel = "{{ $profileData->access_level }}"; // Example: 'superadmin', 'regionaladmin', etc.
+        const userRegionId = "{{ $profileData->region_id ?? '' }}";
+        const userStateId = "{{ $profileData->state_id ?? '' }}";
+        const userLgaId = "{{ $profileData->lga_id ?? '' }}";
+        const userWardId = "{{ $profileData->ward_id ?? '' }}";
+        const userPuId = "{{ $profileData->pu_id ?? '' }}";
 
-    // Hide all dropdowns initially
-    $('#state-dropdown-col, #lga-dropdown-col, #ward-dropdown-col, #pu-dropdown-col').hide();
-    $('#state-dropdown, #lga-dropdown, #ward-dropdown, #pu-dropdown').hide();
+        // Hide all dropdowns initially
+        $('#state-dropdown-col, #lga-dropdown-col, #ward-dropdown-col, #pu-dropdown-col').hide();
+        $('#state-dropdown, #lga-dropdown, #ward-dropdown, #pu-dropdown').hide();
 
-    // Load state options based on the region selection
-    $('#region-dropdown').on('change', function () {
-        var region_id = this.value;
-        loadStates(region_id); // Load states based on region
-        $('#state-dropdown-col').show(); // Show state dropdown-col after region is selected
-        $('#state-dropdown').show(); // Show state dropdown after region is selected
-    });
-
-    // Load LGA options based on state selection
-    $('#state-dropdown').on('change', function () {
-        var state_id = this.value;
-        loadLgas(state_id); // Load LGAs based on state
-        $('#lga-dropdown-col').show(); // Show LGA dropdown-col after state is selected
-        $('#lga-dropdown').show(); // Show LGA dropdown after state is selected
-    });
-
-    // Load ward options based on LGA selection
-    $('#lga-dropdown').on('change', function () {
-        var lga_id = this.value;
-        loadWards(lga_id); // Load wards based on LGA
-        $('#ward-dropdown-col').show(); // Show ward dropdown-col after LGA is selected
-        $('#ward-dropdown').show(); // Show ward dropdown after LGA is selected
-    });
-
-    // Load polling unit options based on ward selection
-    $('#ward-dropdown').on('change', function () {
-        var ward_id = this.value;
-        loadPollingUnits(ward_id); // Load polling units based on ward
-        $('#pu-dropdown-col').show(); // Show polling unit dropdown-col after ward is selected
-        $('#pu-dropdown').show(); // Show polling unit dropdown after ward is selected
-    });
-
-    // Functions to Load Data (AJAX)
-    function loadStates(region_id) {
-        $.ajax({
-            url: "{{ route('getStates') }}",
-            type: "POST",
-            data: { region_id: region_id, _token: '{{ csrf_token() }}' },
-            success: function (result) {
-                $('#state-dropdown').html('<option value="" disabled selected>Select State</option>');
-                $.each(result.states, function (key, value) {
-                    $('#state-dropdown').append('<option value="' + value.id + '">' + value.name + '</option>');
-                });
-                $('#lga-dropdown, #ward-dropdown, #pu-dropdown').html('<option value="" disabled selected>Select</option>'); // Reset lower levels
-            }
+        // Load state options based on the region selection
+        $('#region-dropdown').on('change', function () {
+            var region_id = this.value;
+            loadStates(region_id); // Load states based on region
+            $('#state-dropdown-col').show(); // Show state dropdown-col after region is selected
+            $('#state-dropdown').show(); // Show state dropdown after region is selected
+            fetchRecipientCount(); // Update recipient count
         });
-    }
 
-    function loadLgas(state_id) {
-        $.ajax({
-            url: "{{ route('getLgas') }}",
-            type: "POST",
-            data: { state_id: state_id, _token: '{{ csrf_token() }}' },
-            success: function (result) {
-                $('#lga-dropdown').html('<option value="" disabled selected>Select LGA</option>');
-                $.each(result.lgas, function (key, value) {
-                    $('#lga-dropdown').append('<option value="' + value.id + '">' + value.name + '</option>');
-                });
-                $('#ward-dropdown, #pu-dropdown').html('<option value="" disabled selected>Select</option>'); // Reset lower levels
-            }
+        // Load LGA options based on state selection
+        $('#state-dropdown').on('change', function () {
+            var state_id = this.value;
+            loadLgas(state_id); // Load LGAs based on state
+            $('#lga-dropdown-col').show(); // Show LGA dropdown-col after state is selected
+            $('#lga-dropdown').show(); // Show LGA dropdown after state is selected
+            fetchRecipientCount(); // Update recipient count
         });
-    }
 
-    function loadWards(lga_id) {
-        $.ajax({
-            url: "{{ route('getWards') }}",
-            type: "POST",
-            data: { lga_id: lga_id, _token: '{{ csrf_token() }}' },
-            success: function (result) {
-                $('#ward-dropdown').html('<option value="" disabled selected>Select Ward</option>');
-                $.each(result.wards, function (key, value) {
-                    $('#ward-dropdown').append('<option value="' + value.id + '">' + value.name + '</option>');
-                });
-                $('#pu-dropdown').html('<option value="" disabled selected>Select</option>'); // Reset lower levels
-            }
+        // Load ward options based on LGA selection
+        $('#lga-dropdown').on('change', function () {
+            var lga_id = this.value;
+            loadWards(lga_id); // Load wards based on LGA
+            $('#ward-dropdown-col').show(); // Show ward dropdown-col after LGA is selected
+            $('#ward-dropdown').show(); // Show ward dropdown after LGA is selected
+            fetchRecipientCount(); // Update recipient count
         });
-    }
 
-    function loadPollingUnits(ward_id) {
-        $.ajax({
-            url: "{{ route('getPollingUnits') }}",
-            type: "POST",
-            data: { ward_id: ward_id, _token: '{{ csrf_token() }}' },
-            success: function (result) {
-                $('#pu-dropdown').html('<option value="" disabled selected>Select Polling Unit</option>');
-                $.each(result.pollingUnits, function (key, value) {
-                    $('#pu-dropdown').append('<option value="' + value.id + '">' + value.name + '</option>');
-                });
-            }
+        // Load polling unit options based on ward selection
+        $('#ward-dropdown').on('change', function () {
+            var ward_id = this.value;
+            loadPollingUnits(ward_id); // Load polling units based on ward
+            $('#pu-dropdown-col').show(); // Show polling unit dropdown-col after ward is selected
+            $('#pu-dropdown').show(); // Show polling unit dropdown after ward is selected
+            fetchRecipientCount(); // Update recipient count
         });
-    }
-});
+
+        // Functions to Load Data (AJAX)
+        function loadStates(region_id) {
+            $.ajax({
+                url: "{{ route('getStates') }}",
+                type: "POST",
+                data: { region_id: region_id, _token: '{{ csrf_token() }}' },
+                success: function (result) {
+                    $('#state-dropdown').html('<option value="" disabled selected>Select State</option>');
+                    $.each(result.states, function (key, value) {
+                        $('#state-dropdown').append('<option value="' + value.id + '">' + value.name + '</option>');
+                    });
+                    $('#lga-dropdown, #ward-dropdown, #pu-dropdown').html('<option value="" disabled selected>Select</option>'); // Reset lower levels
+                }
+            });
+        }
+
+        function loadLgas(state_id) {
+            $.ajax({
+                url: "{{ route('getLgas') }}",
+                type: "POST",
+                data: { state_id: state_id, _token: '{{ csrf_token() }}' },
+                success: function (result) {
+                    $('#lga-dropdown').html('<option value="" disabled selected>Select LGA</option>');
+                    $.each(result.lgas, function (key, value) {
+                        $('#lga-dropdown').append('<option value="' + value.id + '">' + value.name + '</option>');
+                    });
+                    $('#ward-dropdown, #pu-dropdown').html('<option value="" disabled selected>Select</option>'); // Reset lower levels
+                }
+            });
+        }
+
+        function loadWards(lga_id) {
+            $.ajax({
+                url: "{{ route('getWards') }}",
+                type: "POST",
+                data: { lga_id: lga_id, _token: '{{ csrf_token() }}' },
+                success: function (result) {
+                    $('#ward-dropdown').html('<option value="" disabled selected>Select Ward</option>');
+                    $.each(result.wards, function (key, value) {
+                        $('#ward-dropdown').append('<option value="' + value.id + '">' + value.name + '</option>');
+                    });
+                    $('#pu-dropdown').html('<option value="" disabled selected>Select</option>'); // Reset lower levels
+                }
+            });
+        }
+
+        function loadPollingUnits(ward_id) {
+            $.ajax({
+                url: "{{ route('getPollingUnits') }}",
+                type: "POST",
+                data: { ward_id: ward_id, _token: '{{ csrf_token() }}' },
+                success: function (result) {
+                    $('#pu-dropdown').html('<option value="" disabled selected>Select Polling Unit</option>');
+                    $.each(result.pollingUnits, function (key, value) {
+                        $('#pu-dropdown').append('<option value="' + value.id + '">' + value.name + '</option>');
+                    });
+                }
+            });
+        }
+
+        // Function to fetch recipient count
+        function fetchRecipientCount() {
+            const groupId = $('#support_group_id').val();
+            const regionIdFilter = $('#region-dropdown').val() || null;
+            const stateIdFilter = $('#state-dropdown').val() || null;
+            const lgaIdFilter = $('#lga-dropdown').val() || null;
+            const wardIdFilter = $('#ward-dropdown').val() || null;
+            const puIdFilter = $('#pu-dropdown').val() || null;
+
+            $.ajax({
+                url: "/get-group-recipients",
+                type: "POST",
+                data: {
+                    group_id: groupId,
+                    country_id: 1, // Static for all users
+                    region_id: regionIdFilter,
+                    state_id: stateIdFilter,
+                    lga_id: lgaIdFilter,
+                    ward_id: wardIdFilter,
+                    pu_id: puIdFilter,
+                    _token: $("meta[name='csrf-token']").attr("content"),
+                },
+                success: function (response) {
+                    const recipientCount = response.total || 0;
+                    // Format recipient count with commas
+                    const formattedCount = recipientCount.toLocaleString();
+                    $('#total-recipients-count').text(formattedCount);
+                },
+                error: function (xhr) {
+                    console.error('AJAX Error:', xhr.responseText);
+                    $('#total-recipients-count').text(0);
+                },
+            });
+        }
+
+        // Trigger initial recipient count fetch
+        fetchRecipientCount();
+    });
 </script>
 
+    
+    
 @endsection

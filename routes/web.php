@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\BulksmsController;
 use App\Http\Controllers\ElectionController;
 use Illuminate\Support\Facades\Route;
 
@@ -11,6 +12,8 @@ use App\Http\Controllers\AjaxController;
 
 
 // Ajax Routes
+Route::post('/get-group-recipients', [AjaxController::class, 'getGroupRecipients'])->name('getGroupRecipients');
+
 Route::get('/get-regions', [AjaxController::class, 'getRegions'])->name('getRegions');
 Route::post('/get-states', [AjaxController::class, 'ajaxGetStates'])->name('getStates');
 Route::post('/get-lgas', [AjaxController::class, 'ajaxGetLgas'])->name('getLgas');
@@ -40,6 +43,9 @@ require __DIR__.'/nationalAdmin.php';
 
 //Require Regional Admin Routes file
 require __DIR__.'/regionalAdmin.php';
+
+//Require State Admin Routes file
+require __DIR__.'/stateAdmin.php';
 
 //Require Auth Routes file
 require __DIR__.'/auth.php';
