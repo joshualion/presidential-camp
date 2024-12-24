@@ -37,6 +37,8 @@ class AuthenticatedSessionController extends Controller
             $url = '/regional/dashboard';
         }elseif (Auth::user()->access_level==='stateadmin'){
             $url = '/state/dashboard';
+        }elseif (Auth::user()->access_level==='lgaadmin'){
+            $url = '/lga/dashboard';
         }elseif (Auth::user()->access_level==='wardadmin'){
             $url = '/ward/dashboard';
         }elseif (Auth::user()->access_level==='puadmin'){

@@ -75,6 +75,12 @@
 @endif
 <!-- /State admin Menu -->
 
+<!-- lga admin Menu -->
+@if(Auth::user()->access_level == 'lgaadmin')
+@Include('backend.template.lgaAdminMenu') 
+@endif
+<!-- /lga admin Menu -->
+
 
 <!-- Member Menu -->
 @if(Auth::user()->access_level == 'user')

@@ -10,4 +10,15 @@ class SystemSetting extends Model
     use HasFactory;
     protected $table = 'system_settings';
     protected $guarded =[];
+
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::updated(function ($model) {
+            \Artisan::call('route:clear');
+            \Artisan::call('route:cache');
+        });
+    }
 }

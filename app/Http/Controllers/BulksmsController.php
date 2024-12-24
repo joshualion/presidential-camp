@@ -34,48 +34,48 @@ class BulksmsController extends Controller
      
     private function filterRecipients(Request $request)
     {
-        $users = User::query()->where('access_level', '!=', 'superadmin');
+        $users = User::query()->where('access_level', '!=', 'superadmin')->whereNotNull('phone');                 
+       
 
-        if ($request->filled('region_id')) {
+       
+         if ($request->filled('region_id')) {
+            // Only users belonging to the selected region
             $users->whereHas('region', function ($query) use ($request) {
                 $query->where('id', $request->region_id);
             });
-        }
-
-        if ($request->filled('state_id')) {
+        }elseif ($request->filled('state_id')) {
+            // Only users belonging to the selected state
             $users->whereHas('state', function ($query) use ($request) {
-                $query->orwhere('id', $request->state_id);
+                $query->where('id', $request->state_id);
             });
-        }
-
-        if ($request->filled('lga_id')) {
+        }elseif ($request->filled('lga_id')) {
+            // Only users belonging to the selected LGA
             $users->whereHas('lga', function ($query) use ($request) {
-                $query->orwhere('id', $request->lga_id);
+                $query->where('id', $request->lga_id);
             });
-        }
-
-        if ($request->filled('ward_id')) {
+        }elseif ($request->filled('ward_id')) {
+            // Only users belonging to the selected ward
             $users->whereHas('ward', function ($query) use ($request) {
-                $query->orwhere('id', $request->ward_id);
+                $query->where('id', $request->ward_id);
             });
-        }
-
-        if ($request->filled('pu_id')) {
+        }elseif ($request->filled('pu_id')) {
+            // Only users belonging to the selected polling unit
             $users->whereHas('pollingUnit', function ($query) use ($request) {
-                $query->orwhere('id', $request->pu_id);
+                $query->where('id', $request->pu_id);
             });
-        }
+        } 
 
         if ($request->filled('support_group_id')) {
+            // Additional filter for support group
             $users->whereHas('supportGroups', function ($query) use ($request) {
                 $query->where('id', $request->support_group_id);
             });
         }
 
-        return $users->whereNotNull('phone')
-            ->pluck('phone')
-            ->toArray();
+        // Ensure only users with valid phone numbers are selected
+       return $users->pluck('phone')->toArray();
     }
+
 
 
     private function sendSmsApiRequest($data, $apiToken)
@@ -177,59 +177,43 @@ class BulksmsController extends Controller
     public function sendSms(Request $request)
     {
         $profileData = $this->getProfileData();
-
+    
         // Retrieve SMS settings
         $smsSetting = BulkSmsSetting::where('user_id', $profileData->id)->first();
-
+    
         if (!$smsSetting) {
-            $notification = [
-                'message' => 'You need to set up your SMS settings before sending SMS',
-                'alert-type' => 'error'
-            ];
-            return view('backend.' . $profileData->access_level . 'settings.bulksms.settings', compact('profileData'))->with($notification);
+            return response()->json(['status' => 'error', 'message' => 'You need to set up your SMS settings before sending SMS']);
         }
-
-        $apiToken = $smsSetting->sms_api_key;
-        $senderId = $smsSetting->sender_id;
-
+    
         // Filter recipients
         $recipients = $this->filterRecipients($request);
-
+    
         if (empty($recipients)) {
-            $notification = [
-                'message' => 'No recipients available',
-                'alert-type' => 'error'
-            ];
-            return redirect()->back()->with($notification);
+            return response()->json(['status' => 'error', 'message' => 'No recipients available']);
         }
-
+    
         $message = $request->input('message');
         if (empty($message)) {
-            $notification = [
-                'message' => 'No message available',
-                'alert-type' => 'error'
-            ];
-            return redirect()->back()->with($notification);
+            return response()->json(['status' => 'error', 'message' => 'No message provided']);
         }
-
-        // Process recipients in chunks to avoid memory issues
-        User::chunk(100, function ($users) use ($message, $apiToken, $senderId) {
-            $recipients = $users->pluck('phone')->toArray();
-            // Dispatch a job for each chunk
-            SendSmsBatchJob::dispatch($recipients, $message, $apiToken, $senderId);
+    
+        // If preview mode is requested, return a summary without sending SMS
+        if ($request->boolean('preview', false)) {
+            return response()->json([
+                'status' => 'success',
+                'message' => $message,
+                'recipient_count' => count($recipients),
+            ]);
+        }
+    
+        // Process filtered recipients in chunks
+        collect($recipients)->chunk(100)->each(function ($chunkedRecipients) use ($message, $smsSetting) {
+            SendSmsBatchJob::dispatch($chunkedRecipients->toArray(), $message, $smsSetting->sms_api_key, $smsSetting->sender_id);
         });
-
-        $notification = [
-            'message' => 'Your SMS has been queued and will be sent shortly.',
-            'alert-type' => 'success'
-        ];
-
-        return redirect()->back()->with($notification);
+    
+        return response()->json(['status' => 'success', 'message' => 'Your SMS has been queued and will be sent shortly.']);
     }
-
-
-   
-
+    
 
  
 

@@ -170,7 +170,7 @@
                 <li class="nav-item">
                     <a href="/national/dashboard" class="nav-link">
                       <i class="fas fa-hand-holding-usd nav-icon"></i>
-                      <p>Donations</p>
+                      <p>Dues & Donations</p>
                     </a>
                   </li>
 

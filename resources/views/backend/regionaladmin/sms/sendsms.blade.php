@@ -7,7 +7,7 @@
     }
 
     @keyframes blink-animation {
-        50% {
+        5% {
             visibility: hidden;
         }
     }
@@ -23,7 +23,7 @@
                         <h3 class="card-title">Send Bulk SMS</h3>
                     </div>
                     <div class="card-body">
-                        <form class="form" action="{{ route($profileData->access_level.'.bulksms.send.sms') }}" method="POST">
+                        <form id="send-sms-form" class="form" action="{{ route($profileData->access_level.'.bulksms.send.sms') }}" method="POST">
                             @csrf
                             
                             <div class="form-group">
@@ -180,10 +180,7 @@
                             <div class="col-lg-12 col-12">
                                 <div class="form-group">
                                     <label for="support_group_id">Recipient Group</label>
-                                    <div style="float:right;" class="blinking-text  text-upper">
-                                        <small>Estimated Number of Recipients:</small>
-                                        <span id="total-recipients-count">0</span>
-                                    </div>
+                                    
                                     <select class="form-control" name="support_group_id" id="support_group_id">
                                         <option value="">Choose Recipient Group</option>
                                         @foreach($supportGroups as $supportGroup)
@@ -202,6 +199,10 @@
 
                             <div class="form-group mt-4">
                                 <label for="message">Message</label>
+                                <div style="float:right;" class="blinking-text  text-upper">
+                                    <small>Estimated Number of Recipients:</small>
+                                    <span id="total-recipients-count">0</span>
+                                </div>
                                 <textarea name="message" class="form-control" rows="5" id="message"></textarea>
                                 <small class="form-text text-muted text-danger">
                                     <span id="count">0</span>/160 characters | Pages: <span id="pageCount">1</span>
@@ -209,7 +210,7 @@
                             </div>
 
                             <div class="form-group mt-4">
-                                <button type="submit" class="btn btn-primary btn-lg">
+                                <button type="submit" class="btn btn-primary btn-lg" id="send-sms-button" >
                                     <i class="fas fa-paper-plane"></i> Send
                                 </button>
                             </div>
@@ -282,6 +283,11 @@ document.addEventListener('DOMContentLoaded', function() {
             $('#pu-dropdown-col').show(); // Show polling unit dropdown-col after ward is selected
             $('#pu-dropdown').show(); // Show polling unit dropdown after ward is selected
             fetchRecipientCount(); // Update recipient count
+        });
+
+        $('#pu-dropdown').on('change', function () {
+            var pu_id = this.value;
+                fetchRecipientCount(); // Trigger the recipient count update
         });
 
         // Functions to Load Data (AJAX)
@@ -384,6 +390,89 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 </script>
 
-   
+   {{-- SMS Sending Confirmation --}}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const sendSmsForm = document.getElementById('send-sms-form'); // Assuming form has this ID
+        const sendSmsButton = document.getElementById('send-sms-button'); // Button to trigger SMS
+
+        sendSmsButton.addEventListener('click', function (event) {
+            event.preventDefault();
+
+            const formData = new FormData(sendSmsForm);
+            formData.append('preview', true); // Indicate preview mode
+
+            //customize button colors
+           var yesColor = "{{ $SystemSetting->dark_theme_color ?? ' #008751'}}" ;
+           var noColor = "#333333" ;
+
+            // Fetch preview data from the server
+            fetch(sendSmsForm.action, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                },
+                body: formData,
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    Swal.fire({
+                        title: 'Confirm SMS Sending',
+                        html: `<p><strong>Message:</strong> ${data.message}</p>
+                               <p><strong>Recipients:</strong> ${data.recipient_count}</p>`,
+                        icon: 'info',
+                        showCancelButton: true,
+                        confirmButtonColor: yesColor,
+                        cancelButtonColor: noColor,
+                        confirmButtonText: 'Send',
+                        cancelButtonText: 'Cancel',
+                    }).then(result => {
+                        if (result.isConfirmed) {
+                            // Remove preview flag and resubmit the form
+                            formData.delete('preview');
+                            fetch(sendSmsForm.action, {
+                                method: 'POST',
+                                headers: {
+                                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                                },
+                                body: formData,
+                            })
+                            .then(response => response.json())
+                            .then(finalData => {
+                                Swal.fire({
+                                    title: finalData.status === 'success' ? 'Success' : 'Error',                                    
+                                    confirmButtonColor: yesColor,
+                                    text: finalData.message,
+                                    icon: finalData.status === 'success' ? 'success' : 'error',
+                                }).then(() => {
+                                        // Reload the page after the Swal alert is closed
+                                        location.reload();
+                                    });
+                            });
+                        }
+                    });
+                } else {
+                    Swal.fire({
+                        title: 'Error',
+                        text: data.message,
+                        confirmButtonColor: "#d33",
+                        icon: 'error',
+                    });
+                }
+            })
+            .catch(error => {
+                Swal.fire({
+                    title: 'Error',
+                    text: 'An error occurred while processing your request.',
+                    confirmButtonColor: "#d33",
+                    icon: 'error',
+                });
+            });
+        });
+    });
+</script>
+
+
 
 @endsection

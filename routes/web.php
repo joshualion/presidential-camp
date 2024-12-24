@@ -31,9 +31,7 @@ Route::get('/pu/data', [AjaxController::class, 'getPUData'])->name('pus.data');
 Route::get('/election/{uuid}/chart-data', [ElectionController::class, 'getElectionResultChartData'])
     ->name('election.chart.data');
 
-Route::get('/', function () {
-    return redirect()->route('login');
-});
+
 
 //Require Super Admin Routes file
 require __DIR__.'/superAdmin.php';
@@ -47,5 +45,27 @@ require __DIR__.'/regionalAdmin.php';
 //Require State Admin Routes file
 require __DIR__.'/stateAdmin.php';
 
+//Require LGA Admin Routes file
+require __DIR__.'/lgaAdmin.php';
+
 //Require Auth Routes file
 require __DIR__.'/auth.php';
+
+//Application Landing Page
+Route::get('/', function () {
+    if (Auth::check()) {
+        $user = Auth::user();
+        $dashboardRoute = match ($user->access_level) {
+            'superadmin' => route('superadmin.dashboard'),
+            'nationaladmin' => route('nationaladmin.dashboard'),
+            'stateadmin' => route('stateadmin.dashboard'),
+            'lgaadmin' => route('lgaadmin.dashboard'),
+            'wardadmin' => route('wardadmin.dashboard'),
+            'puadmin' => route('puadmin.dashboard'),
+            // Add more levels here as needed
+            default => route('login'),
+        };
+        return redirect($dashboardRoute);
+    }
+    return redirect()->route('login');
+});

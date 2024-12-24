@@ -7,11 +7,12 @@
     }
 
     @keyframes blink-animation {
-        50% {
+        5% {
             visibility: hidden;
         }
     }
 </style>
+
 
 <section class="content">
     <div class="container-fluid">
@@ -22,14 +23,14 @@
                         <h3 class="card-title">Send Bulk SMS</h3>
                     </div>
                     <div class="card-body">
-                        <form class="form" action="{{ route($profileData->access_level.'.bulksms.send.sms') }}" method="POST">
+                        <form id="send-sms-form" class="form" action="{{ route($profileData->access_level.'.bulksms.send.sms') }}" method="POST">
                             @csrf
                             
                             <div class="form-group">
                                 <label for="recipient-location">Filter Recipient(s) By Location</label>
                                 <div class="row">
                                     <!-- Country Field -->
-                                    <div class="col-md-12 country-col">
+                                    <div class="col-md-12">
                                         <label>Country</label>
                                         <select class="form-control" disabled>
                                             <option value="{{ $profileData->country_id }}" selected>
@@ -47,46 +48,79 @@
                                 <div class="row">
 
                                     <!-- Region Field -->
-                                   <div class="col-md-12">
+                                    @if($profileData->access_level == "superadmin" || $profileData->access_level == "nationaladmin")
+                                        <div class="col-md-12">
                                             <label>Region</label>
-                                            <select class="form-control" name="region_id" id="region-dropdown" disabled>
-                                                
-                                                
-                                            <option value="{{ $profileData->region->id  }}">{{ $profileData->region->name }}</option>
-                                                
+                                            <select class="form-control" name="region_id" id="region-dropdown">
+                                                <option value="" disabled selected>Select Region</option>
+                                                @foreach ($regions as $region)
+                                                    <option value="{{ $region->id }}">{{ $region->name }}</option>
+                                                @endforeach
                                             </select>
                                             <small class="form-text text-muted text-primary">
-                                                No change Required.
+                                                If no region is selected, the SMS will be sent to everyone in the country.
                                             </small>
-                                        </div>                                   
+                                        </div>
+                                    @elseif($profileData->access_level == "regionaladmin")
+                                        <input type="hidden" name="region_id" value="{{ $profileData->region_id }}">
+                                        <input type="hidden" name="country_id" value="{{ $profileData->country_id }}">
+                                        <div class="col-md-12">
+                                            <label>Region</label>
+                                            <select class="form-control" disabled>
+                                                <option value="{{ $profileData->region_id }}" selected>
+                                                    {{ $profileData->region->name }}
+                                                </option>
+                                            </select>
+                                            <small class="form-text text-muted text-primary">
+                                                If no state is selected, the SMS will be sent to everyone in your region.
+                                            </small>
+                                        </div>
+                                    @endif
                                 </div>
 
                                 <!-- State Field -->
-                               <div class="row mt-3">
+                                
+                                    <div class="row mt-3">
                                         <div class="col-md-12" id="state-dropdown-col">
                                             <label>State</label>
                                             <select class="form-control" name="state_id" id="state-dropdown" disabled>
-                                                <option value="{{$profileData->state->id}}"  selected>{{ $profileData->state->name}}</option>
+                                                <option value="" disabled selected>{{$profileData->state->name}}</option>
                                             </select>
                                             <small class="form-text text-muted text-danger">
-                                                No Change Required.
+                                                If no state is selected, the SMS will be sent to everyone in your region.
                                             </small>
                                         </div>
                                     </div>
+                                   
                                 
-                               
-                                <!-- LGA Field -->
-                               <div class="row mt-3">
+                                    <input type="hidden" name="state_id" value="{{ $profileData->state_id }}">
+                                    <div class="row mt-3">
                                         <div class="col-md-12" id="lga-dropdown-col">
                                             <label>LGA</label>
-                                            <select class="form-control" name="lga_id" id="lga-dropdown" >
+                                            <select class="form-control" name="lga_id" id="lga-dropdown">
                                                 <option value="" disabled selected>Select LGA</option>
                                             </select>
                                             <small class="form-text text-muted text-danger">
-                                                If no LGA is selected, the SMS will be sent to everyone in the state.
+                                                If no LGA is selected, the SMS will be sent to everyone in the selected state.
                                             </small>
                                         </div>
                                     </div>
+                                    
+
+                                <!-- LGA Field -->
+                                @if($profileData->access_level == "superadmin" || $profileData->access_level == "nationaladmin" || $profileData->access_level == "regionaladmin")
+                                    <div class="row mt-3">
+                                        <div class="col-md-12" id="lga-dropdown-col">
+                                            <label>LGA</label>
+                                            <select class="form-control" name="lga_id" id="lga-dropdown" style="display:none;">
+                                                <option value="" disabled selected>Select LGA</option>
+                                            </select>
+                                            <small class="form-text text-muted text-danger">
+                                                If no LGA is selected, the SMS will be sent to everyone in the selected state.
+                                            </small>
+                                        </div>
+                                    </div>
+                                @endif
 
                                 <!-- Ward Field -->
                                 @if($profileData->access_level == "superadmin" || $profileData->access_level == "nationaladmin" || $profileData->access_level == "regionaladmin" || $profileData->access_level == "stateadmin")
@@ -119,13 +153,11 @@
                                 @endif
                             </div>
                             
+
                             <div class="col-lg-12 col-12">
                                 <div class="form-group">
                                     <label for="support_group_id">Recipient Group</label>
-                                    <div style="float:right;" class="blinking-text  text-upper">
-                                        <small>Estimated Number of Recipients:</small>
-                                        <span id="total-recipients-count">0</span>
-                                    </div>
+                                    
                                     <select class="form-control" name="support_group_id" id="support_group_id">
                                         <option value="">Choose Recipient Group</option>
                                         @foreach($supportGroups as $supportGroup)
@@ -138,12 +170,16 @@
                                         
                                         <code>No change is required if sending to all Groups</code>
                                     </small>
-                                    
+                                   
                                 </div>
                             </div>
 
                             <div class="form-group mt-4">
                                 <label for="message">Message</label>
+                                <div style="float:right;" class="blinking-text  text-upper">
+                                    <small>Estimated Number of Recipients:</small>
+                                    <span id="total-recipients-count">0</span>
+                                </div>
                                 <textarea name="message" class="form-control" rows="5" id="message"></textarea>
                                 <small class="form-text text-muted text-danger">
                                     <span id="count">0</span>/160 characters | Pages: <span id="pageCount">1</span>
@@ -151,7 +187,7 @@
                             </div>
 
                             <div class="form-group mt-4">
-                                <button type="submit" class="btn btn-primary btn-lg">
+                                <button type="submit" class="btn btn-primary btn-lg" id="send-sms-button" >
                                     <i class="fas fa-paper-plane"></i> Send
                                 </button>
                             </div>
@@ -178,6 +214,8 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 <!-- jQuery -->
 <script src="{{asset('assets/plugins/jquery/jquery.min.js')}}"></script>
+
+
 <script>
     $(document).ready(function () {
         const userAccessLevel = "{{ $profileData->access_level }}"; // Example: 'superadmin', 'regionaladmin', etc.
@@ -188,8 +226,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const userPuId = "{{ $profileData->pu_id ?? '' }}";
 
         // Hide all dropdowns initially
-        $('#ward-dropdown-col, #pu-dropdown-col').hide();
-        $('#ward-dropdown, #pu-dropdown').hide();
+        $(' #lga-dropdown-col, #ward-dropdown-col, #pu-dropdown-col').hide();
+        $(' #lga-dropdown, #ward-dropdown, #pu-dropdown').hide();
 
         // Load state options based on the region selection
         
@@ -198,10 +236,13 @@ document.addEventListener('DOMContentLoaded', function() {
             fetchRecipientCount(); // Update recipient count
 
         // Load LGA options based on state selection
-        
+       
             var state_id = userStateId;
             loadLgas(state_id); // Load LGAs based on state
+            $('#lga-dropdown-col').show(); // Show LGA dropdown-col after state is selected
+            $('#lga-dropdown').show(); // Show LGA dropdown after state is selected
             fetchRecipientCount(); // Update recipient count
+        
 
         // Load ward options based on LGA selection
         $('#lga-dropdown').on('change', function () {
@@ -221,6 +262,11 @@ document.addEventListener('DOMContentLoaded', function() {
             fetchRecipientCount(); // Update recipient count
         });
 
+        $('#pu-dropdown').on('change', function () {
+            var pu_id = this.value;
+                fetchRecipientCount(); // Trigger the recipient count update
+        });
+
         // Functions to Load Data (AJAX)
         function loadStates(region_id) {
             $.ajax({
@@ -228,7 +274,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 type: "POST",
                 data: { region_id: region_id, _token: '{{ csrf_token() }}' },
                 success: function (result) {
-                    
+                    $('#state-dropdown').html('<option value="" disabled selected>{{$profileData->state->name }}</option>');
                     $.each(result.states, function (key, value) {
                         $('#state-dropdown').append('<option value="' + value.id + '">' + value.name + '</option>');
                     });
@@ -320,4 +366,90 @@ document.addEventListener('DOMContentLoaded', function() {
         fetchRecipientCount();
     });
 </script>
+
+   {{-- SMS Sending Confirmation --}}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const sendSmsForm = document.getElementById('send-sms-form'); // Assuming form has this ID
+        const sendSmsButton = document.getElementById('send-sms-button'); // Button to trigger SMS
+
+        sendSmsButton.addEventListener('click', function (event) {
+            event.preventDefault();
+
+            const formData = new FormData(sendSmsForm);
+            formData.append('preview', true); // Indicate preview mode
+
+            //customize button colors
+           var yesColor = "{{ $SystemSetting->dark_theme_color ?? ' #008751'}}" ;
+           var noColor = "#333333" ;
+
+            // Fetch preview data from the server
+            fetch(sendSmsForm.action, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                },
+                body: formData,
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    Swal.fire({
+                        title: 'Confirm SMS Sending',
+                        html: `<p><strong>Message:</strong> ${data.message}</p>
+                               <p><strong>Recipients:</strong> ${data.recipient_count}</p>`,
+                        icon: 'info',
+                        showCancelButton: true,
+                        confirmButtonColor: yesColor,
+                        cancelButtonColor: noColor,
+                        confirmButtonText: 'Send',
+                        cancelButtonText: 'Cancel',
+                    }).then(result => {
+                        if (result.isConfirmed) {
+                            // Remove preview flag and resubmit the form
+                            formData.delete('preview');
+                            fetch(sendSmsForm.action, {
+                                method: 'POST',
+                                headers: {
+                                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                                },
+                                body: formData,
+                            })
+                            .then(response => response.json())
+                            .then(finalData => {
+                                Swal.fire({
+                                    title: finalData.status === 'success' ? 'Success' : 'Error',                                    
+                                    confirmButtonColor: yesColor,
+                                    text: finalData.message,
+                                    icon: finalData.status === 'success' ? 'success' : 'error',
+                                }).then(() => {
+                                        // Reload the page after the Swal alert is closed
+                                        location.reload();
+                                    });
+                            });
+                        }
+                    });
+                } else {
+                    Swal.fire({
+                        title: 'Error',
+                        text: data.message,
+                        confirmButtonColor: "#d33",
+                        icon: 'error',
+                    });
+                }
+            })
+            .catch(error => {
+                Swal.fire({
+                    title: 'Error',
+                    text: 'An error occurred while processing your request.',
+                    confirmButtonColor: "#d33",
+                    icon: 'error',
+                });
+            });
+        });
+    });
+</script>
+
+
+
 @endsection

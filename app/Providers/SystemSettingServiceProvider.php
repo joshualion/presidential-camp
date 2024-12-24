@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\View;
 use App\Models\SystemSetting;
+use Illuminate\Support\Facades\Route;
 
 class SystemSettingServiceProvider extends ServiceProvider
 {
@@ -31,6 +32,8 @@ class SystemSettingServiceProvider extends ServiceProvider
             if (Schema::hasTable('system_settings')) {
                 // Only try to fetch the first record if the table exists
                 $SystemSetting = SystemSetting::first();
+                
+                //send settings instance to views
                 $view->with('SystemSetting', $SystemSetting);
             } else {
                 // Optionally, provide a fallback or leave it as null
