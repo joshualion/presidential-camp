@@ -1,6 +1,9 @@
 @extends('backend.template.backend-master')
 @section('content')
 
+@php 
+ $state = \App\Models\State::find(Auth::user()->state_id);
+@endphp
 
     <!-- Main content -->
     <section class="content">
@@ -9,7 +12,7 @@
             <div class="col-12">
                 <div class="card card-primary">
                 <div class="card-header">
-                    <h3 class="card-title">  Members By Polling Unit</h3>
+                    <h3 class="card-title"> {{optional($state)->name }} State  Members By Polling Unit</h3>
                     <div class="card-tools">
                         <a href="{{ route($profileData->access_level.'.member.add') }}"><button class="btn btn-default"> <i class="fa fa-plus-square"></i> Add New Member</button></a>
                     </div>

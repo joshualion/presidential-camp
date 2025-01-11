@@ -20,15 +20,25 @@ class ElectionIncident extends Model
         return $this->belongsTo(User::class);
     }
 
-    public function pictures()
+
+    // Relationship to PictureEvidences
+    public function pictureEvidences()
     {
         return $this->hasMany(PictureEvidence::class);
     }
 
-    public function videos()
+    // Relationship to VideoEvidences
+    public function videoEvidences()
     {
         return $this->hasMany(VideoEvidence::class);
     }
+
+    //You can also define the relationship to the agent, if needed
+    public function agent()
+    {
+        return $this->belongsTo(User::class, 'agent_id');
+    }
+
 
     //Auto generate UUID
     public static function boot()

@@ -11,27 +11,12 @@
                         <h3 class="card-title">
                             Incident Report for 
                             {{ $pollingUnit->name }} 
-                            in {{ $pollingUnit->ward->name }} Ward, 
+                            in Ward {{ $pollingUnit->ward->name }} , 
                             {{ $pollingUnit->ward->localGovernmentArea->name }} LGA of 
                             {{ $pollingUnit->ward->localGovernmentArea->state->name }} State
                         </h3>
                         <div class="card-tools">
-                            @if(
-                                $profileData->hasAnyRole([
-                                    'National ICT/Media Director',
-                                    'Regional ICT/Media Director',
-                                    'State ICT/Media Director',
-                                    'LGA ICT/Media Director',
-                                    'Ward ICT/Media Director',
-                                    'PU ICT/Media Director',
-                                    'Pu Agent'
-                                ]) || $profileData->access_level == 'superadmin' && $profileData->polling_unit_id == $pollingUnit->id)
-                            <a href="{{ route($profileData->access_level.'.incident.add') }}">
-                                <button class="btn btn-default btn-sm">
-                                    <i class="fa fa-plus-square"></i> Add Incident Report
-                                </button>
-                            </a>
-                            @endif
+                           
                         </div>
                     </div>
                     <!-- /.card-header -->
@@ -43,7 +28,8 @@
                                 <div class="card mb-4">
                                     <div class="card-header bg-secondary">
                                         <h5>Incident #{{ $loop->iteration }}</h5>
-                                        <p><strong>Reported by:</strong> {{ $incident->agent->name ?? 'Unknown Agent' }}</p>
+                                        <p><strong>Reported by:</strong> {{ optional($incident->agent)->name ?? 'Unknown Agent' }}</p>
+
                                         <p><strong>Remarks:</strong> {{ $incident->remarks ?? 'No remarks provided' }}</p>
                                     </div>
                                     <div class="card-body">

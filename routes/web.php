@@ -3,7 +3,8 @@
 use App\Http\Controllers\BulksmsController;
 use App\Http\Controllers\ElectionController;
 use Illuminate\Support\Facades\Route;
-
+use App\Http\Controllers\ProfileCompletionController;
+use App\Http\Controllers\CredentialUpdateController;
 use App\Http\Controllers\AjaxController;
 
 
@@ -30,6 +31,27 @@ Route::get('/pu/data', [AjaxController::class, 'getPUData'])->name('pus.data');
 
 Route::get('/election/{uuid}/chart-data', [ElectionController::class, 'getElectionResultChartData'])
     ->name('election.chart.data');
+
+
+   
+    // Credential update route
+    Route::get('/update-credentials', [CredentialUpdateController::class, 'showUpdateForm'])
+        ->name('update.credentials')
+        ->middleware(['auth']);
+    
+    // Process credential update
+    Route::post('/update-credentials', [CredentialUpdateController::class, 'update']) ->name('update.credentials.store')
+    ->middleware(['auth']);
+    
+    // Profile completion route
+    Route::get('/complete-profile', [ProfileCompletionController::class, 'showProfileForm'])
+        ->name('complete.profile')
+        ->middleware(['auth']);
+    
+    // Process profile completion
+    Route::post('/complete-profile', [ProfileCompletionController::class, 'complete'])->name('complete.profile.store')
+    ->middleware(['auth']);
+    
 
 
 

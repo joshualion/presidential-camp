@@ -390,8 +390,8 @@
                           </li>
 
                           <li class="nav-item">
-                            <a href="/national/settings/smtp" class="nav-link">
-                            <i class="fas fa-dollar-sign nav-icon"></i>
+                            <a href="/national/settings/paymentgateway" class="nav-link">
+                            <i class="fas fa-credit-card nav-icon"></i>
                               <p> Payment Settings</p>
                             </a>
                           </li>
@@ -508,12 +508,7 @@
                             </a>
                           </li>
 
-                          <li class="nav-item">
-                            <a href="/national/bankdetails" class="nav-link">
-                              <i class="fas fa-university nav-icon"></i>
-                              <p> Bank Details</p>
-                            </a>
-                          </li>
+                          
 
                           <li class="nav-item">
                             <a href="/national/change/password" class="nav-link">

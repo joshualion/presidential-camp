@@ -13,9 +13,10 @@ use App\Http\Controllers\stateadmin\StateAdminController;
 use Illuminate\Support\Facades\Route;
 
 
+Route::get('/state/logout', [StateAdminController::class, 'stateadminLogout'])->name('stateadmin.logout')->middleware(['auth','access_level:stateadmin']);
 
 
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth','check_onboarding'])->group(function () {
 
  // Regional Admin Profile & Dashboard Routes
  Route::get('/state/dashboard', [StateAdminController::class, 'stateAdminDashBoard'])->name('stateadmin.dashboard')->middleware('access_level:stateadmin');
@@ -23,7 +24,6 @@ Route::middleware('auth')->group(function () {
  Route::post('/state/profile/store', [StateAdminController::class, 'stateadminProfileStore'])->name('stateadmin.profile.store')->middleware('access_level:stateadmin');
  Route::get('/state/change/password', [StateAdminController::class, 'stateadminChangePassword'])->name('stateadmin.change.password')->middleware('access_level:stateadmin');
  Route::post('/state/update/password', [StateAdminController::class, 'stateadminUpdatePassword'])->name('stateadmin.update.password')->middleware('access_level:stateadmin');
- Route::get('/state/logout', [StateAdminController::class, 'stateadminLogout'])->name('stateadmin.logout')->middleware('access_level:stateadmin');
 
 
 

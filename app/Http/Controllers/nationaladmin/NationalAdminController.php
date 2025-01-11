@@ -149,6 +149,8 @@ class NationalAdminController extends Controller
           'religion_id' => 'required|exists:religions,id',
           'address' => 'nullable|string|max:255',
           'occupation' => 'nullable|string|max:255',
+          'bank' => 'nullable|string|max:255',
+          'bank_account_number' => 'nullable|string|size:10',
           'qualification' => 'nullable|string|max:255',
           'photo' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
       ]);
@@ -168,6 +170,8 @@ class NationalAdminController extends Controller
           'ward_id' => $validatedData['ward_id'],
           'polling_unit_id' => $validatedData['polling_unit_id'],
           'religion_id' => $validatedData['religion_id'],
+          'bank' => $validatedData['bank'],
+           'bank_account_number' => $validatedData['bank_account_number'],
           'address' => $validatedData['address'],
           'occupation' => $validatedData['occupation'],
           'qualification' => $validatedData['qualification'],

@@ -55,6 +55,9 @@ class SystemSettingController extends Controller
                 's3_region' => 'required_if:enable_s3_storage,1',
                 's3_bucket' => 'required_if:enable_s3_storage,1',
                 's3_endpoint' =>'required_if:enable_s3_storage,1',
+                'bank' => 'nullable|string|max:255',
+                'bank_account_number' => 'nullable|string|size:10',
+                'bank_account_name' => 'nullable|string|max:255',
             ]);
 
              // Enforce mutual exclusivity
@@ -134,6 +137,9 @@ class SystemSettingController extends Controller
                                         's3_region' => $request->s3_region,
                                         's3_bucket' => $request->s3_bucket,
                                         's3_endpoint'=> $request->s3_endpoint,
+                                        'bank' =>$request->bank,
+                                        'bank_account_name'=> $request->bank_account_name,
+                                        'bank_account_number'=> $request->bank_account_number,
                                     ]);
 
                                     $notification = array(

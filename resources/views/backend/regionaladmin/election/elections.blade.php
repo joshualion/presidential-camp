@@ -21,7 +21,9 @@ $badgeClasses = [
                 <div class="card-header">
                     <h3 class="card-title">All Elections</h3>
                     <div class="card-tools">
+                        @if($profileData->access_level == 'superadmin' || $profileData->access_level == 'nationaladmin')
                         <a href="{{ route($profileData->access_level.'.election.add') }}"><button class="btn btn-default"> <i class="fa fa-plus-square"></i> Create Election</button></a>
+                        @endif
                     </div>
                 </div>
                 <!-- /.card-header -->

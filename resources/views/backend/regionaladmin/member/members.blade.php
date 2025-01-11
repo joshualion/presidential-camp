@@ -105,7 +105,7 @@
         "processing": true,
         "serverSide": true,
         "searching": true,
-        "ajax": "{{ route($profileData->access_level.'.members.data') }}", // Define a route to get the paginated data
+        "ajax": "{{ route($profileData->access_level.'.members.data', $PuLgaStateRegionCountryUUID) }}", // Define a route to get the paginated data
         "pageLength": 25, // Default number of rows per page
         "lengthMenu": [ [10, 25, 50, 100], [10, 25, 50, 100] ],
         "columns": [

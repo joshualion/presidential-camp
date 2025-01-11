@@ -260,12 +260,7 @@ $lga = \App\Models\LocalGovernmentArea::find(Auth::user()->lga_id);
                             </a>
                           </li>
 
-                          <li class="nav-item">
-                            <a href="/lga/bankdetails" class="nav-link">
-                              <i class="fas fa-university nav-icon"></i>
-                              <p> Bank Details</p>
-                            </a>
-                          </li>
+                         
 
                           <li class="nav-item">
                             <a href="/lga/change/password" class="nav-link">

@@ -25,6 +25,8 @@ return new class extends Migration
             $table->string('address')->nullable();
             $table->string('occupation')->nullable();
             $table->string('qualification')->nullable();
+            $table->string('bank')->nullable();
+            $table->string('bank_account_number', 20)->nullable();
             $table->enum('validVoter', ['yes', 'no'])->default('no');
             $table->enum('gender', ['male', 'female'])->nullable();
             $table->enum('status', ['active', 'inactive'])->default('active');
@@ -38,6 +40,7 @@ return new class extends Migration
             $table->unsignedBigInteger('polling_unit_id')->nullable();
             $table->unsignedBigInteger('religion_id')->nullable();
             $table->unsignedBigInteger('age_grade_id')->nullable();
+            $table->boolean('requires_update')->default(false);
             $table->rememberToken();
             $table->timestamps();
 

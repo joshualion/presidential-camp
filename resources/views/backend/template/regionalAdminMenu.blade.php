@@ -310,12 +310,7 @@ $region = \App\Models\Region::find(Auth::user()->region_id);
                             </a>
                           </li>
 
-                          <li class="nav-item">
-                            <a href="/regional/bankdetails" class="nav-link">
-                              <i class="fas fa-university nav-icon"></i>
-                              <p> Bank Details</p>
-                            </a>
-                          </li>
+                          
 
                           <li class="nav-item">
                             <a href="/regional/change/password" class="nav-link">

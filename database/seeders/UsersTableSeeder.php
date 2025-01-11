@@ -49,6 +49,7 @@ class UsersTableSeeder extends Seeder
                 'polling_unit_id' => null,
                 'religion_id' => rand(1, 5),
                 'age_grade_id' => 1,
+                'requires_update'=> true,
                 'remember_token' => Str::random(10),
             ]);
 

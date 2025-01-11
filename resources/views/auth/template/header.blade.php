@@ -8,7 +8,7 @@
     @if ($SystemSetting)
         {{$SystemSetting->system_name}}
     @else
-        Political Campaign & Election Management Solution
+    Political Campaign & Election Management Solution
     @endif
 </title>
 
@@ -34,12 +34,12 @@
       background-attachment: fixed;
     }
     a{
-      color: {{ $SystemSetting ? $SystemSetting->dark_theme_color : '#008751' }} !important;
+      color: {{ $SystemSetting ? $SystemSetting->dark_theme_color : '#165828' }} !important;
     }
 
     .btn-primary{
-      background: {{ $SystemSetting ? $SystemSetting->dark_theme_color : '#008751' }} !important;
-      border:{{ $SystemSetting ? $SystemSetting->dark_theme_color : '#008751' }} !important;
+      background: {{ $SystemSetting ? $SystemSetting->dark_theme_color : '#165828' }} !important;
+      border:{{ $SystemSetting ? $SystemSetting->dark_theme_color : '#165828' }} !important;
     }
 
     .card-title{
@@ -47,7 +47,7 @@
     }
 
     .navbar-bg{
-    background:{{ $SystemSetting ? $SystemSetting->dark_theme_color : '#008751' }} !important;
+    background:{{ $SystemSetting ? $SystemSetting->dark_theme_color : '#165828' }} !important;
     }
 
   </style>
@@ -58,7 +58,7 @@
 <div class="register-box">
   <div class="register-logo">
     <a href="/">
-        <img src="{{ !empty($SystemSetting->logo) ? url('uploads/system_images/'.$SystemSetting->logo) : url('uploads/system_images/logo.png') }}" alt="Logo" class="brand-image" width="35%" height="35%" style="opacity: .8">
+        <img src="{{ !empty($SystemSetting->logo) ? url('uploads/system_images/'.$SystemSetting->logo) : url('uploads/system_images/logo.png') }}" alt="Logo" class="brand-image" width="40%" height="40%" >
 
     </a>
 

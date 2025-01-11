@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\ElectionIncident;
+use App\Models\PictureEvidence;
 use App\Models\PoliticalParty;
 use App\Models\PollingUnit;
 use App\Models\SystemSetting;
@@ -539,23 +540,32 @@ class ElectionController extends Controller
             // Fetch the logged-in user's profile data
             $profileData = $this->getProfileData();
 
-            // Base query for votes with incidents
             $query = Vote::join('polling_units', 'votes.polling_unit_id', '=', 'polling_units.id')
-                ->leftJoin('polling_unit_results', 'votes.polling_unit_result_id', '=', 'polling_unit_results.id')
-                ->leftJoin('election_incidents', function ($join) use ($election) {
-                    $join->on('election_incidents.polling_unit_id', '=', 'votes.polling_unit_id')
-                        ->where('election_incidents.election_id', '=', $election->id);
-                })
-                ->select(
-                    'votes.polling_unit_id',
-                    'polling_units.name as polling_unit_name',
-                    DB::raw("SUM(CASE WHEN votes.party_id = {$election->party_id} THEN votes.quantity ELSE 0 END) as votes_obtained"),
-                    DB::raw('SUM(votes.quantity) as total_votes_cast'),
-                    'polling_unit_results.result_sheet',
-                    DB::raw("GROUP_CONCAT(election_incidents.remarks SEPARATOR ', ') as incident_report")
-                )
-                ->where('votes.election_id', $election->id)
-                ->groupBy('votes.polling_unit_id', 'polling_units.name', 'polling_unit_results.result_sheet');
+            ->leftJoin('polling_unit_results', 'votes.polling_unit_result_id', '=', 'polling_unit_results.id')
+            // Join Election to get the uuid
+            ->join('elections', 'votes.election_id', '=', 'elections.id')
+            // Subquery to fetch distinct incidents for each polling unit
+            ->leftJoinSub(
+                ElectionIncident::selectRaw('
+                    polling_unit_id,
+                    GROUP_CONCAT(DISTINCT election_incidents.remarks SEPARATOR ", ") as incident_report
+                ')
+                ->where('election_id', $election->id)
+                ->groupBy('polling_unit_id'),
+                'incident_reports', 'polling_units.id', '=', 'incident_reports.polling_unit_id'
+            )
+            ->select(
+                'votes.polling_unit_id',
+                'polling_units.name as polling_unit_name',
+                DB::raw("SUM(CASE WHEN votes.party_id = {$election->party_id} THEN votes.quantity ELSE 0 END) as votes_obtained"),
+                DB::raw('SUM(votes.quantity) as total_votes_cast'),
+                'polling_unit_results.result_sheet',
+                'incident_reports.incident_report', // Aggregated incident report from subquery
+                'elections.uuid' // Select the uuid from the elections table
+            )
+            ->where('votes.election_id', $election->id)
+            ->groupBy('votes.polling_unit_id', 'polling_units.name', 'polling_unit_results.result_sheet', 'incident_reports.incident_report', 'elections.uuid'); // Ensure proper grouping
+        
 
             // Apply filters based on access level
             if ($profileData->access_level === 'regionaladmin') {
@@ -598,26 +608,75 @@ class ElectionController extends Controller
                     return 'No File';
                 })
                 
+                
+                
                 ->addColumn('incident_report', function ($row) {
                     if ($row->incident_report) {
                         $profileData = $this->getProfileData();
-                        $incidentRoute = route($profileData->access_level.'.election.incident', [
-                            'uuid' => $row->uuid,
-                            'polling_unit_id' => $row->polling_unit_id,
+                
+                        // Use the uuid from the row and the polling_unit_id to generate the route
+                        $incidentRoute = route($profileData->access_level . '.election.incident', [
+                            'uuid' => $row->uuid, // Ensure that the uuid is passed here
+                            'polling_unit_id' => $row->polling_unit_id, // The ID of the polling unit
                         ]);
-
-                        return "<a class='btn btn-info btn-sm' href='{$incidentRoute}' target='_blank'>
-                                    View Incident Report
+                
+                        // Return the button HTML
+                        return "<a class='btn btn-dark btn-sm text-white' href='{$incidentRoute}' target='_blank'>
+                                    <i class='fas fa-eye'></i> Incident Report
                                 </a>";
                     }
                     return 'None';
                 })
+                
+                
+                
                 
                 ->rawColumns(['result_sheet', 'incident_report'])
                 ->make(true);
         }
 
     
+
+    public function storeIcident(Request $request)
+    {
+        // Validate incoming request
+        $validated = $request->validate([
+            'election_id' => 'required|exists:elections,id',
+            'region_id' => 'required|exists:regions,id',
+            'state_id' => 'required|exists:states,id',
+            'lga_id' => 'required|exists:local_government_areas,id',
+            'ward_id' => 'required|exists:wards,id',
+            'polling_unit_id' => 'required|exists:polling_units,id',
+            'remarks' => 'nullable|string|max:255',
+            'pictures.*' => 'nullable|image|max:2048',
+        ]);
+
+        // Create the incident record
+        $incident = ElectionIncident::create([
+            'election_id' => $validated['election_id'],
+            'region_id' => $validated['region_id'],
+            'state_id' => $validated['state_id'],
+            'lga_id' => $validated['lga_id'],
+            'ward_id' => $validated['ward_id'],
+            'polling_unit_id' => $validated['polling_unit_id'],
+            'remarks' => $validated['remarks'],
+            'agent_id' => auth()->id(), // Assuming the logged-in user is the agent
+        ]);
+
+        // Handle picture evidence uploads
+        if ($request->has('pictures')) {
+            foreach ($request->file('pictures') as $picture) {
+                $path = $picture->store('evidences/pictures', 'public');
+                PictureEvidence::create([
+                    'election_incident_id' => $incident->id,
+                    'file_path' => $path,
+                ]);
+            }
+        }
+
+        return redirect()->back()->with('success', 'Incident recorded successfully.');
+    }
+
 
         public function manageIncidentByPu($uuid, $polling_unit_id)
         {
@@ -631,17 +690,18 @@ class ElectionController extends Controller
             $pageTitle = $election->name;
 
                 // Fetch the incidents for the specific polling unit and election
-            $incidents = ElectionIncident::with(['pictureEvidences', 'videoEvidences', 'agent'])
+            $incidents = ElectionIncident::with(['pictureEvidences', 'videoEvidences', 'user'])
             ->where('election_id', $election->id)
             ->where('polling_unit_id', $polling_unit_id)
             ->get();
 
             // Return a view to display the incidents
-            return view('backend'.$profileData->access_level.'.election.incident_report', [
+            return view('backend.'.$profileData->access_level.'.election.incident_report', [
                 'election' => $election,
                 'pollingUnit' => $pollingUnit,
                 'incidents' => $incidents,
                 'pageTitle' => $pageTitle,
+                'profileData' => $profileData,
             ]);
         }
 

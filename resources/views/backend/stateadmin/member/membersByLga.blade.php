@@ -2,7 +2,7 @@
 @section('content')
 
 @php 
- $region = \App\Models\Region::find(Auth::user()->region_id);
+ $state = \App\Models\State::find(Auth::user()->state_id);
 @endphp
 
     <!-- Main content -->
@@ -12,7 +12,7 @@
             <div class="col-12">
                 <div class="card card-primary">
                 <div class="card-header">
-                    <h3 class="card-title">  {{optional($region)->name }} Members By LGA</h3>
+                    <h3 class="card-title">  {{optional($state)->name }} State  Members By LGA</h3>
                     <div class="card-tools">
                         <a href="{{ route($profileData->access_level.'.member.add') }}"><button class="btn btn-default"> <i class="fa fa-plus-square"></i> Add New Member</button></a>
                     </div>
@@ -23,9 +23,7 @@
                                     <thead>
                                     <tr>
                                         <th>S/N</th>
-                                        <th>Region</th>
-                                        <th>State</th>
-                                        <th>LGA</th>
+                                        <th>Local Government Area</th>
                                         <th>Members</th>
                                         <th>Action</th>
                                     </tr>
@@ -34,8 +32,6 @@
                                         @foreach ($lgas as $lga)
                                             <tr>
                                                 <td>{{ $loop->iteration }}</td>
-                                                <td>{{ $lga->state->region->name }}</td>
-                                                <td>{{ $lga->state->name}}</td>
                                                 <td><strong>{{ $lga->name }}</strong></td>
                                                 <td>
                                                     <span class="badge bg-secondary text-white">
@@ -56,9 +52,7 @@
                                     <tfoot>
                                     <tr>
                                         <th>S/N</th>
-                                        <th>Region</th>
-                                        <th>State</th>
-                                        <th>LGA</th>
+                                        <th>Local Government Area</th>
                                         <th>Members</th>
                                         <th>Action</th>
                                     </tr>

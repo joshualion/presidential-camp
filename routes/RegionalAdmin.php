@@ -12,9 +12,10 @@ use App\Http\Controllers\regionaladmin\RegionalAdminController;
 use Illuminate\Support\Facades\Route;
 
 
+Route::get('/regional/logout', [RegionalAdminController::class, 'regionaladminLogout'])->name('regionaladmin.logout')->middleware(['auth','access_level:regionaladmin']);
 
 
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth','check_onboarding'])->group(function () {
 
  // Regional Admin Profile & Dashboard Routes
  Route::get('/regional/dashboard', [RegionalAdminController::class, 'regionalAdminDashBoard'])->name('regionaladmin.dashboard')->middleware('access_level:regionaladmin');
@@ -22,7 +23,6 @@ Route::middleware('auth')->group(function () {
  Route::post('/regional/profile/store', [RegionalAdminController::class, 'regionaladminProfileStore'])->name('regionaladmin.profile.store')->middleware('access_level:regionaladmin');
  Route::get('/regional/change/password', [RegionalAdminController::class, 'regionaladminChangePassword'])->name('regionaladmin.change.password')->middleware('access_level:regionaladmin');
  Route::post('/regional/update/password', [RegionalAdminController::class, 'regionaladminUpdatePassword'])->name('regionaladmin.update.password')->middleware('access_level:regionaladmin');
- Route::get('/regional/logout', [RegionalAdminController::class, 'regionaladminLogout'])->name('regionaladmin.logout')->middleware('access_level:regionaladmin');
 
 
 
@@ -190,14 +190,6 @@ Route::get('/regional/export-polling-units', [LocationController::class, 'export
 Route::post('/regional/import-polling-units', [LocationController::class, 'importPollingUnits'])->name('regionaladmin.location.pu.importPollingUnits')->middleware('access_level:regionaladmin');
 
 
-// Political Party Management CRUD
-
-Route::get('/regional/election/setting/politicalparty', [PoliticalPartyController::class, 'allPoliticalParties'])->name('regionaladmin.election.politicalparty')->middleware('access_level:regionaladmin');
-Route::get('/regional/election/setting/politicalparty/add', [PoliticalPartyController::class, 'addPoliticalParty'])->name('regionaladmin.election.politicalparty.add')->middleware('access_level:regionaladmin');
-Route::post('/regional/election/setting/politicalparty/store', [PoliticalPartyController::class, 'storePoliticalParty'])->name('regionaladmin.election.politicalparty.store')->middleware('access_level:regionaladmin');
-Route::get('/regional/election/setting/politicalparty/edit/{uuid}', [PoliticalPartyController::class, 'editPoliticalParty'])->name('regionaladmin.election.politicalparty.edit')->middleware('access_level:regionaladmin');
-Route::post('/regional/election/setting/politicalparty/update/{uuid}', [PoliticalPartyController::class, 'updatePoliticalParty'])->name('regionaladmin.election.politicalparty.update')->middleware('access_level:regionaladmin');
-Route::delete('/regional/election/setting/politicalparty/delete/{uuid}', [PoliticalPartyController::class, 'deletePoliticalParty'])->name('regionaladmin.election.politicalparty.delete')->middleware('access_level:regionaladmin');
 // Election Management CRUD
 
 Route::get('/regional/elections', [ElectionController::class, 'allElections'])->name('regionaladmin.elections')->middleware('access_level:regionaladmin');

@@ -49,6 +49,19 @@
                       </p>
 
                       <hr>
+                      <!-- Bank Name -->
+                    <strong><i class="fas fa-university mr-1"></i> Bank</strong>
+                    <p class="text-muted">
+                        {{ (!empty($profileData->bank)) ? ($profileData->bank) : ('Nil') }}
+                    </p>
+                    <hr>
+
+                    <!-- Bank Account Number -->
+                    <strong><i class="fas fa-credit-card mr-1"></i> Account Number</strong>
+                    <p class="text-muted">
+                        {{ (!empty($profileData->bank_account_number)) ? ($profileData->bank_account_number) : ('Nil') }}
+                    </p>
+                    <hr>
 
                       <strong><i class="fas fa-map-marker-alt mr-1"></i> Address</strong>
 

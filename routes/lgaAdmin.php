@@ -12,9 +12,10 @@ use App\Http\Controllers\lgaadmin\LgaAdminController;
 use Illuminate\Support\Facades\Route;
 
 
+Route::get('/lga/logout', [LgaAdminController::class, 'lgaadminLogout'])->name('lgaadmin.logout')->middleware(['auth','access_level:lgaadmin']);
 
 
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth','check_onboarding'])->group(function () {
 
  // Regional Admin Profile & Dashboard Routes
  Route::get('/lga/dashboard', [LgaAdminController::class, 'lgaAdminDashBoard'])->name('lgaadmin.dashboard')->middleware('access_level:lgaadmin');
@@ -22,8 +23,7 @@ Route::middleware('auth')->group(function () {
  Route::post('/lga/profile/store', [LgaAdminController::class, 'lgaadminProfileStore'])->name('lgaadmin.profile.store')->middleware('access_level:lgaadmin');
  Route::get('/lga/change/password', [LgaAdminController::class, 'lgaadminChangePassword'])->name('lgaadmin.change.password')->middleware('access_level:lgaadmin');
  Route::post('/lga/update/password', [LgaAdminController::class, 'lgaadminUpdatePassword'])->name('lgaadmin.update.password')->middleware('access_level:lgaadmin');
- Route::get('/lga/logout', [LgaAdminController::class, 'lgaadminLogout'])->name('lgaadmin.logout')->middleware('access_level:lgaadmin');
-
+ 
 
 
     /*Regional Admin Ajax Routes */

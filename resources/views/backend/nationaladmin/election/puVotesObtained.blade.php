@@ -25,7 +25,7 @@
                     @elseif($profileData->access_level == 'wardadmin')
                         Ward Votes By PU for {{ $profileData->ward->name ?? 'Your Ward' }}
                     @elseif($profileData->access_level == 'pollingunitadmin')
-                        Polling Unit Votes By PU for {{ $profileData->pollingUnit->name ?? 'Your Polling Unit' }}
+                        Votes  for {{ $profileData->pollingUnit->name ?? 'Your Polling Unit' }}
                     @endif
 
                     </h3>

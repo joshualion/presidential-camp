@@ -92,6 +92,10 @@ class User extends Authenticatable
         return $this->hasOne(BulkSmsSetting::class, 'user_id');
     }
 
+    public function bankAccount(){
+        return $this->hasOne(BankAccount::class);
+    }
+
     public static function getPermissionGroups()
     {
         $permission_groups = DB::table('permissions')->select('group_name')->groupBy('group_name')->get();

@@ -266,12 +266,7 @@ $state = \App\Models\State::find(Auth::user()->state_id);
                             </a>
                           </li>
 
-                          <li class="nav-item">
-                            <a href="/state/bankdetails" class="nav-link">
-                              <i class="fas fa-university nav-icon"></i>
-                              <p> Bank Details</p>
-                            </a>
-                          </li>
+                          
 
                           <li class="nav-item">
                             <a href="/state/change/password" class="nav-link">

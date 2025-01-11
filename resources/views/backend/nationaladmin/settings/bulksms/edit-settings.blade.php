@@ -7,7 +7,7 @@
       <div class="container-fluid">
         <div class="row">
           <div class="col-9">
-            <div class="card card-success card-outline">
+            <div class="card card-primary">
               <div class="card-header">
                 <h3 class="card-title">Bulksms Settings </h3>
             
@@ -34,7 +34,7 @@
                   </div>
                
                 <div class="col-3">
-                  <button type="submit" class="btn btn-success btn-block btn-group-lg"><i class='fas fa-save' style='font-size:24px;color:white'> Save</i></button>
+                  <button type="submit" class="btn btn-primary btn-block btn-group-lg"><i class='fas fa-save' style='font-size:24px;color:white'> Save</i></button>
                 </div>
               </form>
             </div>

@@ -46,7 +46,12 @@ return new class extends Migration
             $table->string('s3_secret')->nullable();
             $table->string('s3_region')->nullable();
             $table->string('s3_bucket')->nullable();
-            $table->string(' s3_endpoint')->nullable();
+            $table->string('s3_endpoint')->nullable();
+             // New Columns for Banking & finance
+             $table->string('bank')->nullable();
+             $table->string('bank_account_number')->nullable();
+             $table->string('bank_account_name')->nullable();
+ 
            
             $table->timestamps();
         });
