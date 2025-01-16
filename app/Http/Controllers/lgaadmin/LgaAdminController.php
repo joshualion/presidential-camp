@@ -147,9 +147,10 @@ class LgaAdminController extends Controller
             $pollingUnits = PollingUnit::all();
             $religions = Religion::all();
             $ageGrades = AgeGrade::all();
+            $userSupportGroups = $profileData->supportGroups()->pluck('name')->toArray();
 
             return view('backend.'.$profileData->access_level.'.profile', compact(
-                'profileData', 'pageTitle', 'roles', 'countries',
+                'profileData', 'userSupportGroups', 'pageTitle', 'roles', 'countries',
                 'regions', 'states', 'lgas', 'wards', 'pollingUnits', 'religions', 'ageGrades'
             ));
     }
@@ -163,7 +164,16 @@ class LgaAdminController extends Controller
          $validatedData = $request->validate([
             'firstname' => 'required|string|max:255',
             'lastname' => 'required|string|max:255',
-            'email' => 'required|email|max:255',
+            'email' => [
+                'required',
+                'email',
+                'max:255',
+                function ($attribute, $value, $fail) {
+                    if (str_ends_with($value, '@example.com')) {
+                        $fail('Email cannot be a placeholder domain like @example.com.');
+                    }
+                },
+            ],
             'phone' => 'required|string|max:15|unique:users,phone,' .$profileData->id,
             'validvoter' => 'required|in:yes,no',
             'vin' => 'nullable|string|max:255',
@@ -241,6 +251,14 @@ class LgaAdminController extends Controller
 
         $user = $this->getProfileData();
         $hashedPassword = $user->password;
+         // Check if the new password is "password"
+         if ($request->new_password === 'password') {
+            $notification = [
+                'message' => 'Password cannot be set to "password".',
+                'alert-type' => 'error'
+            ];
+            return back()->with($notification);
+        }
 
         if (!Hash::check($request->old_password, $hashedPassword)) {
             $notification = [

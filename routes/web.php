@@ -52,6 +52,10 @@ Route::get('/election/{uuid}/chart-data', [ElectionController::class, 'getElecti
     Route::post('/complete-profile', [ProfileCompletionController::class, 'complete'])->name('complete.profile.store')
     ->middleware(['auth']);
     
+    //Handle Volunteer group selection 
+    Route::get('/select-support-group', [ProfileCompletionController::class, 'selectSupportGroup'])->name('select.support.group')->middleware('auth');
+    Route::post('/store-support-group', [ProfileCompletionController::class, 'storeSupportGroup'])->name('store.support.group')->middleware('auth');
+
 
 
 

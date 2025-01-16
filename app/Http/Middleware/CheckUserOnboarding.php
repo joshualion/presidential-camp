@@ -30,6 +30,11 @@ class CheckUserOnboarding
             return redirect()->route('complete.profile');
         }
 
+            // Step 3: Check if user belongs to at least one volunteer group
+        if ($user->supportGroups()->count() === 0) {
+            return redirect()->route('select.support.group');
+        }
+
         // Allow access to the next middleware or controller
         return $next($request);
     }
@@ -58,6 +63,6 @@ class CheckUserOnboarding
      */
     protected function isProfileComplete($user): bool
     {
-        return $user->firstname && $user->lastname && $user->phone;
+        return $user->firstname && $user->lastname && $user->phone && $user->lga_id;
     }
 }

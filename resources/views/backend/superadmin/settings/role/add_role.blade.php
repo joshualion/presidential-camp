@@ -11,14 +11,14 @@
               <div class="card-header">
                 <h3 class="card-title">Add Role</h3>
                 <div class="card-tools">
-                    <a href="{{ route('superadmin.settings.roles') }}"><button class="btn btn-default"> <i class="fas fa-eye"></i> All Roles</button></a>
+                    <a href="{{ route('nationaladmin.settings.roles') }}"><button class="btn btn-default"> <i class="fas fa-eye"></i> All Roles</button></a>
                 </div>
               </div>
               <!-- /.card-header -->
               <div class="card-body">
 
               <!-- form start -->
-              <form class="form" action="{{route('superadmin.settings.role.store')}}" method="POST">
+              <form class="form" action="{{route('nationaladmin.settings.role.store')}}" method="POST">
                 @csrf
 
                   <div class="form-group">

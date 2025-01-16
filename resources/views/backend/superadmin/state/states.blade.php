@@ -10,7 +10,7 @@
                 <div class="card-header">
                     <h3 class="card-title">All States</h3>
                     <div class="card-tools">
-                        <a href="{{ route('superadmin.location.state.add') }}"><button class="btn btn-default"> <i class="fa fa-plus-square"></i> Add state</button></a>
+                        <a href="{{ route('nationaladmin.location.state.add') }}"><button class="btn btn-default"> <i class="fa fa-plus-square"></i> Add state</button></a>
                     </div>
                 </div>
                 <!-- /.card-header -->
@@ -26,19 +26,18 @@
                     </thead>
                     <tbody>
                     @php
-                     $serialNumber = 1; // Initialize serial number
-                    @endphp
-                     
-                    @foreach($states as  $state)
+                            $serialNumber = 1; // Initialize serial number
+                            @endphp
+                    @foreach( $states as  $state)
                     <tr>
 
                         <td>{{ $serialNumber++ }}</td>
-                        <td>{{ $state->name}}</td>                                                
+                        <td><strong>{{ $state->name}}</strong></td>                                                
                         <td>{{ optional($state->region)->name}}</td>
                         
                         <td>
-                        <a href="{{ route('superadmin.location.state.edit',  ($state->uuid))}}" ><button class="btn btn-success btn-sm"><i class="fas fa-pencil-alt"></i> Edit</button></a>
-                        <form action="{{ route('superadmin.location.state.delete',  ($state->uuid)) }}" method="POST" style="display: inline-block;">
+                        <a href="{{ route('nationaladmin.location.state.edit',  ($state->uuid))}}" ><button class="btn btn-success btn-sm"><i class="fas fa-pencil-alt"></i> Edit</button></a>
+                        <form action="{{ route('nationaladmin.location.state.delete',  ($state->uuid)) }}" method="POST" style="display: inline-block;">
                             @csrf
                             @method('DELETE')
                             <button type="submit" class="btn btn-danger btn-sm delete-btn"><i class="fas fa-trash"></i> Delete</button>

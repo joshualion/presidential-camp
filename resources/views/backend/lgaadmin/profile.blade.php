@@ -50,7 +50,7 @@
 
                       <hr>
 
-                                            <!-- Bank Name -->
+                      <!-- Bank Name -->
                     <strong><i class="fas fa-university mr-1"></i> Bank</strong>
                     <p class="text-muted">
                         {{ (!empty($profileData->bank)) ? ($profileData->bank) : ('Nil') }}
@@ -81,12 +81,19 @@
                       <strong><i class="fas fa-user mr-1"></i> Member Since</strong>
                     <p class="text-muted">{{ Carbon::parse($profileData->created_at)->format('F jS Y') }}</p>
 
-                    </div>
-
-                    <!-- /.card-body -->
-                  </div>
-                  <!-- /.card -->
-          </div><!-- /.col -->
+                    <strong><i class="fas fa-users mr-1"></i> Volunteer Groups</strong>
+                    <p class="text-muted">
+                        @if(!empty($userSupportGroups))
+                            @foreach($userSupportGroups as $group)
+                                <span class="badge badge-secondary">{{ $group }}</span>
+                            @endforeach
+                        @else
+                            <span class="text-danger">Not a member of any group</span>
+                        @endif
+                    </p>
+                </div>
+            </div>
+        </div>
 
 
           <div class="col-md-9">
@@ -101,7 +108,7 @@
 
                   <!-- /.tab-pane -->
                   <div class="tab-pane active" id="editprofile">
-                  <form class="form-horizontal" id="profileData" method="POST"  action="{{route($profileData->access_level.'.profile.store')}}" enctype="multipart/form-data">
+                  <form class="form-horizontal" id="profileData" method="POST" action="{{route('nationaladmin.profile.store')}}" enctype="multipart/form-data">
                             @csrf
 
                             @method('POST')
@@ -225,95 +232,95 @@
                         </div>
                         </div>
                         </div>
-                    
+                        
+                        <!-- Voting Region -->
+<div class="form-group row">
+    <label for="region_id" class="col-sm-2 col-form-label">Voting Region</label>
+    <div class="col-sm-10">
+        <select class="form-control" name="region_id" id="region-dropdown" {{ $profileData->region_id ? 'disabled' : '' }}>
+            <option value="" disabled selected>Select Region</option>
+            @foreach($regions as $region)
+                <option value="{{ $region->id }}" {{ $profileData->region_id == $region->id ? 'selected' : '' }}>{{ $region->name }}</option>
+            @endforeach
+        </select>
+        @if($profileData->region_id)
+            <input type="hidden" name="region_id" value="{{ $profileData->region_id }}">
+        @endif
+    </div>
+</div>
 
-                                                <!-- Voting Region -->
-                                                <div class="form-group row">
-                                                    <label for="region_id" class="col-sm-2 col-form-label">Voting Region</label>
-                                                    <div class="col-sm-10">
-                                                        <select class="form-control" name="region_id" id="region-dropdown" {{ $profileData->region_id ? 'disabled' : '' }}>
-                                                            <option value="" disabled selected>Select Region</option>
-                                                            @foreach($regions as $region)
-                                                                <option value="{{ $region->id }}" {{ $profileData->region_id == $region->id ? 'selected' : '' }}>{{ $region->name }}</option>
-                                                            @endforeach
-                                                        </select>
-                                                        @if($profileData->region_id)
-                                                            <input type="hidden" name="region_id" value="{{ $profileData->region_id }}">
-                                                        @endif
-                                                    </div>
-                                                </div>
-                        
-                                                <!-- Voting State -->
-                                                <div class="form-group row">
-                                                    <label for="state-dropdown" class="col-sm-2 col-form-label">Voting State</label>
-                                                    <div class="col-sm-10">
-                                                        <select class="form-control" name="state_id" id="state-dropdown" {{ $profileData->state_id ? 'disabled' : '' }}>
-                                                            <option value="" disabled selected>Select State</option>
-                                                            @foreach($states as $state)
-                                                                @if($state->region_id == $profileData->region_id)
-                                                                    <option value="{{ $state->id }}" {{ ($profileData->state_id == $state->id) ? 'selected' : '' }}>{{ $state->name }}</option>
-                                                                @endif
-                                                            @endforeach
-                                                        </select>
-                                                        @if($profileData->state_id)
-                                                            <input type="hidden" name="state_id" value="{{ $profileData->state_id }}">
-                                                        @endif
-                                                    </div>
-                                                </div>
-                        
-                                                <!-- Voting LGA -->
-                                                <div class="form-group row">
-                                                    <label for="lga-dropdown" class="col-sm-2 col-form-label">Voting LGA</label>
-                                                    <div class="col-sm-10">
-                                                        <select class="form-control" name="lga_id" id="lga-dropdown" {{ $profileData->lga_id ? 'disabled' : '' }}>
-                                                            <option value="" disabled selected>Select LGA</option>
-                                                            @foreach($lgas as $lga)
-                                                                @if($lga->state_id == $profileData->state_id)
-                                                                    <option value="{{ $lga->id }}" {{ ($profileData->lga_id == $lga->id) ? 'selected' : '' }}>{{ $lga->name }}</option>
-                                                                @endif
-                                                            @endforeach
-                                                        </select>
-                                                        @if($profileData->lga_id)
-                                                            <input type="hidden" name="lga_id" value="{{ $profileData->lga_id }}">
-                                                        @endif
-                                                    </div>
-                                                </div>
-                        
-                                                <!-- Voting Ward -->
-                                                <div class="form-group row">
-                                                    <label for="ward-dropdown" class="col-sm-2 col-form-label">Voting Ward</label>
-                                                    <div class="col-sm-10">
-                                                        <select class="form-control" name="ward_id" id="ward-dropdown" {{ $profileData->ward_id ? 'disabled' : '' }}>
-                                                            <option value="" disabled selected>Select Ward</option>
-                                                            @foreach($wards as $ward)
-                                                                @if($ward->lga_id == $profileData->lga_id)
-                                                                    <option value="{{ $ward->id }}" {{ ($profileData->ward_id == $ward->id) ? 'selected' : '' }}>{{ $ward->name }}</option>
-                                                                @endif
-                                                            @endforeach
-                                                        </select>
-                                                        @if($profileData->ward_id)
-                                                            <input type="hidden" name="ward_id" value="{{ $profileData->ward_id }}">
-                                                        @endif
-                                                    </div>
-                                                </div>
-                        
-                                                <!-- Polling Unit -->
-                                                <div class="form-group row">
-                                                    <label for="pu-dropdown" class="col-sm-2 col-form-label">Voting Polling Unit</label>
-                                                    <div class="col-sm-10">
-                                                        <select class="form-control" name="polling_unit_id" id="pu-dropdown" {{ $profileData->polling_unit_id ? 'disabled' : '' }}>
-                                                            <option value="" disabled selected>Select Polling Unit</option>
-                                                            @foreach($pollingUnits as $pu)
-                                                                @if($pu->ward_id == $profileData->ward_id)
-                                                                    <option value="{{ $pu->id }}" {{ ($profileData->polling_unit_id == $pu->id) ? 'selected' : '' }}>{{ $pu->name }}</option>
-                                                                @endif
-                                                            @endforeach
-                                                        </select>
-                                                        @if($profileData->polling_unit_id)
-                                                            <input type="hidden" name="polling_unit_id" value="{{ $profileData->polling_unit_id }}">
-                                                        @endif
-                                                    </div>
-                                                </div>
+<!-- Voting State -->
+<div class="form-group row">
+    <label for="state-dropdown" class="col-sm-2 col-form-label">Voting State</label>
+    <div class="col-sm-10">
+        <select class="form-control" name="state_id" id="state-dropdown" {{ $profileData->state_id ? 'disabled' : '' }}>
+            <option value="" disabled selected>Select State</option>
+            @foreach($states as $state)
+                @if($state->region_id == $profileData->region_id)
+                    <option value="{{ $state->id }}" {{ ($profileData->state_id == $state->id) ? 'selected' : '' }}>{{ $state->name }}</option>
+                @endif
+            @endforeach
+        </select>
+        @if($profileData->state_id)
+            <input type="hidden" name="state_id" value="{{ $profileData->state_id }}">
+        @endif
+    </div>
+</div>
+
+<!-- Voting LGA -->
+<div class="form-group row">
+    <label for="lga-dropdown" class="col-sm-2 col-form-label">Voting LGA</label>
+    <div class="col-sm-10">
+        <select class="form-control" name="lga_id" id="lga-dropdown" {{ $profileData->lga_id ? 'disabled' : '' }}>
+            <option value="" disabled selected>Select LGA</option>
+            @foreach($lgas as $lga)
+                @if($lga->state_id == $profileData->state_id)
+                    <option value="{{ $lga->id }}" {{ ($profileData->lga_id == $lga->id) ? 'selected' : '' }}>{{ $lga->name }}</option>
+                @endif
+            @endforeach
+        </select>
+        @if($profileData->lga_id)
+            <input type="hidden" name="lga_id" value="{{ $profileData->lga_id }}">
+        @endif
+    </div>
+</div>
+
+<!-- Voting Ward -->
+<div class="form-group row">
+    <label for="ward-dropdown" class="col-sm-2 col-form-label">Voting Ward</label>
+    <div class="col-sm-10">
+        <select class="form-control" name="ward_id" id="ward-dropdown" {{ $profileData->ward_id ? 'disabled' : '' }}>
+            <option value="" disabled selected>Select Ward</option>
+            @foreach($wards as $ward)
+                @if($ward->lga_id == $profileData->lga_id)
+                    <option value="{{ $ward->id }}" {{ ($profileData->ward_id == $ward->id) ? 'selected' : '' }}>{{ $ward->name }}</option>
+                @endif
+            @endforeach
+        </select>
+        @if($profileData->ward_id)
+            <input type="hidden" name="ward_id" value="{{ $profileData->ward_id }}">
+        @endif
+    </div>
+</div>
+
+<!-- Polling Unit -->
+<div class="form-group row">
+    <label for="pu-dropdown" class="col-sm-2 col-form-label">Voting Polling Unit</label>
+    <div class="col-sm-10">
+        <select class="form-control" name="polling_unit_id" id="pu-dropdown" {{ $profileData->polling_unit_id ? 'disabled' : '' }}>
+            <option value="" disabled selected>Select Polling Unit</option>
+            @foreach($pollingUnits as $pu)
+                @if($pu->ward_id == $profileData->ward_id)
+                    <option value="{{ $pu->id }}" {{ ($profileData->polling_unit_id == $pu->id) ? 'selected' : '' }}>{{ $pu->name }}</option>
+                @endif
+            @endforeach
+        </select>
+        @if($profileData->polling_unit_id)
+            <input type="hidden" name="polling_unit_id" value="{{ $profileData->polling_unit_id }}">
+        @endif
+    </div>
+</div>
+
 
 
 
@@ -330,38 +337,39 @@
                         </div>
                         </div>
 
-                                                <!-- Bank Name -->
-                                                <div class="form-group row">
-                                                    <label for="bank" class="col-sm-2 col-form-label">Bank Name</label>
-                                                    <div class="col-sm-10">
-                                                        <input type="text" 
-                                                            class="form-control @error('bank') is-invalid @enderror" 
-                                                            name="bank" 
-                                                            id="bank" 
-                                                            value="{{ old('bank', $profileData->bank) }}" 
-                                                            placeholder="Enter your bank name">
-                                                    </div>
-                                                    @error('bank')
-                                                    <div class="alert alert-danger">{{ $message }}</div>
-                                                    @enderror
-                                                </div>
-                        
-                                                <!-- Bank Account Number -->
-                                                <div class="form-group row">
-                                                    <label for="bank_account_number" class="col-sm-2 col-form-label">Account Number</label>
-                                                    <div class="col-sm-10">
-                                                        <input type="text" 
-                                                            class="form-control @error('bank_account_number') is-invalid @enderror" 
-                                                            name="bank_account_number" 
-                                                            id="bank_account_number" 
-                                                            value="{{ old('bank_account_number', $profileData->bank_account_number) }}" 
-                                                            placeholder="Enter your account number"
-                                                            oninput="this.value = this.value.replace(/[^0-9]/g, '')">
-                                                    </div>
-                                                    @error('bank_account_number')
-                                                    <div class="alert alert-danger">{{ $message }}</div>
-                                                    @enderror
-                                                </div>
+                        <!-- Bank Name -->
+                        <div class="form-group row">
+                            <label for="bank" class="col-sm-2 col-form-label">Bank Name</label>
+                            <div class="col-sm-10">
+                                <input type="text" 
+                                    class="form-control @error('bank') is-invalid @enderror" 
+                                    name="bank" 
+                                    id="bank" 
+                                    value="{{ old('bank', $profileData->bank) }}" 
+                                    placeholder="Enter your bank name">
+                            </div>
+                            @error('bank')
+                            <div class="alert alert-danger">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <!-- Bank Account Number -->
+                        <div class="form-group row">
+                            <label for="bank_account_number" class="col-sm-2 col-form-label">Account Number</label>
+                            <div class="col-sm-10">
+                                <input type="text" 
+                                    class="form-control @error('bank_account_number') is-invalid @enderror" 
+                                    name="bank_account_number" 
+                                    id="bank_account_number" 
+                                    value="{{ old('bank_account_number', $profileData->bank_account_number) }}" 
+                                    placeholder="Enter your account number"
+                                    oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                            </div>
+                            @error('bank_account_number')
+                            <div class="alert alert-danger">{{ $message }}</div>
+                            @enderror
+                        </div>
+
 
                         <!-- Residential Address -->
                         <div class="form-group row">

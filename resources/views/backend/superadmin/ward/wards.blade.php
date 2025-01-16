@@ -99,13 +99,12 @@
 <!-- Page specific data table script -->
 <!-- jQuery -->
 <script src="{{asset('assets/plugins/jquery/jquery.min.js')}}"></script>
-
 <script>
+
  $(document).ready(function() {
     $('#mywards').DataTable({
         "processing": true,
         "serverSide": true,
-        "searching": true,
         "ajax": "{{ route('wards.data') }}", // Define a route to get the paginated data
         "pageLength": 25, // Default number of rows per page
         "lengthMenu": [ [10, 25, 50, 100], [10, 25, 50, 100] ],
@@ -115,13 +114,12 @@
                 "render": function (data, type, row, meta) {
                     return meta.row + meta.settings._iDisplayStart + 1; // Create the serial number dynamically
                 },
-                "orderable": false,
-                "searchable": false // Set to false because it’s just an index
+                "orderable": false
             },
-            { "data": "name", "searchable": true },
-            { "data": "lga", "searchable": true },
-            { "data": "state", "searchable": true },
-            { "data": "region", "searchable": true },
+            { "data": "name" },
+            { "data": "lga" },
+            { "data": "state" },
+            { "data": "region" }, // Fix the column name here, it should match the one returned in JSON
             { "data": "action", "orderable": false, "searchable": false }
         ],
         "responsive": true,

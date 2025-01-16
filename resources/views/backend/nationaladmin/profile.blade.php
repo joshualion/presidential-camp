@@ -81,12 +81,19 @@
                       <strong><i class="fas fa-user mr-1"></i> Member Since</strong>
                     <p class="text-muted">{{ Carbon::parse($profileData->created_at)->format('F jS Y') }}</p>
 
-                    </div>
-
-                    <!-- /.card-body -->
-                  </div>
-                  <!-- /.card -->
-          </div><!-- /.col -->
+                    <strong><i class="fas fa-users mr-1"></i> Volunteer Groups</strong>
+                    <p class="text-muted">
+                        @if(!empty($userSupportGroups))
+                            @foreach($userSupportGroups as $group)
+                                <span class="badge badge-secondary">{{ $group }}</span>
+                            @endforeach
+                        @else
+                            <span class="text-danger">Not a member of any group</span>
+                        @endif
+                    </p>
+                </div>
+            </div>
+        </div>
 
 
           <div class="col-md-9">

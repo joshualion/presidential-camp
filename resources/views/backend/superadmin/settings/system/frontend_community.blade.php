@@ -22,7 +22,6 @@
     @enderror
 </div>
 
-
 <div class="form-group row">
     <label for="frontend_registration" class="col-sm-3 col-form-label">Public Registration</label>
     <div class="col-sm-9">
@@ -93,7 +92,6 @@
         });
     });
 </script>
-
 
 
 <!-- JavaScript to update label dynamically -->

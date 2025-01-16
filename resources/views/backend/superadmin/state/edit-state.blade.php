@@ -10,16 +10,16 @@
                 <div class="card-header">
                     <h3 class="card-title">Edit State</h3>
                     <div class="card-tools">
-                        <a href="{{ route('superadmin.location.states') }}"><button class="btn btn-default"> <i class="fa fa-eye"></i> All states</button></a>
+                        <a href="{{ route('nationaladmin.location.states') }}"><button class="btn btn-default"> <i class="fa fa-eye"></i> All states</button></a>
                     </div>
                 </div>
                 <!-- /.card-header -->
                 <div class="card-body">
 
-                    <form action="{{ route('superadmin.location.state.update', $state->uuid) }}" method="POST">
+                    <form action="{{ route('nationaladmin.location.state.update', $state->uuid) }}" method="POST">
                         @csrf   
 
-                        @include('backend.superadmin.state.edit-state-form')
+                        @include('backend.nationaladmin.state.edit-state-form')
 
                     </form>
 

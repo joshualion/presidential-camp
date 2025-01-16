@@ -119,9 +119,10 @@ class NationalAdminController extends Controller
             $pollingUnits = PollingUnit::all();
             $religions = Religion::all();
             $ageGrades = AgeGrade::all();
+            $userSupportGroups = $profileData->supportGroups()->pluck('name')->toArray();
 
             return view('backend.nationaladmin.profile', compact(
-                'profileData', 'pageTitle', 'roles', 'countries',
+                'profileData', 'userSupportGroups', 'pageTitle', 'roles', 'countries',
                 'regions', 'states', 'lgas', 'wards', 'pollingUnits', 'religions', 'ageGrades'
             ));
     }
@@ -134,8 +135,17 @@ class NationalAdminController extends Controller
         // Validation rules
        $validatedData = $request->validate([
           'firstname' => 'required|string|max:255',
-          'lastname' => 'required|string|max:255',
-          'email' => 'required|email|max:255',
+          'lastname' => 'required|string|max:255', 
+          'email' => [
+            'required',
+            'email',
+            'max:255',
+            function ($attribute, $value, $fail) {
+                if (str_ends_with($value, '@example.com')) {
+                    $fail('Email cannot be a placeholder domain like @example.com.');
+                }
+            },
+        ],
           'phone' => 'required|string|max:15|unique:users,phone,' .$profileData->id,
           'validvoter' => 'required|in:yes,no',
           'vin' => 'nullable|string|max:255',
@@ -194,7 +204,6 @@ class NationalAdminController extends Controller
           
           
     }
-
 
 
           //Function for admin change password

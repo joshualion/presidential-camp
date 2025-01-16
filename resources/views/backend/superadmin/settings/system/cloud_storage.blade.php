@@ -65,7 +65,7 @@
     </div>
 
     <div class="form-group row">
-        <label for="s3_secret" class="col-sm-3 col-form-label">AWS Secret Key</label>
+        <label for="s3_secret" class="col-sm-3 col-form-label">AWS Secret Key Id</label>
         <div class="col-sm-9">
             <input type="password" class="form-control" id="s3_secret" name="s3_secret"
                    value="{{ $SystemSetting->s3_secret }}" placeholder="Enter AWS Secret Key">
@@ -100,7 +100,7 @@
 
 <!-- JavaScript for Toggling Storage Options -->
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
+   document.addEventListener('DOMContentLoaded', function () {
     const enableS3Input = document.getElementById('enable_s3_storage');
     const enableLocalInput = document.getElementById('enable_local_storage');
     const awsCredentialsSection = document.getElementById('aws_credentials_section');

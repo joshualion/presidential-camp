@@ -10,6 +10,7 @@ use App\Models\PollingUnit;
 use App\Models\Region;
 use App\Models\Religion;
 use App\Models\State;
+use App\Models\SupportGroup;
 use App\Models\SystemSetting;
 use App\Models\Ward;
 use Illuminate\Http\Request;
@@ -238,4 +239,38 @@ class ProfileCompletionController extends Controller
         
         return redirect()->route( $profileData->access_level.'.dashboard')->with($notification);
     }
+
+     // Show the form for selecting support groups
+     public function selectSupportGroup()
+     {
+         $profileData = $this->getProfileData();
+         $pageTitle = 'Volunteer Groups';
+         $supportGroups = SupportGroup::all(); // Fetch all available groups
+         $userSupportGroups = $profileData->supportGroups()->pluck('user_support_group.support_group_id')->toArray() ?? []; // Explicitly specify the column
+
+         return view('backend.'.$profileData->access_level.'.select-support-group', compact('supportGroups', 'profileData', 'pageTitle', 'userSupportGroups'));
+     }
+ 
+     // Handle the submission of selected support groups
+     public function storeSupportGroup(Request $request)
+     {
+         $request->validate([
+             'support_groups' => 'required|array|min:1',
+             'support_groups.*' => 'exists:support_groups,id',
+         ]);
+     
+         $profileData = $this->getProfileData();
+     
+         // Sync the user's selected groups (add/remove as necessary)
+         $profileData->supportGroups()->sync($request->input('support_groups'));
+         $profileData->save();
+
+         $notification = [
+            'message'=> 'Volunteer groups updated successfully!',
+            'type'=> 'success',
+         ];
+     
+         return redirect()->route($profileData->access_level.'.dashboard')->with($notification);
+     }
+     
 }

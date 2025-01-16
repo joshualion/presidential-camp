@@ -18,8 +18,6 @@ use App\Http\Controllers\VolunteerGroupController;
 use Illuminate\Support\Facades\Route;
 
 // Manage Locations
-
-
 Route::get('/national/location/localgovernments', [LocationController::class, 'allLocalGovernments'])->name('nationaladmin.location.lgas')->middleware(['auth','access_level:nationaladmin']);
 Route::get('/national/location/localgovernment/add', [LocationController::class, 'addLocalGovernment'])->name('nationaladmin.location.lga.add')->middleware(['auth','access_level:nationaladmin']);
 Route::post('/national/location/localgovernment/store', [LocationController::class, 'storeLocalGovernment'])->name('nationaladmin.location.lga.store')->middleware(['auth','access_level:nationaladmin']);

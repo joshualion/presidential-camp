@@ -148,8 +148,7 @@
                         <div class="form-group row">
                         <label for="region_id" class="col-sm-2 col-form-label">Voting Region</label>
                         <div class="col-sm-10">
-                            <input type="hidden" name="region_id" value="{{$profileData->region_id}}" />
-                        <select disabled class="form-control" name="region_id" id="region-dropdown">
+                        <select  class="form-control" name="region_id" id="region-dropdown">
                         <option value="" disabled selected>Select Region</option>
                         @foreach($regions as $region)
                             <option value="{{ $region->id }}" {{ $profileData->region_id == $region->id ? 'selected' : '' }}>{{ $region->name }}</option>

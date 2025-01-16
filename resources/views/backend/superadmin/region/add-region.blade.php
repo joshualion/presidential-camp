@@ -11,16 +11,16 @@
                 <div class="card-header">
                     <h3 class="card-title">Add Region</h3>
                     <div class="card-tools">
-                        <a href="{{ route('superadmin.location.regions') }}"><button class="btn btn-default"> <i class="fa fa-eye"></i> All Regions</button></a>
+                        <a href="{{ route('nationaladmin.location.regions') }}"><button class="btn btn-default"> <i class="fa fa-eye"></i> All Regions</button></a>
                     </div>
                 </div>
                 <!-- /.card-header -->
                 <div class="card-body">
 
-                    <form action="{{ route('superadmin.location.region.store') }}" method="POST">
+                    <form action="{{ route('nationaladmin.location.region.store') }}" method="POST">
                         @csrf
 
-                        @include('backend.superadmin.region.add-region-form')
+                        @include('backend.nationaladmin.region.add-region-form')
 
                     </form>
 

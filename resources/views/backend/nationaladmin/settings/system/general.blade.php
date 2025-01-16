@@ -3,7 +3,7 @@
 
 
 @php
- $packages = array('national', 'state', 'lga', 'ward', 'pu');
+ $packages = array('national');
 @endphp
 
 <section class="content">
@@ -26,20 +26,20 @@
                     <div class="card-body">
                         <div class="row">
                             <div class="col-md-3">
-                                @include('backend.nationaladmin.settings.system.menu')
+                                @include('backend.'.$profileData->access_level.'.settings.system.menu')
                             </div>
 
                             <div class="col-md-9">
 
                                     <div class="tab-content" id="myTabContent">
-                                        <form method="POST" action="{{ route('nationaladmin.settings.system.update') }}" enctype="multipart/form-data">
+                                        <form method="POST" action="{{ route($profileData->access_level.'.settings.system.update') }}" enctype="multipart/form-data">
                                             @csrf
                                             @method('POST')
                                             <input type="hidden" name="id" value="{{ $SystemSetting->id }}" />
 
 
                                              <div class="tab-pane fade show active" id="general-settings" role="tabpanel">
-                                                @include('backend.nationaladmin.settings.system.general_settings')
+                                                @include('backend.'.$profileData->access_level.'.settings.system.general_settings')
 
 
                                             </div>
@@ -47,49 +47,49 @@
 
                                             <div class="tab-pane fade show" id="brand-settings" role="tabpanel">
 
-                                                @include('backend.nationaladmin.settings.system.brand')
+                                                @include('backend.'.$profileData->access_level.'.settings.system.brand')
 
                                             </div>
 
                                             <div class="tab-pane fade show" id="community-settings" role="tabpanel">
 
-                                                @include('backend.nationaladmin.settings.system.frontend_community')
+                                                @include('backend.'.$profileData->access_level.'.settings.system.frontend_community')
 
                                             </div>
 
                                             <div class="tab-pane fade show" id="cloud_storage-settings" role="tabpanel">
 
-                                                @include('backend.nationaladmin.settings.system.cloud_storage')
+                                                @include('backend.'.$profileData->access_level.'.settings.system.cloud_storage')
 
                                             </div>
 
                                             <div class="tab-pane fade show" id="social-media" role="tabpanel">
 
-                                                @include('backend.nationaladmin.settings.system.social_media')
+                                                @include('backend.'.$profileData->access_level.'.settings.system.social_media')
 
                                             </div>
 
                                             <div class="tab-pane fade show" id="terms-settings" role="tabpanel">
 
-                                                @include('backend.nationaladmin.settings.system.terms')
+                                                @include('backend.'.$profileData->access_level.'.settings.system.terms')
 
                                             </div>
 
                                             <div class="tab-pane fade show" id="privacy-settings" role="tabpanel">
 
-                                                @include('backend.nationaladmin.settings.system.privacy')
+                                                @include('backend.'.$profileData->access_level.'.settings.system.privacy')
 
                                             </div>
 
                                             <div class="tab-pane fade show" id="disclaimer-settings" role="tabpanel">
 
-                                                @include('backend.nationaladmin.settings.system.disclaimer')
+                                                @include('backend.'.$profileData->access_level.'.settings.system.disclaimer')
 
                                             </div>
 
                                             <div class="tab-pane fade show" id="copyright-settings" role="tabpanel">
 
-                                                @include('backend.nationaladmin.settings.system.legal')
+                                                @include('backend.'.$profileData->access_level.'.settings.system.legal')
 
                                             </div>
 

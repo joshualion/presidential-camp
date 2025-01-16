@@ -1,7 +1,6 @@
 @extends('backend.template.backend-master')
 @section('content')
 
-
 <div class="card card-primary">
               <div class="card-header">
                     <h3 class="card-title">Nationwide Statistics</h3>
@@ -26,15 +25,22 @@
 
                                   <p>Out of <strong>{{$stateCount }}</strong> States in {{$SystemSetting->system_country}}</p>
                                   <p style="float: right;">
-                                        <b>@php
-                                        echo number_format(($statesWithUsersCount / $stateCount) * 100, 2);
-                                          @endphp %</b>
+
+                                    <b>
+                                        @php
+                                            if ($stateCount > 0) {
+                                                echo number_format(($statesWithUsersCount / $stateCount) * 100, 2);
+                                            } else {
+                                                echo '0.00'; // Handle the case where $wardCount is zero
+                                            }
+                                        @endphp %
+                                    </b>
                                   </p>
                                 </div>
                                 <div class="icon">
                                   <i class="ion ion-nigeria"></i>
                                 </div>
-                                <a href="{{route($profileData->access_level.'.members.byState',$uuid)}}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
+                                <a href="{{route($profileData->access_level.'.members.byState', $uuid)}}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
                               </div>
                             </div>
                             <!-- ./col -->
@@ -45,15 +51,21 @@
                                   <h3>{{$lgaWithUsersCount}}</h3>
                                   <p>Out of <strong>{{$lgaCount}}</strong> LGAs in {{$SystemSetting->system_country}}</p>
                                   <p style="float: right;">
-                                        <b>@php
-                                        echo number_format(($lgaWithUsersCount / $lgaCount) * 100, 2);
-                                          @endphp %</b>
+                                    <b>
+                                        @php
+                                            if ($lgaCount > 0) {
+                                                echo number_format(($lgaWithUsersCount / $lgaCount) * 100, 2);
+                                            } else {
+                                                echo '0.00'; // Handle the case where $wardCount is zero
+                                            }
+                                        @endphp %
+                                    </b>
                                   </p>
                                 </div>
                                 <div class="icon">
                                   <i class="ion ion-lga"></i>
                                 </div>
-                                <a href="{{route($profileData->access_level.'.members.byLga',$uuid)}}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
+                                <a href="{{route($profileData->access_level.'.members.byLga', $uuid)}}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
                               </div>
                             </div>
                             <!-- ./col -->
@@ -64,15 +76,21 @@
                                 <h3>{{$wardWithUsersCount}}</h3>
                                   <p>Out of <strong>{{$wardCount}}</strong> Wards in {{$SystemSetting->system_country}}</p>
                                   <p style="float: right;">
-                                        <b>@php
-                                        echo number_format(($wardWithUsersCount / $wardCount) * 100, 2);
-                                          @endphp %</b>
+                                    <b>
+                                        @php
+                                            if ($wardCount > 0) {
+                                                echo number_format(($wardWithUsersCount / $wardCount) * 100, 2);
+                                            } else {
+                                                echo '0.00'; // Handle the case where $wardCount is zero
+                                            }
+                                        @endphp %
+                                    </b>
                                   </p>
                                 </div>
                                 <div class="icon">
                                   <i class="ion ion-ward"></i>
                                 </div>
-                                <a href="{{route($profileData->access_level.'.members.byWard',$uuid)}}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
+                                <a href="{{route($profileData->access_level.'.members.byWard', $uuid)}}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
                               </div>
                             </div>
                             <!-- ./col -->
@@ -83,15 +101,21 @@
                                 <h3>{{$puWithUsersCount}}</h3>
                                   <p>Out of <strong>{{$puCount}}</strong> PUs in {{$SystemSetting->system_country}}</p>
                                   <p style="float: right;">
-                                        <b>@php
-                                        echo number_format(($puWithUsersCount / $puCount) * 100, 2);
-                                          @endphp %</b>
+                                    <b>
+                                        @php
+                                            if ($puCount > 0) {
+                                                echo number_format(($puWithUsersCount / $puCount) * 100, 2);
+                                            } else {
+                                                echo '0.00'; // Handle the case where $wardCount is zero
+                                            }
+                                        @endphp %
+                                    </b>
                                   </p>
                                 </div>
                                 <div class="icon">
                                   <i class="ion ion-pu"></i>
                                 </div>
-                                <a href="{{route($profileData->access_level.'.members.byPu',$uuid)}}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
+                                <a href="{{route($profileData->access_level.'.members.byPu', $uuid)}}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
                               </div>
                             </div>
                             <!-- ./col -->
@@ -114,7 +138,7 @@
                                 <div class="icon">
                                   <i class="ion ion-map"></i>
                                 </div>
-                                <a href="#" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
+                                <a href="{{route($profileData->access_level.'.members.region')}}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
                               </div>
                             </div>
                             <!-- ./col -->
@@ -124,12 +148,12 @@
                                 <div class="inner">
                                   <h3>{{$excoCount}}</h3>
 
-                                  <p>Team Leaders</p>
+                                  <p>Executive Members</p>
                                 </div>
                                 <div class="icon">
                                   <i class="ion ion-person"></i>
                                 </div>
-                                <a href="{{route($profileData->access_level.'.leaders',$uuid)}}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
+                                <a href="{{route($profileData->access_level.'.leaders', $uuid)}}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
                               </div>
                             </div>
                             <!-- ./col -->
@@ -143,7 +167,7 @@
                                 <div class="icon">
                                   <i class="ion ion-person-add"></i>
                                 </div>
-                                <a href="#" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
+                                <a href="{{route($profileData->access_level.'.regulars', $uuid)}}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
                               </div>
                             </div>
                             <!-- ./col -->
@@ -158,7 +182,7 @@
                                 <div class="icon">
                                   <i class="ion ion-person"></i>
                                 </div>
-                                <a href="/superadmin/members" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
+                                <a href="{{route($profileData->access_level.'.members', $uuid)}}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
                               </div>
                             </div> <!-- ./col -->
                   </div><!-- /.row -->
@@ -171,7 +195,7 @@
         <!-- PIE CHART -->
             <div class="card card-primary">
               <div class="card-header">
-                <h3 class="card-title">DISTRIBUTION BY GENDER</h3>
+                <h3 class="card-title">MEMBER DISTRIBUTION BY GENDER</h3>
 
                 <div class="card-tools">
                   <button type="button" class="btn btn-tool" data-card-widget="collapse">
@@ -195,7 +219,7 @@
       <!-- BAR CHART -->
       <div class="card card-primary ">
               <div class="card-header">
-                <h3 class="card-title">DISTRIBUTION BY AGE BRACKET</h3>
+                <h3 class="card-title">MEMBER DISTRIBUTION BY AGE BRACKET</h3>
 
                 <div class="card-tools">
                   <button type="button" class="btn btn-tool" data-card-widget="collapse">
@@ -215,85 +239,63 @@
 
            </div><!-- /.col Right -->
       </div>
-<!-- End Member Distribution by Gender and Age Brcaket -->
+<!-- End Member MEMBER Distribution by Gender and Age Brcaket -->
 
-<!-- Member Distribution by Region & States -->
+<!-- Member MEMBER Distribution by Region -->
 <div class="row">
-        <div class="col-md-6">
-        <!-- PIE CHART -->
-            <div class="card card-primary">
-              <div class="card-header">
-                <h3 class="card-title"> DISTRIBUTION BY GEOPOLITICAL REGIONS</h3>
+    <div class="col-md-12">
+    <!-- PIE CHART -->
+        <div class="card card-primary">
+          <div class="card-header">
+            <h3 class="card-title"> MEMBER DISTRIBUTION BY GEOPOLITICAL REGIONS</h3>
 
-                <div class="card-tools">
-                  <button type="button" class="btn btn-tool" data-card-widget="collapse">
-                    <i class="fas fa-minus"></i>
-                  </button>
-                  <button type="button" class="btn btn-tool" data-card-widget="remove">
-                    <i class="fas fa-times"></i>
-                  </button>
-                </div>
-              </div>
-              <div class="card-body" style="display: block;">
-                <div class="chartjs-size-monitor"><div class="chartjs-size-monitor-expand"><div class=""></div></div><div class="chartjs-size-monitor-shrink"><div class=""></div></div></div>
-                <canvas id="donutChart" style="min-height: 250px; height: 241px; max-height: 250px; max-width: 100%; display: block; width: 470px;" width="470" height="241" class="chartjs-render-monitor"></canvas>
-              </div>
-              <!-- /.card-body -->
-            </div> <!-- /.card -->
-
-        </div>  <!-- /.col (LEFT) -->
-
-      <div class="col-md-6">
-
-      <!-- DONUT CHART -->
-      <div class="card card-primary ">
-        <div class="card-header">
-          <h3 class="card-title">DISTRIBUTION BY STATES</h3>
-
-          <div class="card-tools">
-            <button type="button" class="btn btn-tool" data-card-widget="collapse">
-              <i class="fas fa-minus"></i>
-            </button>
-            <button type="button" class="btn btn-tool" data-card-widget="remove">
-              <i class="fas fa-times"></i>
-            </button>
+            <div class="card-tools">
+              <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                <i class="fas fa-minus"></i>
+              </button>
+              <button type="button" class="btn btn-tool" data-card-widget="remove">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
           </div>
-        </div>
-    <div class="card-body" style="display: block;">
-        <div class="chart"><div class="chartjs-size-monitor"><div class="chartjs-size-monitor-expand"><div class=""></div></div><div class="chartjs-size-monitor-shrink"><div class=""></div></div></div>
-        <canvas id="stateDonutChart" style="min-height: 250px; height: 241px; max-height: 250px; max-width: 100%; display: block; width: 470px;" width="470" height="241" class="chartjs-render-monitor"></canvas>
-        </div>
-    </div> <!-- /.card-body -->
+          <div class="card-body" style="display: block;">
+            <div class="chartjs-size-monitor"><div class="chartjs-size-monitor-expand"><div class=""></div></div><div class="chartjs-size-monitor-shrink"><div class=""></div></div></div>
+            <canvas id="donutChart" style="min-height: 250px; height: 241px; max-height: 250px; max-width: 100%; display: block; width: 470px;" width="470" height="241" class="chartjs-render-monitor"></canvas>
+          </div>
+          <!-- /.card-body -->
+        </div> <!-- /.card -->
+
+    </div>  <!-- /.col (LEFT) -->
+
+  <div class="col-md-6">
+
+  </div><!-- /.col Right -->
 </div>
-       <!-- /.card -->
-
-           </div><!-- /.col Right -->
-</div>
 
 
-<!-- Member distribution by Religion and Voter Eligibility -->
+
+<!-- Member MEMBER distribution by Religion and Voter Eligibility -->
  <div class="row">
         <div class="col-md-6">
-        <!-- PIE CHART -->
+                <!-- PIE CHART -->
             <div class="card card-primary">
-              <div class="card-header">
-                <h3 class="card-title">DISTRIBUTION BY VOTE ELIGIBILITY</h3>
+                <div class="card-header">
+                    <h3 class="card-title">MEMBER DISTRIBUTION BY VOTE ELIGIBILITY</h3>
 
-                <div class="card-tools">
-                  <button type="button" class="btn btn-tool" data-card-widget="collapse">
-                    <i class="fas fa-minus"></i>
-                  </button>
-                  <button type="button" class="btn btn-tool" data-card-widget="remove">
-                    <i class="fas fa-times"></i>
-                  </button>
+                    <div class="card-tools">
+                    <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                        <i class="fas fa-minus"></i>
+                    </button>
+                    <button type="button" class="btn btn-tool" data-card-widget="remove">
+                        <i class="fas fa-times"></i>
+                    </button>
+                    </div>
                 </div>
-              </div>
-              <div class="card-body" style="display: block;"><div class="chartjs-size-monitor"><div class="chartjs-size-monitor-expand"><div class=""></div></div><div class="chartjs-size-monitor-shrink"><div class=""></div></div></div>
-              <canvas id="validVoterPieChart" style="min-height: 250px; height: 250px; max-height: 250px; max-width: 100%; display: block; width: 487px;"></canvas>
-            </div>
+                <div class="card-body" style="display: block;"><div class="chartjs-size-monitor"><div class="chartjs-size-monitor-expand"><div class=""></div></div><div class="chartjs-size-monitor-shrink"><div class=""></div></div></div>
+                <canvas id="validVoterPieChart" style="min-height: 250px; height: 250px; max-height: 250px; max-width: 100%; display: block; width: 487px;"></canvas>
+                </div>
               <!-- /.card-body -->
             </div> <!-- /.card -->
-
         </div>  <!-- /.col (LEFT) -->
 
       <div class="col-md-6">
@@ -301,7 +303,7 @@
       <!-- BAR CHART -->
       <div class="card card-primary">
         <div class="card-header">
-          <h3 class="card-title">DISTRIBUTION BY RELIGION</h3>
+          <h3 class="card-title">MEMBER DISTRIBUTION BY RELIGION</h3>
 
           <div class="card-tools">
             <button type="button" class="btn btn-tool" data-card-widget="collapse">
@@ -322,7 +324,35 @@
 
     </div><!-- /.col Right -->
 </div>
-<!-- End Member Distribution by Support and Eligibility -->
+<!-- End Member MEMBER Distribution by Support and Eligibility -->
+
+<!-- Member MEMBER Distribution by  States -->
+<div class="row">
+
+    <div class="col-md-12">
+    <!-- DONUT CHART -->
+      <div class="card card-primary ">
+          <div class="card-header">
+          <h3 class="card-title">MEMBER DISTRIBUTION BY STATES</h3>
+
+          <div class="card-tools">
+              <button type="button" class="btn btn-tool" data-card-widget="collapse">
+              <i class="fas fa-minus"></i>
+              </button>
+              <button type="button" class="btn btn-tool" data-card-widget="remove">
+              <i class="fas fa-times"></i>
+              </button>
+          </div>
+          </div>
+          <div class="card-body" style="display: block;">
+              <div class="chart"><div class="chartjs-size-monitor"><div class="chartjs-size-monitor-expand"><div class=""></div></div><div class="chartjs-size-monitor-shrink"><div class=""></div></div></div>
+              <canvas id="stateDonutChart" style="min-height: 250px; height: 241px; max-height: 250px; max-width: 100%; display: block; width: 470px;" width="470" height="241" class="chartjs-render-monitor"></canvas>
+              </div>
+          </div> <!-- /.card-body -->
+      </div>  <!-- /.card -->
+    </div><!-- /.col Right -->
+</div>
+
 
 
 <!-- Add this within the <head> section of your HTML -->
@@ -332,7 +362,7 @@
 <!-- AdminLTE ChartJS -->
 <script src="{{asset('assets/plugins/chart.js/Chart.min.js')}}"></script>
 
-<!-- Distribution By Gender -->
+<!-- MEMBER Distribution By Gender -->
 <script>
     // Get the canvas element and create a pie chart
     var pieChartCanvas = document.getElementById('pieChart').getContext('2d');
@@ -413,7 +443,7 @@
     updatePieChart();
 </script>
 
-<!-- Distribution By Age Grade -->
+<!-- MEMBER Distribution By Age Grade -->
 <script>
     var barChartCanvas = document.getElementById('barChart').getContext('2d');
     var barChart;
@@ -522,8 +552,7 @@
     updateDonutChart();
 </script>
 
-<!-- Religion Distribution of Member -->
-
+<!-- Distribution of Members by Religion -->
 <script>
     var religionBarChartCanvas = document.getElementById('religionBarChart').getContext('2d');
     var religionBarChart;
@@ -572,6 +601,7 @@
     // Call the function to initialize the bar chart for religion distribution
     updateReligionBarChart();
 </script>
+<!-- Distribution of Members by Religion -->
 
 <!-- Voter Eligibility -->
 <script>
@@ -645,46 +675,6 @@
     updateStateDonutChart();
 </script>
 
-<!-- Volunteer Group Distribution -->
-<script>
-    var volunteerGroupDonutChartCanvas = document.getElementById('volunteerGroupDonutChart').getContext('2d');
-    var volunteerGroupDonutChart;
 
-    function updateVolunteerGroupDonutChart() {
-        $.ajax({
-            url: '/admin/member/distribution/volunteergroup', // Update with your route URL
-            method: 'GET',
-            success: function(data) {
-
-                if (volunteerGroupDonutChart) {
-                    volunteerGroupDonutChart.destroy();
-                }
-                // Calculate total count to calculate percentages
-                var totalCount = data.datasets[0].data.reduce((a, b) => a + b, 0);
-                // Calculate and update the labels with percentages
-                data.labels = data.labels.map((label, index) => `${label} (${((data.datasets[0].data[index] / totalCount) * 100).toFixed(2)}%)`);
-                volunteerGroupDonutChart = new Chart(volunteerGroupDonutChartCanvas, {
-                    type: 'pie', // Use 'doughnut' for a donut chart
-                    data: data,
-                    options: {
-                        responsive: true,
-                        //cutoutPercentage: 20, // Make the chart doughnut hole 20% of the radius
-                        maintainAspectRatio: false,
-                        legend: {
-                            position: 'right' // Position the legend to the right
-                        }
-                        // Add more options as needed
-                    }
-                });
-            },
-            error: function(error) { // Add error handling
-                console.error('Error:', error);
-            }
-        });
-    }
-
-    // Call the function to initialize the donut chart
-    updateVolunteerGroupDonutChart();
-</script>
 
 @endsection

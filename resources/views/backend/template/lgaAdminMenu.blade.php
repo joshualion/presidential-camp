@@ -25,6 +25,7 @@ $lga = \App\Models\LocalGovernmentArea::find(Auth::user()->lga_id);
 
             </li>
 
+            @if($lga)
             {{-- Members --}}
             <li class="tab nav-item menu-close">
                         <a href="#" class="nav-link">
@@ -62,6 +63,7 @@ $lga = \App\Models\LocalGovernmentArea::find(Auth::user()->lga_id);
                         </ul>
             </li>
             {{-- / Members --}}
+            @endif
 
                    {{-- Election --}}
         <li class="tab nav-item menu-close">

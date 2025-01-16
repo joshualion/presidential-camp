@@ -85,7 +85,11 @@
 
                  <h3 class="card-title"> Member's Infomation</h3>
                  <div class="card-tools">
-                    <a href="{{ route('superadmin.member.edit', $member->uuid) }}"><button class="btn btn-default"> <i class="fas fa-pencil"></i> Edit Member</button></a>
+                    @if(($profileData->hasRole('National ICT/Media Director')) || ($profileData->hasRole('Regional ICT/Media Director')) || ($profileData->hasAnyRole('State ICT/Media Director')) || ($profileData->hasAnyRole('LGA ICT/Media Director')) || ($profileData->hasAnyRole('Ward ICT/Media Director')) || ($profileData->hasAnyRole('PU ICT/Media Director')) || ( $profileData->access_level == 'superadmin'))
+
+                        <a href="{{ route($profileData->access_level.'.member.edit', $member->uuid) }}"><button class="btn btn-default"> <i class="fas fa-pencil"></i> Edit Member</button></a>
+
+                    @endif
                 </div>
 
               </div><!-- /.card-header -->
@@ -419,7 +423,7 @@
 
 
   <!-- Handle Voter eligibility and toggles display of VIN input  -->
-  <script>
+<script>
     // Function to toggle visibility of the VIN input box and its label
     function toggleVinInput() {
         var validVoterYes = document.getElementById('validvoter_yes');
@@ -556,55 +560,54 @@
 </script>
 
 
-<script src="https://cdn.jsdelivr.net/npm/intl-tel-input@18.1.1/build/js/intlTelInput.min.js"></script>
+<script src="{{asset('assets/js/intl-tel-input/intl-tel-input.js')}}"></script>
 <script>
-    const input = document.querySelector("#phone");
-    const button = document.querySelector("#btn");
-    const errorMsg = document.querySelector("#error-msg");
-    const validMsg = document.querySelector("#valid-msg");
+            const input = document.querySelector("#phone");
+            const button = document.querySelector("#btn");
+            const errorMsg = document.querySelector("#error-msg");
+            const validMsg = document.querySelector("#valid-msg");
 
-    // here, the index maps to the error code returned from getValidationError - see readme
-    const errorMap = ["Invalid number", "Invalid country code", "Too short", "Too long", "Invalid number"];
+            // here, the index maps to the error code returned from getValidationError - see readme
+            const errorMap = ["Invalid number", "Invalid country code", "Too short", "Too long", "Invalid number"];
 
-    window.intlTelInput(input, {
-        initialCountry: "ng",
-    geoIpLookup: callback => {
-        fetch("https://ipapi.co/json")
-        .then(res => res.json())
-        .then(data => callback(data.country_code))
-        .catch(() => callback("us"));
+            window.intlTelInput(input, {
+                initialCountry: "ng",
+            geoIpLookup: callback => {
+                fetch("https://ipapi.co/json")
+                .then(res => res.json())
+                .then(data => callback(data.country_code))
+                .catch(() => callback("us"));
 
-    },
-        separateDialCode: true,
-        hiddenInput: "full_phone",
-        utilsScript: "https://cdn.jsdelivr.net/npm/intl-tel-input@18.1.1/build/js/utils.js?1690975972744",
-    });
+            },
+                separateDialCode: true,
+                hiddenInput: "full_phone",
+                utilsScript: "{{asset('assets/js/intl-tel-input/utils.js')}}",
+            });
 
-        const reset = () => {
-        input.classList.remove("error");
-        errorMsg.innerHTML = "";
-        errorMsg.classList.add("hide");
-        validMsg.classList.add("hide");
-        };
+                const reset = () => {
+                input.classList.remove("error");
+                errorMsg.innerHTML = "";
+                errorMsg.classList.add("hide");
+                validMsg.classList.add("hide");
+                };
 
-        // on click button: validate
-        button.addEventListener('click', () => {
-        reset();
-        if (input.value.trim()) {
-            if (iti.isPossibleNumber()) {
-            validMsg.classList.remove("hide");
-            } else {
-            input.classList.add("error");
-            const errorCode = iti.getValidationError();
-            errorMsg.innerHTML = errorMap[errorCode];
-            errorMsg.classList.remove("hide");
-            }
-        }
-        });
+                // on click button: validate
+                button.addEventListener('click', () => {
+                reset();
+                if (input.value.trim()) {
+                    if (iti.isPossibleNumber()) {
+                    validMsg.classList.remove("hide");
+                    } else {
+                    input.classList.add("error");
+                    const errorCode = iti.getValidationError();
+                    errorMsg.innerHTML = errorMap[errorCode];
+                    errorMsg.classList.remove("hide");
+                    }
+                }
+                });
 
-        // on keyup / change flag: reset
-        input.addEventListener('change', reset);
-        input.addEventListener('keyup', reset);
+                // on keyup / change flag: reset
+                input.addEventListener('change', reset);
+                input.addEventListener('keyup', reset);
 </script>
-
 @endsection

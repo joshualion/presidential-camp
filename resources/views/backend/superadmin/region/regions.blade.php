@@ -1,7 +1,6 @@
 @extends('backend.template.backend-master')
 @section('content')
 
-
     <!-- Main content -->
         <section class="content">
         <div class="container-fluid">
@@ -11,7 +10,7 @@
                 <div class="card-header">
                     <h3 class="card-title">All Regions</h3>
                     <div class="card-tools">
-                        <a href="{{ route('superadmin.location.region.add') }}"><button class="btn btn-default"> <i class="fa fa-plus-square"></i> Add Region</button></a>
+                        <a href="{{ route('nationaladmin.location.region.add') }}"><button class="btn btn-default"> <i class="fa fa-plus-square"></i> Add Region</button></a>
                     </div>
                 </div>
                 <!-- /.card-header -->
@@ -37,8 +36,8 @@
                         <td>{{ $region->description}}</td>
                         
                         <td>
-                        <a href="{{ route('superadmin.location.region.edit',  ($region->uuid))}}" ><button class="btn btn-success btn-sm"><i class="fas fa-pencil-alt"></i> Edit</button></a>
-                        <form action="{{ route('superadmin.location.region.delete',  ($region->uuid)) }}" method="POST" style="display: inline-block;">
+                        <a href="{{ route('nationaladmin.location.region.edit',  ($region->uuid))}}" ><button class="btn btn-success btn-sm"><i class="fas fa-pencil-alt"></i> Edit</button></a>
+                        <form action="{{ route('nationaladmin.location.region.delete',  ($region->uuid)) }}" method="POST" style="display: inline-block;">
                             @csrf
                             @method('DELETE')
                             <button type="submit" class="btn btn-danger btn-sm delete-btn"><i class="fas fa-trash"></i> Delete</button>

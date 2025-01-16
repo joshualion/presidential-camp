@@ -1,10 +1,6 @@
 @extends('backend.template.backend-master')
 @section('content')
 
-@php
-    use Carbon\Carbon;
-@endphp
-
 
     <!-- Main content -->
     <section class="content">
@@ -15,7 +11,18 @@
                 <div class="card-header">
                     <h3 class="card-title">All Members</h3>
                     <div class="card-tools">
-                        <a href="{{ route('superadmin.member.add') }}"><button class="btn btn-default"> <i class="fa fa-plus-square"></i> Add New Member</button></a>
+                        @if(
+                            $profileData->hasAnyRole([
+                                'National ICT/Media Director',
+                                'Regional ICT/Media Director',
+                                'State ICT/Media Director',
+                                'LGA ICT/Media Director',
+                                'Ward ICT/Media Director',
+                                'PU ICT/Media Director',
+                                'Pu Agent'
+                            ]) || $profileData->access_level == 'superadmin')
+                                <a href="{{ route($profileData->access_level.'.member.add') }}"><button class="btn btn-default"> <i class="fa fa-plus-square"></i> Add New Member</button></a>
+                        @endif
                     </div>
                 </div>
                 <!-- /.card-header -->
@@ -25,7 +32,7 @@
                                     <tr>
                                         <th>S/N</th>
                                         <th>Name</th>
-                                        <th>access Level</th>
+                                        <th>Access Level</th>
                                         <th>Role</th>
                                         <th>Action</th>
                                     </tr>
@@ -103,12 +110,12 @@
 <!-- jQuery -->
 <script src="{{asset('assets/plugins/jquery/jquery.min.js')}}"></script>
 <script>
-
  $(document).ready(function() {
     $('#myMembers').DataTable({
         "processing": true,
         "serverSide": true,
-        "ajax": "{{ route($profileData->access_level.'.members.data', $PuLgaStateRegionCountryUUID) }}", // Define a route to get the paginated data
+        "searching": true,
+        "ajax": "{{ route($profileData->access_level.'.members.data') }}", // Define a route to get the paginated data
         "pageLength": 25, // Default number of rows per page
         "lengthMenu": [ [10, 25, 50, 100], [10, 25, 50, 100] ],
         "columns": [
@@ -119,7 +126,7 @@
                 },
                 "orderable": false
             },
-            { "data": "name" },
+            { "data": "name", "searchable": true },
             { "data": "access_level" },
             { "data": "role" }, // Fix the column name here, it should match the one returned in JSON
             { "data": "action", "orderable": false, "searchable": false }
@@ -127,8 +134,9 @@
         "responsive": true,
         "autoWidth": false,
     });
+     // Set placeholder for the search box
+     $('#myMembers_filter input').attr('placeholder', 'firstname or lastname');
 });
-
 </script>
 
 

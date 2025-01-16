@@ -40,7 +40,8 @@
                                 <div class="icon">
                                   <i class="ion ion-nigeria"></i>
                                 </div>
-                                <a href="#" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
+                                <a href="{{ route($profileData->access_level.'.members.byState', $region->uuid) }}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
+
                               </div>
                             </div>
                             <!-- ./col -->
@@ -52,7 +53,7 @@
                                   <p>Out of <strong>{{$lgaCount}}</strong> LGAs in {{$region->name}}</p>
                                   <p style="float: right;">
                                     <b>
-                                        @php 
+                                        @php
                                             if ($lgaCount > 0) {
                                                 echo number_format(($lgaWithUsersCount / $lgaCount) * 100, 2);
                                             } else {
@@ -65,7 +66,7 @@
                                 <div class="icon">
                                   <i class="ion ion-lga"></i>
                                 </div>
-                                <a href="#" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
+                                <a href="{{route($profileData->access_level.'.members.byLga', $region->uuid)}}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
                               </div>
                             </div>
                             <!-- ./col -->
@@ -74,7 +75,7 @@
                               <div class="small-box bg-info">
                                 <div class="inner">
                                 <h3>{{$wardWithUsersCount}}</h3>
-                                  <p>Out of <strong>{{$wardCount}}</strong> Wards in {{$region->name}}</p>
+                                  <p><small>Out of {{$wardCount}} Wards in {{$region->name}} </small></p>
                                   <p style="float: right;">
                                     <b>
                                         @php
@@ -90,7 +91,7 @@
                                 <div class="icon">
                                   <i class="ion ion-ward"></i>
                                 </div>
-                                <a href="#" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
+                                <a href="{{route($profileData->access_level.'.members.byWard', $region->uuid)}}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
                               </div>
                             </div>
                             <!-- ./col -->
@@ -109,13 +110,13 @@
                                                 echo '0.00'; // Handle the case where $puCount is zero
                                             }
                                         @endphp %
-                                    </b> 
+                                    </b>
                                   </p>
                                 </div>
                                 <div class="icon">
                                   <i class="ion ion-pu"></i>
                                 </div>
-                                <a href="#" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
+                                <a href="{{route($profileData->access_level.'.members.byPu', $region->uuid)}}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
                               </div>
                             </div>
                             <!-- ./col -->
@@ -132,7 +133,7 @@
                                 <h3>{{ $newMembers }}</h3>
                                   <p>New Member(s) Today</p>
                                   <p style="float: right;">
-                                        
+
                                   </p>
                                 </div>
                                 <div class="icon">
@@ -153,7 +154,7 @@
                                 <div class="icon">
                                   <i class="ion ion-person"></i>
                                 </div>
-                                <a href="#" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
+                                <a href="{{route($profileData->access_level.'.leaders', $region->uuid)}}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
                               </div>
                             </div>
                             <!-- ./col -->
@@ -167,7 +168,7 @@
                                 <div class="icon">
                                   <i class="ion ion-person-add"></i>
                                 </div>
-                                <a href="#" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
+                                <a href="{{route($profileData->access_level.'.regulars', $region->uuid)}}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
                               </div>
                             </div>
                             <!-- ./col -->
@@ -182,7 +183,7 @@
                                 <div class="icon">
                                   <i class="ion ion-person"></i>
                                 </div>
-                                <a href="/national/members" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
+                                <a href="{{route($profileData->access_level.'.member.region.view', $region->uuid)}}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
                               </div>
                             </div> <!-- ./col -->
                   </div><!-- /.row -->
@@ -195,7 +196,7 @@
     <!-- PIE CHART -->
         <div class="card card-primary">
           <div class="card-header">
-            <h3 class="card-title">DISTRIBUTION BY GENDER</h3>
+            <h3 class="card-title">MEMBER DISTRIBUTION BY GENDER</h3>
 
             <div class="card-tools">
               <button type="button" class="btn btn-tool" data-card-widget="collapse">
@@ -219,7 +220,7 @@
   <!-- BAR CHART -->
   <div class="card card-primary ">
           <div class="card-header">
-            <h3 class="card-title">DISTRIBUTION BY AGE BRACKET</h3>
+            <h3 class="card-title">MEMBER DISTRIBUTION BY AGE BRACKET</h3>
 
             <div class="card-tools">
               <button type="button" class="btn btn-tool" data-card-widget="collapse">
@@ -242,13 +243,13 @@
 <!-- End Demographics -->
 
 
-<!-- Member distribution by State and Voter Eligibility -->
+<!-- Member MEMBER distribution by State and Voter Eligibility -->
 <div class="row">
     <div class="col-md-6">
         <!-- PIE CHART -->
         <div class="card card-primary">
             <div class="card-header">
-                <h3 class="card-title">DISTRIBUTION BY VOTE ELIGIBILITY</h3>
+                <h3 class="card-title">MEMBER DISTRIBUTION BY VOTE ELIGIBILITY</h3>
 
                 <div class="card-tools">
                 <button type="button" class="btn btn-tool" data-card-widget="collapse">
@@ -264,14 +265,14 @@
             </div>
         <!-- /.card-body -->
         </div> <!-- /.card -->
-    </div>  
+    </div>
 
     <div class="col-md-6">
             <!-- DONUT CHART -->
             <div class="card card-primary ">
                 <div class="card-header">
-                <h3 class="card-title">DISTRIBUTION BY STATES</h3>
-    
+                <h3 class="card-title">MEMBER DISTRIBUTION BY STATES</h3>
+
                 <div class="card-tools">
                     <button type="button" class="btn btn-tool" data-card-widget="collapse">
                     <i class="fas fa-minus"></i>
@@ -290,8 +291,8 @@
             </div><!-- /.col Right -->
     </div>
 
-   
-<!-- End Member Distribution by State and Eligibility -->
+
+<!-- End Member MEMBER Distribution by State and Eligibility -->
 
 
 
@@ -300,7 +301,7 @@
 <!-- AdminLTE ChartJS -->
 <script src="{{asset('assets/plugins/chart.js/Chart.min.js')}}"></script>
 
-<!-- Distribution By Gender -->
+<!-- MEMBER Distribution By Gender -->
 <script>
     // Get the canvas element and create a pie chart
     var pieChartCanvas = document.getElementById('pieChart').getContext('2d');
@@ -381,7 +382,7 @@
     updatePieChart();
 </script>
 
-<!-- Distribution By Age Grade -->
+<!-- MEMBER Distribution By Age Grade -->
 <script>
     var barChartCanvas = document.getElementById('barChart').getContext('2d');
     var barChart;

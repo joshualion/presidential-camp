@@ -17,6 +17,7 @@ class SystemSettingController extends Controller
 
         $pageTitle = 'System Setting';
 
+
         View::share('pageTitle', $pageTitle);
     }
 
@@ -24,9 +25,9 @@ class SystemSettingController extends Controller
     private function getProfileData()
     {
         $id = Auth::user()->id;
+
         return User::find($id);
     }
-   
 
 
         private function getSystemSettings(){
@@ -37,7 +38,7 @@ class SystemSettingController extends Controller
         }// End Method
 
         public function systemSettings(){
-               $profileData = $this->getProfileData();
+
                 $SystemSetting = SystemSetting::first();
                 $countries = Country::all();
                 $profileData = $this->getProfileData();
@@ -48,17 +49,18 @@ class SystemSettingController extends Controller
         public function updateSystemsSettings(Request $request){
 
             $request->validate([
-                'enable_s3_storage' => 'boolean',                
+                'enable_s3_storage' => 'boolean',
                 'enable_local_storage'=> 'boolean',
                 's3_key' => 'required_if:enable_s3_storage,1',
                 's3_secret' => 'required_if:enable_s3_storage,1',
                 's3_region' => 'required_if:enable_s3_storage,1',
                 's3_bucket' => 'required_if:enable_s3_storage,1',
-                's3_endpoint' =>'required_if:enable_s3_storage,1',
+                's3_endpoint'=> 'required_if:enable_s3_storage,1',
                 'bank' => 'nullable|string|max:255',
                 'bank_account_number' => 'nullable|string|size:10',
                 'bank_account_name' => 'nullable|string|max:255',
             ]);
+
 
              // Enforce mutual exclusivity
                 $enableLocalStorage = $request->has('enable_local_storage') && $request->enable_local_storage;
@@ -67,7 +69,6 @@ class SystemSettingController extends Controller
                 if ($enableLocalStorage && $enableS3Storage) {
                     $enableLocalStorage = !$enableS3Storage;
                 }
-
                                 $site_id = $request->id;
                                 $SystemSetting= $this->getSystemSettings();
 
@@ -136,7 +137,7 @@ class SystemSettingController extends Controller
                                         's3_secret' => $request->s3_secret,
                                         's3_region' => $request->s3_region,
                                         's3_bucket' => $request->s3_bucket,
-                                        's3_endpoint'=> $request->s3_endpoint,
+                                        's3_endpoint' => $request->s3_endpoint,                                        
                                         'bank' =>$request->bank,
                                         'bank_account_name'=> $request->bank_account_name,
                                         'bank_account_number'=> $request->bank_account_number,
@@ -156,7 +157,7 @@ class SystemSettingController extends Controller
         public function SmtpSettings(){
                 $profileData = $this->getProfileData();
                 $smtpsettings = SMTPSetting::find(1);
-                return view('backend.superadmin.settings.smtp.update_smtp', compact('smtpsettings','profileData'));
+                return view('backend.'.$profileData->access_level.'.settings.smtp.update_smtp', compact('smtpsettings','profileData'));
         }
 
         public function UpdateSmtpSettings(Request $request){

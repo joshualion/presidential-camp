@@ -1,9 +1,11 @@
 
-@if($profileData->access_level = 'superadmin')
+@if($profileData->access_level == 'superadmin')
     <div class="form-group row">
         <label for="system_country" class="col-sm-3 col-form-label">System Country</label>
             <div class="col-sm-9">
-                <select  class="form-control @error('system_country') is_invalid @enderror" name="system_country" id="system_country">
+                <input type="hidden" name="system_country" value="{{ $SystemSetting->system_country }}" />
+
+                <select disabled readonly class="form-control @error('system_country') is_invalid @enderror" name="system_country" id="system_country">
                         <option value="" disabled selected>Select Country</option>
                         @foreach($countries as $country)
                             <option value="{{ $country->name }}" {{ $SystemSetting->system_country == $country->name ? 'selected' : '' }}>
@@ -23,11 +25,13 @@
     <input type="hidden" name="system_country" value="{{ $SystemSetting->system_country }}" />
 @endif
 
-@if($profileData->access_level = 'superadmin')
+@if($profileData->access_level == 'superadmin')
     <div class="form-group row">
         <label for="package" class="col-sm-3 col-form-label">Package</label>
             <div class="col-sm-9">
-                <select  class="form-control @error('package') is_invalid @enderror" name="package" id="package">
+                <input type="hidden" name="package" value="{{ $SystemSetting->package }}" />
+
+                <select disabled  class="form-control @error('package') is_invalid @enderror" name="package" id="package">
                         <option value="" disabled selected>Select Package</option>
                         @foreach($packages as $package)
                             <option value="{{ $package }}" {{ $SystemSetting->package == $package ? 'selected' : '' }}>
@@ -97,11 +101,63 @@
         </div>
 
         <div class="form-group row">
-            <label for="company_phone" class="col-sm-3 col-form-label">Office Phone</label>
+            <label for="phone" class="col-sm-3 col-form-label">Office Phone</label>
             <div class="col-sm-9">
-                <input type="text" class="form-control @error('company_phone') is_invalid @enderror" name="company_phone" id="company_phone" value="{{ $SystemSetting->company_phone }}">
+                <input type="text" id="phone" class="form-control @error('company_phone') is_invalid @enderror" name="company_phone" type="tel" pattern="\+\d{1,3}\d{5,15}" value="{{ old('phone', $SystemSetting->company_phone) }}" title="Please enter a valid phone number with country code without any space (e.g., +2348061906478)" value="{{ $SystemSetting->company_phone }}">
             </div>
             @error('company_phone')
                 <div class="alert alert-danger">{{ $message }}</div>
             @enderror
         </div>
+
+
+        <script src="{{asset('assets/js/intl-tel-input/intl-tel-input.js')}}"></script>
+        <script>
+            const input = document.querySelector("#phone");
+            const button = document.querySelector("#btn");
+            const errorMsg = document.querySelector("#error-msg");
+            const validMsg = document.querySelector("#valid-msg");
+
+            // here, the index maps to the error code returned from getValidationError - see readme
+            const errorMap = ["Invalid number", "Invalid country code", "Too short", "Too long", "Invalid number"];
+
+            window.intlTelInput(input, {
+                initialCountry: "ng",
+            geoIpLookup: callback => {
+                fetch("https://ipapi.co/json")
+                .then(res => res.json())
+                .then(data => callback(data.country_code))
+                .catch(() => callback("us"));
+
+            },
+                separateDialCode: false,
+                hiddenInput: "full_phone",
+                utilsScript: "{{asset('assets/js/intl-tel-input/utils.js')}}",
+            });
+
+                const reset = () => {
+                input.classList.remove("error");
+                errorMsg.innerHTML = "";
+                errorMsg.classList.add("hide");
+                validMsg.classList.add("hide");
+                };
+
+                // on click button: validate
+                button.addEventListener('click', () => {
+                reset();
+                if (input.value.trim()) {
+                    if (iti.isPossibleNumber()) {
+                    validMsg.classList.remove("hide");
+                    } else {
+                    input.classList.add("error");
+                    const errorCode = iti.getValidationError();
+                    errorMsg.innerHTML = errorMap[errorCode];
+                    errorMsg.classList.remove("hide");
+                    }
+                }
+                });
+
+                // on keyup / change flag: reset
+                input.addEventListener('change', reset);
+                input.addEventListener('keyup', reset);
+        </script>

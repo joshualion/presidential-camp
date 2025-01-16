@@ -18,16 +18,16 @@
                 <div class="card-header">
                     <h3 class="card-title">Add Member</h3>
                     <div class="card-tools">
-                        <a href="{{ route('superadmin.member.add') }}"><button class="btn btn-default"> <i class="fa fa-plus-square"></i> Add New Member</button></a>
+                        <a href="{{ route($profileData->access_level.'.member.add') }}"><button class="btn btn-default"> <i class="fa fa-plus-square"></i> Add New Member</button></a>
                     </div>
                 </div>
                 <!-- /.card-header -->
                 <div class="card-body">
 
-                    <form action="{{ route('superadmin.member.store') }}" method="POST">
+                    <form action="{{ route($profileData->access_level.'.member.store') }}" method="POST">
                         @csrf
 
-                        @include('backend.superadmin.member.add-member-form')
+                        @include('backend.'.$profileData->access_level.'.member.add-member-form')
                     </form>
 
                 </div>

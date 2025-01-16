@@ -8,9 +8,10 @@
             <div class="col-12">
                 <div class="card card-primary">
                 <div class="card-header">
-                    <h3 class="card-title">All Local Government Areas</h3>
+                    <h3 class="card-title">All Local Government Areas - <span class="badge badge-light">{{number_format($lgas->count(),0)}}</span></h3>
                     <div class="card-tools">
-                        <a href="{{ route('superadmin.location.lga.add') }}"><button class="btn btn-default"> <i class="fa fa-plus-square"></i> Add local Government Area - <span class="badge badge-light">{{number_format($lgas->count(),0)}}</span></button></a>
+                        <a href="{{ route('nationaladmin.location.lga.add') }}"><button class="btn btn-default"> <i class="fa fa-plus-square"></i> Add local Government Area</button></a>
+                        <a href="{{route($profileData->access_level.'.location.lga.import')}}"><button class="btn btn-dark"> <i class="fa fa-file-excel"></i> Import LGAs</button></a>
                     </div>
                 </div>
                 <!-- /.card-header -->
@@ -26,7 +27,7 @@
                     </tr>
                     </thead>
                     <tbody>
-                    
+
                     </tbody>
                     <tfoot>
                     <tr>
@@ -52,47 +53,48 @@
         </section>
     <!-- /.content -->
 
-
 <!-- Page delete confirmation script -->
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-    // Use event delegation on a parent container like 'body' to capture dynamically added elements
-    document.body.addEventListener('click', function (event) {
-        if (event.target.classList.contains('delete-btn')) {
-            event.preventDefault();
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+        // Use event delegation on a parent container like 'body' to capture dynamically added elements
+        document.body.addEventListener('click', function (event) {
+            if (event.target.classList.contains('delete-btn')) {
+                event.preventDefault();
 
-            const button = event.target;
-            const form = button.closest('form');
-            const hasAssociatedUsers = form.getAttribute('data-associated-users') === 'true';
+                const button = event.target;
+                const form = button.closest('form');
+                const hasAssociatedUsers = form.getAttribute('data-associated-users') === 'true';
 
-            if (hasAssociatedUsers) {
-                Swal.fire({
-                    title: 'Cannot Delete LGA',
-                    text: 'This LGA cannot be deleted because it has associated users.',
-                    icon: 'warning',
-                    confirmButtonColor: '#3085d6',
-                    confirmButtonText: 'OK'
-                });
-            } else {
-                Swal.fire({
-                    title: 'Confirm Delete',
-                    text: 'Are you sure you want to delete this LGA?',
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonColor: '#d33',
-                    cancelButtonColor: '#3085d6',
-                    confirmButtonText: 'Yes, delete it!'
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        form.submit(); // Submit the form after confirmation
-                    }
-                });
+                if (hasAssociatedUsers) {
+                    Swal.fire({
+                        title: 'Cannot Delete LGA',
+                        text: 'This LGA cannot be deleted because it has associated users.',
+                        icon: 'warning',
+                        confirmButtonColor: '#3085d6',
+                        confirmButtonText: 'OK'
+                    });
+                } else {
+                    Swal.fire({
+                        title: 'Confirm Delete',
+                        text: 'Are you sure you want to delete this LGA?',
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#d33',
+                        cancelButtonColor: '#3085d6',
+                        confirmButtonText: 'Yes, delete it!'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            form.submit(); // Submit the form after confirmation
+                        }
+                    });
+                }
             }
-        }
+        });
     });
-});
-</script>
+    </script>
+
 <!-- Page specific data table script -->
+
 <!-- jQuery -->
 <script src="{{asset('assets/plugins/jquery/jquery.min.js')}}"></script>
 <script>
@@ -103,6 +105,7 @@
         "serverSide": true,
         "ajax": "{{ route('lgas.data') }}", // Define a route to get the paginated data
         "pageLength": 10, // Default number of rows per page
+        "searching": true,
         "lengthMenu": [ [10, 20, 50, 100], [10, 20, 50, 100] ],
         "columns": [
             {
@@ -112,9 +115,9 @@
                 },
                 "orderable": false
             },
-            { "data": "name" },
-            { "data": "state" },
-            { "data": "region" }, // Fix the column name here, it should match the one returned in JSON
+            { "data": "name", "searchable": true },
+            { "data": "state", "searchable": true },
+            { "data": "region", "searchable": true }, // Fix the column name here, it should match the one returned in JSON
             { "data": "action", "orderable": false, "searchable": false }
         ],
         "responsive": true,

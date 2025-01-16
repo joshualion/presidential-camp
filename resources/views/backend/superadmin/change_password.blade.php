@@ -13,8 +13,8 @@
                   <div class="card card-primary">
                     <div class="card-body box-profile">
                       <div class="text-center">
-                      <img class="profile-user-img img-fluid img-circle" src="{{(!empty($profileData->photo)) ? url('uploads/profile_images/'.$profileData->photo) : url('uploads/no_image.jpg')}}" alt="profile">
-                  <span class="h4 ms-3 "></span>
+                      <img class="profile-user-img img-fluid img-circle" src="{{(!empty($profileData->photo)) ? url('uploads/member_images/'.$profileData->photo) : url('uploads/no_image.jpg')}}" alt="profile">
+                      <span class="h4 ms-3 "></span>
                       </div>
 
                       <h3 class="profile-username text-center">{{($profileData->firstname)}} {{($profileData->lastname)}}</h3>
@@ -85,7 +85,7 @@
 
                   <!-- /.tab-pane -->
                   <div class="tab-pane active" id="editprofile">
-                  <form class="form-horizontal" method="POST" action="{{route('superadmin.update.password')}}" enctype="multipart/form-data">
+                  <form class="form-horizontal" method="POST" action="{{route($profileData->access_level.'.update.password')}}" enctype="multipart/form-data">
                             @csrf
                   <div class="form-group row">
                         <label for="old_password" class="col-sm-3 col-form-label">Old Password</label>
@@ -113,10 +113,6 @@
                           <input type="password" class="form-control" name="new_password_confirmation" placeholder="Retype New password" id="new_password_confirmation">
                         </div>
                       </div>
-
-
-
-
 
                       <div class="form-group row">
                       <div class=" col-sm-12"><hr/><div>

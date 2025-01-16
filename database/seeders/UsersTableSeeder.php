@@ -12,7 +12,7 @@ class UsersTableSeeder extends Seeder
     public function run()
     {
         $access_levels = [
-            'superadmin' => 'National ICT/Media Director',
+            'superadmin' => 'Presidential Candidate',
             'nationaladmin' => 'National ICT/Media Director',
             'regionaladmin' => 'Regional ICT/Media Director',
             'stateadmin' => 'State ICT/Media Director',
