@@ -92,8 +92,21 @@ class User extends Authenticatable
         return $this->hasOne(BulkSmsSetting::class, 'user_id');
     }
 
-    public function bankAccount(){
-        return $this->hasOne(BankAccount::class);
+     /**
+     * Get the users that are following this user.
+     */
+    public function followers()
+    {
+        return $this->belongsToMany(User::class, 'followers', 'user_id', 'follower_id');
+
+    }
+
+    /**
+     * Get the users this user is following.
+     */
+    public function following()
+    {
+        return $this->belongsToMany(User::class, 'followers', 'follower_id', 'user_id');
     }
 
     public static function getPermissionGroups()

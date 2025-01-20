@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Models\SystemSetting;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -28,8 +29,12 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
+        $setting = SystemSetting::find(1);
+
         $url ='';
-        if (Auth::user()->access_level === 'superadmin') {
+        if($setting->frontend_community == 1){
+            $url = '/community/timeline';
+        }elseif(Auth::user()->access_level === 'superadmin') {
             $url = '/superadmin/dashboard';
         }elseif(Auth::user()->access_level === 'nationaladmin') {
             $url = '/national/dashboard';
@@ -44,7 +49,7 @@ class AuthenticatedSessionController extends Controller
         }elseif (Auth::user()->access_level==='puadmin'){
             $url = '/pu/dashboard';
         }elseif (Auth::user()->access_level==='user') {
-            $url = '/dashboard';
+            $url = '/member/dashboard';
         }else{
             //logout User something has gone wrong
            Auth::guard('web')->logout();

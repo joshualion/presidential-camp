@@ -1,11 +1,12 @@
 <?php
 
+use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\AjaxController;
+use App\Http\Controllers\HomeController;
 use App\Http\Controllers\BulksmsController;
 use App\Http\Controllers\ElectionController;
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\ProfileCompletionController;
 use App\Http\Controllers\CredentialUpdateController;
-use App\Http\Controllers\AjaxController;
+use App\Http\Controllers\ProfileCompletionController;
 
 
 
@@ -56,6 +57,52 @@ Route::get('/election/{uuid}/chart-data', [ElectionController::class, 'getElecti
     Route::get('/select-support-group', [ProfileCompletionController::class, 'selectSupportGroup'])->name('select.support.group')->middleware('auth');
     Route::post('/store-support-group', [ProfileCompletionController::class, 'storeSupportGroup'])->name('store.support.group')->middleware('auth');
 
+    
+
+
+
+//Application Landing Page
+Route::get('/', function () {
+    if (Auth::check()) {
+        $user = Auth::user();
+        $dashboardRoute = match ($user->access_level) {
+            'superadmin' => route('superadmin.dashboard'),
+            'nationaladmin' => route('nationaladmin.dashboard'),
+            'stateadmin' => route('stateadmin.dashboard'),
+            'lgaadmin' => route('lgaadmin.dashboard'),
+            'wardadmin' => route('wardadmin.dashboard'),
+            'puadmin' => route('puadmin.dashboard'),
+            'user' => route('user.dashboard'),
+            // Add more levels here as needed
+            default => route('login'),
+        };
+        return redirect($dashboardRoute);
+    }
+    return redirect()->route('login');
+});
+
+//Emergency exit
+
+Route::get('/emergency/exit', function () {
+    Auth::logout();
+    session()->invalidate();
+    session()->regenerateToken();
+    return redirect()->route('login');
+})->name('emergency.exit');
+
+//Front Pages
+Route::middleware(['auth','check_onboarding'])->group(function () {
+    // comunity pages
+    Route::get('/community/timeline', [HomeController::class,'index'])->name('timeline');
+  
+    // Followers and following views
+    Route::get('/user/followers', [HomeController::class, 'getFollowers']);
+    Route::get('/user/following', [HomeController::class, 'getFollowing']);
+
+ 
+});
+
+
 
 
 
@@ -74,24 +121,11 @@ require __DIR__.'/stateAdmin.php';
 //Require LGA Admin Routes file
 require __DIR__.'/lgaAdmin.php';
 
+//Require Ward Admin Routes file
+require __DIR__.'/wardAdmin.php';
+
+//Require User Routes file
+require __DIR__.'/memberAdmin.php';
+
 //Require Auth Routes file
 require __DIR__.'/auth.php';
-
-//Application Landing Page
-Route::get('/', function () {
-    if (Auth::check()) {
-        $user = Auth::user();
-        $dashboardRoute = match ($user->access_level) {
-            'superadmin' => route('superadmin.dashboard'),
-            'nationaladmin' => route('nationaladmin.dashboard'),
-            'stateadmin' => route('stateadmin.dashboard'),
-            'lgaadmin' => route('lgaadmin.dashboard'),
-            'wardadmin' => route('wardadmin.dashboard'),
-            'puadmin' => route('puadmin.dashboard'),
-            // Add more levels here as needed
-            default => route('login'),
-        };
-        return redirect($dashboardRoute);
-    }
-    return redirect()->route('login');
-});

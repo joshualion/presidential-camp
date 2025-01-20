@@ -81,6 +81,12 @@
 @endif
 <!-- /lga admin Menu -->
 
+<!-- ward admin Menu -->
+@if(Auth::user()->access_level == 'wardadmin')
+@Include('backend.template.wardAdminMenu') 
+@endif
+<!-- /ward admin Menu -->
+
 
 <!-- Member Menu -->
 @if(Auth::user()->access_level == 'user')

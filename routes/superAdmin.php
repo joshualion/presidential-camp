@@ -6,6 +6,7 @@ use App\Http\Controllers\BulksmsController;
 use App\Http\Controllers\BulkSmsSettingController;
 use App\Http\Controllers\ChartsController;
 use App\Http\Controllers\ElectionController;
+use App\Http\Controllers\LiveChatController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\MembersController;
 use App\Http\Controllers\PaymentGatewayController;
@@ -318,9 +319,14 @@ Route::post('/superadmin/incident/store', [ElectionController::class, 'storeIcid
   Route::post('/superadmin/bulksms/setting/update/', [BulkSmsSettingController::class, 'update'])->name('superadmin.bulksms.setting.update')->middleware('access_level:superadmin');
   // Send Bulksms Routes
   Route::get('/superadmin/bulksms/send', [BulksmsController::class, 'index'])->name('superadmin.bulksms.send')->middleware('access_level:superadmin');
-  Route::post('/superadmin/bulksms/send/sms', [BulksmsController::class, 'sendsms'])->name('superadmin.bulksms.send.sms')->middleware('access_level:superadmin');
+  Route::post('/superadmin/bulksms/send/sms', [BulksmsController::class, 'sendsms'])->name('superadmin.bulksms.send.sms')->middleware(middleware: 'access_level:superadmin');
 
- 
+
+  // Live Chat Application
+  Route::get('/superadmin/chat/messenger', [LiveChatController::class,'index'])->name('superadmin.livechat.send')->middleware('access_level:superadmin');
+  Route::get('/superadmin/chat/messages', [LiveChatController::class, 'fetchMessages'])->name('superadmin.livechat.fetch.messages')->middleware('access_level:superadmin');
+  Route::post('/superadmin/chat/send', [LiveChatController::class, 'sendMessage'])->name('superadmin.livechat.send.messages')->middleware('access_level:superadmin');
+
 
 });
 

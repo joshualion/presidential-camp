@@ -247,12 +247,12 @@
                   </a>
                 </li>
 
-                <!-- <li class="nav-item">
-                  <a href="#" class="nav-link">
+                 <li class="nav-item">
+                  <a href="/superadmin/chat/messenger" class="nav-link">
                   <i class="fas fa-comment-alt nav-icon"></i>
                     <p>Live Chat</p>
                   </a>
-                </li> -->
+                </li> 
                 <!-- <li class="nav-item">
                   <a href="#" class="nav-link">
                   <i class="fas fa-envelope-square nav-icon"></i>

@@ -14,7 +14,7 @@
                     <div class="card-body box-profile">
                       <div class="text-center">
                       <img class="profile-user-img img-fluid img-circle" src="{{(!empty($profileData->photo)) ? url('uploads/member_images/'.$profileData->photo) : url('uploads/no_image.jpg')}}" alt="profile">
-                  <span class="h4 ms-3 "></span>
+                        <span class="h4 ms-3 "></span>
                       </div>
 
                       <h3 class="profile-username text-center">{{($profileData->firstname)}} {{($profileData->lastname)}}</h3>

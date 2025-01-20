@@ -38,6 +38,7 @@ class StateAdminController extends Controller
         return User::find($id);
     }
 
+    
     //Function to get the system country
     private function getCountries()
     {

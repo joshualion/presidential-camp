@@ -11,8 +11,8 @@
                 <div class="card-header">
                     <h3 class="card-title">All Roles</h3>
                     <div class="card-tools">
-                        <a href="{{ route('nationaladmin.settings.role.add') }}"><button class="btn btn-default"> <i class="fa fa-plus-square"></i> Add role</button></a>
-                        <a href="{{ route('nationaladmin.settings.permissions') }}"><button class="btn btn-default"> <i class="fas fa-pencil-alt"></i> Manage Permissions</button></a>
+                        <a href="{{ route($profileData->access_level.'.settings.role.add') }}"><button class="btn btn-default"> <i class="fa fa-plus-square"></i> Add role</button></a>
+                        <a href="{{ route($profileData->access_level.'.settings.permissions') }}"><button class="btn btn-default"> <i class="fas fa-pencil-alt"></i> Manage Permissions</button></a>
                     </div>
                 </div>
                 <!-- /.card-header -->

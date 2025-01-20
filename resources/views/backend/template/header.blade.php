@@ -5,7 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="csrf-token" content="{{ csrf_token() }}">
 
-  <title>Political Campaign & Election Management Solution</title>
+  <title>
+    @if($SystemSetting)
+    {{$pageTitle}} - {{$SystemSetting->system_name}}
+    @else
+    Political Campaign & Election Management Solution
+    @endif
+  </title>
+  @vite(['resources/js/app.js'])
 
   <!-- Google Font: Source Sans Pro -->
   <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700&display=fallback">
@@ -102,7 +109,7 @@
     background: #ccc !important;
     color: #fff;
     background-color: #fafafa !important;
-    border-color: #6c757d;
+    border-color: {{ $SystemSetting->dark_theme_color ?? ' #008751'}} !important;
     box-shadow: none;
     }
 

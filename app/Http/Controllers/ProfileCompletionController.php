@@ -269,8 +269,15 @@ class ProfileCompletionController extends Controller
             'message'=> 'Volunteer groups updated successfully!',
             'type'=> 'success',
          ];
-     
+
+         $Setting = SystemSetting::find(1);
+
+         if($Setting->frontend_community==1){
+            return redirect()->route('timeline')->with($notification);     
+         }else{     
          return redirect()->route($profileData->access_level.'.dashboard')->with($notification);
-     }
+         }
+         
+        }
      
 }
