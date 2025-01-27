@@ -33,7 +33,7 @@ class AuthenticatedSessionController extends Controller
 
         $url ='';
         if($setting->frontend_community == 1){
-            $url = '/community/timeline';
+            $url = '/community/feed';
         }elseif(Auth::user()->access_level === 'superadmin') {
             $url = '/superadmin/dashboard';
         }elseif(Auth::user()->access_level === 'nationaladmin') {

@@ -2,17 +2,28 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Post;
 use App\Models\User;
 use Illuminate\Http\Request;
+use App\Services\FileStorageService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\View;
 
 class HomeController extends Controller
 {
-    public function __construct(){
-        $pageTitle = 'Timeline';
-        View::share('pageTitle', $pageTitle);
-    }
+    protected $fileStorageService;
+
+     // Constructor with dependency injection
+     public function __construct(FileStorageService $fileStorageService)
+     {
+         $this->fileStorageService = $fileStorageService;
+ 
+         // Your existing logic
+         $pageTitle = 'Community';
+         View::share('pageTitle', $pageTitle);
+     }
+
+   
 
      // Function to get the profile data
      private function getProfileData()
@@ -31,9 +42,11 @@ class HomeController extends Controller
         $followers = $profileData->followers()->get(); // Users following this profile
         $following = $profileData->following()->get(); // Users this profile is following
      
+       
+
         return view('frontend.index', compact(
             'profileData',
-            'userSupportGroups',
+             'userSupportGroups',
             'followersCount',
             'followingCount',
             'followers',
@@ -43,27 +56,152 @@ class HomeController extends Controller
     }
 
 
-    public function getFollowers()
+   
+    public function storePost(Request $request)
     {
-        $profileData = $this->getProfileData();
-        // Paginate followers and following
-        $followers = $profileData->followers()->paginate(10); // 10 followers per page
+        // Validate the request
+        $validatedData = $request->validate([
+            'content' => 'nullable|string|required_without_all:photo,video',
+            'photo' => 'nullable|image|max:2048|required_without_all:content,video', // Max 2MB
+            'video' => 'nullable|mimes:mp4,mov,avi|max:10240|required_without_all:content,photo', // Max 10MB
+            'audience' => 'required|string',
+        ], [
+            'content.required_without_all' => 'You must provide content, a photo, or a video.',
+            'photo.required_without_all' => 'You must provide content, a photo, or a video.',
+            'video.required_without_all' => 'You must provide content, a photo, or a video.',
+        ]);
 
+        // Initialize file paths
+        $photoFilename = null;
+        $videoFilename = null;
+
+        // Store photo if uploaded
+        if ($request->hasFile('photo')) {
+            $photoFilename = $this->fileStorageService->storeFile(
+                $request->file('photo'),
+                'community/photos'
+            );
+        }
+
+        // Store video if uploaded
+        if ($request->hasFile('video')) {
+            $videoFilename = $this->fileStorageService->storeFile(
+                $request->file('video'),
+                'community/videos'
+            );
+        }
+
+        // Retrieve additional profile data
+        $profileData = $this->getProfileData();
+        $country_id = $profileData->country_id;  // Assuming the user has a country relationship
+        $region_id = $profileData->region_id;    // Assuming the user has a region relationship
+        $state_id = $profileData->state_id;      // Assuming the user has a state relationship
+        $lga_id = $profileData->lga_id;          // Assuming the user has a LGA relationship
+        $ward_id = $profileData->ward_id;        // Assuming the user has a ward relationship
+        $pu_id = $profileData->polling_unit_id ; // Assuming the user has a polling unit relationship
+
+        // Create the post
+        $post = $profileData->posts()->create([
+            'content' => $validatedData['content'],
+            'image_url' => $photoFilename,
+            'video_url' => $videoFilename,
+            'audience' => $validatedData['audience'],
+            'country_id' => $country_id,
+            'region_id' => $region_id,
+            'state_id' => $state_id,
+            'lga_id' => $lga_id,
+            'ward_id' => $ward_id,
+            'pu_id' => $pu_id,
+            'post_type' => $photoFilename && $videoFilename ? 'mixed' : ($photoFilename ? 'image' : ($videoFilename ? 'video' : 'text')),
+        ]);
+
+        // Respond with the new post (to update the feed dynamically)
         return response()->json([
-            'followers' => $followers
+            'status' => 'success',
+            'post' => $post,
+            'photo_url' => $photoFilename ? $this->fileStorageService->getFileUrl('uploads/community/photos/' . $photoFilename) : null,
+            'video_url' => $videoFilename ? $this->fileStorageService->getFileUrl('uploads/community/videos/' . $videoFilename) : null,
         ]);
     }
 
-    public function getFollowing()
-    {
-        $profileData = $this->getProfileData();
-        // Paginate  following
-        $following = $profileData ->following()->paginate(10); // 10 following per page
 
-        return response()->json([
-            'following' => $following
-        ]);
+    public function fetchPosts(Request $request)
+    {
+        // Get the audience and page parameters from the request
+        $audience = $request->input('audience', 'public');
+        $page = $request->query('page', 1); // Default to page 1 if not provided
+
+        // Initialize the query builder for posts
+        $query = Post::with('user');  // Assuming the relationship is named 'user'
+
+        // Get profile data for filtering
+        $profileData = $this->getProfileData();
+
+        // Check audience type and apply filters accordingly
+        switch ($audience) {
+            case 'public':
+                // No additional filtering for public audience
+                $query->where('audience', 'public');
+                break;
+            case 'region':
+                // Filter posts based on the region_id (user's region vs post's region)
+                $regionId = $profileData->region_id;
+                $query->where(function($q) use ($regionId) {
+                    $q->where('audience', 'public')
+                    ->orWhere('region_id', $regionId);
+                });
+                break;
+            case 'state':
+                // Filter posts based on the state_id (user's state vs post's state)
+                $stateId = $profileData->state_id;
+                $query->where(function($q) use ($stateId) {
+                    $q->where('audience', 'public')
+                    ->orWhere('state_id', $stateId);
+                });
+                break;
+            case 'lga':
+                // Filter posts based on the lga_id (user's LGA vs post's LGA)
+                $lgaId = $profileData->lga_id;
+                $query->where(function($q) use ($lgaId) {
+                    $q->where('audience', 'public')
+                    ->orWhere('lga_id', $lgaId);
+                });
+                break;
+            case 'ward':
+                // Filter posts based on the ward_id (user's ward vs post's ward)
+                $wardId = $profileData->ward_id;
+                $query->where(function($q) use ($wardId) {
+                    $q->where('audience', 'public')
+                    ->orWhere('ward_id', $wardId);
+                });
+                break;
+            case 'pu':
+                // Filter posts based on the pu_id (user's polling unit vs post's polling unit)
+                $puId = $profileData->polling_unit_id;
+                $query->where(function($q) use ($puId) {
+                    $q->where('audience', 'public')
+                    ->orWhere('pu_id', $puId);
+                });
+                break;
+            default:
+                // If the audience is not recognized, fall back to public
+                $query->where('audience', 'public');
+                break;
+        }
+
+        // Order by creation date and paginate the results
+        $posts = $query->orderBy('created_at', 'desc')->paginate(1000, ['*'], 'page', $page);
+        
+        $posts = $query->skip($request->get('offset'))->take(10)->get();
+       
+        return response()->json($posts );
     }
+
+
+
+
+
+    
 
 
 }

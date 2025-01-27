@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+
     <title>
         @if($SystemSetting)
         {{$pageTitle}} - {{$SystemSetting->system_name}}
@@ -16,12 +18,23 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- FontAwesome Icons -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css"> <!-- Include your custom styles -->
+    <link rel="stylesheet" href="{{asset('frontend/css/style.css')}}"> <!-- Include your custom styles -->
 
     <!-- Custom CSS -->
-    <link id="theme-stylesheet" href="css/theme-light.css" rel="stylesheet">
+    <link id="theme-stylesheet" href="{{asset('frontend/css/theme-light.css')}}" rel="stylesheet">
     <style>
+
+     
                 /* Custom Styles */
+                .navbar-nav .nav-link {
+                    transition: transform 0.3s, box-shadow 0.3s;
+                }
+
+                .navbar-nav .nav-link:hover {
+                    transform: scale(1.1);
+                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                }
+
 
         
     h1{
@@ -31,6 +44,25 @@
     .os-scrollbar{
      background-color: {{ $SystemSetting->dark_theme_color ?? ' #008751'}} !important;
       
+    }
+
+    .embossed-image {
+            position: relative;
+            display: inline-block;
+            filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.9)) 
+                    drop-shadow(-2px -2px 4px rgba(255, 255, 255, 0.1));
+            /* Adjust these values for different embossing effects */
+        }
+
+        
+
+     .bg-primary{
+     background-color: {{ $SystemSetting->dark_theme_color ?? ' #008751'}} !important;
+     
+    }
+
+    h5 {
+      color: {{ $SystemSetting->dark_theme_color ?? '#008751' }} !important;
     }
 
     a{
@@ -53,6 +85,11 @@
       background-color: {{ $SystemSetting->dark_theme_color ?? ' #008751'}} !important;
       border-color: {{ $SystemSetting->dark_theme_color ?? ' #008751'}} !important;
     }
+
+    .username{
+    color: {{ $SystemSetting->dark_theme_color ?? ' #008751'}} !important;
+ }
+
     .dataTables_paginate .paginate_button:hover {
       color: #fff !important;
       background-color: {{ $SystemSetting->dark_theme_color ?? ' #008751'}} !important;
@@ -194,8 +231,8 @@
 
         .sidebar .nav-link.active,
         .sidebar .nav-link:hover {
-           // background-color: #c3e6cb; /* Lighter green for active and hover */
-            color: #155724 !important;
+            background-color: #c3e6cb; /* Lighter green for active and hover */
+            color: {{ $SystemSetting->dark_theme_color ?? ' #008751'}} !important; 
         }
 
         /* General Styling */
@@ -218,5 +255,12 @@
             color: #ffffff !important;
             background-color: {{ $SystemSetting->dark_theme_color ?? ' #008751'}} !important;
         }
+
+        .logo {
+    max-width: 100%;
+    height: auto; /* Maintain aspect ratio */
+    display: block; /* Remove any extra space below the image */
+  }
+
     </style>
 </head>

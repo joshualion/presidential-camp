@@ -8,8 +8,9 @@
     <p>This section can be used for announcements, links, or ads.</p>
     </div>
 </div>
+@desktop()
 <hr/>
-<!-- Sidebar 2 -->
+<!-- Sidebar Widgit 2 -->
 <div class="card card-primary mt-20 gap-10">
     <div class="card-header">
         <h6 class="card-title">Events</h6>
@@ -20,8 +21,9 @@
     </div>
 </div>
 
-<!-- Sidebar 2 -->
-<div class="card card-primary mt-40 gap-20">
+<hr/>
+<!-- Sidebar Widgit  3 -->
+<div class="card card-primary pt-40 mt-20">
     <div class="card-header">
         <h6 class="card-title">Polls Watch</h6>
         </div>
@@ -30,3 +32,4 @@
     <p>Displays election updates and stats .</p>
     </div>
 </div>
+@enddesktop()

@@ -1,12 +1,28 @@
-<div class="card mb-3" >
-    <div class="card-body">
-            <!-- Vue Component for Followers -->
-            <Get-Followers v-if="isFollowersVisible"></Get-Followers>
-    </div>
+<!-- New Post Section -->
+<div class="col-md-6">    
 
-    <div class="card-body">       
-        <!-- Vue Component for Following -->
-        <Get-Following v-if="isFollowingVisible"></Get-Following>
+
+    <!-- Include VUE ROW-->
+    <div class="row" id= "app" >
+        <div class="col-md-12">
+            <div class="card mb-3">                              
+        
+                <div class="card-body">
+                    
+                        <!-- Vue Component for Followers -->
+                    <get-followers v-if="isFollowersVisible" :></get-followers>
+                
+                    <!-- Vue Component for Following -->
+                    <get-following v-if="isFollowingVisible"></get-following>
+
+                    
+                </div>
+            </div>
+            
+        </div>
+
     </div>
+    <!-- Include VUE ROW-->  
 
 </div>
+

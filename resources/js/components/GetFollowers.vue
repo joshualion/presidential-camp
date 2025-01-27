@@ -1,6 +1,6 @@
 <template>
     <div v-if="isFollowersVisible">
-      <h3>Followers</h3>
+      <h5 class="card-title">Followers</h5>
       <ul>
         <li v-for="follower in followers.data" :key="follower.id">{{ follower.firstname }} {{ follower.lastname }}</li>
       </ul>
@@ -31,7 +31,9 @@
           });
       },
       showFollowers() {
+        console.log('showFollowers called');
         this.isFollowersVisible = true;
+        console.log('isFollowersVisible:', this.isFollowersVisible);
         this.fetchFollowers();
       }
     },

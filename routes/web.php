@@ -3,7 +3,6 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AjaxController;
 use App\Http\Controllers\HomeController;
-use App\Http\Controllers\BulksmsController;
 use App\Http\Controllers\ElectionController;
 use App\Http\Controllers\CredentialUpdateController;
 use App\Http\Controllers\ProfileCompletionController;
@@ -93,11 +92,15 @@ Route::get('/emergency/exit', function () {
 //Front Pages
 Route::middleware(['auth','check_onboarding'])->group(function () {
     // comunity pages
-    Route::get('/community/timeline', [HomeController::class,'index'])->name('timeline');
+    Route::get('/community/feed', [HomeController::class,'index'])->name('timeline');
+    Route::post('/community/post/store', [HomeController::class,'storePost'])->name('posts.store');
   
+    //Get feed:
+    Route::get('/community/posts', [HomeController::class, 'fetchPosts'])->name('posts.fetch');
+
     // Followers and following views
-    Route::get('/user/followers', [HomeController::class, 'getFollowers']);
-    Route::get('/user/following', [HomeController::class, 'getFollowing']);
+    Route::get('/community/followers', [HomeController::class, 'getFollowers']);
+    Route::get('/community/following', [HomeController::class, 'getFollowing']);
 
  
 });

@@ -1,6 +1,6 @@
 <template>
     <div v-if="isFollowingVisible">
-      <h3>Following</h3>
+      <h5 class="card-title">Following</h5>
       <ul>
         <li v-for="followedUser in following.data" :key="followedUser.id">{{ followedUser.name }}</li>
       </ul>
@@ -36,3 +36,4 @@ export default {
   }
 };
 </script>
+

@@ -1,52 +1,71 @@
-<nav class="navbar navbar-expand-lg navbar-dark">
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
     <div class="container">
-        <div class="row w-100 align-items-center">
-            <!-- Logo: 5 columns -->
-            <div class="col-3 col-lg-3 d-flex align-items-center">
-                <a class="navbar-brand" href="/">
-                    <img src="{{ !empty($SystemSetting->logo) ? url('uploads/system_images/'.$SystemSetting->logo) : url('uploads/system_images/logo.png') }}" class="logo img-responsive" @desktop() width="50%" @enddesktop() @handheld() width="100%" @endhandheld() height="auto" />
-                </a>
-            </div>
+        <!-- Toggle Button for Small Screens -->
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent" aria-controls="navbarContent" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
 
-            <!-- Search Form: 10 columns -->
-            <div class="col-6 col-lg-6">
-                <form class="d-flex " role="search">
-                    <input class="form-control me-2 w-100 styled-search-form" type="search" placeholder="Search" aria-label="Search">
-                    <button class="btn btn-primary" type="submit">
-                        <i class="fas fa-search"></i>
-                    </button>
-                </form>
-            </div>
+        <!-- Navbar Content -->
+        <div class="collapse navbar-collapse" id="navbarContent">
+            <div class="row w-100 align-items-center">
+                <!-- Logo: 3 columns on large screens, 4 on medium and smaller screens -->
+                <div class="col-4 col-lg-3 d-flex align-items-center">
+                    <a class="navbar-brand" href="/" style="width: 100px; height: 50px; overflow: hidden;">
+                        <img 
+                            src="{{ !empty($SystemSetting->logo) ? url('uploads/system_images/'.$SystemSetting->logo) : url('uploads/system_images/logo.png') }}" 
+                            class="logo img-responsive embossed-image" 
+                            style="max-width: 100%; height: auto;" 
+                        />
+                    </a>
+                </div>
 
-            @desktop()
-            <!-- Profile Dropdown: 5 columns -->
-            <div class="col-3 col-lg-3 d-flex justify-content-end">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <img src="{{(!empty($profileData->photo)) ? url('uploads/member_images/'.$profileData->photo) : url('uploads/no_image.jpg')}}" class="img-circle" alt="profile picture" width="40" height="40">
-                        </a>
+                <!-- Search Form: 6 columns on large screens, 8 on medium screens -->
+                <div class="col-8 col-lg-6">
+                    <form class="d-flex" role="search">
+                        <input class="form-control me-2 w-100 styled-search-form" type="search" placeholder="Search" aria-label="Search">
+                        <button class="btn btn-light" type="submit">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </form>
+                </div>
 
-                        <ul class="dropdown-menu dropdown-menu-end profile-nav text-white" aria-labelledby="navbarDropdown">
-                            <li class="dropdown-header text-center">
-                                <img src="{{(!empty($profileData->photo)) ? url('uploads/member_images/'.$profileData->photo) : url('uploads/no_image.jpg')}}" alt="User Image" class="img-circle mb-2" width="60" height="60" />
-                                <h6 class="mb-0">{{$profileData->firstname}} {{$profileData->lastname}}</h6>
-                            </li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="{{route($profileData->access_level.'.dashboard')}}"> <i class="fas fa-laptop nav-icon"></i> Dashboard</a></li>
-                            <li><a class="dropdown-item" href="#"> <i class="fas fa-users nav-icon"></i> Followers: {{$followersCount}}</a></li>
-                            <li><a class="dropdown-item" href="#"> <i class="fas fa-biking nav-icon"></i> Following: {{$followingCount}}</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li>
-                                <a class="dropdown-item text-dark" href="{{route($profileData->access_level.'.logout')}}">
-                                    <i class="fas fa-power-off nav-icon"></i> Logout
-                                </a>
-                            </li>
-                        </ul>
-                    </li>
-                </ul>
+               
+               @desktop <!-- Notification, Message, and Logout Icons -->
+                <div class="col-12 col-lg-3 d-flex justify-content-end mt-3 mt-lg-0">
+                    <ul class="navbar-nav ms-auto d-flex flex-row align-items-center gap-3" style="list-style: none; margin: 0; padding: 0;">
+                        <!-- Notification Icon -->
+                        <li class="nav-item position-relative">
+                            <a class="nav-link p-2 rounded-circle d-flex justify-content-center align-items-center shadow" href="#" title="Notifications" style="background-color: {{ $SystemSetting->dark_theme_color ?? '#008751' }}; width: 35px; height: 35px;">
+                                <i class="fas fa-bell" style="font-size: 1.2rem; color: #f9f9f9; "></i>
+                            </a>
+                            <!-- Optional Badge -->
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-warning" style="font-size: 0.75rem;">
+                                3
+                            </span>
+                        </li>
+
+                        <!-- Message Icon -->
+                        <li class="nav-item position-relative">
+                            <a class="nav-link p-2 rounded-circle d-flex justify-content-center align-items-center shadow" href="#" title="Messages" style="background-color:  {{ $SystemSetting->dark_theme_color ?? '#008751' }}; width: 35px; height: 35px;">
+                                <i class="fas fa-comment" style="font-size: 1.2rem; color: #f9f9f9;"></i>
+                            </a>
+                            <!-- Optional Badge -->
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.75rem;">
+                                5
+                            </span>
+                        </li>
+
+                        <!-- Logout Icon -->
+                        <li class="nav-item">
+                            <a class="nav-link p-2 rounded-circle d-flex justify-content-center align-items-center shadow" href="{{route($profileData->access_level.'.logout')}}" title="Logout" style="background-color:  {{ $SystemSetting->dark_theme_color ?? '#008751' }}; width: 35px; height: 35px;">
+                                <i class="fas fa-power-off" style="font-size: 1.2rem; color:#f9f9f9; "></i>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                @enddesktop()
+
             </div>
-            @enddesktop()
         </div>
     </div>
 </nav>

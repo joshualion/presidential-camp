@@ -92,6 +92,12 @@ class User extends Authenticatable
         return $this->hasOne(BulkSmsSetting::class, 'user_id');
     }
 
+     // Define the one-to-many relationship between User and Post
+     public function posts()
+     {
+         return $this->hasMany(Post::class);
+     }
+
      /**
      * Get the users that are following this user.
      */
