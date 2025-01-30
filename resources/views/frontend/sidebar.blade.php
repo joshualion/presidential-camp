@@ -50,17 +50,17 @@
             
             <li class="nav-item mb-2">
                 <a class="nav-link text-dark d-flex align-items-center" href="{{route($profileData->access_level.'.dashboard')}}">
-                    <i class="fas fa-laptop nav-icon  me-2"></i> Dashboard <span class="badge bg-primary ms-auto"><i class="fas  fa-eye"></i></span>
+                    <i class="fas fa-tachometer-alt nav-icon  me-2"></i> Dashboard <span class="badge bg-primary ms-auto"><i class="fas  fa-eye"></i></span>
                 </a>
             </li>
             <li class="nav-item mb-2">
                 <a class="nav-link text-dark d-flex align-items-center" href="javascript:void(0)" @click.prevent="$root.$emit('show-followers')">
-                    <i class="fas fa-users nav-icon  me-2"></i> Followers <span class="badge bg-primary ms-auto">{{$followersCount}}</span>
+                    <i class="fas fa-users nav-icon  me-2"></i> Followers <span class="badge bg-primary ms-auto">{{ number_format($followersCount) }}</span>
                 </a>
             </li>
             <li class="nav-item mb-4">
                 <a class="nav-link text-dark d-flex align-items-center" href="javascript:void(0)" @click.prevent="showFollowing">
-                    <i class="fas fa-biking nav-icon  me-2"></i> Following <span class="badge bg-primary ms-auto">{{$followingCount}}</span>
+                    <i class="fas fa-biking nav-icon  me-2"></i> Following <span class="badge bg-primary ms-auto">{{number_format($followingCount) }}</span>
                 </a>
             </li>
             
@@ -71,35 +71,35 @@
             </h6>
             @if(($SystemSetting) && ($SystemSetting->package == 'national'))
             <li class="nav-item small">
-                <a class="nav-link text-dark ps-3"><i class="fas fa-globe"></i> {{ ucwords(strtolower($profileData->country->name)) }}
+                <a class="nav-link text-dark ps-3"><i class="fas fa-globe"></i> Country: {{ ucwords(strtolower($profileData->country->name)) }}
                     
                 </a>
             </li>
             @endif
             @if(($SystemSetting) && ($SystemSetting->package == 'national') || ($SystemSetting->package == 'regional'))
             <li class="nav-item small">
-                <a class="nav-link text-dark ps-3"><i class="fas fa-globe"></i> {{ ucwords(strtolower($profileData->region->name)) }}
+                <a class="nav-link text-dark ps-3"><i class="fas fa-globe"></i> Region: {{ ucwords(strtolower($profileData->region->name)) }}
                     
                 </a>
             </li>
             @endif
             <li class="nav-item small">
-                <a class="nav-link text-dark ps-3"><i class="fas fa-globe"></i> {{ ucwords(strtolower($profileData->state->name)) }}
+                <a class="nav-link text-dark ps-3"><i class="fas fa-globe"></i> State: {{ ucwords(strtolower($profileData->state->name)) }}
                     
                 </a>
             </li>
             <li class="nav-item small">
-                <a class="nav-link text-dark ps-3"><i class="fas fa-globe"></i> {{ ucwords(strtolower($profileData->lga->name)) }}
+                <a class="nav-link text-dark ps-3"><i class="fas fa-globe"></i> LGA: {{ ucwords(strtolower($profileData->lga->name)) }}
                     
                 </a>
             </li>
             <li class="nav-item small">
-                <a class="nav-link text-dark ps-3"><i class="fas fa-globe"></i> Ward {{ ucwords(strtolower($profileData->ward->name)) }}
+                <a class="nav-link text-dark ps-3"><i class="fas fa-globe"></i> Ward: {{ ucwords(strtolower($profileData->ward->name)) }}
                     
                 </a>
             </li>
             <li class="nav-item small">
-                <a class="nav-link text-dark ps-3"><i class="fas fa-globe"></i> {{ ucwords(strtolower($profileData->pollingUnit->name)) }}
+                <a class="nav-link text-dark ps-3"><i class="fas fa-globe"></i> PU: {{ ucwords(strtolower($profileData->pollingUnit->name)) }}
                      </a>
             </li>
 

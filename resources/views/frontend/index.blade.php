@@ -5,5 +5,4 @@
    
          @include('frontend.createPost')
 
-
 @endsection

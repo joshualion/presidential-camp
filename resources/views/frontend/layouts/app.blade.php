@@ -1,4 +1,4 @@
-<body class="d-flex flex-column min-vh-100">
+<body class="d-flex flex-column min-vh-100" >
 
     <!-- Include Header -->
     @include('frontend.header')
@@ -8,7 +8,7 @@
 
     <div class="container-fluid flex-grow-3">
         <div class="row">
-            <div class="col-lg-12">
+            <div class="col-lg-12" >
                 <div class="container mt-4">
                     <div class="row">
                 
@@ -23,13 +23,7 @@
                 @yield('content')
 
                 
-                  <!-- Include Left Sidebar  -->
-                  @mobile()
-                  <div class="col-md-3 sidebar">
-                      @include('frontend.sidebar')
-                  </div>
-                  <hr/>
-                  @endmobile()
+                 
                   <!-- Include Left Sidebar  -->
                             <!-- Include Right Sidebar -->
                             <div class="col-md-3 sidebar">

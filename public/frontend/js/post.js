@@ -143,17 +143,7 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 
-//Audience data 
-document.addEventListener('DOMContentLoaded', function () {
-    // Audience Selection
-    document.querySelectorAll('.dropdown-item').forEach(item => {
-        item.addEventListener('click', function (e) {
-            e.preventDefault();
-            const selectedValue = this.getAttribute('data-value');
-            document.getElementById('audienceInput').value = selectedValue;
-        });
-    });
-});
+
 
 
 

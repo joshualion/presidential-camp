@@ -6,6 +6,7 @@ use App\Models\Post;
 use App\Models\User;
 use Illuminate\Http\Request;
 use App\Services\FileStorageService;
+use App\Events\NewPostCreated;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\View;
 
@@ -53,6 +54,28 @@ class HomeController extends Controller
             'following'
         ));
 
+    }
+
+    public function mobileProfile(){
+        $profileData = $this->getProfileData();
+        $userSupportGroups = $profileData->supportGroups()->pluck('name')->toArray();
+        // Get followers and following counts
+        $followersCount = $profileData->followers()->count();
+        $followingCount = $profileData->following()->count();
+         // Get followers and following data
+        $followers = $profileData->followers()->get(); // Users following this profile
+        $following = $profileData->following()->get(); // Users this profile is following
+     
+       
+
+        return view('frontend.profile', compact(
+            'profileData',
+             'userSupportGroups',
+            'followersCount',
+            'followingCount',
+            'followers',
+            'following'
+        ));
     }
 
 
@@ -115,6 +138,8 @@ class HomeController extends Controller
             'post_type' => $photoFilename && $videoFilename ? 'mixed' : ($photoFilename ? 'image' : ($videoFilename ? 'video' : 'text')),
         ]);
 
+        broadcast(new NewPostCreated($post))->toOthers();
+
         // Respond with the new post (to update the feed dynamically)
         return response()->json([
             'status' => 'success',
@@ -127,16 +152,16 @@ class HomeController extends Controller
 
     public function fetchPosts(Request $request)
     {
-        // Get the audience and page parameters from the request
+        // Get the audience, page, and last_post_timestamp parameters from the request
         $audience = $request->input('audience', 'public');
-        $page = $request->query('page', 1); // Default to page 1 if not provided
-
+        $lastPostTimestamp = $request->input('last_post_timestamp'); // Timestamp of the latest post in the feed
+    
         // Initialize the query builder for posts
         $query = Post::with('user');  // Assuming the relationship is named 'user'
-
+    
         // Get profile data for filtering
         $profileData = $this->getProfileData();
-
+    
         // Check audience type and apply filters accordingly
         switch ($audience) {
             case 'public':
@@ -188,18 +213,132 @@ class HomeController extends Controller
                 $query->where('audience', 'public');
                 break;
         }
+    
+        // Filter posts created after the last_post_timestamp
+        if ($lastPostTimestamp) {
+            $query->where('created_at', '>', $lastPostTimestamp);
+        }
+    
+        // Order by creation date and get the results
+        $posts = $query->latest()->get();
+    
+        return response()->json($posts);
+    }
 
-        // Order by creation date and paginate the results
-        $posts = $query->orderBy('created_at', 'desc')->paginate(1000, ['*'], 'page', $page);
-        
-        $posts = $query->skip($request->get('offset'))->take(10)->get();
+    public function fetchAuthUserPosts(Request $request)
+    {
        
-        return response()->json($posts );
+        // Get the audience, page, and last_post_timestamp parameters from the request
+        $audience = $request->input('audience', 'public');
+        $lastPostTimestamp = $request->input('last_post_timestamp'); // Timestamp of the latest post in the feed
+    
+        // Get profile data for filtering
+        $profileData = $this->getProfileData();
+        // Initialize the query builder for posts
+        $query = Post::with('user')->where('user_id', $profileData->id);  // Assuming the relationship is named 'user'
+
+    
+        // Check audience type and apply filters accordingly
+        switch ($audience) {
+            case 'public':
+                // No additional filtering for public audience
+                $query->where('audience', 'public');
+                break;
+            case 'region':
+                // Filter posts based on the region_id (user's region vs post's region)
+                $regionId = $profileData->region_id;
+                $query->where(function($q) use ($regionId) {
+                    $q->where('audience', 'public')
+                    ->orWhere('region_id', $regionId);
+                });
+                break;
+            case 'state':
+                // Filter posts based on the state_id (user's state vs post's state)
+                $stateId = $profileData->state_id;
+                $query->where(function($q) use ($stateId) {
+                    $q->where('audience', 'public')
+                    ->orWhere('state_id', $stateId);
+                });
+                break;
+            case 'lga':
+                // Filter posts based on the lga_id (user's LGA vs post's LGA)
+                $lgaId = $profileData->lga_id;
+                $query->where(function($q) use ($lgaId) {
+                    $q->where('audience', 'public')
+                    ->orWhere('lga_id', $lgaId);
+                });
+                break;
+            case 'ward':
+                // Filter posts based on the ward_id (user's ward vs post's ward)
+                $wardId = $profileData->ward_id;
+                $query->where(function($q) use ($wardId) {
+                    $q->where('audience', 'public')
+                    ->orWhere('ward_id', $wardId);
+                });
+                break;
+            case 'pu':
+                // Filter posts based on the pu_id (user's polling unit vs post's polling unit)
+                $puId = $profileData->polling_unit_id;
+                $query->where(function($q) use ($puId) {
+                    $q->where('audience', 'public')
+                    ->orWhere('pu_id', $puId);
+                });
+                break;
+            default:
+                // If the audience is not recognized, fall back to public
+                $query->where('audience', 'public');
+                break;
+        }
+    
+        // Filter posts created after the last_post_timestamp
+        if ($lastPostTimestamp) {
+            $query->where('created_at', '>', $lastPostTimestamp);
+        }
+    
+        // Order by creation date and get the results
+        $posts = $query->latest()->get();
+    
+        return response()->json($posts);
     }
 
 
 
-
+     // Show the edit form
+     public function editPost(Post $post)
+     {
+         return response()->json([
+             'post' => $post,
+         ]);
+     }
+ 
+     // Update the post
+     public function updatePost(Request $request, Post $post)
+     {
+         // Validate incoming request
+         $validatedData = $request->validate([
+             'title' => 'required|string|max:255',
+             'content' => 'required|string',
+         ]);
+ 
+         // Update the post
+         $post->update($validatedData);
+ 
+         return response()->json([
+             'message' => 'Post updated successfully!',
+             'post' => $post,
+         ]);
+     }
+ 
+     // Delete the post
+     public function destroyPost(Post $post)
+     {
+         // Delete the post
+         $post->delete();
+ 
+         return response()->json([
+             'message' => 'Post deleted successfully!',
+         ]);
+     }
 
     
 

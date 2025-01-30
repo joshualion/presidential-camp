@@ -16,24 +16,41 @@
 
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
     <!-- FontAwesome Icons -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="{{asset('frontend/css/style.css')}}"> <!-- Include your custom styles -->
+    <link rel="stylesheet" href="{{asset('frontend/css/style.css')}}"> 
 
     <!-- Custom CSS -->
     <link id="theme-stylesheet" href="{{asset('frontend/css/theme-light.css')}}" rel="stylesheet">
     <style>
+    
+    html, body {
+  height: 100%;
+  margin: 0;
+  overflow-y: auto; /* Ensure the scrollbar is for the entire page */
+}
+
+  .btn-xs{
+    padding: 0.25rem 0.5rem; /* Adjust padding */
+    font-size: 0.5rem; /* Smaller font size */
+    line-height: 1; /* Compact height */
+    border-radius: 0.2rem; /* Slightly smaller rounded corners */
+  }
+
+
+
 
      
-                /* Custom Styles */
-                .navbar-nav .nav-link {
-                    transition: transform 0.3s, box-shadow 0.3s;
-                }
+      /* Custom Styles */
+    .navbar-nav .nav-link {
+        transition: transform 0.3s, box-shadow 0.3s;
+    }
 
-                .navbar-nav .nav-link:hover {
-                    transform: scale(1.1);
-                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-                }
+   .navbar-nav .nav-link:hover {
+        transform: scale(1.1);
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
 
 
         
@@ -237,7 +254,7 @@
 
         /* General Styling */
         .card {
-            border: 1px solid #c3e6cb; /* Card border color */
+            border: {{ $SystemSetting->light_theme_color ?? ' #fafaf1'}} !important; /* Card border color */
         }
 
         /* Custom Button Styling */

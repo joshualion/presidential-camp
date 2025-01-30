@@ -1,3 +1,4 @@
+@desktop()
 <!-- Sidebar -->
 <div class="card card-primary">
     <div class="card-header">
@@ -8,7 +9,7 @@
     <p>This section can be used for announcements, links, or ads.</p>
     </div>
 </div>
-@desktop()
+
 <hr/>
 <!-- Sidebar Widgit 2 -->
 <div class="card card-primary mt-20 gap-10">

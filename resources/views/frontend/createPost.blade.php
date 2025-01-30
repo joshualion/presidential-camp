@@ -1,5 +1,5 @@
 <!-- New Post Section -->
-<div class="col-md-6 Infinite-scroll-area">  
+<div class="col-md-6" style="overflow-y: auto; max-height: 150vh;">  
             
     <div class="card mb-3 shadow-sm">
         <div class="card-body d-flex align-items-center">
@@ -56,7 +56,7 @@
                     <div>
                         <h6 class="mb-0">{{ $profileData->firstname }} {{ $profileData->lastname }}</h6>
                         <small class="text-muted" id="audienceDisplay">
-                            Sharing with Everyone: 
+                            Sharing with: 
                             @if($SystemSetting && $SystemSetting->package == 'national' && $profileData->access_level=='nationaladmin')
                                 Nationwide Audience
                             @elseif($SystemSetting && $profileData->access_level=='regionaladmin' && in_array($SystemSetting->package, ['national', 'regional']))
@@ -129,6 +129,7 @@
 <script src="{{asset('frontend/js/jquery.min.js')}}"></script>
 <script src="{{asset('frontend/js/post.js')}}"></script>
 
+{{-- Submit form with Ajax --}}
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const postForm = document.getElementById('postForm');
@@ -197,44 +198,76 @@
         });
     });
 </script>
+
+{{-- Audience dynamic Selection--}}
 <script>
-    document.addEventListener("DOMContentLoaded", function () {
-    const scrollArea = document.querySelector('.Infinite-scroll-area');
-
-    scrollArea.addEventListener('scroll', async () => {
-        // Check if user scrolled near the bottom
-        if (scrollArea.scrollTop + scrollArea.clientHeight >= scrollArea.scrollHeight - 10) {
-            await loadMoreContent(); // Load additional content
-        }
+    document.addEventListener('DOMContentLoaded', function () {
+    // Audience Selection
+    document.querySelectorAll('.dropdown-item').forEach(item => {
+        item.addEventListener('click', function (e) {
+            e.preventDefault();
+            const selectedValue = this.getAttribute('data-value');
+            document.getElementById('audienceInput').value = selectedValue;
+        });
     });
-
-    async function loadMoreContent() {
-        try {
-            // Make an API request to fetch more posts
-            const response = await fetch('/community/posts'); // Replace with your API route
-            const data = await response.text();
-            
-            // Append the new posts to the scroll area
-            scrollArea.insertAdjacentHTML('beforeend', data);
-        } catch (error) {
-            console.error("Error loading more content:", error);
-        }
-    }
 });
 
 </script>
-    
 
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Audience Selection
+        document.querySelectorAll('.dropdown-item').forEach(item => {
+            item.addEventListener('click', function (e) {
+                e.preventDefault();
+
+                // Get the selected value
+                const selectedValue = this.getAttribute('data-value');
+
+                // Update the hidden input
+                const audienceInput = document.getElementById('audienceInput');
+                audienceInput.value = selectedValue;
+
+                // Update the audience display text
+                const audienceDisplay = document.getElementById('audienceDisplay');
+                let displayText = '';
+
+                // Define the display text based on the selected value
+                switch (selectedValue) {
+                    case 'public':
+                        displayText = 'Sharing with: Nationwide Audience';
+                        break;
+                    case 'region':
+                        displayText = `Sharing with: {{ $profileData->region->name }} Audience`;
+                        break;
+                    case 'state':
+                        displayText = `Sharing with: {{ $profileData->state->name }} Audience`;
+                        break;
+                    case 'lga':
+                        displayText = `Sharing with: {{ $profileData->lga->name }} Audience`;
+                        break;
+                    case 'ward':
+                        displayText = `Sharing with: Ward: {{ $profileData->ward->name }} Audience`;
+                        break;
+                    case 'pu':
+                        displayText = `Sharing with: PU: {{ $profileData->pollingUnit->name }} Audience`;
+                        break;
+                    default:
+                        displayText = 'Sharing with: Everyone';
+                        break;
+                }
+
+                // Update the text in the audienceDisplay
+                audienceDisplay.textContent = displayText;
+            });
+        });
+    });
+</script>
 
 
 <style>
 
-.Infinite-scroll-area {
-          max-height: 80vh; /* Set a maximum height for the scroll area */
-          overflow-y: scroll; /* Enable vertical scrolling */
-          padding: 10px;
-          border: 1px solid #ccc;
-      }
+
     .drag-drop-area {
     border: 2px dashed #ccc;
     border-radius: 10px;

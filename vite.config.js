@@ -21,4 +21,12 @@ export default defineConfig({
             },
         })
     ],
+
+    // server: {
+    //     host: '0.0.0.0', // Bind to all IPs
+    //     port: 5173,      // Default Vite port
+    //     hmr: {
+    //         host: '192.168.3.47', // Your computer's IP address
+    //     },
+    // },
 });

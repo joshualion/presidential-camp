@@ -115,6 +115,21 @@ class User extends Authenticatable
         return $this->belongsToMany(User::class, 'followers', 'follower_id', 'user_id');
     }
 
+    // In User.php (Model)
+    public function getAudience()
+    {
+        return match ($this->access_level) {
+            'superadmin', 'nationaladmin' => 'public',
+            'regionaladmin' => 'region',
+            'stateadmin' => 'state',
+            'lgaadmin' => 'lga',
+            'wardadmin' => 'ward',
+            'puadmin', 'user' => 'pu',
+            default => 'public',
+        };
+    }
+
+
     public static function getPermissionGroups()
     {
         $permission_groups = DB::table('permissions')->select('group_name')->groupBy('group_name')->get();

@@ -93,10 +93,20 @@ Route::get('/emergency/exit', function () {
 Route::middleware(['auth','check_onboarding'])->group(function () {
     // comunity pages
     Route::get('/community/feed', [HomeController::class,'index'])->name('timeline');
+    Route::get('/community/profile', [HomeController::class,'mobileProfile'])->name('mobile.timeline');
+    
+    
     Route::post('/community/post/store', [HomeController::class,'storePost'])->name('posts.store');
-  
+   
     //Get feed:
     Route::get('/community/posts', [HomeController::class, 'fetchPosts'])->name('posts.fetch');
+    Route::get('/community/profile/posts', [HomeController::class, 'fetchAuthUserPosts'])->name('user.posts.fetch');
+
+
+    //Manage Posts
+    Route::get('/posts/{post}/edit', [HomeController::class, 'editPost'])->name('posts.edit'); // Show edit form
+Route::put('/posts/{post}', [HomeController::class, 'updatePost'])->name('posts.update'); // Update the post
+Route::delete('/posts/{post}', [HomeController::class, 'destroyPost'])->name('posts.destroy'); // Delete the post
 
     // Followers and following views
     Route::get('/community/followers', [HomeController::class, 'getFollowers']);

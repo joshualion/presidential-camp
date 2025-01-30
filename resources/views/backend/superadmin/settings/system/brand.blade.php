@@ -27,7 +27,7 @@
     <div class="col-sm-10">
         <div class="align-items-center">
             <table cellpadding="1"   align="center" class="table table-bordered table-responsive" role="none" >
-             <td><img id="showimage" class="img-square img-responsive" src="{{ !empty($SystemSetting->logo) ? url('uploads/system_images/'.$SystemSetting->logo) : url('logo.png') }}" alt="profile" width="50%" height="15%"></td>
+             <td><img id="showLogo" class="img-square img-responsive" src="{{ !empty($SystemSetting->logo) ? url('uploads/system_images/'.$SystemSetting->logo) : url('logo.png') }}" alt="profile" width="50%" height="15%"></td>
              <td colspan="2"><label for="logo" class="btn btn-primary ms-10 d-block"> Change Logo</label></td>
              </table>
             <input type="file" class="form-control d-none" id="logo" name="logo">
@@ -98,3 +98,37 @@
         <div class="alert alert-danger">{{ $message }}</div>
     @enderror
 </div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        // Function to preview an image
+        function previewImage(input, targetImgId) {
+            if (input.files && input.files[0]) {
+                let reader = new FileReader();
+                reader.onload = function (e) {
+                    document.getElementById(targetImgId).src = e.target.result;
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        // Favicon preview
+        const faviconInput = document.getElementById("favicon");
+        faviconInput.addEventListener("change", function () {
+            previewImage(this, "showimage");
+        });
+
+        // Logo preview (fix target image ID)
+        const logoInput = document.getElementById("logo");
+        logoInput.addEventListener("change", function () {
+            previewImage(this, "showLogo");
+        });
+
+        // Login page background preview
+        const loginPageBackgroundInput = document.getElementById("login_page_background");
+        loginPageBackgroundInput.addEventListener("change", function () {
+            previewImage(this, "showImage");
+        });
+    });
+</script>
+

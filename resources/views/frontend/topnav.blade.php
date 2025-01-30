@@ -1,3 +1,4 @@
+@desktop
 <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
     <div class="container">
         <!-- Toggle Button for Small Screens -->
@@ -10,7 +11,7 @@
             <div class="row w-100 align-items-center">
                 <!-- Logo: 3 columns on large screens, 4 on medium and smaller screens -->
                 <div class="col-4 col-lg-3 d-flex align-items-center">
-                    <a class="navbar-brand" href="/" style="width: 100px; height: 50px; overflow: hidden;">
+                    <a class="navbar-brand" href="{{route('timeline')}}" style="width: 100px; height: 50px; overflow: hidden;">
                         <img 
                             src="{{ !empty($SystemSetting->logo) ? url('uploads/system_images/'.$SystemSetting->logo) : url('uploads/system_images/logo.png') }}" 
                             class="logo img-responsive embossed-image" 
@@ -30,7 +31,7 @@
                 </div>
 
                
-               @desktop <!-- Notification, Message, and Logout Icons -->
+              <!-- Notification, Message, and Logout Icons -->
                 <div class="col-12 col-lg-3 d-flex justify-content-end mt-3 mt-lg-0">
                     <ul class="navbar-nav ms-auto d-flex flex-row align-items-center gap-3" style="list-style: none; margin: 0; padding: 0;">
                         <!-- Notification Icon -->
@@ -63,12 +64,21 @@
                         </li>
                     </ul>
                 </div>
-                @enddesktop()
+             
 
             </div>
         </div>
     </div>
 </nav>
+@enddesktop()
+
+@mobile()
+
+<div class="container mb-5" style="padding-top: 70px;">
+        @include('frontend.mobile-menu')
+</div>
+
+@endmobile()
 
 
 
