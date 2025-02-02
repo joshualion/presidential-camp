@@ -23,7 +23,7 @@
   <form method="POST" action="{{ route('login') }}">
         @csrf @method('POST')
         <div class="input-group mb-3">
-          <input type="text" class="form-control @error('login') is-invalid @enderror" id ="login" name="login" placeholder="Email/Username/Phone">
+          <input type="text" class="form-control @error('login') is-invalid @enderror" id ="login" name="login" placeholder="Email/Username/Phone" autocomplete="true">
           <div class="input-group-append">
             <div class="input-group-text">
               <span class="fas fa-envelope text-primary"></span>
@@ -35,7 +35,7 @@
         </div>
 
         <div class="input-group mb-3">
-          <input type="password" class="form-control @error('password') is-invalid @enderror" name="password" id="password" placeholder="Password">
+          <input type="password" class="form-control @error('password') is-invalid @enderror" name="password" id="password" placeholder="Password" autocomplete="true">
           <div class="input-group-append">
             <div class="input-group-text">
               <span class="fas fa-lock text-primary"></span>
@@ -50,7 +50,7 @@
           <div class="col-8">
             <div class="icheck-primary">
                <label for="remember_me" class="inline-flex items-center">
-                <input id="remember_me" type="checkbox" class="rounded dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-indigo-600 shadow-sm focus:ring-indigo-500 dark:focus:ring-indigo-600 dark:focus:ring-offset-gray-800" name="remember">
+                <input id="remember_me" type="checkbox" autocomplete="true" class="rounded dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-indigo-600 shadow-sm focus:ring-indigo-500 dark:focus:ring-indigo-600 dark:focus:ring-offset-gray-800" name="remember">
                 <span class="ml-2 text-sm text-gray-600 dark:text-gray-400">{{ __('Remember me') }}</span>
             </label>
             </div>

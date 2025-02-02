@@ -21,13 +21,6 @@ const app = createApp({
 });
 app.mount('#app');
 
-import Echo from "laravel-echo";
-import io from "socket.io-client";
-
-window.Echo = new Echo({
-    broadcaster: 'socket.io',
-    host: window.location.hostname + ':8080', // Reverb server
-});
 
 
 

@@ -2,6 +2,7 @@
 
 namespace App\Events;
 
+use App\Models\Post;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PresenceChannel;
@@ -19,7 +20,7 @@ class NewPostCreated implements ShouldBroadcast
     /**
      * Create a new event instance.
      */
-    public function __construct($post)
+    public function __construct(Post $post)
     {
         $this->post = $post;
     }
@@ -33,4 +34,10 @@ class NewPostCreated implements ShouldBroadcast
     {
         return [new Channel('posts')];
     }
+
+    public function broadcastAs()
+    {
+        return 'post.created';
+    }
+
 }

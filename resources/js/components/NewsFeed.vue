@@ -6,67 +6,53 @@
       <div v-for="post in posts" :key="post.id" class="card mb-3">
         <div class="card-body">
           <div class="row">
-            <!-- <div class="d-flex justify-content-between w-100">
-              <h6 class="card-title username d-flex align-items-center">
-                <img
-                  :src="post.user?.photo ? '/uploads/member_images/' + post.user.photo : '/uploads/no_image.jpg'"
-                  alt="Profile Picture"
-                  class="rounded-circle me-3"
-                  style="width: 50px; height: 50px; object-fit: cover;"
-                />
-                {{ post.user?.firstname || 'Unknown' }} {{ post.user?.lastname || 'User' }}
-              </h6>
-              <span class="text-secondary d-block" style="font-size: 0.75rem; margin-top: -4px;">
-      {{ formatDate(post.created_at) }}
-    </span>
-            </div> -->
-            <div class="d-flex justify-content-between w-100">
-  <h6 class="card-title username d-flex align-items-center">
-    <img
-      :src="post.user?.photo ? '/uploads/member_images/' + post.user.photo : '/uploads/no_image.jpg'"
-      alt="Profile Picture"
-      class="rounded-circle me-3"
-      style="width: 50px; height: 50px; object-fit: cover;"
-    />
-    {{ post.user?.firstname || 'Unknown' }} {{ post.user?.lastname || 'User' }}
-  </h6>
-  <div class="d-flex align-items-center">
-    <span class="text-secondary d-block" style="font-size: 0.55rem; margin-top: -4px;">
-      {{ formatDate(post.created_at) }}
-    </span>
+           <div class="d-flex justify-content-between w-100">
+            <h6 class="card-title username d-flex align-items-center">
+              <img
+                :src="post.user?.photo ? '/uploads/member_images/' + post.user.photo : '/uploads/no_image.jpg'"
+                alt="Profile Picture"
+                class="rounded-circle me-3"
+                style="width: 50px; height: 50px; object-fit: cover;"
+              />
+              {{ post.user?.firstname || 'Unknown' }} {{ post.user?.lastname || 'User' }}
+            </h6>
+            <div class="d-flex align-items-center">
+              <span class="text-secondary d-block" style="font-size: 0.55rem; margin-top: -4px;">
+                {{ formatDate(post.created_at) }}
+              </span>
 
-    <!-- Gear icon dropdown -->
-<div v-if="post.user?.id && post.user.id === profileData.id">
-  <!-- Show edit or delete form if editing or deleting -->
-  <div v-if="editingPost && editingPost.id === post.id">
-    <EditPost :post="post" @updatePost="updatePost" @cancel="editingPost = null" />
-  </div>
-  <div v-else-if="deletingPost && deletingPost.id === post.id">
-    <DeletePost :post="post" @deletePost="confirmDelete" @cancel="deletingPost = null" />
-  </div>
-  <!-- Default gear dropdown -->
-  <div v-else class="dropdown">
-    <span
-      class="text-small dropdown-toggle d-block ml-3"
-      data-bs-toggle="dropdown"
-      aria-expanded="false"
-      style="font-size: 0.65rem; margin-top: -25px;"
-    >
-      <i class="fas fa-cog"></i>
-    </span>
-    <ul class="dropdown-menu">
-      <li>
-        <a class="dropdown-item" href="#" @click="editPost(post)">Edit Post</a>
-      </li>
-      <li>
-        <a class="dropdown-item text-danger" href="#" @click="deletePost(post)">Delete Post</a>
-      </li>
-    </ul>
-  </div>
-</div>
+              <!-- Gear icon dropdown -->
+          <div v-if="post.user?.id && post.user.id === profileData.id">
+            <!-- Show edit or delete form if editing or deleting -->
+            <div v-if="editingPost && editingPost.id === post.id">
+              <EditPost :post="post" @updatePost="updatePost" @cancel="editingPost = null" />
+            </div>
+            <div v-else-if="deletingPost && deletingPost.id === post.id">
+              <DeletePost :post="post" @deletePost="confirmDelete" @cancel="deletingPost = null" />
+            </div>
+            <!-- Default gear dropdown -->
+            <div v-else class="dropdown">
+              <span
+                class="text-small dropdown-toggle d-block ml-3"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+                style="font-size: 0.65rem; margin-top: -25px;"
+              >
+                <i class="fas fa-cog"></i>
+              </span>
+              <ul class="dropdown-menu">
+                <li>
+                  <a class="dropdown-item" href="#" @click="editPost(post)">Edit Post</a>
+                </li>
+                <li>
+                  <a class="dropdown-item text-danger" href="#" @click="deletePost(post)">Delete Post</a>
+                </li>
+              </ul>
+            </div>
+          </div>
 
-  </div>
-</div>
+            </div>
+ </div>
 
           </div>
           <p class="card-text">{{ post.content }}</p>
@@ -117,16 +103,17 @@
     </div>
   </div>
 </template>
+
 <script>
 import axios from "axios";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import EditPost from "./EditPost.vue";
 import DeletePost from "./DeletePost.vue";
-import debounce from "lodash/debounce";
 import Swal from "sweetalert2";
-
 dayjs.extend(relativeTime);
+
+
 
 export default {
   components: {
@@ -173,12 +160,18 @@ export default {
     window.addEventListener('focus', this.startPolling);
     window.addEventListener('blur', this.stopPolling);
     this.startPolling(); // Start polling initially
+
+    // Listen for new posts via WebSocket
+    this.listenForNewPosts();
   },
   beforeUnmount() {
     // Clean up event listeners and stop polling
     window.removeEventListener('focus', this.startPolling);
     window.removeEventListener('blur', this.stopPolling);
     this.stopPolling();
+
+    // Stop listening for WebSocket events
+    window.Echo.leaveChannel('posts');
   },
   methods: {
     startPolling() {
@@ -220,6 +213,17 @@ export default {
       } finally {
         this.loading = false;
       }
+    },
+    listenForNewPosts() {    
+      if (!window.Echo) {
+        console.error("Echo is not initialized");
+        return;
+    }
+      // Listen for the NewPostCreated event
+    window.Echo.channel('posts')
+        .listen('NewPostCreated', (data) => {
+            this.posts.unshift(data.post); // Add the new post to the top of the list
+        });
     },
     handleScroll() {
       if (this.loading) return; // Prevent overlapping fetches
