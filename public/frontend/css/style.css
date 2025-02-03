@@ -49,3 +49,7 @@ footer {
     margin-top: auto; /* Ensure footer sticks to bottom */
 }
 
+.infinite-scroll-area {
+    height: 500px; /* Adjust as needed */
+    overflow-y: auto;
+  }

@@ -103,7 +103,6 @@
     </div>
   </div>
 </template>
-
 <script>
 import axios from "axios";
 import dayjs from "dayjs";
@@ -112,7 +111,6 @@ import EditPost from "./EditPost.vue";
 import DeletePost from "./DeletePost.vue";
 import Swal from "sweetalert2";
 dayjs.extend(relativeTime);
-
 
 
 export default {
@@ -127,7 +125,6 @@ export default {
       currentPage: 1, // Current page for pagination
       hasMore: true, // Track if there are more posts to fetch
       loading: false, // Loading state for fetchPosts
-      intervalId: null, // Store the interval ID to clear it later
       editingPost: null, // Track the post being edited
       deletingPost: null, // Track the post being deleted
     };
@@ -156,39 +153,16 @@ export default {
     },
   },
   mounted() {
-    // Start polling when the tab is focused
-    window.addEventListener('focus', this.startPolling);
-    window.addEventListener('blur', this.stopPolling);
-    this.startPolling(); // Start polling initially
-
+    // Fetch initial posts
+    this.fetchPosts();
     // Listen for new posts via WebSocket
     this.listenForNewPosts();
   },
   beforeUnmount() {
-    // Clean up event listeners and stop polling
-    window.removeEventListener('focus', this.startPolling);
-    window.removeEventListener('blur', this.stopPolling);
-    this.stopPolling();
-
     // Stop listening for WebSocket events
     window.Echo.leaveChannel('posts');
   },
   methods: {
-    startPolling() {
-      // Only start polling if it's not already running
-      if (!this.intervalId) {
-        this.intervalId = setInterval(() => {
-          if (!this.loading) this.fetchPosts();
-        }, 10000); // Poll every 10 seconds
-      }
-    },
-    stopPolling() {
-      // Clear the interval if it's running
-      if (this.intervalId) {
-        clearInterval(this.intervalId);
-        this.intervalId = null;
-      }
-    },
     async fetchPosts() {
       if (this.loading) return;
 
@@ -214,26 +188,27 @@ export default {
         this.loading = false;
       }
     },
-    listenForNewPosts() {    
-      if (!window.Echo) {
-        console.error("Echo is not initialized");
-        return;
-    }
-      // Listen for the NewPostCreated event
-    window.Echo.channel('posts')
-        .listen('NewPostCreated', (data) => {
-            this.posts.unshift(data.post); // Add the new post to the top of the list
-        });
-    },
-    handleScroll() {
-      if (this.loading) return; // Prevent overlapping fetches
-      const scrollPosition = window.scrollY + window.innerHeight;
-      const pageHeight = document.documentElement.scrollHeight;
+    listenForNewPosts() {
+  if (!window.Echo) {
+    console.error("Echo is not initialized");
+    return;
+  }
+  // Listen for the NewPostCreated event
+  window.Echo.private('posts')
+    .listen('.NewPostCreated', (data) => {
+      this.posts.unshift(data.post); // Add the new post to the top of the list
+    });
+},
+    handleScroll(event) {
+  if (this.loading) return;
+  const scrollableContainer = event.target;
+  const scrollPosition = scrollableContainer.scrollTop + scrollableContainer.clientHeight;
+  const scrollHeight = scrollableContainer.scrollHeight;
 
-      if (scrollPosition >= pageHeight - 200) {
-        this.fetchPosts(); // Fetch more posts
-      }
-    },
+  if (scrollPosition >= scrollHeight - 200) {
+    this.fetchPosts();
+  }
+},
     editPost(post) {
       this.editingPost = post;
     },

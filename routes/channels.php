@@ -7,5 +7,6 @@ Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
 });
 
 Broadcast::channel('posts', function ($user) {
-    return true; // Allows all authenticated users
+    return (bool) $user; // Only authenticated users can listen
 });
+

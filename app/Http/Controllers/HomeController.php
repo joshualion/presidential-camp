@@ -138,7 +138,8 @@ class HomeController extends Controller
             'post_type' => $photoFilename && $videoFilename ? 'mixed' : ($photoFilename ? 'image' : ($videoFilename ? 'video' : 'text')),
         ]);
 
-        broadcast(new NewPostCreated($post))->toOthers();
+         // Broadcast the event
+         broadcast(new NewPostCreated($post))->toOthers();
 
         // Respond with the new post (to update the feed dynamically)
         return response()->json([
