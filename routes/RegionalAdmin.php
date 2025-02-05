@@ -1,6 +1,4 @@
 <?php
-
-
 use App\Http\Controllers\AjaxController;
 use App\Http\Controllers\BulksmsController;
 use App\Http\Controllers\BulkSmsSettingController;
