@@ -19,6 +19,12 @@
     
     <!-- FontAwesome Icons -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+
+    <!-- Bootstrap 5 CSS -->
+    <link href="{{asset('frontend/css/bootstrap.min.css')}}" rel="stylesheet">
+    
+    <!-- FontAwesome Icons -->
+    <link href="{{asset('frontend/css/fontawesome.min.css')}}" rel="stylesheet">
     <link rel="stylesheet" href="{{asset('frontend/css/style.css')}}"> 
 
     <!-- Custom CSS -->

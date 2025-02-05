@@ -10,3 +10,8 @@ Broadcast::channel('posts', function ($user) {
     return (bool) $user; // Only authenticated users can listen
 });
 
+// BroadcastServiceProvider.php
+Broadcast::channel('posts.{postId}', function ($user, $postId) {
+    return (bool) $user; // Only authenticated users can listen
+});
+

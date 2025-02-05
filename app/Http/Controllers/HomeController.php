@@ -151,81 +151,158 @@ class HomeController extends Controller
     }
 
 
+    // public function fetchPosts(Request $request)
+    // {
+    //     // Get the audience, page, and last_post_timestamp parameters from the request
+    //     $audience = $request->input('audience', 'public');
+    //     $lastPostTimestamp = $request->input('last_post_timestamp'); // Timestamp of the latest post in the feed
+    
+    //     // Initialize the query builder for posts
+    //     $query = Post::with('user');  // Assuming the relationship is named 'user'
+    
+    //     // Get profile data for filtering
+    //     $profileData = $this->getProfileData();
+    
+    //     // Check audience type and apply filters accordingly
+    //     switch ($audience) {
+    //         case 'public':
+    //             // No additional filtering for public audience
+    //             $query->where('audience', 'public');
+    //             break;
+    //         case 'region':
+    //             // Filter posts based on the region_id (user's region vs post's region)
+    //             $regionId = $profileData->region_id;
+    //             $query->where(function($q) use ($regionId) {
+    //                 $q->where('audience', 'public')
+    //                 ->orWhere('region_id', $regionId);
+    //             });
+    //             break;
+    //         case 'state':
+    //             // Filter posts based on the state_id (user's state vs post's state)
+    //             $stateId = $profileData->state_id;
+    //             $query->where(function($q) use ($stateId) {
+    //                 $q->where('audience', 'public')
+    //                 ->orWhere('state_id', $stateId);
+    //             });
+    //             break;
+    //         case 'lga':
+    //             // Filter posts based on the lga_id (user's LGA vs post's LGA)
+    //             $lgaId = $profileData->lga_id;
+    //             $query->where(function($q) use ($lgaId) {
+    //                 $q->where('audience', 'public')
+    //                 ->orWhere('lga_id', $lgaId);
+    //             });
+    //             break;
+    //         case 'ward':
+    //             // Filter posts based on the ward_id (user's ward vs post's ward)
+    //             $wardId = $profileData->ward_id;
+    //             $query->where(function($q) use ($wardId) {
+    //                 $q->where('audience', 'public')
+    //                 ->orWhere('ward_id', $wardId);
+    //             });
+    //             break;
+    //         case 'pu':
+    //             // Filter posts based on the pu_id (user's polling unit vs post's polling unit)
+    //             $puId = $profileData->polling_unit_id;
+    //             $query->where(function($q) use ($puId) {
+    //                 $q->where('audience', 'public')
+    //                 ->orWhere('pu_id', $puId);
+    //             });
+    //             break;
+    //         default:
+    //             // If the audience is not recognized, fall back to public
+    //             $query->where('audience', 'public');
+    //             break;
+    //     }
+    
+    //     // Filter posts created after the last_post_timestamp
+    //     if ($lastPostTimestamp) {
+    //         $query->where('created_at', '>', $lastPostTimestamp);
+    //     }
+    
+    //     // Order by creation date and get the results
+    //     $posts = $query->latest()->get();
+    
+    //     return response()->json($posts);
+    // }
+
+   
+   
     public function fetchPosts(Request $request)
-    {
-        // Get the audience, page, and last_post_timestamp parameters from the request
-        $audience = $request->input('audience', 'public');
-        $lastPostTimestamp = $request->input('last_post_timestamp'); // Timestamp of the latest post in the feed
-    
-        // Initialize the query builder for posts
-        $query = Post::with('user');  // Assuming the relationship is named 'user'
-    
-        // Get profile data for filtering
-        $profileData = $this->getProfileData();
-    
-        // Check audience type and apply filters accordingly
-        switch ($audience) {
-            case 'public':
-                // No additional filtering for public audience
-                $query->where('audience', 'public');
-                break;
-            case 'region':
-                // Filter posts based on the region_id (user's region vs post's region)
-                $regionId = $profileData->region_id;
-                $query->where(function($q) use ($regionId) {
-                    $q->where('audience', 'public')
-                    ->orWhere('region_id', $regionId);
-                });
-                break;
-            case 'state':
-                // Filter posts based on the state_id (user's state vs post's state)
-                $stateId = $profileData->state_id;
-                $query->where(function($q) use ($stateId) {
-                    $q->where('audience', 'public')
-                    ->orWhere('state_id', $stateId);
-                });
-                break;
-            case 'lga':
-                // Filter posts based on the lga_id (user's LGA vs post's LGA)
-                $lgaId = $profileData->lga_id;
-                $query->where(function($q) use ($lgaId) {
-                    $q->where('audience', 'public')
-                    ->orWhere('lga_id', $lgaId);
-                });
-                break;
-            case 'ward':
-                // Filter posts based on the ward_id (user's ward vs post's ward)
-                $wardId = $profileData->ward_id;
-                $query->where(function($q) use ($wardId) {
-                    $q->where('audience', 'public')
-                    ->orWhere('ward_id', $wardId);
-                });
-                break;
-            case 'pu':
-                // Filter posts based on the pu_id (user's polling unit vs post's polling unit)
-                $puId = $profileData->polling_unit_id;
-                $query->where(function($q) use ($puId) {
-                    $q->where('audience', 'public')
-                    ->orWhere('pu_id', $puId);
-                });
-                break;
-            default:
-                // If the audience is not recognized, fall back to public
-                $query->where('audience', 'public');
-                break;
-        }
-    
-        // Filter posts created after the last_post_timestamp
-        if ($lastPostTimestamp) {
-            $query->where('created_at', '>', $lastPostTimestamp);
-        }
-    
-        // Order by creation date and get the results
-        $posts = $query->latest()->get();
-    
-        return response()->json($posts);
+{
+    // Get the audience, page, and last_post_timestamp parameters from the request
+    $audience = $request->input('audience', 'public');
+    $lastPostTimestamp = $request->input('last_post_timestamp'); // Timestamp of the latest post in the feed
+    $perPage = $request->input('per_page', 10); // Number of posts per page
+
+    // Initialize the query builder for posts
+    $query = Post::with('user');  // Assuming the relationship is named 'user'
+
+    // Get profile data for filtering
+    $profileData = $this->getProfileData();
+
+    // Check audience type and apply filters accordingly
+    switch ($audience) {
+        case 'public':
+            // No additional filtering for public audience
+            $query->where('audience', 'public');
+            break;
+        case 'region':
+            // Filter posts based on the region_id (user's region vs post's region)
+            $regionId = $profileData->region_id;
+            $query->where(function($q) use ($regionId) {
+                $q->where('audience', 'public')
+                ->orWhere('region_id', $regionId);
+            });
+            break;
+        case 'state':
+            // Filter posts based on the state_id (user's state vs post's state)
+            $stateId = $profileData->state_id;
+            $query->where(function($q) use ($stateId) {
+                $q->where('audience', 'public')
+                ->orWhere('state_id', $stateId);
+            });
+            break;
+        case 'lga':
+            // Filter posts based on the lga_id (user's LGA vs post's LGA)
+            $lgaId = $profileData->lga_id;
+            $query->where(function($q) use ($lgaId) {
+                $q->where('audience', 'public')
+                ->orWhere('lga_id', $lgaId);
+            });
+            break;
+        case 'ward':
+            // Filter posts based on the ward_id (user's ward vs post's ward)
+            $wardId = $profileData->ward_id;
+            $query->where(function($q) use ($wardId) {
+                $q->where('audience', 'public')
+                ->orWhere('ward_id', $wardId);
+            });
+            break;
+        case 'pu':
+            // Filter posts based on the pu_id (user's polling unit vs post's polling unit)
+            $puId = $profileData->polling_unit_id;
+            $query->where(function($q) use ($puId) {
+                $q->where('audience', 'public')
+                ->orWhere('pu_id', $puId);
+            });
+            break;
+        default:
+            // If the audience is not recognized, fall back to public
+            $query->where('audience', 'public');
+            break;
     }
 
+    // Filter posts created after the last_post_timestamp
+    if ($lastPostTimestamp) {
+        $query->where('created_at', '>', $lastPostTimestamp);
+    }
+
+    // Order by creation date and paginate the results
+    $posts = $query->latest()->paginate($perPage);
+
+    return response()->json($posts);
+}
     public function fetchAuthUserPosts(Request $request)
     {
        

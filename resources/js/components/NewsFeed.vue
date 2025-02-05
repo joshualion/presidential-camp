@@ -103,6 +103,7 @@
     </div>
   </div>
 </template>
+
 <script>
 import axios from "axios";
 import dayjs from "dayjs";
@@ -111,7 +112,6 @@ import EditPost from "./EditPost.vue";
 import DeletePost from "./DeletePost.vue";
 import Swal from "sweetalert2";
 dayjs.extend(relativeTime);
-
 
 export default {
   components: {
@@ -164,24 +164,25 @@ export default {
   },
   methods: {
     async fetchPosts() {
-      if (this.loading) return;
+      if (this.loading || !this.hasMore) return;
 
       this.loading = true;
       try {
-        // Get the timestamp of the latest post in the current feed
-        const lastPostTimestamp = this.posts.length > 0 ? this.posts[0].created_at : null;
-
         const response = await axios.get(`/community/posts`, {
           params: {
             audience: this.audience,
-            last_post_timestamp: lastPostTimestamp, // Send the timestamp to the backend
+            page: this.currentPage,
           },
         });
 
-        const newPosts = response.data;
+        const newPosts = response.data.data;
 
-        // Prepend new posts to the beginning of the array (for real-time updates)
-        this.posts = [...newPosts, ...this.posts];
+        if (newPosts.length > 0) {
+          this.posts = [...this.posts, ...newPosts];
+          this.currentPage += 1;
+        } else {
+          this.hasMore = false;
+        }
       } catch (error) {
         Swal.fire("Error", "Unable to fetch posts. Please try again later.", "error");
       } finally {
@@ -189,26 +190,26 @@ export default {
       }
     },
     listenForNewPosts() {
-  if (!window.Echo) {
-    console.error("Echo is not initialized");
-    return;
-  }
-  // Listen for the NewPostCreated event
-  window.Echo.private('posts')
-    .listen('.NewPostCreated', (data) => {
-      this.posts.unshift(data.post); // Add the new post to the top of the list
-    });
-},
+      if (!window.Echo) {
+        console.error("Echo is not initialized");
+        return;
+      }
+      // Listen for the NewPostCreated event
+      window.Echo.private('posts')
+        .listen('.NewPostCreated', (data) => {
+          this.posts.unshift(data.post); // Add the new post to the top of the list
+        });
+    },
     handleScroll(event) {
-  if (this.loading) return;
-  const scrollableContainer = event.target;
-  const scrollPosition = scrollableContainer.scrollTop + scrollableContainer.clientHeight;
-  const scrollHeight = scrollableContainer.scrollHeight;
+      if (this.loading) return;
+      const scrollableContainer = event.target;
+      const scrollPosition = scrollableContainer.scrollTop + scrollableContainer.clientHeight;
+      const scrollHeight = scrollableContainer.scrollHeight;
 
-  if (scrollPosition >= scrollHeight - 200) {
-    this.fetchPosts();
-  }
-},
+      if (scrollPosition >= scrollHeight - 200) {
+        this.fetchPosts();
+      }
+    },
     editPost(post) {
       this.editingPost = post;
     },

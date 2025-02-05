@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\CommentController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AjaxController;
 use App\Http\Controllers\HomeController;
@@ -105,8 +106,13 @@ Route::middleware(['auth','check_onboarding'])->group(function () {
 
     //Manage Posts
     Route::get('/posts/{post}/edit', [HomeController::class, 'editPost'])->name('posts.edit'); // Show edit form
-Route::put('/posts/{post}', [HomeController::class, 'updatePost'])->name('posts.update'); // Update the post
-Route::delete('/posts/{post}', [HomeController::class, 'destroyPost'])->name('posts.destroy'); // Delete the post
+    Route::put('/posts/{post}', [HomeController::class, 'updatePost'])->name('posts.update'); // Update the post
+    Route::delete('/posts/{post}', [HomeController::class, 'destroyPost'])->name('posts.destroy'); // Delete the post
+
+    //Manage Post comments
+    Route::post('/posts/{post}/comments', [CommentController::class, 'store']); // Create a comment
+    Route::get('/posts/{post}/comments', [CommentController::class, 'index']); // Fetch comments for a post
+    Route::delete('/comments/{comment}', [CommentController::class, 'destroy']); // Delete a comment
 
     // Followers and following views
     Route::get('/community/followers', [HomeController::class, 'getFollowers']);
