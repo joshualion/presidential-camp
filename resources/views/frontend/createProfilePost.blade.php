@@ -1,5 +1,5 @@
 <!-- New Post Section -->
-<div class="col-md-6" style="overflow-y: auto; max-height: 150vh;">  
+<div class="col-md-12" style="overflow-y: auto; max-height: 150vh;">  
             
     <div class="card mb-3 shadow-sm">
         <div class="card-body d-flex align-items-center">

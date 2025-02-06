@@ -6,21 +6,7 @@
       <div v-for="post in posts" :key="post.id" class="card mb-3">
         <div class="card-body">
           <div class="row">
-            <!-- <div class="d-flex justify-content-between w-100">
-              <h6 class="card-title username d-flex align-items-center">
-                <img
-                  :src="post.user?.photo ? '/uploads/member_images/' + post.user.photo : '/uploads/no_image.jpg'"
-                  alt="Profile Picture"
-                  class="rounded-circle me-3"
-                  style="width: 50px; height: 50px; object-fit: cover;"
-                />
-                {{ post.user?.firstname || 'Unknown' }} {{ post.user?.lastname || 'User' }}
-              </h6>
-              <span class="text-secondary d-block" style="font-size: 0.75rem; margin-top: -4px;">
-      {{ formatDate(post.created_at) }}
-    </span>
-            </div> -->
-            <div class="d-flex justify-content-between w-100">
+           <div class="d-flex justify-content-between w-100">
   <h6 class="card-title username d-flex align-items-center">
     <img
       :src="post.user?.photo ? '/uploads/member_images/' + post.user.photo : '/uploads/no_image.jpg'"
@@ -124,7 +110,7 @@ import relativeTime from "dayjs/plugin/relativeTime";
 import EditPost from "./EditPost.vue";
 import DeletePost from "./DeletePost.vue";
 import debounce from "lodash/debounce";
-import Swal from "sweetalert2";
+const Swal = window.Swal;
 
 dayjs.extend(relativeTime);
 

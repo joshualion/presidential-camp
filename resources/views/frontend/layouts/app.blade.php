@@ -14,21 +14,31 @@
                 
                               <!-- Include Left Sidebar  -->
                             @desktop()
-                            <div class="col-md-3 sidebar">
-                                @include('frontend.sidebar')
-                            </div>
+                            @if(Route::currentRouteName() === "timeline")
+                                <div class="col-md-3 sidebar">
+                                
+                                        @include('frontend.sidebar') 
+                                    
+                                </div>
+                            @endif
                             @enddesktop()
                             <!-- Include Left Sidebar  -->
-                <!-- Yield for content -->
-                @yield('content')
+
+
+                            <!-- Yield for content -->
+                            @yield('content')
+                            <!-- Yield for content -->
 
                 
                  
-                  <!-- Include Left Sidebar  -->
+                 
                             <!-- Include Right Sidebar -->
+                            @if(Route::currentRouteName() === "timeline")
                             <div class="col-md-3 sidebar">
-                                @include('frontend.right-sidebar')
+                                  @include('frontend.right-sidebar')
+                               
                             </div>
+                            @endif
                             <!-- Include Right Sidebar -->
                 
                     </div>

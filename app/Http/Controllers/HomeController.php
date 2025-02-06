@@ -34,6 +34,7 @@ class HomeController extends Controller
      }
 
      public function index(){
+        $pageTitle = "Home - Community";
         $profileData = $this->getProfileData();
         $userSupportGroups = $profileData->supportGroups()->pluck('name')->toArray();
         // Get followers and following counts
@@ -51,12 +52,14 @@ class HomeController extends Controller
             'followersCount',
             'followingCount',
             'followers',
-            'following'
+            'following',
+            'pageTitle'
         ));
 
     }
 
-    public function mobileProfile(){
+    public function profileTimeline(){
+        $pageTitle = "Profile Timeline";
         $profileData = $this->getProfileData();
         $userSupportGroups = $profileData->supportGroups()->pluck('name')->toArray();
         // Get followers and following counts
@@ -74,7 +77,8 @@ class HomeController extends Controller
             'followersCount',
             'followingCount',
             'followers',
-            'following'
+            'following',
+            'pageTitle'
         ));
     }
 

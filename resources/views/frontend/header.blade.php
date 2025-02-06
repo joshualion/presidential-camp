@@ -15,19 +15,16 @@
      @vite(['resources/js/app.js'])
 
     <!-- Bootstrap 5 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link id="bootstrap-css" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     
     <!-- FontAwesome Icons -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <link id="fontawesome-css" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
 
-    <!-- Bootstrap 5 CSS -->
-    <link href="{{asset('frontend/css/bootstrap.min.css')}}" rel="stylesheet">
-    
-    <!-- FontAwesome Icons -->
-    <link href="{{asset('frontend/css/fontawesome.min.css')}}" rel="stylesheet">
+      <!-- SweetAlerts -->
+  <link rel="stylesheet" href="{{asset('assets/plugins/sweetalert2/sweetalert2.min.css')}}" />
+
+    <!-- Custom CSS -->    
     <link rel="stylesheet" href="{{asset('frontend/css/style.css')}}"> 
-
-    <!-- Custom CSS -->
     <link id="theme-stylesheet" href="{{asset('frontend/css/theme-light.css')}}" rel="stylesheet">
     <style>
     
@@ -44,10 +41,39 @@
     border-radius: 0.2rem; /* Slightly smaller rounded corners */
   }
 
-
-
-
-     
+  /* SweetAlert Styling */
+  .swal2-popup {
+    font-family: 'Arial', sans-serif; /* Ensure it matches your theme */
+    border-radius: 8px;
+  }
+  
+  .swal2-title {
+    color: {{ $SystemSetting->dark_theme_color ?? ' #008751'}} !important; /* Adjust title color */
+  }
+  
+  .swal2-confirm {
+    background-color: {{ $SystemSetting->dark_theme_color ?? ' #008751'}} !important; /* Your theme’s primary button color */
+    color: white !important;
+    border-radius: 6px;
+    padding: 8px 16px;
+  }
+  
+  .swal2-cancel {
+    background-color: #dc3545 !important; /* Your theme’s danger color */
+    color: white !important;
+    border-radius: 6px;
+    padding: 8px 16px;
+  }
+  
+  .swal2-confirm:hover {
+    background-color:{{ $SystemSetting->dark_theme_color ?? ' #008751'}} !important;
+    color: {{ $SystemSetting->light_theme_color ?? ' #008751'}} !important;
+  }
+  
+  .swal2-cancel:hover {
+    background-color: #b52b32 !important;
+  }
+       
       /* Custom Styles */
     .navbar-nav .nav-link {
         transition: transform 0.3s, box-shadow 0.3s;

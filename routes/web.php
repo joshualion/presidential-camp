@@ -94,7 +94,7 @@ Route::get('/emergency/exit', function () {
 Route::middleware(['auth','check_onboarding'])->group(function () {
     // comunity pages
     Route::get('/community/feed', [HomeController::class,'index'])->name('timeline');
-    Route::get('/community/profile', [HomeController::class,'mobileProfile'])->name('mobile.timeline');
+    Route::get('/community/profile', [HomeController::class,'profileTimeline'])->name('profile.timeline');
     
     
     Route::post('/community/post/store', [HomeController::class,'storePost'])->name('posts.store');

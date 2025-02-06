@@ -21,7 +21,8 @@ return new class extends Migration
             $table->string('lastname')->nullable();
             $table->string('phone')->unique()->nullable();
             $table->string('vin')->nullable();
-            $table->string('photo')->nullable();
+            $table->string('photo')->nullable();            
+            $table->string('cover_image')->nullable();
             $table->string('address')->nullable();
             $table->string('occupation')->nullable();
             $table->string('qualification')->nullable();

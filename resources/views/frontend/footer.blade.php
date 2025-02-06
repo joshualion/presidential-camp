@@ -31,3 +31,45 @@
 <!-- Include Bootstrap JS and jQuery -->
 <script src="{{asset('frontend/js/bootstrap-bundle.min.js')}}"></script>
 <script src="{{asset('frontend/js/jquery.min.js')}}"></script>
+<!-- SweetAlerts -->
+<script src="{{asset('assets/plugins/sweetalert2/sweetalert2.min.js')}}"></script>
+
+
+ <!-- JavaScript to handle fallback -->
+ <script>
+    // Function to check if a CSS file is loaded successfully
+    function isCSSLoaded(cssId) {
+        const css = document.getElementById(cssId);
+        if (!css) return false;
+
+        // Check if the CSS file is loaded by testing a computed style
+        const testElement = document.createElement('div');
+        document.body.appendChild(testElement);
+        const styleBefore = window.getComputedStyle(testElement).display;
+        testElement.style.display = 'none';
+        const styleAfter = window.getComputedStyle(testElement).display;
+        document.body.removeChild(testElement);
+
+        return styleAfter !== styleBefore;
+    }
+
+    // Check Bootstrap CSS
+    if (!isCSSLoaded('bootstrap-css')) {
+        const localBootstrap = document.createElement('link');
+        localBootstrap.id = 'bootstrap-css';
+        localBootstrap.rel = 'stylesheet';
+        localBootstrap.href = "{{ asset('frontend/css/bootstrap.min.css') }}";
+        document.head.appendChild(localBootstrap);
+    }
+
+    // Check FontAwesome CSS
+    if (!isCSSLoaded('fontawesome-css')) {
+        const localFontAwesome = document.createElement('link');
+        localFontAwesome.id = 'fontawesome-css';
+        localFontAwesome.rel = 'stylesheet';
+        localFontAwesome.href = "{{ asset('frontend/css/fontawesome.min.css') }}";
+        document.head.appendChild(localFontAwesome);
+    }
+</script>
+
+

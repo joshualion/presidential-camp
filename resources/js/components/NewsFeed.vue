@@ -110,8 +110,10 @@ import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import EditPost from "./EditPost.vue";
 import DeletePost from "./DeletePost.vue";
-import Swal from "sweetalert2";
 dayjs.extend(relativeTime);
+
+const Swal = window.Swal;
+
 
 export default {
   components: {
@@ -127,6 +129,8 @@ export default {
       loading: false, // Loading state for fetchPosts
       editingPost: null, // Track the post being edited
       deletingPost: null, // Track the post being deleted
+      useWebSocket: true, // Flag to determine if WebSocket is being used
+      pollingInterval: null, // Store the polling interval ID
     };
   },
   props: {
@@ -155,12 +159,17 @@ export default {
   mounted() {
     // Fetch initial posts
     this.fetchPosts();
-    // Listen for new posts via WebSocket
-    this.listenForNewPosts();
+
+    // Attempt to use WebSocket (Reverb)
+    this.setupWebSocket();
+
+    // Fallback to polling if WebSocket fails
+    this.setupPollingFallback();
   },
   beforeUnmount() {
-    // Stop listening for WebSocket events
-    window.Echo.leaveChannel('posts');
+    // Clean up WebSocket and polling
+    this.cleanupWebSocket();
+    this.cleanupPolling();
   },
   methods: {
     async fetchPosts() {
@@ -189,16 +198,41 @@ export default {
         this.loading = false;
       }
     },
-    listenForNewPosts() {
+    setupWebSocket() {
       if (!window.Echo) {
-        console.error("Echo is not initialized");
+        console.warn("Echo is not initialized. Falling back to polling.");
+        this.useWebSocket = false;
         return;
       }
+
       // Listen for the NewPostCreated event
       window.Echo.private('posts')
         .listen('.NewPostCreated', (data) => {
           this.posts.unshift(data.post); // Add the new post to the top of the list
+        })
+        .error((error) => {
+          console.error("WebSocket connection failed. Falling back to polling.", error);
+          this.useWebSocket = false;
+          this.setupPollingFallback();
         });
+    },
+    setupPollingFallback() {
+      if (this.useWebSocket) return; // Skip polling if WebSocket is working
+
+      // Set up polling every 10 seconds (adjust as needed)
+      this.pollingInterval = setInterval(() => {
+        this.fetchPosts();
+      }, 10000); // 10 seconds
+    },
+    cleanupWebSocket() {
+      if (window.Echo) {
+        window.Echo.leaveChannel('posts');
+      }
+    },
+    cleanupPolling() {
+      if (this.pollingInterval) {
+        clearInterval(this.pollingInterval);
+      }
     },
     handleScroll(event) {
       if (this.loading) return;

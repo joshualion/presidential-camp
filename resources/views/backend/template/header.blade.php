@@ -174,6 +174,13 @@
 <div class="wrapper">
 
   <!-- Preloader -->
+  @desktop()
   <div class="preloader flex-column justify-content-center align-items-center">
     <img class="animation__shake" src="{{ !empty($SystemSetting->logo) ? url('uploads/system_images/'.$SystemSetting->logo) : url('uploads/system_images/logo.png') }}" alt="Logo" height="15%" width="15%">
   </div>
+  @enddesktop()
+  @mobile()
+  <div class="preloader flex-column justify-content-center align-items-center">
+    <img class="animation__shake" src="{{ !empty($SystemSetting->favicon) ? url('uploads/system_images/'.$SystemSetting->favicon) : url('uploads/system_images/favicon.png') }}" alt="Logo" height="15%" width="15%">
+  </div>
+  @endmobile()
