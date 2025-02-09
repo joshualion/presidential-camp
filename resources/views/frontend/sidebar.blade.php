@@ -6,7 +6,7 @@
     <div class="card-body">
         <ul class="nav flex-column">
             <div class="text-center mb-4">
-                <a class="nav-link text-dark" href="{{route($profileData->access_level.'.profile')}}">
+                <a class="nav-link text-dark" href="{{route('profile.timeline')}}">
                     <img class="profile-user-img img-fluid img-circle shadow-sm" src="{{(!empty($profileData->photo)) ? url('uploads/member_images/'.$profileData->photo) : url('uploads/no_image.jpg')}}" alt="profile" width="60" height="60">
                     <h6 class="mt-2" style="color: {{ $SystemSetting->dark_theme_color ?? '#008751' }};">{{$profileData->firstname}} {{$profileData->lastname}}</h6>
                 </a>

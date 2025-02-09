@@ -306,10 +306,10 @@
         }
 
         .logo {
-    max-width: 100%;
-    height: auto; /* Maintain aspect ratio */
-    display: block; /* Remove any extra space below the image */
-  }
+          max-width: 100%;
+          height: auto; /* Maintain aspect ratio */
+          display: block; /* Remove any extra space below the image */
+        }
 
     </style>
 </head>

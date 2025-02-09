@@ -2,11 +2,7 @@
 
 @include('auth.template.header')
 
-<style>
-    .text-primary, .card-outline{
-        color: {{ $SystemSetting ? $SystemSetting->dark_theme_color : '#008751' }} !important;
-    }
-</style>
+
 
 <div class="card card-primary">
     <div class="card-body login-card-body">
@@ -95,18 +91,7 @@
         </div>
 
 
-          <!-- Phone -->
-        <!-- <div class=" input-group mb-3">
-          <input  class="form-control  @error('phone') is-invalid @enderror" name="phone" id="phone" type="tel" >
-          <div class="input-group-append">
-              <div class="input-group-text">
-                <span class="fas fa-phon text-primarye"></span>
-              </div>
-            </div>
-            @error('phone')
-                <div class="invalid-feedback">{{ $message }}</div>
-            @enderror
-          </div>           -->
+        
           <!-- /.col -->
           <div class="input-group mb-3">
             <button type="submit" class="btn btn-primary btn-block fa-pull-right text-center ">Register</button>
@@ -127,59 +112,9 @@
   </div><!-- /.card -->
 </div>
 <!-- /.register-box -->
-
-
-
 @include('auth.template.footer')
-
-<script src="https://cdn.jsdelivr.net/npm/intl-tel-input@18.1.1/build/js/intlTelInput.min.js"></script>
-
-<script>
-  const input = document.querySelector("#phone");
-  const button = document.querySelector("#btn");
-  const errorMsg = document.querySelector("#error-msg");
-  const validMsg = document.querySelector("#valid-msg");
-
-// here, the index maps to the error code returned from getValidationError - see readme
-  const errorMap = ["Invalid number", "Invalid country code", "Too short", "Too long", "Invalid number"];
-
-  window.intlTelInput(input, {
-    initialCountry: "ng",
-  geoIpLookup: callback => {
-    fetch("https://ipapi.co/json")
-      .then(res => res.json())
-      .then(data => callback(data.country_code))
-      .catch(() => callback("us"));
-
-  },
-     separateDialCode: true,
-      hiddenInput: "full_phone",
-    utilsScript: "https://cdn.jsdelivr.net/npm/intl-tel-input@18.1.1/build/js/utils.js?1690975972744",
-  });
-
-  const reset = () => {
-  input.classList.remove("error");
-  errorMsg.innerHTML = "";
-  errorMsg.classList.add("hide");
-  validMsg.classList.add("hide");
-  };
-
-// on click button: validate
-  button.addEventListener('click', () => {
-  reset();
-  if (input.value.trim()) {
-    if (iti.isPossibleNumber()) {
-      validMsg.classList.remove("hide");
-    } else {
-      input.classList.add("error");
-      const errorCode = iti.getValidationError();
-      errorMsg.innerHTML = errorMap[errorCode];
-      errorMsg.classList.remove("hide");
-    }
+<style>
+  .text-primary, .card-outline{
+      color: {{ $SystemSetting ? $SystemSetting->dark_theme_color : '#008751' }} !important;
   }
-});
-
-// on keyup / change flag: reset
-input.addEventListener('change', reset);
-input.addEventListener('keyup', reset);
-</script>
+</style>

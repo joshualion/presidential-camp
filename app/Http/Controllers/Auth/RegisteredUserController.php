@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\SystemSetting;
 use App\Models\User;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
@@ -11,6 +12,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
 use Illuminate\View\View;
+use Spatie\Permission\Models\Role;
 
 class RegisteredUserController extends Controller
 {
@@ -37,20 +39,31 @@ class RegisteredUserController extends Controller
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
 
+        // Find the role by its Name
+        $role = Role::where('name', 'member')->first();
+
         $user = User::create([
-            'username' => $request->name,
+            'username' => $request->username,
             'firstname' => $request->firstname,
             'lastname' => $request->lastname,
             'email' => $request->email,
             'password' => Hash::make($request->password),
         ]);
 
+        //assign role
+        $user->roles()->attach($role->id);
+
+
         event(new Registered($user));
 
         Auth::login($user);       
 
+        $setting = SystemSetting::find(1);
+
         $url ='';
-        if (Auth::user()->access_level === 'superadmin') {
+        if($setting->frontend_community == 1){
+            $url = '/community/feed';
+        }elseif (Auth::user()->access_level === 'superadmin') {
             $url = '/superadmin/dashboard';
         }elseif(Auth::user()->access_level === 'nationaladmin') {
             $url = '/national/dashboard';

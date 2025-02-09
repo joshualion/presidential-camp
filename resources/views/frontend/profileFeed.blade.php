@@ -3,24 +3,38 @@ use Illuminate\Support\Facades\Auth;
 
 $profileData = Auth::check() ? Auth::user() : null;
 $userAudience = $profileData ? $profileData->getAudience() : 'public';
-$coverImage =  $profileData->cover_image ? url('uploads/member_images/'.$profileData->cover_image) : url('uploads/no_image.jpg');
+$coverImage = $profileData->cover_image ? url('uploads/member_images/'.$profileData->cover_image) : url('uploads/no_image.jpg');
+$profileImage = !empty($profileData->photo) ? url('uploads/member_images/'.$profileData->photo) : url('uploads/no_image.jpg');
 @endphp
 
 <!-- Cover Image -->
-<div class="cover-image" style="background-image: url({{$coverImage}}); background-size: cover; background-position: center; height: 300px;">
+<div class="cover-image position-relative" style="background-image: url({{ $coverImage }});">
+    <button class="btn btn-primary position-absolute bottom-0 end-0 m-3 update-cover-btn" data-bs-toggle="modal" data-bs-target="#updateCoverModal" title="Change Cover Photo">
+        <i class="fas fa-camera"></i>
+    </button>
 </div>
 
-<!-- Profile Image and Name (Positioned to the left for desktop) -->
+<!-- Profile Image and Name -->
 <div class="container mt-n5">
     <div class="row align-items-end">
-        <div class="col-md-2">
-            <img class="profile-user-img img-fluid img-circle shadow-lg" src="{{(!empty($profileData->photo)) ? url('uploads/member_images/'.$profileData->photo) : url('uploads/no_image.jpg')}}" alt="profile" width="120" height="120" style="margin-top: -45%;">
+        <div class="col-md-2 profile-img-overlap position-relative">
+            <div class="profile-img-container position-relative" style="width: 120px; height: 120px;">
+                <img class="profile-user-img img-fluid img-circle shadow-lg" src="{{ $profileImage }}" alt="profile" width="120" height="120">
+                <button class="btn btn-primary position-absolute update-profile-btn" style="right: 10px; bottom: 0; width: 30px; height: 30px; padding: 0; border-radius: 50%;" data-bs-toggle="modal" data-bs-target="#updateProfileModal" title="Change Profile Photo">
+                    <i class="fas fa-camera fa-sm"></i>
+                </button>
+            </div>
         </div>
         <div class="col-md-10">
-            <h2 class="mt-2" style="color: {{ $SystemSetting->dark_theme_color ?? '#008751' }};">{{$profileData->firstname}} {{$profileData->lastname}}</h2>
+            <h2 class="mt-2" style="color: {{ $SystemSetting->dark_theme_color ?? '#008751' }};">
+                {{ $profileData->firstname }} {{ $profileData->lastname }}
+            </h2>
         </div>
     </div>
-</div>
+</div> 
+
+<!-- Modals and Scripts remain unchanged -->
+
 
 <!-- Three Column Layout for Links -->
 <div class="container mt-4">
@@ -85,7 +99,7 @@ $coverImage =  $profileData->cover_image ? url('uploads/member_images/'.$profile
                         @foreach($userSupportGroups as $group)
                         <li class="d-flex justify-content-between align-items-center">
                             <span>{{ $group }}</span>
-                            <a href="{{ route('select.support.group') }}" class="btn btn-sm btn-outline-primary"><i class="fas fa-edit"></i></a>
+                            <a href="{{ route('select.support.group') }}" class="btn btn-sm btn-default"><i class="fas fa-edit"></i></a>
                         </li>
                         @endforeach
                     </ul>
@@ -99,7 +113,7 @@ $coverImage =  $profileData->cover_image ? url('uploads/member_images/'.$profile
 <div class="container mt-4">
     <div class="row">
         <!-- Left Side: Create & View Post Section -->
-        <div class="col-md-8">
+        <div class="col-md-9">
             <div class="create-post">
                  @include('frontend.createProfilePost') <!-- No extra divs needed -->
             </div>
@@ -116,12 +130,100 @@ $coverImage =  $profileData->cover_image ? url('uploads/member_images/'.$profile
 
         <!-- Right Side: Sidebar (Visible on Desktop) -->
         @desktop()
-        <div class="col-md-4 sidebar">
+        <div class="col-md-3 sidebar">
             @include('frontend.right-sidebar')
         </div>
         @enddesktop()
     </div>
 </div>
+
+<!-- Modals for Updating Images -->
+<!-- Cover Photo Modal -->
+<div class="modal fade" id="updateCoverModal" tabindex="-1" aria-labelledby="updateCoverModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Update Cover Photo</h5>
+                <button type="button" class="btn-close" data-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="updateCoverForm" enctype="multipart/form-data">
+                    @csrf
+                    <input type="file" name="cover_image" class="form-control" accept="image/*">
+                    <button type="submit" class="btn btn-primary mt-3">Upload & Save</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Profile Photo Modal -->
+<div class="modal fade" id="updateProfileModal" tabindex="-1" aria-labelledby="updateProfileModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Update Profile Photo</h5>
+                <button type="button" class="btn-close" data-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="updateProfileForm" enctype="multipart/form-data">
+                    @csrf
+                    <input type="file" name="photo" class="form-control" accept="image/*">
+                    <button type="submit" class="btn btn-primary mt-3">Upload & Save</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function() {
+    // Handle Profile Photo Upload
+    $('#updateProfileForm').submit(function(e) {
+        e.preventDefault();
+        var formData = new FormData(this);
+        
+        $.ajax({
+            url: "{{ route('update.profile.photo') }}",
+            type: "POST",
+            data: formData,
+            contentType: false,
+            processData: false,
+            success: function(response) {
+                if(response.success) {
+                    $('.profile-user-img').attr('src', response.image_url);
+                    $('#updateProfileModal').modal('hide');
+                } else {
+                    alert(response.error);
+                }
+            }
+        });
+    });
+
+    // Handle Cover Photo Upload
+    $('#updateCoverForm').submit(function(e) {
+        e.preventDefault();
+        var formData = new FormData(this);
+
+        $.ajax({
+            url: "{{ route('update.cover.photo') }}",
+            type: "POST",
+            data: formData,
+            contentType: false,
+            processData: false,
+            success: function(response) {
+                if(response.success) {
+                    $('.cover-image').css('background-image', 'url(' + response.image_url + ')');
+                    $('#updateCoverModal').modal('hide');
+                } else {
+                    alert(response.error);
+                }
+            }
+        });
+    });
+});
+
+</script>
 
 <style>
     .cover-image {
@@ -132,22 +234,49 @@ $coverImage =  $profileData->cover_image ? url('uploads/member_images/'.$profile
     }
 
     .profile-user-img {
-        position: relative;
-        z-index: 1;
-        border: 4px solid #fff; /* Add a border to make the profile image stand out */
+        
     }
 
     .create-post {
         width: 100%;
     }
 
-    /* Ensure the profile image overlaps the cover image by 45% */
-    .profile-user-img {
-        margin-top: -45%;
-    }
-
     /* Adjust the profile name positioning */
     .col-md-10 h2 {
         margin-top: 20px; /* Add some spacing between the profile image and the name */
     }
+
+    /* Ensure the profile image button stays within the profile image */
+    .profile-img-container {
+        overflow: hidden; /* Clip the button to the container */
+        border-radius: 50%; /* Ensure the container is circular */
+        margin-top: -45%; /* Ensure the profile image overlaps the cover image by 45% */
+        position: relative;
+        z-index: 1;
+        border: 4px solid #fff; /* Add a border to make the profile image stand out */
+       
+    }
+
+    /* Position the camera icon directly on top of the profile photo in the bottom right corner */
+    .update-profile-btn {
+        right: 15px;
+        bottom: 15px;
+        width: 30px;
+        height: 30px;
+        
+        padding: 0;
+        border-radius: 50%;
+    }
+
+    /* Mobile-specific adjustments */
+    @media (max-width: 767.98px) {
+        .profile-img-container {
+            margin-top: -30%; /* Adjust overlap for mobile */
+        }
+        .update-profile-btn {
+            right: 5px !important; /* Adjust button position */
+            bottom: 5px !important;
+        }
+    }
 </style>
+

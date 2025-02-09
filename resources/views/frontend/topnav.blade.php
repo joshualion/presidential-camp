@@ -34,6 +34,15 @@
               <!-- Notification, Message, and Logout Icons -->
                 <div class="col-12 col-lg-3 d-flex justify-content-end mt-3 mt-lg-0">
                     <ul class="navbar-nav ms-auto d-flex flex-row align-items-center gap-3" style="list-style: none; margin: 0; padding: 0;">
+                        
+                        <!-- Home Icon -->
+                        <li class="nav-item position-relative">
+                            <a class="nav-link p-2 rounded-circle d-flex justify-content-center align-items-center shadow" href="/community/feed" title="Home" style="background-color: {{ $SystemSetting->dark_theme_color ?? '#008751' }}; width: 35px; height: 35px;">
+                                <i class="fas fa-home" style="font-size: 1.2rem; color: #f9f9f9; "></i>
+                            </a>
+                            
+                        </li>
+                        
                         <!-- Notification Icon -->
                         <li class="nav-item position-relative">
                             <a class="nav-link p-2 rounded-circle d-flex justify-content-center align-items-center shadow" href="#" title="Notifications" style="background-color: {{ $SystemSetting->dark_theme_color ?? '#008751' }}; width: 35px; height: 35px;">

@@ -142,8 +142,12 @@ class HomeController extends Controller
             'post_type' => $photoFilename && $videoFilename ? 'mixed' : ($photoFilename ? 'image' : ($videoFilename ? 'video' : 'text')),
         ]);
 
-         // Broadcast the event
-         broadcast(new NewPostCreated($post))->toOthers();
+
+           // Only broadcast if WebSocket is available (local environment)
+            // if (app()->WEB_SOCKET_AVAILABILITY==true) {
+                // Broadcast the event
+                broadcast(new NewPostCreated($post))->toOthers();
+           // }
 
         // Respond with the new post (to update the feed dynamically)
         return response()->json([
@@ -155,83 +159,7 @@ class HomeController extends Controller
     }
 
 
-    // public function fetchPosts(Request $request)
-    // {
-    //     // Get the audience, page, and last_post_timestamp parameters from the request
-    //     $audience = $request->input('audience', 'public');
-    //     $lastPostTimestamp = $request->input('last_post_timestamp'); // Timestamp of the latest post in the feed
-    
-    //     // Initialize the query builder for posts
-    //     $query = Post::with('user');  // Assuming the relationship is named 'user'
-    
-    //     // Get profile data for filtering
-    //     $profileData = $this->getProfileData();
-    
-    //     // Check audience type and apply filters accordingly
-    //     switch ($audience) {
-    //         case 'public':
-    //             // No additional filtering for public audience
-    //             $query->where('audience', 'public');
-    //             break;
-    //         case 'region':
-    //             // Filter posts based on the region_id (user's region vs post's region)
-    //             $regionId = $profileData->region_id;
-    //             $query->where(function($q) use ($regionId) {
-    //                 $q->where('audience', 'public')
-    //                 ->orWhere('region_id', $regionId);
-    //             });
-    //             break;
-    //         case 'state':
-    //             // Filter posts based on the state_id (user's state vs post's state)
-    //             $stateId = $profileData->state_id;
-    //             $query->where(function($q) use ($stateId) {
-    //                 $q->where('audience', 'public')
-    //                 ->orWhere('state_id', $stateId);
-    //             });
-    //             break;
-    //         case 'lga':
-    //             // Filter posts based on the lga_id (user's LGA vs post's LGA)
-    //             $lgaId = $profileData->lga_id;
-    //             $query->where(function($q) use ($lgaId) {
-    //                 $q->where('audience', 'public')
-    //                 ->orWhere('lga_id', $lgaId);
-    //             });
-    //             break;
-    //         case 'ward':
-    //             // Filter posts based on the ward_id (user's ward vs post's ward)
-    //             $wardId = $profileData->ward_id;
-    //             $query->where(function($q) use ($wardId) {
-    //                 $q->where('audience', 'public')
-    //                 ->orWhere('ward_id', $wardId);
-    //             });
-    //             break;
-    //         case 'pu':
-    //             // Filter posts based on the pu_id (user's polling unit vs post's polling unit)
-    //             $puId = $profileData->polling_unit_id;
-    //             $query->where(function($q) use ($puId) {
-    //                 $q->where('audience', 'public')
-    //                 ->orWhere('pu_id', $puId);
-    //             });
-    //             break;
-    //         default:
-    //             // If the audience is not recognized, fall back to public
-    //             $query->where('audience', 'public');
-    //             break;
-    //     }
-    
-    //     // Filter posts created after the last_post_timestamp
-    //     if ($lastPostTimestamp) {
-    //         $query->where('created_at', '>', $lastPostTimestamp);
-    //     }
-    
-    //     // Order by creation date and get the results
-    //     $posts = $query->latest()->get();
-    
-    //     return response()->json($posts);
-    // }
-
-   
-   
+  
     public function fetchPosts(Request $request)
 {
     // Get the audience, page, and last_post_timestamp parameters from the request
@@ -422,6 +350,141 @@ class HomeController extends Controller
          ]);
      }
 
+
+
+    
+
+     public function updateProfilePhoto(Request $request)
+     {
+         $user = Auth::user();
+     
+         // Validate file type and size
+         $request->validate([
+             'photo' => 'required|image|mimes:jpeg,png,jpg,gif|max:1024', // 1MB max
+         ]);
+     
+         if ($request->hasFile('photo')) {
+             $file = $request->file('photo');
+             $filename = date('YmdHi') . '_' . $file->getClientOriginalName();
+             
+             // Move file to both locations
+             $file->move(public_path('uploads/member_images/'), $filename);
+             copy(public_path('uploads/member_images/' . $filename), public_path('uploads/community/photos/' . $filename));
+     
+             // Delete old images if they exist
+             if ($user->photo) {
+                 $oldProfilePath = public_path('uploads/member_images/' . $user->photo);
+                 $oldCommunityPath = public_path('uploads/community/photos/' . $user->photo);
+                 
+                 if (file_exists($oldProfilePath)) unlink($oldProfilePath);
+                 if (file_exists($oldCommunityPath)) unlink($oldCommunityPath);
+             }
+     
+             // Update user's profile photo
+             $user->photo = $filename;
+             $user->save();
+
+             // Retrieve additional profile data
+            $profileData = $this->getProfileData();
+            $country_id = $profileData->country_id;  // Assuming the user has a country relationship
+            $region_id = $profileData->region_id;    // Assuming the user has a region relationship
+            $state_id = $profileData->state_id;      // Assuming the user has a state relationship
+            $lga_id = $profileData->lga_id;          // Assuming the user has a LGA relationship
+            $ward_id = $profileData->ward_id;        // Assuming the user has a ward relationship
+            $pu_id = $profileData->polling_unit_id ; // Assuming the user has a polling unit relationship
+
+     
+             // Create a post with correct image URL
+             Post::create([
+                 'user_id' => $user->id,
+                 'content' => $user->firstname . ' ' . $user->lastname . ' has updated their profile photo.',
+                 'image_url' => $filename, // Post uses community photos
+                 'post_type' => 'image',                 
+                'audience' => 'pu',
+                'country_id' => $country_id,
+                'region_id' => $region_id,
+                'state_id' => $state_id,
+                'lga_id' => $lga_id,
+                'ward_id' => $ward_id,
+                'pu_id' => $pu_id,
+             ]);
+     
+             return response()->json([
+                 'success' => true,
+                 'image_url' => url('uploads/member_images/' . $filename),
+             ]);
+         }
+     
+         return response()->json(['success' => false, 'error' => 'File upload failed']);
+     }
+     
+
+     public function updateCoverPhoto(Request $request)
+     {
+         $user = Auth::user();
+     
+         // Validate file type and size
+         $request->validate([
+             'cover_image' => 'required|image|mimes:jpeg,png,jpg,gif|max:1024', // 1MB max
+         ]);
+     
+         if ($request->hasFile('cover_image')) {
+             $file = $request->file('cover_image');
+             $filename = date('YmdHi') . '_' . $file->getClientOriginalName();
+             
+             // Move file to both locations
+             $file->move(public_path('uploads/member_images/'), $filename);
+             copy(public_path('uploads/member_images/' . $filename), public_path('uploads/community/photos/' . $filename));
+     
+             // Delete old images if they exist
+             if ($user->cover_image) {
+                 $oldCoverPath = public_path('uploads/member_images/' . $user->cover_image);
+                 $oldCommunityPath = public_path('uploads/community/photos/' . $user->cover_image);
+                 
+                 if (file_exists($oldCoverPath)) unlink($oldCoverPath);
+                 if (file_exists($oldCommunityPath)) unlink($oldCommunityPath);
+             }
+     
+             // Update user's cover image
+             $user->cover_image = $filename;
+             $user->save();
+
+               // Retrieve additional profile data
+            $profileData = $this->getProfileData();
+            $country_id = $profileData->country_id;  // Assuming the user has a country relationship
+            $region_id = $profileData->region_id;    // Assuming the user has a region relationship
+            $state_id = $profileData->state_id;      // Assuming the user has a state relationship
+            $lga_id = $profileData->lga_id;          // Assuming the user has a LGA relationship
+            $ward_id = $profileData->ward_id;        // Assuming the user has a ward relationship
+            $pu_id = $profileData->polling_unit_id ; // Assuming the user has a polling unit relationship
+
+     
+             // Create a post with correct image URL
+             Post::create([
+                 'user_id' => $user->id,
+                 'content' => $user->firstname . ' ' . $user->lastname . ' has updated their cover photo.',
+                 'image_url' => $filename, // Post uses community photos
+                 'post_type' => 'image',                
+                 'audience' => 'pu',
+                 'country_id' => $country_id,
+                 'region_id' => $region_id,
+                 'state_id' => $state_id,
+                 'lga_id' => $lga_id,
+                 'ward_id' => $ward_id,
+                 'pu_id' => $pu_id,
+             ]);
+     
+             return response()->json([
+                 'success' => true,
+                 'image_url' => url('uploads/member_images/' . $filename),
+             ]);
+         }
+     
+         return response()->json(['success' => false, 'error' => 'File upload failed']);
+     }
+     
+
+    
     
 
 

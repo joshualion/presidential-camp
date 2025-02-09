@@ -12,9 +12,6 @@ use App\Http\Controllers\Auth\VerifyEmailController;
 use Illuminate\Support\Facades\Route;
 use App\Models\SystemSetting;
 
-
-
-
 Route::middleware('guest')->group(function () {
 
     $SystemSetting = SystemSetting::first();

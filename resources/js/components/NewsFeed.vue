@@ -1,5 +1,7 @@
 <template>
   <div>
+    <!-- Lightbox Component -->
+  <Lightbox />
     <!-- Scrollable container with a fixed height to enable scrolling -->
     <div class="infinite-scroll-area"  @scroll="handleScroll">
       <!-- Display posts -->
@@ -8,13 +10,19 @@
           <div class="row">
            <div class="d-flex justify-content-between w-100">
             <h6 class="card-title username d-flex align-items-center">
-              <img
-                :src="post.user?.photo ? '/uploads/member_images/' + post.user.photo : '/uploads/no_image.jpg'"
-                alt="Profile Picture"
-                class="rounded-circle me-3"
-                style="width: 50px; height: 50px; object-fit: cover;"
-              />
-              {{ post.user?.firstname || 'Unknown' }} {{ post.user?.lastname || 'User' }}
+              
+              <a :href="post.user?.id === profileData.id ? '/community/profile' : `/community/${post.user?.username}/profile/timeline`">
+                <img
+                  :src="post.user?.photo ? '/uploads/member_images/' + post.user.photo : '/uploads/no_image.jpg'"
+                  alt="Profile Picture"
+                  class="rounded-circle me-3"
+                  style="width: 50px; height: 50px; object-fit: cover;"
+                />
+              </a>
+              <a :href="post.user?.id === profileData.id ? '/community/profile' : `/community/${post.user?.username}/profile/timeline`">
+                {{ post.user?.firstname || 'Unknown' }} {{ post.user?.lastname || 'User' }}
+              </a>
+
             </h6>
             <div class="d-flex align-items-center">
               <span class="text-secondary d-block" style="font-size: 0.55rem; margin-top: -4px;">
@@ -102,220 +110,289 @@
       </div>
     </div>
   </div>
+  
 </template>
 
 <script>
-import axios from "axios";
-import dayjs from "dayjs";
-import relativeTime from "dayjs/plugin/relativeTime";
-import EditPost from "./EditPost.vue";
-import DeletePost from "./DeletePost.vue";
-dayjs.extend(relativeTime);
+    import axios from "axios";
+    import dayjs from "dayjs";
+    import relativeTime from "dayjs/plugin/relativeTime";
+    import EditPost from "./EditPost.vue";
+    import DeletePost from "./DeletePost.vue";
+    dayjs.extend(relativeTime);
 
-const Swal = window.Swal;
+    const Swal = window.Swal;
 
-
-export default {
-  components: {
-    EditPost,
-    DeletePost,
-  },
-  data() {
-    return {
-      posts: [], // Array to hold posts
-      newComment: {}, // Object to hold comments for each post
-      currentPage: 1, // Current page for pagination
-      hasMore: true, // Track if there are more posts to fetch
-      loading: false, // Loading state for fetchPosts
-      editingPost: null, // Track the post being edited
-      deletingPost: null, // Track the post being deleted
-      useWebSocket: true, // Flag to determine if WebSocket is being used
-      pollingInterval: null, // Store the polling interval ID
-    };
-  },
-  props: {
-    audience: {
-      type: String,
-      default: "public",
-      validator: (value) => ["public", "private", "friends"].includes(value), // Validate allowed values
-    },
-    profileData: {
-      type: Object,
-      default: () => ({}), // Default to an empty object if not provided
-    },
-  },
-  watch: {
-    audience: {
-      handler(newAudience) {
-        // Reset posts and pagination when audience changes
-        this.posts = [];
-        this.currentPage = 1;
-        this.hasMore = true;
-        this.fetchPosts();
+    export default {
+      components: {
+        EditPost,
+        DeletePost,
       },
-      immediate: true, // Trigger handler immediately on mount
-    },
-  },
-  mounted() {
-    // Fetch initial posts
-    this.fetchPosts();
-
-    // Attempt to use WebSocket (Reverb)
-    this.setupWebSocket();
-
-    // Fallback to polling if WebSocket fails
-    this.setupPollingFallback();
-  },
-  beforeUnmount() {
-    // Clean up WebSocket and polling
-    this.cleanupWebSocket();
-    this.cleanupPolling();
-  },
-  methods: {
-    async fetchPosts() {
-      if (this.loading || !this.hasMore) return;
-
-      this.loading = true;
-      try {
-        const response = await axios.get(`/community/posts`, {
-          params: {
-            audience: this.audience,
-            page: this.currentPage,
+      data() {
+        return {
+          posts: [], // Array to hold posts
+          newComment: {}, // Object to hold comments for each post
+          currentPage: 1, // Current page for pagination
+          hasMore: true, // Track if there are more posts to fetch
+          loading: false, // Loading state for fetchPosts
+          editingPost: null, // Track the post being edited
+          deletingPost: null, // Track the post being deleted
+          useWebSocket: true, // Flag to determine if WebSocket is being used
+          pollingInterval: null, // Store the polling interval ID
+          isFormSubmitting: false, // Track form submission state
+          isUserActive: true, // Track if the user is active
+        };
+      },
+      props: {
+        audience: {
+          type: String,
+          default: "public",
+          validator: (value) => ["public", "private", "friends"].includes(value), // Validate allowed values
+        },
+        profileData: {
+          type: Object,
+          default: () => ({}), // Default to an empty object if not provided
+        },
+      },
+      watch: {
+        audience: {
+          handler(newAudience) {
+            // Reset posts and pagination when audience changes
+            this.posts = [];
+            this.currentPage = 1;
+            this.hasMore = true;
+            this.fetchPosts();
           },
-        });
-
-        const newPosts = response.data.data;
-
-        if (newPosts.length > 0) {
-          this.posts = [...this.posts, ...newPosts];
-          this.currentPage += 1;
-        } else {
-          this.hasMore = false;
-        }
-      } catch (error) {
-        Swal.fire("Error", "Unable to fetch posts. Please try again later.", "error");
-      } finally {
-        this.loading = false;
-      }
-    },
-    setupWebSocket() {
-      if (!window.Echo) {
-        console.warn("Echo is not initialized. Falling back to polling.");
-        this.useWebSocket = false;
-        return;
-      }
-
-      // Listen for the NewPostCreated event
-      window.Echo.private('posts')
-        .listen('.NewPostCreated', (data) => {
-          this.posts.unshift(data.post); // Add the new post to the top of the list
-        })
-        .error((error) => {
-          console.error("WebSocket connection failed. Falling back to polling.", error);
-          this.useWebSocket = false;
-          this.setupPollingFallback();
-        });
-    },
-    setupPollingFallback() {
-      if (this.useWebSocket) return; // Skip polling if WebSocket is working
-
-      // Set up polling every 10 seconds (adjust as needed)
-      this.pollingInterval = setInterval(() => {
+          immediate: true, // Trigger handler immediately on mount
+        },
+      },
+      mounted() {
+        // Fetch initial posts
         this.fetchPosts();
-      }, 10000); // 10 seconds
-    },
-    cleanupWebSocket() {
-      if (window.Echo) {
-        window.Echo.leaveChannel('posts');
-      }
-    },
-    cleanupPolling() {
-      if (this.pollingInterval) {
-        clearInterval(this.pollingInterval);
-      }
-    },
-    handleScroll(event) {
-      if (this.loading) return;
-      const scrollableContainer = event.target;
-      const scrollPosition = scrollableContainer.scrollTop + scrollableContainer.clientHeight;
-      const scrollHeight = scrollableContainer.scrollHeight;
 
-      if (scrollPosition >= scrollHeight - 200) {
-        this.fetchPosts();
-      }
-    },
-    editPost(post) {
-      this.editingPost = post;
-    },
-    async updatePost(updatedPost) {
-      try {
-        const response = await axios.put(`/community/posts/${updatedPost.id}`, {
-          content: updatedPost.content,
-        });
+        // Attempt to use WebSocket (Reverb)
+        this.setupWebSocket();
 
-        // Merge updated fields with the existing post
-        const index = this.posts.findIndex((p) => p.id === updatedPost.id);
-        if (index !== -1) {
-          this.posts[index] = { ...this.posts[index], ...response.data };
-        }
+        // Fallback to polling if WebSocket fails
+        this.setupPollingFallback();
 
-        this.editingPost = null; // Reset editingPost
-      } catch (error) {
-        Swal.fire("Error", "Unable to update post. Please try again.", "error");
-      }
-    },
-    async deletePost(post) {
-      const confirmation = await Swal.fire({
-        title: "Are you sure?",
-        text: "This action cannot be undone.",
-        icon: "warning",
-        showCancelButton: true,
-        confirmButtonText: "Yes, delete it!",
-      });
+        // Track user activity
+        this.setupUserActivityTracking();
+      },
+      beforeUnmount() {
+        // Clean up WebSocket, polling, and event listeners
+        this.cleanupWebSocket();
+        this.cleanupPolling();
+        this.cleanupUserActivityTracking();
+      },
+      methods: {
+        async fetchPosts() {
+          if (this.loading || !this.hasMore) return;
 
-      if (confirmation.isConfirmed) {
-        try {
-          await axios.delete(`/community/posts/${post.id}`);
-          this.posts = this.posts.filter((p) => p.id !== post.id);
-          this.deletingPost = null; // Reset deletingPost
-          Swal.fire("Deleted!", "Your post has been deleted.", "success");
-        } catch (error) {
-          Swal.fire("Error", "Unable to delete post. Please try again.", "error");
-        }
-      }
-    },
-    async postComment(postId) {
-      if (!this.newComment[postId]) return;
+          this.loading = true;
+          try {
+            const response = await axios.get(`/community/posts`, {
+              params: {
+                audience: this.audience,
+                page: this.currentPage,
+              },
+            });
 
-      try {
-        const response = await axios.post(`/community/posts/${postId}/comments`, {
-          content: this.newComment[postId],
-        });
+            const newPosts = response.data.data.filter(
+              newPost => !this.posts.some(existingPost => existingPost.id === newPost.id)
+            );
 
-        const post = this.posts.find((p) => p.id === postId);
-        if (post) {
-          if (!post.comments) post.comments = [];
-          post.comments.push({
-            id: response.data.id || Date.now(),
-            content: this.newComment[postId],
-            created_at: response.data.created_at || new Date().toISOString(),
+            if (newPosts.length > 0) {
+              this.posts = [...this.posts, ...newPosts];
+              this.currentPage += 1;
+            } else {
+              this.hasMore = false;
+            }
+          } catch (error) {
+            Swal.fire("Error", "Unable to fetch posts. Please try again later.", "error");
+          } finally {
+            this.loading = false;
+          }
+        },
+        setupWebSocket() {
+          if (!window.Echo) {
+            console.warn("Echo is not initialized. Falling back to polling.");
+            this.useWebSocket = false;
+            return;
+          }
+
+          // Test WebSocket connection
+          window.Echo.connector.socket.on("connect", () => {
+            console.log("WebSocket connected.");
+            this.useWebSocket = true;
+
+            // Listen for the NewPostCreated event
+            window.Echo.private('posts')
+              .listen('.NewPostCreated', (data) => {
+                this.posts.unshift(data.post); // Add the new post to the top of the list
+              });
           });
-        }
 
-        this.newComment[postId] = ""; // Clear the comment input for this post
-      } catch (error) {
-        Swal.fire("Error", "Unable to post comment. Please try again later.", "error");
-      }
-    },
-    toggleComments(postId) {
-      const post = this.posts.find((p) => p.id === postId);
-      if (post) {
-        post.showComments = !post.showComments;
-      }
-    },
-    formatDate(date) {
-      return dayjs(date).fromNow(); // Format dates using dayjs
-    },
-  },
-};
+          // Handle WebSocket connection errors
+          window.Echo.connector.socket.on("error", (error) => {
+            console.error("WebSocket connection failed. Falling back to polling.", error);
+            this.useWebSocket = false;
+            this.setupPollingFallback();
+          });
+        },
+        setupPollingFallback() {
+          if (this.useWebSocket || this.pollingInterval) return; // Skip if WebSocket is working or polling is already set up
+
+          // Set up polling every 10 seconds (adjust as needed)
+          this.pollingInterval = setInterval(() => {
+            if (this.isUserActive) {
+              this.fetchPosts();
+            }
+          }, 10000); // 10 seconds
+        },
+        cleanupWebSocket() {
+          if (window.Echo) {
+            window.Echo.leaveChannel('posts');
+          }
+        },
+        cleanupPolling() {
+          if (this.pollingInterval) {
+            clearInterval(this.pollingInterval);
+            this.pollingInterval = null;
+          }
+        },
+        setupUserActivityTracking() {
+          // Track visibility change (e.g., tab switch)
+          document.addEventListener("visibilitychange", this.handleVisibilityChange);
+
+          // Track focus and blur events
+          window.addEventListener("focus", this.handleUserActive);
+          window.addEventListener("blur", this.handleUserInactive);
+        },
+        cleanupUserActivityTracking() {
+          document.removeEventListener("visibilitychange", this.handleVisibilityChange);
+          window.removeEventListener("focus", this.handleUserActive);
+          window.removeEventListener("blur", this.handleUserInactive);
+        },
+        handleVisibilityChange() {
+          this.isUserActive = !document.hidden;
+        },
+        handleUserActive() {
+          this.isUserActive = true;
+        },
+        handleUserInactive() {
+          this.isUserActive = false;
+        },
+        async submitPost() {
+          if (this.isFormSubmitting) return; // Prevent multiple submissions
+
+          this.isFormSubmitting = true;
+
+          try {
+            const response = await axios.post("/community/posts", {
+              content: this.newPostContent,
+            });
+
+            // Add the new post to the top of the list
+            this.posts.unshift(response.data);
+
+            // Clear the form
+            this.newPostContent = "";
+          } catch (error) {
+            Swal.fire("Error", "Unable to submit post. Please try again.", "error");
+          } finally {
+            this.isFormSubmitting = false; // Re-enable the form
+          }
+        },
+        handleScroll(event) {
+          if (this.loading) return;
+          const scrollableContainer = event.target;
+          const scrollPosition = scrollableContainer.scrollTop + scrollableContainer.clientHeight;
+          const scrollHeight = scrollableContainer.scrollHeight;
+
+          if (scrollPosition >= scrollHeight - 200) {
+            this.fetchPosts();
+          }
+        },
+        editPost(post) {
+          this.editingPost = post;
+        },
+        async updatePost(updatedPost) {
+          try {
+            const response = await axios.put(`/community/posts/${updatedPost.id}`, {
+              content: updatedPost.content,
+            });
+
+            // Merge updated fields with the existing post
+            const index = this.posts.findIndex((p) => p.id === updatedPost.id);
+            if (index !== -1) {
+              this.posts[index] = { ...this.posts[index], ...response.data };
+            }
+
+            this.editingPost = null; // Reset editingPost
+          } catch (error) {
+            Swal.fire("Error", "Unable to update post. Please try again.", "error");
+          }
+        },
+        async deletePost(post) {
+          const confirmation = await Swal.fire({
+            title: "Are you sure?",
+            text: "This action cannot be undone.",
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonText: "Yes, delete it!",
+          });
+
+          if (confirmation.isConfirmed) {
+            try {
+              await axios.delete(`/community/posts/${post.id}`);
+              this.posts = this.posts.filter((p) => p.id !== post.id);
+              this.deletingPost = null; // Reset deletingPost
+              Swal.fire("Deleted!", "Your post has been deleted.", "success");
+            } catch (error) {
+              Swal.fire("Error", "Unable to delete post. Please try again.", "error");
+            }
+          }
+        },
+        async postComment(postId) {
+          if (!this.newComment[postId]) return;
+
+          try {
+            const response = await axios.post(`/community/posts/${postId}/comments`, {
+              content: this.newComment[postId],
+            });
+
+            const post = this.posts.find((p) => p.id === postId);
+            if (post) {
+              if (!post.comments) post.comments = [];
+              post.comments.push({
+                id: response.data.id || Date.now(),
+                content: this.newComment[postId],
+                created_at: response.data.created_at || new Date().toISOString(),
+              });
+            }
+
+            this.newComment[postId] = ""; // Clear the comment input for this post
+          } catch (error) {
+            Swal.fire("Error", "Unable to post comment. Please try again later.", "error");
+          }
+        },
+        toggleComments(postId) {
+          const post = this.posts.find((p) => p.id === postId);
+          if (post) {
+            post.showComments = !post.showComments;
+          }
+        },
+        formatDate(date) {
+          return dayjs(date).fromNow(); // Format dates using dayjs
+        },
+      },
+    };
+
 </script>
+
+<style scoped>
+a{
+  text-decoration: none;
+}
+</style>

@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
@@ -152,5 +153,14 @@ class User extends Authenticatable
     }
 
 
+     //boot method for uuid
+
+     public static function boot()
+     {
+         parent::boot();
+         self::creating(function ($user) {
+             $user->uuid = (string) Str::uuid();
+         });
+     }
 
 }

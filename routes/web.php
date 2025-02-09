@@ -94,16 +94,13 @@ Route::get('/emergency/exit', function () {
 Route::middleware(['auth','check_onboarding'])->group(function () {
     // comunity pages
     Route::get('/community/feed', [HomeController::class,'index'])->name('timeline');
-    Route::get('/community/profile', [HomeController::class,'profileTimeline'])->name('profile.timeline');
-    
-    
+    Route::get('/community/profile', [HomeController::class,'profileTimeline'])->name('profile.timeline');    
     Route::post('/community/post/store', [HomeController::class,'storePost'])->name('posts.store');
-   
-    //Get feed:
+        //Get feed:
     Route::get('/community/posts', [HomeController::class, 'fetchPosts'])->name('posts.fetch');
     Route::get('/community/profile/posts', [HomeController::class, 'fetchAuthUserPosts'])->name('user.posts.fetch');
-
-
+    Route::get('/community/{username}/profile/timeline', [HomeController::class, 'ViewUserPosts'])->name('view.user.posts');
+    
     //Manage Posts
     Route::get('/posts/{post}/edit', [HomeController::class, 'editPost'])->name('posts.edit'); // Show edit form
     Route::put('/posts/{post}', [HomeController::class, 'updatePost'])->name('posts.update'); // Update the post
@@ -117,6 +114,11 @@ Route::middleware(['auth','check_onboarding'])->group(function () {
     // Followers and following views
     Route::get('/community/followers', [HomeController::class, 'getFollowers']);
     Route::get('/community/following', [HomeController::class, 'getFollowing']);
+
+    //Update frontend cover and profile images
+    Route::post('/update-profile-photo', [HomeController::class, 'updateProfilePhoto'])->name('update.profile.photo');
+    Route::post('/update-cover-photo', [HomeController::class, 'updateCoverPhoto'])->name('update.cover.photo');
+
 
  
 });

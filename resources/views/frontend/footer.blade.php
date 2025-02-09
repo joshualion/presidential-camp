@@ -34,6 +34,41 @@
 <!-- SweetAlerts -->
 <script src="{{asset('assets/plugins/sweetalert2/sweetalert2.min.js')}}"></script>
 
+{{-- Light Box  --}}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+    // Create lightbox elements
+    const lightboxOverlay = document.createElement('div');
+    lightboxOverlay.id = 'lightbox-overlay';
+
+    const lightboxImage = document.createElement('img');
+    lightboxImage.id = 'lightbox-image';
+
+    const lightboxClose = document.createElement('span');
+    lightboxClose.id = 'lightbox-close';
+    lightboxClose.innerHTML = '&times;';
+
+    lightboxOverlay.appendChild(lightboxImage);
+    lightboxOverlay.appendChild(lightboxClose);
+    document.body.appendChild(lightboxOverlay);
+
+    // Add click event to images that are not inside <a> tags
+    const images = document.querySelectorAll('img:not(a img)');
+    images.forEach(img => {
+        img.addEventListener('click', function () {
+            lightboxImage.src = this.src;
+            lightboxOverlay.style.display = 'flex';
+        });
+    });
+
+    // Close lightbox when clicking the overlay or close button
+    lightboxOverlay.addEventListener('click', function (e) {
+        if (e.target === lightboxOverlay || e.target === lightboxClose) {
+            lightboxOverlay.style.display = 'none';
+        }
+    });
+});
+</script>
 
  <!-- JavaScript to handle fallback -->
  <script>
