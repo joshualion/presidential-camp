@@ -44,7 +44,9 @@ $profileImage = !empty($profileData->photo) ? url('uploads/member_images/'.$prof
                 <div class="card-body">
                     <h5 class="card-title"><i class="fas fa-tachometer-alt me-2"></i>Dashboard</h5>
                     <p class="card-text">Admin Backend</p>
-                    <a href="{{route($profileData->access_level.'.dashboard')}}"><button class="btn btn-primary btn-sm w-100 text-white"><i class="fas fa-eye"></i> Dashboard </button></a>
+                    <a href="{{ route($profileData->access_level . '.dashboard') }}">
+                        <button class="btn btn-primary btn-sm w-100 text-white"><i class="fas fa-eye"></i> Dashboard</button>
+                    </a>
                 </div>
             </div>
         </div>
@@ -53,7 +55,9 @@ $profileImage = !empty($profileData->photo) ? url('uploads/member_images/'.$prof
                 <div class="card-body">
                     <h5 class="card-title"><i class="fas fa-users me-2"></i>Followers</h5>
                     <p class="card-text">{{ number_format($followersCount) }} Followers</p>
-                    <button class="btn btn-primary btn-sm w-100 text-white" @click.prevent="$root.$emit('show-followers')"><i class="fas fa-eye"></i> Followers</button>
+                    <button class="btn btn-primary btn-sm w-100 text-white" data-bs-toggle="modal" data-bs-target="#followersModal">
+                        <i class="fas fa-eye"></i> Followers
+                    </button>
                 </div>
             </div>
         </div>
@@ -62,12 +66,16 @@ $profileImage = !empty($profileData->photo) ? url('uploads/member_images/'.$prof
                 <div class="card-body">
                     <h5 class="card-title"><i class="fas fa-biking me-2"></i>Following</h5>
                     <p class="card-text">{{ number_format($followingCount) }} Following</p>
-                    <button class="btn btn-primary btn-sm w-100 text-white" @click.prevent="showFollowing" ><i class="fas fa-eye"></i> Following</button>
+                    <button class="btn btn-primary btn-sm w-100 text-white" data-bs-toggle="modal" data-bs-target="#followingModal">
+                        <i class="fas fa-eye"></i> Following
+                    </button>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+
 
 <!-- Location and Volunteer Groups -->
 <div class="container mt-4">
@@ -110,7 +118,9 @@ $profileImage = !empty($profileData->photo) ? url('uploads/member_images/'.$prof
 </div>
 
 <!-- Main Container for post and ads -->
-<div class="container mt-4">
+<div class="container mt-4">     
+   
+    
     <div class="row">
         <!-- Left Side: Create & View Post Section -->
         <div class="col-md-9">
@@ -175,6 +185,11 @@ $profileImage = !empty($profileData->photo) ? url('uploads/member_images/'.$prof
         </div>
     </div>
 </div>
+
+
+{{-- Include Followers Modals --}}
+@include('frontend.followers')
+
 
 <script>
     $(document).ready(function() {

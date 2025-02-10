@@ -39,11 +39,12 @@ class HomeController extends Controller
         $userSupportGroups = $profileData->supportGroups()->pluck('name')->toArray();
         // Get followers and following counts
         $followersCount = $profileData->followers()->count();
-        $followingCount = $profileData->following()->count();
-         // Get followers and following data
-        $followers = $profileData->followers()->get(); // Users following this profile
-        $following = $profileData->following()->get(); // Users this profile is following
-     
+        $followingCount = $profileData->following()->count();  
+        
+        // Get paginated followers and following data
+        $followers = $profileData->followers()->paginate(10); // Paginate with 10 items per page
+        $following = $profileData->following()->paginate(10); // Paginate with 10 items per pagefollowing = $profileData->following()->get(); // Users this profile is following
+        
        
 
         return view('frontend.index', compact(
@@ -58,6 +59,8 @@ class HomeController extends Controller
 
     }
 
+  
+
     public function profileTimeline(){
         $pageTitle = "Profile Timeline";
         $profileData = $this->getProfileData();
@@ -65,10 +68,10 @@ class HomeController extends Controller
         // Get followers and following counts
         $followersCount = $profileData->followers()->count();
         $followingCount = $profileData->following()->count();
-         // Get followers and following data
-        $followers = $profileData->followers()->get(); // Users following this profile
-        $following = $profileData->following()->get(); // Users this profile is following
-     
+         // Get paginated followers and following data
+        $followers = $profileData->followers()->paginate(10); // Paginate with 10 items per page
+        $following = $profileData->following()->paginate(10); // Paginate with 10 items per pagefollowing = $profileData->following()->get(); // Users this profile is following
+        
        
 
         return view('frontend.profile', compact(
@@ -80,6 +83,30 @@ class HomeController extends Controller
             'following',
             'pageTitle'
         ));
+    }
+
+
+    // HomeController.php
+    public function followBack(Request $request)
+    {
+        $user = Auth::user();
+        $userToFollow = User::findOrFail($request->user_id);
+
+        // Follow the user
+        $user->follow($userToFollow);
+
+        return response()->json(['success' => true]);
+    }
+
+    public function unfollow(Request $request)
+    {
+        $user = Auth::user();
+        $userToUnfollow = User::findOrFail($request->user_id);
+
+        // Unfollow the user
+        $user->unfollow($userToUnfollow);
+
+        return response()->json(['success' => true]);
     }
 
 
@@ -234,7 +261,9 @@ class HomeController extends Controller
     $posts = $query->latest()->paginate($perPage);
 
     return response()->json($posts);
-}
+  }
+
+   
     public function fetchAuthUserPosts(Request $request)
     {
        
@@ -311,7 +340,111 @@ class HomeController extends Controller
         return response()->json($posts);
     }
 
+    public function viewUserPosts($username){
+        $userData= User::Where("username",$username)->firstOrFail();
+        $pageTitle = $userData->firstname.' '.$userData->lastname." Profile Timeline";
+        $profileData = $this->getProfileData();
+        $userSupportGroups = $userData->supportGroups()->pluck('name')->toArray();
+        // Get followers and following counts
+        $followersCount = $userData->followers()->count();
+        $followingCount = $userData->following()->count();
+         // Get paginated followers and following data
+        $followers = $userData->followers()->paginate(10); // Paginate with 10 items per page
+        $following = $userData->following()->paginate(10); // Paginate with 10 items per pagefollowing = $profileData->following()->get(); // Users this profile is following
+        
+       
 
+        return view('frontend.ViewUserprofile', compact(
+            'profileData',
+        'userData',
+             'userSupportGroups',
+            'followersCount',
+            'followingCount',
+            'followers',
+            'following',
+            'pageTitle'
+        ));
+    }
+
+
+    public function viewUserProfilePost(Request $request, $username){
+        
+       
+        // Get the audience, page, and last_post_timestamp parameters from the request
+        $audience = $request->input('audience', 'public');
+        $lastPostTimestamp = $request->input('last_post_timestamp'); // Timestamp of the latest post in the feed
+    
+        // Get profile data for filtering
+        $profileData = $this->getProfileData();
+
+        //Get User Data
+        $userData = User::where('username',$username)->first();
+        // Initialize the query builder for posts
+ $query = Post::with('user')->where('user_id', $userData->id);  // Assuming the relationship is named 'user'
+
+    
+        // Check audience type and apply filters accordingly
+        switch ($audience) {
+            case 'public':
+                // No additional filtering for public audience
+                $query->where('audience', 'public');
+                break;
+            case 'region':
+                // Filter posts based on the region_id (user's region vs post's region)
+                $regionId = $profileData->region_id;
+                $query->where(function($q) use ($regionId) {
+                    $q->where('audience', 'public')
+                    ->orWhere('region_id', $regionId);
+                });
+                break;
+            case 'state':
+                // Filter posts based on the state_id (user's state vs post's state)
+                $stateId = $profileData->state_id;
+                $query->where(function($q) use ($stateId) {
+                    $q->where('audience', 'public')
+                    ->orWhere('state_id', $stateId);
+                });
+                break;
+            case 'lga':
+                // Filter posts based on the lga_id (user's LGA vs post's LGA)
+                $lgaId = $profileData->lga_id;
+                $query->where(function($q) use ($lgaId) {
+                    $q->where('audience', 'public')
+                    ->orWhere('lga_id', $lgaId);
+                });
+                break;
+            case 'ward':
+                // Filter posts based on the ward_id (user's ward vs post's ward)
+                $wardId = $profileData->ward_id;
+                $query->where(function($q) use ($wardId) {
+                    $q->where('audience', 'public')
+                    ->orWhere('ward_id', $wardId);
+                });
+                break;
+            case 'pu':
+                // Filter posts based on the pu_id (user's polling unit vs post's polling unit)
+                $puId = $profileData->polling_unit_id;
+                $query->where(function($q) use ($puId) {
+                    $q->where('audience', 'public')
+                    ->orWhere('pu_id', $puId);
+                });
+                break;
+            default:
+                // If the audience is not recognized, fall back to public
+                $query->where('audience', 'public');
+                break;
+        }
+    
+        // Filter posts created after the last_post_timestamp
+        if ($lastPostTimestamp) {
+            $query->where('created_at', '>', $lastPostTimestamp);
+        }
+    
+        // Order by creation date and get the results
+        $posts = $query->latest()->get();
+    
+        return response()->json($posts);
+    }
 
      // Show the edit form
      public function editPost(Post $post)

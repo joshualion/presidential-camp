@@ -1,0 +1,251 @@
+@php
+use Illuminate\Support\Facades\Auth;
+
+$userAudience = $userData ? $userData->getAudience() : 'public';
+$coverImage = $userData->cover_image ? url('uploads/member_images/'.$userData->cover_image) : url('uploads/no_image.jpg');
+$profileImage = !empty($userData->photo) ? url('uploads/member_images/'.$userData->photo) : url('uploads/no_image.jpg');
+@endphp
+
+<!-- Cover Image -->
+<div class="cover-image position-relative" style="background-image: url({{ $coverImage }});">
+    
+</div>
+
+<!-- Profile Image and Name -->
+<div class="container mt-n5">
+    <div class="row align-items-end">
+        <div class="col-md-2 profile-img-overlap position-relative">
+            <div class="profile-img-container position-relative" style="width: 120px; height: 120px;">
+                <img class="profile-user-img img-fluid img-circle shadow-lg" src="{{ $profileImage }}" alt="profile" width="120" height="120">
+                
+            </div>
+        </div>
+        <div class="col-md-10">
+            <h2 class="mt-2" style="color: {{ $SystemSetting->dark_theme_color ?? '#008751' }};">
+                {{ $userData->firstname }} {{ $userData->lastname }}
+            </h2>
+        </div>
+    </div>
+</div> 
+
+<!-- Modals and Scripts remain unchanged -->
+
+
+<!-- Three Column Layout for Links -->
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-4 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-tachometer-alt me-2"></i>Follow</h5>
+                    <p class="card-text">Follow {{$userData->firstname}}</p>
+                    <a href="#">
+                        <button class="btn btn-primary btn-sm w-100 text-white"><i class="fas fa-eye"></i> Dashboard</button>
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-users me-2"></i>Followers</h5>
+                    <p class="card-text">{{ number_format($followersCount) }} Followers</p>
+                    <button class="btn btn-primary btn-sm w-100 text-white" data-bs-toggle="modal" data-bs-target="#followersModal">
+                        <i class="fas fa-eye"></i> Followers
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-biking me-2"></i>Following</h5>
+                    <p class="card-text">{{ number_format($followingCount) }} Following</p>
+                    <button class="btn btn-primary btn-sm w-100 text-white" data-bs-toggle="modal" data-bs-target="#followingModal">
+                        <i class="fas fa-eye"></i> Following
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+<!-- Location and Volunteer Groups -->
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-landmark me-2"></i>Location</h5>
+                    <ul class="list-unstyled">
+                        @if(($SystemSetting) && ($SystemSetting->package == 'national'))
+                        <li><i class="fas fa-globe me-2"></i>Country: {{ ucwords(strtolower($userData->country->name)) }}</li>
+                        @endif
+                        @if(($SystemSetting) && ($SystemSetting->package == 'national') || ($SystemSetting->package == 'regional'))
+                        <li><i class="fas fa-globe me-2"></i>Region: {{ ucwords(strtolower($userData->region->name)) }}</li>
+                        @endif
+                        <li><i class="fas fa-globe me-2"></i>State: {{ ucwords(strtolower($userData->state->name)) }}</li>
+                        <li><i class="fas fa-globe me-2"></i>LGA: {{ ucwords(strtolower($userData->lga->name)) }}</li>
+                        <li><i class="fas fa-globe me-2"></i>Ward: {{ ucwords(strtolower($userData->ward->name)) }}</li>
+                        <li><i class="fas fa-globe me-2"></i>PU: {{ ucwords(strtolower($userData->pollingUnit->name)) }}</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-users me-2"></i>Volunteer Group(s)</h5>
+                    <ul class="list-unstyled">
+                        @foreach($userSupportGroups as $group)
+                        <li class="d-flex justify-content-between align-items-center">
+                            <span>{{ $group }}</span>
+                            <a href="{{ route('select.support.group') }}" class="btn btn-sm btn-default"><i class="fas fa-edit"></i></a>
+                        </li>
+                        @endforeach
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Main Container for post and ads -->
+<div class="container mt-4">     
+   
+    
+    <div class="row">
+        <!-- Left Side: Create & View Post Section -->
+        <div class="col-md-9">            
+
+            <div class="shadow-sm">
+                <div class=" card card-body">   
+                    <h5 class="card-title"><i class="fas fa-comment me-2"></i> Posts</h5>
+                    <div id="app" class="newsfeed">
+                        {{-- <profile-feed :audience="'{{ $userAudience }}'"></profile-feed> --}}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Side: Sidebar (Visible on Desktop) -->
+        @desktop()
+        <div class="col-md-3 sidebar">
+            @include('frontend.right-sidebar')
+        </div>
+        @enddesktop()
+    </div>
+</div>
+
+
+
+{{-- Include Followers Modals --}}
+@include('frontend.followers')
+
+
+<script>
+    $(document).ready(function() {
+    // Handle Profile Photo Upload
+    $('#updateProfileForm').submit(function(e) {
+        e.preventDefault();
+        var formData = new FormData(this);
+        
+        $.ajax({
+            url: "{{ route('update.profile.photo') }}",
+            type: "POST",
+            data: formData,
+            contentType: false,
+            processData: false,
+            success: function(response) {
+                if(response.success) {
+                    $('.profile-user-img').attr('src', response.image_url);
+                    $('#updateProfileModal').modal('hide');
+                } else {
+                    alert(response.error);
+                }
+            }
+        });
+    });
+
+    // Handle Cover Photo Upload
+    $('#updateCoverForm').submit(function(e) {
+        e.preventDefault();
+        var formData = new FormData(this);
+
+        $.ajax({
+            url: "{{ route('update.cover.photo') }}",
+            type: "POST",
+            data: formData,
+            contentType: false,
+            processData: false,
+            success: function(response) {
+                if(response.success) {
+                    $('.cover-image').css('background-image', 'url(' + response.image_url + ')');
+                    $('#updateCoverModal').modal('hide');
+                } else {
+                    alert(response.error);
+                }
+            }
+        });
+    });
+});
+
+</script>
+
+<style>
+    .cover-image {
+        position: relative;
+        height: 300px;
+        background-size: cover;
+        background-position: center;
+    }
+
+    .profile-user-img {
+        
+    }
+
+    .create-post {
+        width: 100%;
+    }
+
+    /* Adjust the profile name positioning */
+    .col-md-10 h2 {
+        margin-top: 20px; /* Add some spacing between the profile image and the name */
+    }
+
+    /* Ensure the profile image button stays within the profile image */
+    .profile-img-container {
+        overflow: hidden; /* Clip the button to the container */
+        border-radius: 50%; /* Ensure the container is circular */
+        margin-top: -45%; /* Ensure the profile image overlaps the cover image by 45% */
+        position: relative;
+        z-index: 1;
+        border: 4px solid #fff; /* Add a border to make the profile image stand out */
+       
+    }
+
+    /* Position the camera icon directly on top of the profile photo in the bottom right corner */
+    .update-profile-btn {
+        right: 15px;
+        bottom: 15px;
+        width: 30px;
+        height: 30px;
+        
+        padding: 0;
+        border-radius: 50%;
+    }
+
+    /* Mobile-specific adjustments */
+    @media (max-width: 767.98px) {
+        .profile-img-container {
+            margin-top: -30%; /* Adjust overlap for mobile */
+        }
+        .update-profile-btn {
+            right: 5px !important; /* Adjust button position */
+            bottom: 5px !important;
+        }
+    }
+</style>
+

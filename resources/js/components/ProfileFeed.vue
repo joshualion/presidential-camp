@@ -1,4 +1,5 @@
 <template>
+  
   <div>
     <!-- Scrollable container with a fixed height to enable scrolling -->
     <div class="infinite-scroll-area"  @scroll="handleScroll">
@@ -109,7 +110,6 @@ import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import EditPost from "./EditPost.vue";
 import DeletePost from "./DeletePost.vue";
-import debounce from "lodash/debounce";
 const Swal = window.Swal;
 
 dayjs.extend(relativeTime);
@@ -159,6 +159,7 @@ export default {
     window.addEventListener('focus', this.startPolling);
     window.addEventListener('blur', this.stopPolling);
     this.startPolling(); // Start polling initially
+
   },
   beforeUnmount() {
     // Clean up event listeners and stop polling

@@ -54,12 +54,12 @@
                 </a>
             </li>
             <li class="nav-item mb-2">
-                <a class="nav-link text-dark d-flex align-items-center" href="javascript:void(0)" @click.prevent="$root.$emit('show-followers')">
+                <a class="nav-link text-dark d-flex align-items-center" href="javascript:void(0)" data-bs-toggle="modal" data-bs-target="#followersModal">
                     <i class="fas fa-users nav-icon  me-2"></i> Followers <span class="badge bg-primary ms-auto">{{ number_format($followersCount) }}</span>
                 </a>
             </li>
             <li class="nav-item mb-4">
-                <a class="nav-link text-dark d-flex align-items-center" href="javascript:void(0)" @click.prevent="showFollowing">
+                <a class="nav-link text-dark d-flex align-items-center" href="javascript:void(0)" data-bs-toggle="modal" data-bs-target="#followingModal">
                     <i class="fas fa-biking nav-icon  me-2"></i> Following <span class="badge bg-primary ms-auto">{{number_format($followingCount) }}</span>
                 </a>
             </li>
@@ -119,3 +119,5 @@
         </ul>
     </div>
 </div>
+
+@include('frontend.followers')

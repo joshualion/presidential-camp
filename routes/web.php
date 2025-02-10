@@ -115,6 +115,10 @@ Route::middleware(['auth','check_onboarding'])->group(function () {
     Route::get('/community/followers', [HomeController::class, 'getFollowers']);
     Route::get('/community/following', [HomeController::class, 'getFollowing']);
 
+    // routes/web.php
+    Route::post('/follow-back', [HomeController::class, 'followBack'])->name('follow.back');
+    Route::post('/unfollow', [HomeController::class, 'unfollow'])->name('unfollow');
+
     //Update frontend cover and profile images
     Route::post('/update-profile-photo', [HomeController::class, 'updateProfilePhoto'])->name('update.profile.photo');
     Route::post('/update-cover-photo', [HomeController::class, 'updateCoverPhoto'])->name('update.cover.photo');
