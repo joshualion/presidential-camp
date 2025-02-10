@@ -40,7 +40,7 @@ $profileImage = !empty($userData->photo) ? url('uploads/member_images/'.$userDat
                     <h5 class="card-title"><i class="fas fa-tachometer-alt me-2"></i>Follow</h5>
                     <p class="card-text">Follow {{$userData->firstname}}</p>
                     <a href="#">
-                        <button class="btn btn-primary btn-sm w-100 text-white"><i class="fas fa-eye"></i> Dashboard</button>
+                        <button class="btn btn-primary btn-sm w-100 text-white"><i class="fas fa-eye"></i> Follow</button>
                     </a>
                 </div>
             </div>
@@ -51,7 +51,7 @@ $profileImage = !empty($userData->photo) ? url('uploads/member_images/'.$userDat
                     <h5 class="card-title"><i class="fas fa-users me-2"></i>Followers</h5>
                     <p class="card-text">{{ number_format($followersCount) }} Followers</p>
                     <button class="btn btn-primary btn-sm w-100 text-white" data-bs-toggle="modal" data-bs-target="#followersModal">
-                        <i class="fas fa-eye"></i> Followers
+                        <i class="fas fa-users"></i> Followers
                     </button>
                 </div>
             </div>
@@ -62,7 +62,7 @@ $profileImage = !empty($userData->photo) ? url('uploads/member_images/'.$userDat
                     <h5 class="card-title"><i class="fas fa-biking me-2"></i>Following</h5>
                     <p class="card-text">{{ number_format($followingCount) }} Following</p>
                     <button class="btn btn-primary btn-sm w-100 text-white" data-bs-toggle="modal" data-bs-target="#followingModal">
-                        <i class="fas fa-eye"></i> Following
+                        <i class="fas fa-biking"></i> Following
                     </button>
                 </div>
             </div>
