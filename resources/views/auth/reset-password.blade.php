@@ -1,11 +1,12 @@
 @include('auth.template.header')
-<div class="card card-dark card-outline">
+<div class="card card-primary card">
     <div class="card-body login-card-body">
       <h3 class="login-box-msg">
-        <div class="register-logo">
-            <a href="/">
-                <img src="{{asset('frontend/images/logo/1.png')}}" alt="Ultimataepips Logo" width="75%" height="75%">
-            </a>
+        <div class="text-center">
+          <h3 class="login-box-msg text-uppercase text-primary ">
+            New Password
+         </h3><hr class="card card-primary"/>
+           
         </div>
       </h3>
 
@@ -21,7 +22,7 @@
           <input type="text" class="form-control @error('email') is-invalid @enderror" id ="email" name="email" required  placeholder="Email">
           <div class="input-group-append">
             <div class="input-group-text">
-              <span class="fas fa-envelope"></span>
+              <span class="fas fa-envelope text-primary"></span>
             </div>
           </div>
           @error('email')
@@ -34,7 +35,7 @@
           <input type="password" class="form-control @error('password') is-invalid @enderror" required name="password" id="password" placeholder="New Password">
           <div class="input-group-append">
             <div class="input-group-text">
-              <span class="fas fa-lock"></span>
+              <span class="fas fa-lock text-primary"></span>
             </div>
           </div>
                   @error('password')
@@ -47,7 +48,7 @@
           <input type="password" class="form-control @error('password_confirmation') is-invalid @enderror" required name="password_confirmation" id="password_confirmation" placeholder="Confirm Password">
           <div class="input-group-append">
             <div class="input-group-text">
-              <span class="fas fa-lock"></span>
+              <span class="fas fa-lock text-primary"></span>
             </div>
           </div>
                   @error('password_confirmation')
@@ -56,7 +57,7 @@
         </div>
 
         <div class="flex items-center justify-end mt-4">
-        <button type="submit" class="btn btn-dark btn-block">
+        <button type="submit" class="btn btn-primary btn-block">
                 {{ __('Reset Password') }}
         </button>
         </div>
@@ -69,3 +70,8 @@
 <!-- /.register-box -->
 
 @include('auth.template.footer')
+<style>
+  .text-primary, .card-outline{
+      color: {{ $SystemSetting ? $SystemSetting->dark_theme_color : '#008751' }} !important;
+  }
+</style>

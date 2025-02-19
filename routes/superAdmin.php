@@ -18,57 +18,59 @@ use App\Http\Controllers\RolePermissionController;
 use App\Http\Controllers\VolunteerGroupController;
 use Illuminate\Support\Facades\Route;
 
-
+// Activate License
+Route::get('/superadmin/activate', [SystemSettingController::class, 'showActivationForm'])->name('activation.form')->middleware(['auth','access_level:superadmin']);
+Route::post('/superadmin/activate', [SystemSettingController::class, 'validateActivationCode'])->name('validate.licence')->middleware(['auth','access_level:superadmin', 'throttle:5,1']);
 
 // Manage Locations
-Route::get('/superadmin/location/localgovernments', [LocationController::class, 'allLocalGovernments'])->name('superadmin.location.lgas')->middleware(['auth','access_level:superadmin']);
-Route::get('/superadmin/location/localgovernment/add', [LocationController::class, 'addLocalGovernment'])->name('superadmin.location.lga.add')->middleware(['auth','access_level:superadmin']);
-Route::post('/superadmin/location/localgovernment/store', [LocationController::class, 'storeLocalGovernment'])->name('superadmin.location.lga.store')->middleware(['auth','access_level:superadmin']);
-Route::get('/superadmin/location/localgovernment/edit/{uuid}', [LocationController::class, 'editLocalGovernment'])->name('superadmin.location.lga.edit')->middleware(['auth','access_level:superadmin']);
-Route::post('/superadmin/location/localgovernment/update/{uuid}', [LocationController::class, 'updateLocalGovernment'])->name('superadmin.location.lga.update')->middleware(['auth','access_level:superadmin']);
-Route::delete('/superadmin/location/localgovernment/delete/{uuid}', [LocationController::class, 'deleteLocalGovernment'])->name('superadmin.location.lga.delete')->middleware(['auth','access_level:superadmin']);
+Route::get('/superadmin/location/localgovernments', [LocationController::class, 'allLocalGovernments'])->name('superadmin.location.lgas')->middleware(['auth','access_level:superadmin', 'kuyak_eyen_ino']);
+Route::get('/superadmin/location/localgovernment/add', [LocationController::class, 'addLocalGovernment'])->name('superadmin.location.lga.add')->middleware(['auth','access_level:superadmin', 'kuyak_eyen_ino']);
+Route::post('/superadmin/location/localgovernment/store', [LocationController::class, 'storeLocalGovernment'])->name('superadmin.location.lga.store')->middleware(['auth','access_level:superadmin', 'kuyak_eyen_ino']);
+Route::get('/superadmin/location/localgovernment/edit/{uuid}', [LocationController::class, 'editLocalGovernment'])->name('superadmin.location.lga.edit')->middleware(['auth','access_level:superadmin', 'kuyak_eyen_ino']);
+Route::post('/superadmin/location/localgovernment/update/{uuid}', [LocationController::class, 'updateLocalGovernment'])->name('superadmin.location.lga.update')->middleware(['auth','access_level:superadmin', 'kuyak_eyen_ino']);
+Route::delete('/superadmin/location/localgovernment/delete/{uuid}', [LocationController::class, 'deleteLocalGovernment'])->name('superadmin.location.lga.delete')->middleware(['auth','access_level:superadmin', 'kuyak_eyen_ino']);
 
 //import LGA Form
-Route::get('/superadmin/location/importlgas', [LocationController::class, 'importLgasForm'])->name('superadmin.location.lga.import')->middleware(['auth','access_level:superadmin']);
+Route::get('/superadmin/location/importlgas', [LocationController::class, 'importLgasForm'])->name('superadmin.location.lga.import')->middleware(['auth','access_level:superadmin', 'kuyak_eyen_ino']);
 // Export Route
-Route::get('/superadmin/location/exportlgas', [LocationController::class, 'exportLgas'])->name('superadmin.location.lga.exportLgas')->middleware(['auth','access_level:superadmin']);
+Route::get('/superadmin/location/exportlgas', [LocationController::class, 'exportLgas'])->name('superadmin.location.lga.exportLgas')->middleware(['auth','access_level:superadmin', 'kuyak_eyen_ino']);
 // Import Route['auth',
-Route::post('/superadmin/location/importlgas', [LocationController::class, 'importLgas'])->name('superadmin.location.lga.importLgas')->middleware(['auth','access_level:superadmin']);
+Route::post('/superadmin/location/importlgas', [LocationController::class, 'importLgas'])->name('superadmin.location.lga.importLgas')->middleware(['auth','access_level:superadmin', 'kuyak_eyen_ino']);
 
 
-Route::get('/superadmin/location/wards', [LocationController::class, 'allWards'])->name('superadmin.location.wards')->middleware(['auth','access_level:superadmin']);
-Route::get('/superadmin/location/ward/add', [LocationController::class, 'addWard'])->name('superadmin.location.ward.add')->middleware(['auth','access_level:superadmin']);
-Route::post('/superadmin/location/ward/store', [LocationController::class, 'storeWard'])->name('superadmin.location.ward.store')->middleware(['auth','access_level:superadmin']);
-Route::get('/superadmin/location/ward/edit/{uuid}', [LocationController::class, 'editWard'])->name('superadmin.location.ward.edit')->middleware(['auth','access_level:superadmin']);
-Route::post('/superadmin/location/ward/update/{uuid}', [LocationController::class, 'updateWard'])->name('superadmin.location.ward.update')->middleware(['auth','access_level:superadmin']);
-Route::delete('/superadmin/location/ward/delete/{uuid}', [LocationController::class, 'deleteWard'])->name('superadmin.location.ward.delete')->middleware(['auth','access_level:superadmin']);
+Route::get('/superadmin/location/wards', [LocationController::class, 'allWards'])->name('superadmin.location.wards')->middleware(['auth','access_level:superadmin', 'kuyak_eyen_ino']);
+Route::get('/superadmin/location/ward/add', [LocationController::class, 'addWard'])->name('superadmin.location.ward.add')->middleware(['auth','access_level:superadmin', 'kuyak_eyen_ino']);
+Route::post('/superadmin/location/ward/store', [LocationController::class, 'storeWard'])->name('superadmin.location.ward.store')->middleware(['auth','access_level:superadmin', 'kuyak_eyen_ino']);
+Route::get('/superadmin/location/ward/edit/{uuid}', [LocationController::class, 'editWard'])->name('superadmin.location.ward.edit')->middleware(['auth','access_level:superadmin', 'kuyak_eyen_ino']);
+Route::post('/superadmin/location/ward/update/{uuid}', [LocationController::class, 'updateWard'])->name('superadmin.location.ward.update')->middleware(['auth','access_level:superadmin', 'kuyak_eyen_ino']);
+Route::delete('/superadmin/location/ward/delete/{uuid}', [LocationController::class, 'deleteWard'])->name('superadmin.location.ward.delete')->middleware(['auth','access_level:superadmin', 'kuyak_eyen_ino']);
 
 //import PU Form
-Route::get('/superadmin/location/importwards', [LocationController::class, 'importWardsForm'])->name('superadmin.location.ward.import')->middleware(['auth','access_level:superadmin']);
+Route::get('/superadmin/location/importwards', [LocationController::class, 'importWardsForm'])->name('superadmin.location.ward.import')->middleware(['auth','access_level:superadmin', 'kuyak_eyen_ino']);
 
 // Export Route
-Route::get('/superadmin/location/exportwards', [LocationController::class, 'exportWards'])->name('superadmin.location.ward.exportWards')->middleware(['auth','access_level:superadmin']);
+Route::get('/superadmin/location/exportwards', [LocationController::class, 'exportWards'])->name('superadmin.location.ward.exportWards')->middleware(['auth','access_level:superadmin', 'kuyak_eyen_ino']);
 
 // Import Route
 Route::post('/superadmin/location/importwards', [LocationController::class, 'importWards'])->name('superadmin.location.ward.importWards')->middleware('access_level:superadmin');
 
 
-Route::get('/superadmin/location/pollingunits', [LocationController::class, 'allPollingUnits'])->name('superadmin.location.pus')->middleware(['auth','access_level:superadmin']);
-Route::get('/superadmin/location/pollingunit/add', [LocationController::class, 'addPollingUnit'])->name('superadmin.location.pu.add')->middleware(['auth','access_level:superadmin']);
-Route::post('/superadmin/location/pollingunit/store', [LocationController::class, 'storePollingUnit'])->name('superadmin.location.pu.store')->middleware(['auth','access_level:superadmin']);
-Route::get('/superadmin/location/pollingunit/edit/{uuid}', [LocationController::class, 'editPollingUnit'])->name('superadmin.location.pu.edit')->middleware(['auth','access_level:superadmin']);
-Route::post('/superadmin/location/pollingunit/update/{uuid}', [LocationController::class, 'updatePollingUnit'])->name('superadmin.location.pu.update')->middleware(['auth','access_level:superadmin']);
-Route::delete('/superadmin/location/pollingunit/delete/{uuid}', [LocationController::class, 'deletePollingUnit'])->name('superadmin.location.pu.delete')->middleware(['auth','access_level:superadmin']);
+Route::get('/superadmin/location/pollingunits', [LocationController::class, 'allPollingUnits'])->name('superadmin.location.pus')->middleware(['auth','access_level:superadmin', 'kuyak_eyen_ino']);
+Route::get('/superadmin/location/pollingunit/add', [LocationController::class, 'addPollingUnit'])->name('superadmin.location.pu.add')->middleware(['auth','access_level:superadmin', 'kuyak_eyen_ino']);
+Route::post('/superadmin/location/pollingunit/store', [LocationController::class, 'storePollingUnit'])->name('superadmin.location.pu.store')->middleware(['auth','access_level:superadmin', 'kuyak_eyen_ino']);
+Route::get('/superadmin/location/pollingunit/edit/{uuid}', [LocationController::class, 'editPollingUnit'])->name('superadmin.location.pu.edit')->middleware(['auth','access_level:superadmin', 'kuyak_eyen_ino']);
+Route::post('/superadmin/location/pollingunit/update/{uuid}', [LocationController::class, 'updatePollingUnit'])->name('superadmin.location.pu.update')->middleware(['auth','access_level:superadmin', 'kuyak_eyen_ino']);
+Route::delete('/superadmin/location/pollingunit/delete/{uuid}', [LocationController::class, 'deletePollingUnit'])->name('superadmin.location.pu.delete')->middleware(['auth','access_level:superadmin', 'kuyak_eyen_ino']);
 
 //import PU Form
-Route::get('/superadmin/import-polling-units', [LocationController::class, 'importPollingUnitsForm'])->name('superadmin.location.pu.import')->middleware(['auth','access_level:superadmin']);
+Route::get('/superadmin/import-polling-units', [LocationController::class, 'importPollingUnitsForm'])->name('superadmin.location.pu.import')->middleware(['auth','access_level:superadmin', 'kuyak_eyen_ino']);
 // Export Route
-Route::get('/superadmin/export-polling-units', [LocationController::class, 'exportPollingUnits'])->name('superadmin.location.pu.exportPollingUnits')->middleware(['auth','access_level:superadmin']);
+Route::get('/superadmin/export-polling-units', [LocationController::class, 'exportPollingUnits'])->name('superadmin.location.pu.exportPollingUnits')->middleware(['auth','access_level:superadmin', 'kuyak_eyen_ino']);
 
 // Import Route
-Route::post('/superadmin/import-polling-units', [LocationController::class, 'importPollingUnits'])->name('superadmin.location.pu.importPollingUnits')->middleware(['auth','access_level:superadmin']);
+Route::post('/superadmin/import-polling-units', [LocationController::class, 'importPollingUnits'])->name('superadmin.location.pu.importPollingUnits')->middleware(['auth','access_level:superadmin', 'kuyak_eyen_ino']);
 
-Route::get('/superadmin/logout', [SuperAdminController::class, 'superAdminLogout'])->name('superadmin.logout')->middleware(['auth','access_level:superadmin']);
+Route::get('/superadmin/logout', [SuperAdminController::class, 'superAdminLogout'])->name('superadmin.logout')->middleware(['auth','access_level:superadmin', 'kuyak_eyen_ino']);
 
 //PORTAL ROUTES
 Route::middleware(['auth','check_onboarding'])->group(function () {

@@ -3,12 +3,14 @@
     <div class="container">
         <div class="row align-items-center">
             <!-- Left Section -->
+        @desktop()
             <div class="col-12 col-md-6 mb-2 mb-md-0">
                 <p class="text-center text-md-start">
                     &copy; @php echo date('Y'); @endphp 
                     @if($SystemSetting) {{ $SystemSetting->system_name }} @endif. All Rights Reserved.
                 </p>
             </div>
+        @enddesktop()
             <!-- Right Section -->
             <div class="col-12 col-md-6">
                 <ul class="list-inline text-center text-md-end mb-0">

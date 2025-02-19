@@ -1,10 +1,6 @@
 
 @include('auth.template.header')
-<style>
-    .text-primary, .card-outline{
-        color: {{ $SystemSetting ? $SystemSetting->dark_theme_color : '#008751' }} !important;
-    }
-</style>
+
 <div class="card card-primary">
     <div class="card-body login-card-body">
         <div class="text-center ">
@@ -81,3 +77,8 @@
 
 @include('auth.template.footer')
 
+<style>
+  .text-primary, .card-outline{
+      color: {{ $SystemSetting ? $SystemSetting->dark_theme_color : '#008751' }} !important;
+  }
+</style>

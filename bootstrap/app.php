@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\KuyakEyenIno;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -18,6 +19,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
                          'access_level' => Accesslevel::class,
                          'check_onboarding' => CheckUserOnboarding::class, // Add this alias
+                         'kuyak_eyen_ino' => KuyakEyenIno::class,
                         ]);
 
     })

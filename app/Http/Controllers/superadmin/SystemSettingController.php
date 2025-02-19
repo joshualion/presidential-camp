@@ -6,6 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\Country;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\View;
 use App\Models\SystemSetting;
 use App\Models\SMTPSetting;
@@ -231,6 +235,60 @@ class SystemSettingController extends Controller
         }// End Method
 
 
+
+        public function showActivationForm()
+    {
+        $profileData = $this->getProfileData();
+        return view('backend.'.$profileData->access_level.'.settings.activation.form');
+    }
+
+    public function validateActivationCode(Request $request)
+    {
+        $request->validate([
+            'activation_code' => 'required|string',
+        ]);
+    
+        $activationCode = $request->input('activation_code');
+        $originDomain = $request->getHost(); // Get the user's domain
+    
+        // Validate activation code with remote server
+        $response = Http::post('https://campaignmanager.ng/validate', [
+            'activation_code' => $activationCode,
+            'domain' => $originDomain, // Send the domain to the server
+        ]);
+    
+        // Log the activation attempt
+        Log::info('Activation attempt', [
+            'user_id' => auth()->id(),
+            'activation_code' => $activationCode,
+            'domain' => $originDomain,
+            'success' => $response->successful(),
+        ]);
+    
+        if ($response->successful() && $response->json('valid')) {
+            // Encrypt activation code before storing
+            $encryptedCode = Crypt::encryptString($activationCode);
+    
+            // Update system_settings table on local database
+            DB::table('system_settings')->update([
+                'activation_code' => $encryptedCode,
+            ]);
+         $notification = [
+            'message' => 'Activation successful!',
+            'alert-type' => 'success'
+         ];
+
+            return redirect()->route('home')->with($notification);
+        } else {
+
+            $notification = [
+                'message' => 'Invalid activation code or domain mismatch.',
+                'alert-type' => 'error'
+             ];
+             
+            return back()->with($notification);
+        }
+    }
 
 
 
