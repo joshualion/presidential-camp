@@ -285,7 +285,7 @@ class SystemSettingController extends Controller
         } else {
 
             $notification = [
-                'message' => 'Invalid activation code or domain mismatch.',
+                'message' => 'Invalid activation code or domain '.$originDomain.' mismatch.',
                 'alert-type' => 'error'
              ];
              
