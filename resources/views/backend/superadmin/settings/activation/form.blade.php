@@ -21,7 +21,7 @@
 
                     <div class="card-body" style="display: block;">
                         <!-- Activation Form -->
-                        <form action="{{ route('activate.license') }}" method="POST">
+                        <form action="{{ route('validate.licence') }}" method="POST">
                             @csrf <!-- CSRF Token for security -->
 
                             <!-- Activation Code Input -->
@@ -34,7 +34,7 @@
                             </div>
 
                             <!-- Hidden Package Input -->
-                            <input type="hidden" name="package" value="{{ $package }}"> <!-- Replace $package with the actual package value -->
+                            <input type="hidden" name="package" value="{{ $SystemSetting->package }}"> <!-- Replace $package with the actual package value -->
 
                             <!-- Submit Button -->
                             <button type="submit" class="btn btn-primary">Activate License</button>

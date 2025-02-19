@@ -246,14 +246,17 @@ class SystemSettingController extends Controller
     {
         $request->validate([
             'activation_code' => 'required|string',
+            'package' => 'required|string',
         ]);
     
         $activationCode = $request->input('activation_code');
+        $systemPackage = $request->input('package');
         $originDomain = $request->getHost(); // Get the user's domain
     
         // Validate activation code with remote server
         $response = Http::post('https://campaignmanager.ng/validate', [
             'activation_code' => $activationCode,
+            'package' =>  $systemPackage,
             'domain' => $originDomain, // Send the domain to the server
         ]);
     
