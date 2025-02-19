@@ -239,7 +239,7 @@ class SystemSettingController extends Controller
         public function showActivationForm()
     {
         $profileData = $this->getProfileData();
-        return view('backend.'.$profileData->access_level.'.settings.activation.form');
+        return view('backend.'.$profileData->access_level.'.settings.activation.form', compact('profileData'));
     }
 
     public function validateActivationCode(Request $request)
