@@ -298,7 +298,7 @@ class SystemSettingController extends Controller
             
             
         
-            return redirect()->route('home')->with([
+            return redirect()->route('superadmin.dashboard')->with([
                 'message' => 'Activation successful!',
                 'alert-type' => 'success'
             ]);
