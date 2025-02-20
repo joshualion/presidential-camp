@@ -290,15 +290,15 @@ class SystemSettingController extends Controller
             $apiToken = $response->json('api_token'); // Get token from response
         
             DB::table('system_settings')->updateOrInsert(
-                ['key' => 'license'],
+                ['activation_code' => $activationCode], // Store as plain text
                 ['value' => json_encode([
-                    'code' => Crypt::encryptString($activationCode),
                     'package' => $systemPackage,
                     'domain' => $originDomain,
                     'activated_at' => now(),
-                    'api_token' => $apiToken, // Save token
+                    'api_token' => $apiToken,
                 ])]
             );
+            
         
             return redirect()->route('home')->with([
                 'message' => 'Activation successful!',
