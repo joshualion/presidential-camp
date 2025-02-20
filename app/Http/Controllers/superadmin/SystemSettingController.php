@@ -245,128 +245,81 @@ class SystemSettingController extends Controller
                 return view('backend.' . $profileData->access_level . '.settings.activation.form', compact('profileData'));
             }
         
-            // public function validateActivationCode(Request $request)
-            // {
-            //     $request->validate([
-            //         'activation_code' => 'required|string',
-            //         'package' => 'required|string',
-            //     ]);
-        
-            //     $activationCode = $request->input('activation_code');
-            //     $systemPackage = $request->input('package');
-            //     $originDomain = $request->getHost(); // Get the user's domain
-        
-            //     try {
-            //         // Validate activation code with remote server
-            //         $response = Http::timeout(10)->post('https://campaignmanager.ng/validate', [
-            //             'activation_code' => $activationCode,
-            //             'package' =>  $systemPackage,
-            //             'domain' => $originDomain, // Send the domain to the server
-            //         ]);
-        
-            //         // Log the activation attempt
-            //         Log::info('Activation attempt', [
-            //             'user_id' => Auth::id(),
-            //             'activation_code' => $activationCode,
-            //             'domain' => $originDomain,
-            //             'package' => $systemPackage,
-            //             'status_code' => $response->status(),
-            //             'response_body' => $response->json(),
-            //             'success' => $response->successful(),
-            //         ]);
-        
-            //         if ($response->successful() && $response->json('valid')) {
-            //             // Encrypt activation code before storing
-            //             $encryptedCode = Crypt::encryptString($activationCode);
-        
-            //             // Ensure system_settings table is updated
-            //             DB::table('system_settings')->updateOrInsert(
-            //                 ['id' => 1], // Assuming there's a single settings row
-            //                 [
-            //                     'activation_code' => $encryptedCode,
-            //                     'updated_at' => now(),
-            //                 ]
-            //             );
-        
-            //             return redirect()->route('home')->with([
-            //                 'message' => 'Activation successful!',
-            //                 'alert-type' => 'success'
-            //             ]);
-            //         } else {
-            //             return back()->with([
-            //                 'message' => 'Invalid activation code or domain mismatch (' . $originDomain . ').',
-            //                 'alert-type' => 'error'
-            //             ]);
-            //         }
-            //     } catch (Exception $e) {
-            //         Log::error('License activation failed', ['error' => $e->getMessage()]);
-            //         return back()->with([
-            //             'message' => 'Activation failed due to a network error. Please try again.',
-            //             'alert-type' => 'error'
-            //         ]);
-            //     }
-            
-            // }
-      
-        
-            public function validateActivationCode(Request $request)
-{
-    $request->validate([
-        'activation_code' => 'required|string',
-        'package' => 'required|string',
-    ]);
-
-    $activationCode = $request->input('activation_code');
-    $systemPackage = $request->input('package');
-    $originDomain = $request->getHost();
-
-    // Prevent repeated failed attempts (Rate Limiting)
-    if (Cache::has('activation_attempts_' . auth()->id()) && Cache::get('activation_attempts_' . auth()->id()) >= 5) {
-        return back()->with([
-            'message' => 'Too many activation attempts. Please try again later.',
-            'alert-type' => 'error'
+          
+   
+    public function validateActivationCode(Request $request)
+    {
+        $request->validate([
+            'activation_code' => 'required|string',
+            'package' => 'required|string',
         ]);
+
+        $activationCode = $request->input('activation_code');
+        $systemPackage = $request->input('package');
+        $originDomain = $request->getHost();
+        $clientIP = $request->ip(); // Rate limit per IP
+
+        // Prevent repeated failed attempts (Rate Limiting)
+        $cacheKey = 'activation_attempts_' . $clientIP;
+        if (Cache::get($cacheKey, 0) >= 5) {
+            return back()->with([
+                'message' => 'Too many activation attempts. Please try again later.',
+                'alert-type' => 'error'
+            ]);
+        }
+
+        // Call License Verification API on the Ordering Portal (Script 2)
+        $response = Http::post('https://campaignmanager.ng/api/validate', [
+            'activation_code' => $activationCode,
+            'package' =>  $systemPackage,
+            'domain' => $originDomain,
+        ]);
+
+        // Log the activation attempt
+        Log::info('License Activation Attempt', [
+            'ip' => $clientIP,
+            'activation_code' => $activationCode,
+            'domain' => $originDomain,
+            'response' => $response->json(),
+        ]);
+
+        if ($response->successful() && $response->json('valid')) {
+            $apiToken = $response->json('api_token'); // Get token from response
+        
+            DB::table('system_settings')->updateOrInsert(
+                ['key' => 'license'],
+                ['value' => json_encode([
+                    'code' => Crypt::encryptString($activationCode),
+                    'package' => $systemPackage,
+                    'domain' => $originDomain,
+                    'activated_at' => now(),
+                    'api_token' => $apiToken, // Save token
+                ])]
+            );
+        
+            return redirect()->route('home')->with([
+                'message' => 'Activation successful!',
+                'alert-type' => 'success'
+            ]);
+        } else {
+            // Increase failed attempts
+            Cache::increment($cacheKey);
+            Cache::put($cacheKey, Cache::get($cacheKey, 0), now()->addMinutes(5));
+
+            // Log failure details
+            Log::warning('License Activation Failed', [
+                'ip' => $clientIP,
+                'activation_code' => $activationCode,
+                'domain' => $originDomain,
+                'error' => $response->json('message', 'Unknown error'),
+            ]);
+
+            return back()->with([
+                'message' => 'Invalid activation code or domain mismatch.',
+                'alert-type' => 'error'
+            ]);
+        }
     }
-
-    $response = Http::post('https://campaignmanager.ng/validate', [
-        'activation_code' => $activationCode,
-        'package' =>  $systemPackage,
-        'domain' => $originDomain,
-    ]);
-
-    // Log activation attempt
-    Log::info('Activation attempt', [
-        'user_id' => auth()->id(),
-        'activation_code' => $activationCode,
-        'domain' => $originDomain,
-        'success' => $response->successful(),
-    ]);
-
-    if ($response->successful() && $response->json('valid')) {
-        // Encrypt before saving
-        $encryptedCode = Crypt::encryptString($activationCode);
-
-        // Store the validated activation code
-        DB::table('system_settings')->update([
-            'activation_code' => $encryptedCode,
-        ]);
-
-        return redirect()->route('home')->with([
-            'message' => 'Activation successful!',
-            'alert-type' => 'success'
-        ]);
-    } else {
-        // Track failed attempts
-        Cache::increment('activation_attempts_' . auth()->id());
-        Cache::put('activation_attempts_' . auth()->id(), Cache::get('activation_attempts_' . auth()->id(), 0), now()->addMinutes(5));
-
-        return back()->with([
-            'message' => 'Invalid activation code or domain mismatch: ' . $originDomain,
-            'alert-type' => 'error'
-        ]);
-    }
-}
-
 
 
 }
