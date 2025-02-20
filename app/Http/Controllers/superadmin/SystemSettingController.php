@@ -276,12 +276,15 @@ class SystemSettingController extends Controller
         ]);
 
         // Log the activation attempt
-        Log::info('License Activation Attempt', [
-            'ip' => $clientIP,
-            'activation_code' => $activationCode,
-            'domain' => $originDomain,
-            'response' => $response->json(),
+        Log::info('Sending activation request to licensing server', [
+            'url' => 'https://campaignmanager.ng/api/validate',
+            'data' => [
+                'activation_code' => $activationCode,
+                'package' =>  $systemPackage,
+                'domain' => $originDomain,
+            ]
         ]);
+        
 
         if ($response->successful() && $response->json('valid')) {
             $apiToken = $response->json('api_token'); // Get token from response
