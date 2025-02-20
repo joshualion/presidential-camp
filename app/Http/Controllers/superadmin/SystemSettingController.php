@@ -289,15 +289,13 @@ class SystemSettingController extends Controller
         if ($response->successful() && $response->json('valid')) {
             $apiToken = $response->json('api_token'); // Get token from response
         
-            DB::table('system_settings')->updateOrInsert(
-                ['activation_code' => $activationCode], // Store as plain text
-                ['value' => json_encode([
-                    'package' => $systemPackage,
-                    'domain' => $originDomain,
-                    'activated_at' => now(),
-                    'api_token' => $apiToken,
-                ])]
-            );
+            DB::table('system_settings')->update([
+                'activation_code' => $activationCode,
+                'domain' => $originDomain,
+                'api_token' => $apiToken,
+                'activated_at' => now(),
+            ]);
+            
             
         
             return redirect()->route('home')->with([

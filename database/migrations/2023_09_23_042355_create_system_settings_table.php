@@ -53,8 +53,6 @@ return new class extends Migration
              $table->string('bank')->nullable();
              $table->string('bank_account_number')->nullable();
              $table->string('bank_account_name')->nullable();
- 
-           
             $table->timestamps();
         });
     }
