@@ -27,18 +27,19 @@
                             <!-- Activation Code Input -->
                             <div class="form-group">
                                 <label for="activation_code">Activation Code</label>
-                                <input type="text" class="form-control" id="activation_code" name="activation_code" placeholder="Enter your activation code" required>
+                                <input type="text" class="form-control" id="activation_code" name="activation_code" placeholder="Enter your activation code" autocomplete="off" required>
                                 @error('activation_code')
                                     <span class="text-danger">{{ $message }}</span>
                                 @enderror
                             </div>
 
                             <!-- Hidden Package Input -->
-                            <input type="hidden" name="package" value="{{ $SystemSetting->package }}"> <!-- Replace $package with the actual package value -->
+                            <input type="hidden" name="package" value="{{ optional(DB::table('system_settings')->first())->package }}">
 
                             <!-- Submit Button -->
                             <button type="submit" class="btn btn-primary">Activate License</button>
                         </form>
+
                         <br>
 
                         <!-- Footer Note -->

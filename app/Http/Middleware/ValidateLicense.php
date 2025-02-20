@@ -20,9 +20,9 @@ class ValidateLicense
     public function handle(Request $request, Closure $next): Response
     {
         // Allow localhost to work without activation
-        if ($request->getHost() === 'localhost' || $request->getHost() === '127.0.0.1') {
-            return $next($request);
-        }
+        // if ($request->getHost() === 'localhost' || $request->getHost() === '127.0.0.1') {
+        //     return $next($request);
+        // }
 
         $settings = DB::table('system_settings')->first();
 
