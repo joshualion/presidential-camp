@@ -44,7 +44,7 @@ class ValidateLicense
         if (!Cache::has('license_valid')) {
             $originDomain = $request->getHost();
 
-            // Validate activation code with remote server
+            
             // Validate activation code with remote server
             $response = Http::post('https://campaignmanager.ng/check-license', [
                 'activation_code' => $settings->activation_code,
