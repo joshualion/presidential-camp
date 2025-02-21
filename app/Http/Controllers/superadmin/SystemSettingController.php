@@ -129,7 +129,6 @@ class SystemSettingController extends Controller
                                         'instagram' => $request->instagram,
                                         'linkedin' => $request->linkedin,
                                         'youtube' => $request->youtube,
-                                        'activation_code' => $request->activation_code,
                                         'copyright' => $request->copyright,
                                         'disclaimer' => $request->disclaimer,
                                         'privacy_policy' => $request->privacy_policy,
