@@ -18,9 +18,6 @@ use App\Http\Controllers\RolePermissionController;
 use App\Http\Controllers\VolunteerGroupController;
 use Illuminate\Support\Facades\Route;
 
-// Activate License
-Route::get('/superadmin/activate', [SystemSettingController::class, 'showActivationForm'])->name('activation.form')->middleware(['auth','access_level:superadmin']);
-Route::post('/superadmin/activate', [SystemSettingController::class, 'validateActivationCode'])->name('validate.licence')->middleware(['auth','access_level:superadmin', 'throttle:5,1']);
 
 // Manage Locations
 Route::get('/superadmin/location/localgovernments', [LocationController::class, 'allLocalGovernments'])->name('superadmin.location.lgas')->middleware(['auth','access_level:superadmin', 'kuyak_eyen_ino']);
@@ -76,7 +73,7 @@ Route::get('/superadmin/logout', [SuperAdminController::class, 'superAdminLogout
 Route::middleware(['auth','check_onboarding'])->group(function () {
 
   
- // national Admin Profile & Dashboard Routes
+ // Super Admin Profile & Dashboard Routes
  Route::get('/superadmin/dashboard', [SuperAdminController::class, 'superAdminDashBoard'])->name('superadmin.dashboard')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
  Route::get('/superadmin/profile', [SuperAdminController::class, 'superadminProfile'])->name('superadmin.profile')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
  Route::post('/superadmin/profile/store', [SuperAdminController::class, 'superadminProfileStore'])->name('superadmin.profile.store')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
@@ -85,7 +82,7 @@ Route::middleware(['auth','check_onboarding'])->group(function () {
 
 
 
-  //nationaladmin system Setting
+  //superadmin system Setting
   Route::get('/superadmin/system/settings/', [SystemSettingController::class,'SystemSettings'])->name('superadmin.settings.system')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
   Route::post('/superadmin/settings/system/update', [SystemSettingController::class,'updateSystemsSettings'])->name('superadmin.settings.system.update')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
 
@@ -153,14 +150,14 @@ Route::get('/superadmin/member/distribution/voter', [SuperAdminController::class
 // State Distribution
 Route::get('/superadmin/member/distribution/state', [SuperAdminController::class, 'SuperadminStateDistribution'])->name('superadmin.member.distribution.state')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
 //Member Management
-Route::get('/superadmin/members/data/fetch/{uuid?}', [MembersController::class, 'getMembersData'])->name('superadmin.members.data');
-Route::get('/superadmin/members/fetch/{uuid?}', [MembersController::class, 'allMembers'])->name('superadmin.members');
+Route::get('/superadmin/members/data/fetch/{uuid?}', [MembersController::class, 'getMembersData'])->name('superadmin.members.data')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
+Route::get('/superadmin/members/fetch/{uuid?}', [MembersController::class, 'allMembers'])->name('superadmin.members')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
 //Fetch Excos
-Route::get('/superadmin/leaders/data/fetch/{uuid?}', [MembersController::class, 'getExcoMembersData'])->name('superadmin.leaders.data');
-Route::get('/superadmin/leaders/fetch/{uuid?}', [MembersController::class, 'allExcoMembers'])->name('superadmin.leaders');
+Route::get('/superadmin/leaders/data/fetch/{uuid?}', [MembersController::class, 'getExcoMembersData'])->name('superadmin.leaders.data')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
+Route::get('/superadmin/leaders/fetch/{uuid?}', [MembersController::class, 'allExcoMembers'])->name('superadmin.leaders')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
 //Fetch Regulars
-Route::get('/superadmin/regulars/data/fetch/{uuid?}', [MembersController::class, 'getRegularMembersData'])->name('superadmin.regulars.data');
-Route::get('/superadmin/regulars/fetch/{uuid?}', [MembersController::class, 'allRegularMembers'])->name('superadmin.regulars');
+Route::get('/superadmin/regulars/data/fetch/{uuid?}', [MembersController::class, 'getRegularMembersData'])->name('superadmin.regulars.data')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
+Route::get('/superadmin/regulars/fetch/{uuid?}', [MembersController::class, 'allRegularMembers'])->name('superadmin.regulars')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
 
 Route::get('/superadmin/member/add', [MembersController::class, 'addMember'])->name('superadmin.member.add')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
 Route::post('/superadmin/member/store', [MembersController::class, 'storeMember'])->name('superadmin.member.store')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
@@ -170,8 +167,8 @@ Route::get('/superadmin/member/view/{uuid}', [MembersController::class, 'viewMem
 Route::get('/superadmin/member/suspend/{uuid}', [MembersController::class, 'suspendMember'])->name('superadmin.member.suspend')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
 Route::delete('/superadmin/member/delete/{uuid}', [MembersController::class, 'deleteMember'])->name('superadmin.member.delete')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
  //Members By region
-Route::get('/superadmin/members/region', [MembersController::class, 'membersByRegions'])->name('superadmin.members.region')->middleware('access_level:superadmin,nationaladmin');
-Route::get('/superadmin/members/region/{uuid}', [MembersController::class, 'ViewMembersByRegion'])->name('superadmin.member.region.view')->middleware('access_level:superadmin,nationaladmin');
+Route::get('/superadmin/members/region', [MembersController::class, 'membersByRegions'])->name('superadmin.members.region')->middleware('access_level:superadmin,superadmin');
+Route::get('/superadmin/members/region/{uuid}', [MembersController::class, 'ViewMembersByRegion'])->name('superadmin.member.region.view')->middleware('access_level:superadmin,superadmin');
 Route::get('/superadmin/region/members/data/{uuid}', [MembersController::class, 'getRegionMembersData'])->name('superadmin.region.members.data');
 // Members By State
 Route::get('/superadmin/members/bystate/{uuid?}', [MembersController::class, 'membersByStates'])->name('superadmin.members.byState')->middleware('access_level:superadmin,regionadmin,stateadmin');
@@ -197,6 +194,10 @@ Route::get('/superadmin/members/bypu/{uuid?}', [MembersController::class, 'membe
 Route::get('/superadmin/members/bypu/ajax/{uuid?}', [AjaxController::class, 'membersByPusAjax'])->name('superadmin.members.byPu.ajax')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
 Route::get('/superadmin/members/pu/{uuid}', [MembersController::class, 'viewMembersByPu'])->name('superadmin.member.pu.view')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
 Route::get('/superadmin/pu/members/data/{uuid}', [MembersController::class, 'getPuMembersData'])->name('superadmin.pu.members.data');
+
+// License Activation
+Route::get('/superadmin/activate', [SystemSettingController::class, 'showActivationForm'])->name('activation.form')->middleware(['auth','access_level:superadmin','EnsureSystemNotActivated']);
+Route::post('/superadmin/activate', [SystemSettingController::class, 'validateActivationCode'])->name('validate.licence')->middleware(['auth','access_level:superadmin', 'throttle:5,1']);
 
 //Locations Management Routes
 //Manage Regions

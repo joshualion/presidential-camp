@@ -3,7 +3,7 @@
     <label for="favicon" class="col-sm-2 col-form-label">Favicon</label>
     <div class="col-sm-10">
         <div class="align-items-center">
-            <table cellpadding="1" align="center" class="table table-bordered table-responsive" role="none">
+            <table cellpadding="1" class="table table-bordered table-responsive" role="none">
                 <!-- Favicon Image Preview -->
                 <td>
                     <img id="showimage" class="img-square img-responsive"
@@ -26,7 +26,7 @@
     <label for="image" class="col-sm-2 col-form-label">Logo</label>
     <div class="col-sm-10">
         <div class="align-items-center">
-            <table cellpadding="1"   align="center" class="table table-bordered table-responsive" role="none" >
+            <table cellpadding="1"    class="table table-bordered table-responsive" role="none" >
              <td><img id="showLogo" class="img-square img-responsive" src="{{ !empty($SystemSetting->logo) ? url('uploads/system_images/'.$SystemSetting->logo) : url('logo.png') }}" alt="profile" width="50%" height="15%"></td>
              <td colspan="2"><label for="logo" class="btn btn-primary ms-10 d-block"> Change Logo</label></td>
              </table>

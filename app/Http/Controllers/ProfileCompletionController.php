@@ -83,53 +83,65 @@ class ProfileCompletionController extends Controller
 
         switch ($SystemSetting->package) {
             case 'national':
-                if ($profileData->access_level == 'nationaladmin' && $profileData->hasRole('National ICT/Media Director')) {
+                if ($profileData->access_level == 'nationaladmin' && $profileData->hasRole('National ICT/Media Director') || $profileData->access_level == 'superadmin') {
                     $notification = [
                         'type' => 'success',
                         'message' => ' Please add or upload LGAs, Wards, and Polling Units.',
                     ];
-                    $redirectRoute = 'nationaladmin.location.lgas';
+                    $redirectRoute = $profileData->access_level.'.location.lgas';
                 } else {
-                    $notification = 'The system is not completely set up. Please contact the National ICT/Media Director.';
+                    $notification = 'The system is not completely set up. Please contact the Administrator.';
                 }
                 break;
-
+        
             case 'regional':
-                if ($profileData->access_level == 'regionaladmin' && $profileData->hasRole('Regional ICT/Media Director')) {
+                if ($profileData->access_level == 'regionaladmin' && $profileData->hasRole('Regional ICT/Media Director') || $profileData->access_level == 'superadmin') {
                     $notification = [
                         'type' => 'success',
                         'message' => ' Please add or upload LGAs, Wards and Polling Units.',
                     ];
-                    $redirectRoute = 'regionaladmin.location.lgas';
+                    $redirectRoute = $profileData->access_level.'.location.lgas';
                 } else {
                     $notification = 'The system is not completely set up. Please contact the Regional ICT/Media Director.';
                 }
                 break;
-
+        
             case 'state':
-                if ($profileData->access_level == 'stateadmin' && $profileData->hasRole('State ICT/Media Director')) {
+                if ($profileData->access_level == 'stateadmin' && $profileData->hasRole('State ICT/Media Director') || $profileData->access_level == 'superadmin') {
                     $notification = [
                         'type' => 'success',
                         'message' => ' Please add or upload LGAs, Wards & Polling Units.',
                     ];
-                    $redirectRoute = 'stateadmin.location.lgas';
+                    $redirectRoute = $profileData->access_level.'.location.lgas';
                 } else {
                     $notification = 'The system is not completely set up. Please contact the State ICT/Media Director.';
                 }
                 break;
-
+        
+            case 'lga': // New case for LGA
+                if ($profileData->access_level == 'lgaadmin' && $profileData->hasRole('LGA ICT/Media Director') || $profileData->access_level == 'superadmin') {
+                    $notification = [
+                        'type' => 'success',
+                        'message' => ' Please add or upload Wards and Polling Units.',
+                    ];
+                    $redirectRoute = $profileData->access_level.'.location.wards';
+                } else {
+                    $notification = 'The system is not completely set up. Please contact the LGA ICT/Media Director.';
+                }
+                break;
+        
             case 'ward':
-                if ($profileData->access_level == 'wardadmin' && $profileData->hasRole('Ward ICT/Media Director')) {
+                if ($profileData->access_level == 'wardadmin' && $profileData->hasRole('Ward ICT/Media Director') || $profileData->access_level == 'superadmin') {
                     $notification = [
                         'type' => 'success',
                         'message' => ' Please verify Polling Units.',
                     ];
-                    $redirectRoute = 'wardadmin.location.polling_units';
+                    $redirectRoute = $profileData->access_level.'.location.polling_units';
                 } else {
                     $notification = 'The system is not completely set up. Please contact the Ward ICT/Media Director.';
                 }
                 break;
-
+        
             case 'senate':
             case 'reps':
             case 'assembly':
@@ -142,6 +154,10 @@ class ProfileCompletionController extends Controller
                 } else {
                     $notification = 'The system is not completely set up. Please contact the Campaign ICT/Media Director.';
                 }
+                break;
+        
+            default:
+                $notification = 'Invalid system package. Please contact the Administrator.';
                 break;
         }
 

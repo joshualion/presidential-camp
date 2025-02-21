@@ -13,9 +13,11 @@ class KuyakEyenIno
 {
     public function handle(Request $request, Closure $next)
     {
+
+        
         try {
-            // Cache the settings for 5 minutes to reduce DB load
-            $settings = Cache::remember('system_settings', 300, function () {
+            // Cache the settings for 2 minutes to reduce DB load
+            $settings = Cache::remember('system_settings', 120, function () {
                 return DB::table('system_settings')->first();
             });
         } catch (QueryException $e) {
@@ -23,19 +25,45 @@ class KuyakEyenIno
             return abort(500, 'System configuration error. Please contact support.');
         }
 
-        // If system settings are missing or activation_code is null, require activation
-        if (!$settings || is_null($settings->activation_code)) {
-            if (Auth::check() && Auth::user()->access_level === 'superadmin') {
-                return redirect()->route('activation.form');
-            } else {
-                Auth::logout();
-                $request->session()->invalidate();
-                $request->session()->regenerateToken();
+        // If system settings are missing, require activation
+        if (!$settings) {
+            return $this->handleActivationRequired($request, 'System configuration missing. Please contact support.');
+        }
 
-                return abort(403, 'System not activated. Contact the administrator.');
-            }
+        // Check if the system is activated
+        if (!$this->isSystemActivated($settings)) {
+            return $this->handleActivationRequired($request, 'System not activated. Contact the administrator.');
         }
 
         return $next($request);
+    }
+
+    /**
+     * Check if the system is activated.
+     */
+    protected function isSystemActivated($settings)
+    {
+        // Ensure all required fields are present and not null
+        return !is_null($settings->activation_code) &&
+               !is_null($settings->domain) &&
+               !is_null($settings->activated_at);
+    }
+
+    /**
+     * Handle activation required scenarios.
+     */
+    protected function handleActivationRequired(Request $request, $message)
+    {
+        if (Auth::check() && Auth::user()->access_level === 'superadmin') {
+            // Clear cache to ensure fresh settings are fetched
+            Cache::forget('system_settings');
+            return redirect()->route('activation.form');
+        } else {
+            Auth::logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return abort(403, $message);
+        }
     }
 }

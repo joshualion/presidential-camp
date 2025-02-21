@@ -3,7 +3,7 @@
   <aside class="main-sidebar sidebar-light-primary elevation-4 nav-pills">
     <!-- Brand Logo -->
     <a href="#" class="brand-link">
-        <img src="{{ !empty($SystemSetting->logo) ? url('uploads/system_images/'.$SystemSetting->logo) : url('uploads/system_images/logo.png') }}" alt="Logo" class="brand-image" width="100%" height="100%" style="opacity: .8">
+        <img src="{{ !empty($SystemSetting->logo) ? url('uploads/system_images/'.$SystemSetting->logo) : url('logo.png') }}" alt="Logo" class="brand-image" width="100%" height="100%" style="opacity: .8">
 
       <span class="brand-text font-weight-light" style="opacity:0;">::</span>
 

@@ -134,6 +134,8 @@ Route::middleware(['auth','check_onboarding', 'kuyak_eyen_ino'])->group(function
 //Require Super Admin Routes file
 require __DIR__.'/superAdmin.php';
 
+Route::middleware([ 'kuyak_eyen_ino'])->group(function () {
+
 //Require National Admin Routes file
 require __DIR__.'/nationalAdmin.php';
 
@@ -151,6 +153,7 @@ require __DIR__.'/wardAdmin.php';
 
 //Require User Routes file
 require __DIR__.'/memberAdmin.php';
+});
 
 //Require Auth Routes file
 require __DIR__.'/auth.php';

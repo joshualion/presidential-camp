@@ -58,7 +58,7 @@
 <div class="register-box">
   <div class="register-logo">
     <a href="/">
-        <img src="{{ !empty($SystemSetting->logo) ? url('uploads/system_images/'.$SystemSetting->logo) : url('uploads/system_images/logo.png') }}" alt="Logo" class="brand-image" width="40%" height="40%" >
+        <img src="{{ !empty($SystemSetting->logo) ? url('uploads/system_images/'.$SystemSetting->logo) : url('logo.png') }}" alt="Logo" class="brand-image" width="40%" height="40%" >
 
     </a>
 
