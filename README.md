@@ -1,4 +1,8 @@
-<p align="center"><a href="https://campaignmanager.ng" target="_blank"><img src="https://beta.campaignmanager.ng/uploads/system_images/202501280901logo.png" width="400" alt="Logo"></a></p>
+<p align="center">
+    <a href="https://campaignmanager.ng" target="_blank">
+        <img src="https://postimg.cc/DSzBRNNM"  alt="Logo">
+   </a>
+</p>
 
 
 
