@@ -1,4 +1,4 @@
-<p align="center"><a href="https://campaignmanager.ng" target="_blank"><img src="https://web.facebook.com/photo/?fbid=542349825311550&set=a.111148185098385" width="400" alt="Logo"></a></p>
+<p align="center"><a href="https://campaignmanager.ng" target="_blank"><img src="https://beta.campaignmanager.ng/uploads/system_images/202501280901logo.png" width="400" alt="Logo"></a></p>
 
 
 
