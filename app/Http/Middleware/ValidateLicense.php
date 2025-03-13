@@ -46,7 +46,7 @@ class ValidateLicense
 
             
             // Validate activation code with remote server
-            $response = Http::post('https://campaignmanager.ng/check-license', [
+            $response = Http::post('https://campaignmanager.ng/api/check-license', [
                 'activation_code' => $settings->activation_code,
                 'domain' => $originDomain,
                 'api_token' => $settings->api_token,
