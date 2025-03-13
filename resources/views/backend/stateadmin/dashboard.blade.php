@@ -30,7 +30,7 @@
                             <b>
                                 @php
                                     if ($stateCount > 0) {
-                                        echo number_format(($ $statesWithUsersCount / $stateCount) * 100, 2);
+                                        echo number_format(($statesWithUsersCount / $stateCount) * 100, 2);
                                     } else {
                                         echo '0.00'; // Handle the case where $lgaCount is zero
                                     }
