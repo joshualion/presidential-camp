@@ -49,7 +49,7 @@
                             <!-- ./col -->
                             <div class="col-lg-3 col-6">
                               <!-- small box -->
-                              <div class="small-box bg-success">
+                              <div class="small-box bg-warning">
                                 <div class="inner">
                                   <h3>{{$lgasWithUsersCount}}</h3>
                                   <p>Out of <strong>{{$lgaCount}}</strong> LGAs in {{$state->name}}</p>
