@@ -77,7 +77,8 @@ class StateAdminController extends Controller
         }
 
 
-
+        $stateCount = State::where('state_id', $state->id)->count();
+        $statesWithUsersCount = 1;
 
        
 

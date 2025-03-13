@@ -19,8 +19,35 @@
                    <!-- Small boxes (Stat box) -->
                   <div class="row">
 
+                    <!-- ./col -->
+                    <div class="col-lg-3 col-6">
+                      <!-- small box -->
+                      <div class="small-box bg-success">
+                        <div class="inner">
+                          <h3>{{$statesWithUsersCount}}</h3>
+                          <p>Out of <strong>{{$stateCount}}</strong> State</p>
+                          <p style="float: right;">
+                            <b>
+                                @php
+                                    if ($stateCount > 0) {
+                                        echo number_format(($ $statesWithUsersCount / $stateCount) * 100, 2);
+                                    } else {
+                                        echo '0.00'; // Handle the case where $lgaCount is zero
+                                    }
+                                @endphp %
+                            </b>
+                          </p>
+                        </div>
+                        <div class="icon">
+                          <i class="ion ion-lga"></i>
+                        </div>
+                        <a href="{{route($profileData->access_level.'.members.byLga', $state->uuid)}}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
+                      </div>
+                    </div>
+                    <!-- ./col -->
+
                             <!-- ./col -->
-                            <div class="col-lg-4 col-6">
+                            <div class="col-lg-3 col-6">
                               <!-- small box -->
                               <div class="small-box bg-success">
                                 <div class="inner">
@@ -45,7 +72,7 @@
                               </div>
                             </div>
                             <!-- ./col -->
-                            <div class="col-lg-4 col-6">
+                            <div class="col-lg-3 col-6">
                               <!-- small box -->
                               <div class="small-box bg-info">
                                 <div class="inner">
@@ -70,7 +97,7 @@
                               </div>
                             </div>
                             <!-- ./col -->
-                            <div class="col-lg-4 col-6">
+                            <div class="col-lg-3 col-6">
                               <!-- small box -->
                               <div class="small-box bg-danger">
                                 <div class="inner">
