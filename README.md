@@ -1,8 +1,9 @@
 <p align="center">
     <a href="https://campaignmanager.ng" target="_blank">
-        <img src="https://postimg.cc/DSzBRNNM"  alt="Logo">
-   </a>
+        <img src="https://i.postimg.cc/6prg4Jft/logo.png" alt="Logo">
+    </a>
 </p>
+
 
 
 
