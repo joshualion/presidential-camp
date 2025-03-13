@@ -26,9 +26,16 @@
   <!-- Toaster CSS -->
 <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.css" >
 
+
+{{-- Favicon --}}
+
+<link rel="apple-touch-icon" sizes="180x180" href="{{asset('/apple-touch-icon.png')}}">
+<link rel="icon" type="image/png" sizes="32x32" href="{{asset('/favicon-32x32.png')}}">
+<link rel="icon" type="image/png" sizes="16x16" href="{{asset('/favicon-16x16.png')}}">
+<link rel="manifest" href="{{asset('/site.webmanifest')}}">
   <style>
      body {
-      background-image: url('aso-rock.jpg');
+        background-image: url("{{ asset('uploads/system_images/' . ($SystemSetting ? $SystemSetting->login_page_background : 'aso-rock.jpg')) }}");
       background-size: cover;
       background-repeat: no-repeat;
       background-attachment: fixed;

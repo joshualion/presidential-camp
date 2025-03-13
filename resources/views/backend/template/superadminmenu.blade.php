@@ -163,12 +163,19 @@
       </a>
       <ul class="nav nav-treeview">
 
+        <li class="nav-item">
+          <a href="/superadmin/products" class="nav-link">
+            <i class="fas fa-shopping-cart nav-icon"></i>
+            <p>Income Sources</p>
+          </a>
+      </li>
+
       <li class="nav-item">
           <a href="/superadmin/dashboard" class="nav-link">
             <i class="fas fa-hand-holding-usd nav-icon"></i>
-            <p>Dues & Donations</p>
+            <p>Income</p>
           </a>
-        </li>
+      </li>
 
 
 

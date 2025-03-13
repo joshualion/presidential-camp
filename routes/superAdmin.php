@@ -11,6 +11,7 @@ use App\Http\Controllers\LocationController;
 use App\Http\Controllers\MembersController;
 use App\Http\Controllers\PaymentGatewayController;
 use App\Http\Controllers\PoliticalPartyController;
+use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ReligionController;
 use App\Http\Controllers\superadmin\SuperAdminController;
 use App\Http\Controllers\superadmin\SystemSettingController;
@@ -199,7 +200,7 @@ Route::get('/superadmin/pu/members/data/{uuid}', [MembersController::class, 'get
 Route::get('/superadmin/activate', [SystemSettingController::class, 'showActivationForm'])->name('activation.form')->middleware(['auth','access_level:superadmin','EnsureSystemNotActivated']);
 Route::post('/superadmin/activate', [SystemSettingController::class, 'validateActivationCode'])->name('validate.licence')->middleware(['auth','access_level:superadmin', 'throttle:5,1']);
 
-//Locations Management Routes
+//Locations Management Routes 
 //Manage Regions
 Route::get('/superadmin/location/region/dashboard/{uuid}', [SuperAdminController::class, 'RegionDashBoard'])->name('superadmin.location.region.dashboard')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
 Route::get('/superadmin/region/member/distribution/gender/{uuid}', [ChartsController::class, 'GenderDistributionByRegion'])->name('superadmin.region.member.distribution.gender')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
@@ -329,6 +330,25 @@ Route::post('/superadmin/incident/store', [ElectionController::class, 'storeIcid
   Route::get('/superadmin/chat/messenger', [LiveChatController::class,'index'])->name('superadmin.livechat.send')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
   Route::get('/superadmin/chat/messages', [LiveChatController::class, 'fetchMessages'])->name('superadmin.livechat.fetch.messages')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
   Route::post('/superadmin/chat/send', [LiveChatController::class, 'sendMessage'])->name('superadmin.livechat.send.messages')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
+ 
+  /* Finance Management Routes*/
+
+  // Products(income Sources) Management
+  //  Product management Routes
+  Route::get('/superadmin/products', [ProductController::class, 'allProducts'])->name('superadmin.products')->middleware('access_level:superadmin');
+  Route::get('/superadmin/product/add', [ProductController::class, 'addProduct'])->name('superadmin.product.add')->middleware('access_level:superadmin');
+  Route::post('/superadmin/product/store', [ProductController::class, 'storeProduct'])->name('superadmin.product.store')->middleware('access_level:superadmin');
+  Route::get('/superadmin/product/edit/{id}', [ProductController::class, 'editProduct'])->name('superadmin.product.edit')->middleware('access_level:superadmin');
+  Route::post('/superadmin/product/update/{id}', [ProductController::class, 'updateProduct'])->name('superadmin.product.update')->middleware('access_level:superadmin');
+  Route::delete('/superadmin/product/delete/{id}', [ProductController::class, 'deleteProduct'])->name('superadmin.product.delete')->middleware('access_level:superadmin');
+
+  // Category management Routes
+  Route::get('/superadmin/product/categories', [ProductController::class, 'allCategories'])->name('superadmin.product.categories')->middleware('access_level:superadmin');
+  Route::get('/superadmin/product/category/add', [ProductController::class, 'addCategory'])->name('superadmin.product.category.add')->middleware('access_level:superadmin');
+  Route::post('/superadmin/product/category/store', [ProductController::class, 'storeCategory'])->name('superadmin.product.category.store')->middleware('access_level:superadmin');
+  Route::get('/superadmin/product/category/edit/{id}', [ProductController::class, 'editCategory'])->name('superadmin.product.category.edit')->middleware('access_level:superadmin');
+  Route::post('/superadmin/product/category/update/{id}', [ProductController::class, 'updateCategory'])->name('superadmin.product.category.update')->middleware('access_level:superadmin');
+  Route::delete('/superadmin/product/category/delete/{id}', [ProductController::class, 'deleteCategory'])->name('superadmin.product.category.delete')->middleware('access_level:superadmin');
 
 
 });

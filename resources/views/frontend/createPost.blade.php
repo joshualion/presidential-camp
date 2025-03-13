@@ -132,31 +132,36 @@
 {{-- Submit form with Ajax --}}
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        const postForm = document.getElementById('postForm');
-        const modalElement = document.getElementById('postModal');
-        const modal = new bootstrap.Modal(modalElement);
-    
-        postForm.addEventListener('submit', function (e) {
-            e.preventDefault();
-    
-            const csrfToken = document.querySelector('meta[name="csrf-token"]');
-            if (!csrfToken) {
-                console.error('CSRF token not found');
-                alert('CSRF token is missing.');
-                return;
-            }
-    
-            // Create a FormData object
-            const formData = new FormData(this);
-    
-            // Send an AJAX request
-            fetch('{{ route('posts.store') }}', {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-CSRF-TOKEN': csrfToken.getAttribute('content'),
-                },
-            })
+    const postForm = document.getElementById('postForm');
+    const modalElement = document.getElementById('postModal');
+    const modal = new bootstrap.Modal(modalElement);
+
+    postForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        const csrfToken = document.querySelector('meta[name="csrf-token"]');
+        if (!csrfToken) {
+            console.error('CSRF token not found');
+            alert('CSRF token is missing.');
+            return;
+        }
+
+        // Disable the submit button to prevent multiple submissions
+        const submitButton = postForm.querySelector('button[type="submit"]');
+        submitButton.disabled = true;
+        submitButton.textContent = 'Posting...';
+
+        // Create a FormData object
+        const formData = new FormData(this);
+
+        // Send an AJAX request
+        fetch('{{ route('posts.store') }}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRF-TOKEN': csrfToken.getAttribute('content'),
+            },
+        })
             .then(response => {
                 if (!response.ok) {
                     throw new Error('Network response was not ok');
@@ -167,36 +172,47 @@
                 if (data.status === 'success') {
                     // Clear the form
                     postForm.reset();
-    
+
                     // Hide the modal properly
                     modal.hide();
-    
-                    // Wait for the modal to fully close
-                    modalElement.addEventListener('hidden.bs.modal', function () {
-                        // Reset modal state for reuse
-                        modalElement.removeAttribute('inert');
-                    });
 
-                    // Refresh the page after a short delay
-                setTimeout(() => {
-                    location.reload();
-                }, 500); // Optional delay to allow the modal transition to complete
-    
-               } else {
-                    alert('Failed to create post.');
+                    // Remove the modal backdrop (overlay)
+                    const modalBackdrop = document.querySelector('.modal-backdrop');
+                    if (modalBackdrop) {
+                        modalBackdrop.remove();
+                    }
+
+                    // Remove the modal-open class from the body
+                    document.body.classList.remove('modal-open');
+
+                    // Reset the modal state
+                    modalElement.style.display = 'none';
+                    modalElement.setAttribute('aria-hidden', 'true');
+                    modalElement.removeAttribute('aria-modal');
+                    modalElement.removeAttribute('role');
+
+                    // Log success (no page reload)
+                    console.log('Post submitted successfully. No page reload needed.');
+                } else {
+                    throw new Error(data.message || 'Failed to create post.');
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('An error occurred while processing your request.');
+                alert('An error occurred while processing your request. Please try again.');
+            })
+            .finally(() => {
+                // Re-enable the submit button
+                submitButton.disabled = false;
+                submitButton.textContent = 'Post';
             });
-        });
-    
-        // Ensure the modal's inert state is removed when hidden
-        modalElement.addEventListener('hidden.bs.modal', function () {
-            modalElement.removeAttribute('inert');
-        });
     });
+
+    // Ensure the modal's inert state is removed when hidden
+    modalElement.addEventListener('hidden.bs.modal', function () {
+        modalElement.removeAttribute('inert');
+    });
+});
 </script>
 
 {{-- Audience dynamic Selection--}}

@@ -111,83 +111,189 @@ class HomeController extends Controller
 
 
    
+    // public function storePost(Request $request)
+    // {
+    //     // Validate the request
+    //     $validatedData = $request->validate([
+    //         'content' => 'nullable|string|required_without_all:photo,video',
+    //         'photo' => 'nullable|image|max:2048|required_without_all:content,video', // Max 2MB
+    //         'video' => 'nullable|mimes:mp4,mov,avi|max:10240|required_without_all:content,photo', // Max 10MB
+    //         'audience' => 'required|string',
+    //     ], [
+    //         'content.required_without_all' => 'You must provide content, a photo, or a video.',
+    //         'photo.required_without_all' => 'You must provide content, a photo, or a video.',
+    //         'video.required_without_all' => 'You must provide content, a photo, or a video.',
+    //     ]);
+
+    //     // Initialize file paths
+    //     $photoFilename = null;
+    //     $videoFilename = null;
+
+    //     // Store photo if uploaded
+    //     if ($request->hasFile('photo')) {
+    //         $photoFilename = $this->fileStorageService->storeFile(
+    //             $request->file('photo'),
+    //             'community/photos'
+    //         );
+    //     }
+
+    //     // Store video if uploaded
+    //     if ($request->hasFile('video')) {
+    //         $videoFilename = $this->fileStorageService->storeFile(
+    //             $request->file('video'),
+    //             'community/videos'
+    //         );
+    //     }
+
+    //     // Retrieve additional profile data
+    //     $profileData = $this->getProfileData();
+    //     $country_id = $profileData->country_id;  // Assuming the user has a country relationship
+    //     $region_id = $profileData->region_id;    // Assuming the user has a region relationship
+    //     $state_id = $profileData->state_id;      // Assuming the user has a state relationship
+    //     $lga_id = $profileData->lga_id;          // Assuming the user has a LGA relationship
+    //     $ward_id = $profileData->ward_id;        // Assuming the user has a ward relationship
+    //     $pu_id = $profileData->polling_unit_id ; // Assuming the user has a polling unit relationship
+
+    //     // Create the post
+    //     $post = $profileData->posts()->create([
+    //         'content' => $validatedData['content'],
+    //         'image_url' => $photoFilename,
+    //         'video_url' => $videoFilename,
+    //         'audience' => $validatedData['audience'],
+    //         'country_id' => $country_id,
+    //         'region_id' => $region_id,
+    //         'state_id' => $state_id,
+    //         'lga_id' => $lga_id,
+    //         'ward_id' => $ward_id,
+    //         'pu_id' => $pu_id,
+    //         'post_type' => $photoFilename && $videoFilename ? 'mixed' : ($photoFilename ? 'image' : ($videoFilename ? 'video' : 'text')),
+    //     ]);
+
+
+    //        // Only broadcast if WebSocket is available (local environment)
+    //         // if (app()->WEB_SOCKET_AVAILABILITY==true) {
+    //             // Broadcast the event
+    //             broadcast(new NewPostCreated($post))->toOthers();
+    //        // }
+
+    //     // Respond with the new post (to update the feed dynamically)
+    //     return response()->json([
+    //         'status' => 'success',
+    //         'post' => $post,
+    //         'photo_url' => $photoFilename ? $this->fileStorageService->getFileUrl('uploads/community/photos/' . $photoFilename) : null,
+    //         'video_url' => $videoFilename ? $this->fileStorageService->getFileUrl('uploads/community/videos/' . $videoFilename) : null,
+    //     ]);
+    // }
+
+
+
     public function storePost(Request $request)
     {
-        // Validate the request
-        $validatedData = $request->validate([
-            'content' => 'nullable|string|required_without_all:photo,video',
-            'photo' => 'nullable|image|max:2048|required_without_all:content,video', // Max 2MB
-            'video' => 'nullable|mimes:mp4,mov,avi|max:10240|required_without_all:content,photo', // Max 10MB
-            'audience' => 'required|string',
-        ], [
-            'content.required_without_all' => 'You must provide content, a photo, or a video.',
-            'photo.required_without_all' => 'You must provide content, a photo, or a video.',
-            'video.required_without_all' => 'You must provide content, a photo, or a video.',
-        ]);
-
-        // Initialize file paths
-        $photoFilename = null;
-        $videoFilename = null;
-
-        // Store photo if uploaded
-        if ($request->hasFile('photo')) {
-            $photoFilename = $this->fileStorageService->storeFile(
-                $request->file('photo'),
-                'community/photos'
-            );
-        }
-
-        // Store video if uploaded
-        if ($request->hasFile('video')) {
-            $videoFilename = $this->fileStorageService->storeFile(
-                $request->file('video'),
-                'community/videos'
-            );
-        }
-
-        // Retrieve additional profile data
-        $profileData = $this->getProfileData();
-        $country_id = $profileData->country_id;  // Assuming the user has a country relationship
-        $region_id = $profileData->region_id;    // Assuming the user has a region relationship
-        $state_id = $profileData->state_id;      // Assuming the user has a state relationship
-        $lga_id = $profileData->lga_id;          // Assuming the user has a LGA relationship
-        $ward_id = $profileData->ward_id;        // Assuming the user has a ward relationship
-        $pu_id = $profileData->polling_unit_id ; // Assuming the user has a polling unit relationship
-
-        // Create the post
-        $post = $profileData->posts()->create([
-            'content' => $validatedData['content'],
-            'image_url' => $photoFilename,
-            'video_url' => $videoFilename,
-            'audience' => $validatedData['audience'],
-            'country_id' => $country_id,
-            'region_id' => $region_id,
-            'state_id' => $state_id,
-            'lga_id' => $lga_id,
-            'ward_id' => $ward_id,
-            'pu_id' => $pu_id,
-            'post_type' => $photoFilename && $videoFilename ? 'mixed' : ($photoFilename ? 'image' : ($videoFilename ? 'video' : 'text')),
-        ]);
-
-
-           // Only broadcast if WebSocket is available (local environment)
-            // if (app()->WEB_SOCKET_AVAILABILITY==true) {
-                // Broadcast the event
+        try {
+            // Validate the request
+            $validatedData = $request->validate([
+                'content' => 'nullable|string|required_without_all:photo,video',
+                'photo' => 'nullable|image|max:2048|required_without_all:content,video', // Max 2MB
+                'video' => 'nullable|mimes:mp4,mov,avi|max:10240|required_without_all:content,photo', // Max 10MB
+                'audience' => 'required|string',
+            ], [
+                'content.required_without_all' => 'You must provide content, a photo, or a video.',
+                'photo.required_without_all' => 'You must provide content, a photo, or a video.',
+                'video.required_without_all' => 'You must provide content, a photo, or a video.',
+            ]);
+    
+            // Initialize file paths
+            $photoFilename = null;
+            $videoFilename = null;
+    
+            // Store photo if uploaded
+            if ($request->hasFile('photo')) {
+                $photoFilename = $this->fileStorageService->storeFile(
+                    $request->file('photo'),
+                    'community/photos'
+                );
+                if (!$photoFilename) {
+                    throw new \Exception('Failed to store the photo.');
+                }
+            }
+    
+            // Store video if uploaded
+            if ($request->hasFile('video')) {
+                $videoFilename = $this->fileStorageService->storeFile(
+                    $request->file('video'),
+                    'community/videos'
+                );
+                if (!$videoFilename) {
+                    throw new \Exception('Failed to store the video.');
+                }
+            }
+    
+            // Retrieve additional profile data
+            $profileData = $this->getProfileData();
+            if (!$profileData) {
+                throw new \Exception('Profile data not found.');
+            }
+    
+            $country_id = $profileData->country_id;  // Assuming the user has a country relationship
+            $region_id = $profileData->region_id;    // Assuming the user has a region relationship
+            $state_id = $profileData->state_id;      // Assuming the user has a state relationship
+            $lga_id = $profileData->lga_id;          // Assuming the user has a LGA relationship
+            $ward_id = $profileData->ward_id;        // Assuming the user has a ward relationship
+            $pu_id = $profileData->polling_unit_id;  // Assuming the user has a polling unit relationship
+    
+            // Create the post
+            $post = $profileData->posts()->create([
+                'content' => $validatedData['content'],
+                'image_url' => $photoFilename,
+                'video_url' => $videoFilename,
+                'audience' => $validatedData['audience'],
+                'country_id' => $country_id,
+                'region_id' => $region_id,
+                'state_id' => $state_id,
+                'lga_id' => $lga_id,
+                'ward_id' => $ward_id,
+                'pu_id' => $pu_id,
+                'post_type' => $photoFilename && $videoFilename ? 'mixed' : ($photoFilename ? 'image' : ($videoFilename ? 'video' : 'text')),
+            ]);
+    
+            if (!$post) {
+                throw new \Exception('Failed to create the post.');
+            }
+    
+            // Broadcast the event (if WebSocket is available)
+            if (config('app.web_socket_availability')) {
                 broadcast(new NewPostCreated($post))->toOthers();
-           // }
-
-        // Respond with the new post (to update the feed dynamically)
-        return response()->json([
-            'status' => 'success',
-            'post' => $post,
-            'photo_url' => $photoFilename ? $this->fileStorageService->getFileUrl('uploads/community/photos/' . $photoFilename) : null,
-            'video_url' => $videoFilename ? $this->fileStorageService->getFileUrl('uploads/community/videos/' . $videoFilename) : null,
-        ]);
+            }
+    
+            // Respond with the new post
+            return response()->json([
+                'status' => 'success',
+                'post' => $post,
+                'photo_url' => $photoFilename ? $this->fileStorageService->getFileUrl('uploads/community/photos/' . $photoFilename) : null,
+                'video_url' => $videoFilename ? $this->fileStorageService->getFileUrl('uploads/community/videos/' . $videoFilename) : null,
+            ]);
+    
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            // Handle validation errors
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Validation failed.',
+                'errors' => $e->errors(),
+            ], 422);
+    
+        } catch (\Exception $e) {
+            // Log the error for debugging
+            \Log::error('Error in storePost: ' . $e->getMessage());
+    
+            // Return a generic error message
+            return response()->json([
+                'status' => 'error',
+                'message' => 'An error occurred while processing your request. Please try again.',
+            ], 500);
+        }
     }
 
-
-  
-    public function fetchPosts(Request $request)
+public function fetchPosts(Request $request)
 {
     // Get the audience, page, and last_post_timestamp parameters from the request
     $audience = $request->input('audience', 'public');

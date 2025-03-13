@@ -123,4 +123,12 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Websocket Availability
+    |--------------------------------------------------------------------------
+    */
+
+    'web_socket_availability' => env('WEB_SOCKET_AVAILABILITY', false),
+
 ];

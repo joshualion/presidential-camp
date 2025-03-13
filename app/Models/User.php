@@ -149,6 +149,35 @@ class User extends Authenticatable
         };
     }
 
+   /**
+     * Finance Module.
+     */
+
+            public function transactions()
+        {
+            return $this->hasMany(Transaction::class);
+        }
+
+        public function expenses()
+        {
+            return $this->hasMany(Expense::class);
+        }
+      /**
+     * Funding requests initiated by the user (receiver).
+     */
+    public function fundingRequests()
+    {
+        return $this->hasMany(FundingRequest::class, 'receiver_id');
+    }
+
+    /**
+     * Funding requests approved by the user (admin).
+     */
+    public function approvedFundingRequests()
+    {
+        return $this->hasMany(FundingRequest::class, 'admin_id');
+    }
+
 
     public static function getPermissionGroups()
     {

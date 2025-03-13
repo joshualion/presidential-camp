@@ -91,7 +91,7 @@ Route::get('/emergency/exit', function () {
 })->name('emergency.exit');
 
 //Front Pages
-Route::middleware(['auth','check_onboarding', 'kuyak_eyen_ino'])->group(function () {
+Route::middleware(['auth','check_onboarding', 'kuyak_eyen_ino', 'eyen_ino_no_way'])->group(function () {
     // comunity pages
     Route::get('/community/feed', [HomeController::class,'index'])->name('timeline');
     Route::get('/community/profile', [HomeController::class,'profileTimeline'])->name('profile.timeline');    
