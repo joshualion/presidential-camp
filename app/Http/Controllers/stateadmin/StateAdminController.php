@@ -132,6 +132,8 @@ class StateAdminController extends Controller
 'profileData',
 'pageTitle',
             'state',
+            'stateCount',
+            'statesWithUsersCount',
         'lgaCount',
         'lgasWithUsersCount',
         'wardCount',
