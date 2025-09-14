@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\Country;
 use App\Models\SystemSetting;
 use App\Models\User;
 use Illuminate\Auth\Events\Registered;
@@ -41,8 +42,13 @@ class RegisteredUserController extends Controller
 
         // Find the role by its Name
         $role = Role::where('name', 'member')->first();
+        //get the default country id
+        $country= SystemSetting::find(1)->system_country;
+        $country_id = Country::where('name',$country)->first()->id;
+
 
         $user = User::create([
+            'country_id' => $country_id,
             'username' => $request->username,
             'firstname' => $request->firstname,
             'lastname' => $request->lastname,

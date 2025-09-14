@@ -35,7 +35,8 @@
 <link rel="manifest" href="{{asset('/site.webmanifest')}}">
   <style>
      body {
-        background-image: url("{{ asset('uploads/system_images/' . ($SystemSetting ? $SystemSetting->login_page_background : 'aso-rock.jpg')) }}");
+      background-image: url("{{ !empty($SystemSetting->login_page_background) ? asset('uploads/system_images/' . $SystemSetting->login_page_background) : asset('aso-rock.jpg') }}");
+       
       background-size: cover;
       background-repeat: no-repeat;
       background-attachment: fixed;

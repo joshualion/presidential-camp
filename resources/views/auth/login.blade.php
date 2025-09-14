@@ -9,10 +9,7 @@
             </h3><hr class="card card-primary"/>
             <p class="login-box-msg text-muted">Sign in to start your session</p>
         </div>
-
-
-
-
+        
     <!-- Session Status -->
     <x-auth-session-status class="mb-4" :status="session('status')" />
 

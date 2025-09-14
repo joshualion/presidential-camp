@@ -19,9 +19,9 @@ class SystemSettingsSeeder extends Seeder
     {
         $now = Carbon::now();
         DB::table('system_settings')->insert([
-            'logo' => 'logo.png',
+            'logo' => '',
             'favicon'=> 'favicon.png',
-            'login_page_background' => 'aso-rock.jpg',
+            'login_page_background' => '',
             'dark_theme_color' => '#008751',
             'light_theme_color' => '#f7f7f7',
             'system_name' => 'Political Campaign Management Solution',

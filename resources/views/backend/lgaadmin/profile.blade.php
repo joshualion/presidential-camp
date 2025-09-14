@@ -570,55 +570,80 @@
 </script>
 
 
+<!-- Using IntellInput -->
 <script src="{{asset('assets/js/intl-tel-input/intl-tel-input.js')}}"></script>
+
 <script>
-            const input = document.querySelector("#phone");
-            const button = document.querySelector("#btn");
-            const errorMsg = document.querySelector("#error-msg");
-            const validMsg = document.querySelector("#valid-msg");
-
-            // here, the index maps to the error code returned from getValidationError - see readme
-            const errorMap = ["Invalid number", "Invalid country code", "Too short", "Too long", "Invalid number"];
-
-            window.intlTelInput(input, {
-                initialCountry: "ng",
-            geoIpLookup: callback => {
-                fetch("https://ipapi.co/json")
+document.addEventListener('DOMContentLoaded', function() {
+    const phoneInput = document.querySelector("#phone");
+    
+    // Initialize intlTelInput
+    const iti = window.intlTelInput(phoneInput, {
+        initialCountry: "ng",
+        separateDialCode: false,
+        nationalMode: false, // Force international format
+        utilsScript: "https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.19/js/utils.js",
+        preferredCountries: ['ng', 'us', 'gb'],
+        autoPlaceholder: "aggressive",
+        customPlaceholder: function(selectedCountryPlaceholder, selectedCountryData) {
+            return "+" + selectedCountryData.dialCode + " " + selectedCountryPlaceholder;
+        },
+        geoIpLookup: function(callback) {
+            fetch("https://ipapi.co/json")
                 .then(res => res.json())
                 .then(data => callback(data.country_code))
-                .catch(() => callback("us"));
+                .catch(() => callback("ng"));
+        }
+    });
 
-            },
-                separateDialCode: false,
-                hiddenInput: "full_phone",
-                utilsScript: "{{asset('assets/js/intl-tel-input/utils.js')}}",
-            });
+    // Set initial value with country code if empty
+    if (!phoneInput.value) {
+        const countryData = iti.getSelectedCountryData();
+        phoneInput.value = '+' + countryData.dialCode;
+    }
 
-                const reset = () => {
-                input.classList.remove("error");
-                errorMsg.innerHTML = "";
-                errorMsg.classList.add("hide");
-                validMsg.classList.add("hide");
-                };
+    // Prevent modification of country code
+    phoneInput.addEventListener('keydown', function(e) {
+        const countryCode = '+' + iti.getSelectedCountryData().dialCode;
+        const currentValue = phoneInput.value;
+        
+        // If trying to delete country code
+        if ((e.key === 'Backspace' || e.key === 'Delete') && 
+            phoneInput.selectionStart <= countryCode.length) {
+            e.preventDefault();
+        }
+        
+        // If trying to type over country code
+        if (phoneInput.selectionStart < countryCode.length && 
+            e.key.length === 1 && /[0-9+]/.test(e.key)) {
+            e.preventDefault();
+            // Move cursor to end of country code
+            phoneInput.setSelectionRange(countryCode.length, countryCode.length);
+        }
+    });
 
-                // on click button: validate
-                button.addEventListener('click', () => {
-                reset();
-                if (input.value.trim()) {
-                    if (iti.isPossibleNumber()) {
-                    validMsg.classList.remove("hide");
-                    } else {
-                    input.classList.add("error");
-                    const errorCode = iti.getValidationError();
-                    errorMsg.innerHTML = errorMap[errorCode];
-                    errorMsg.classList.remove("hide");
-                    }
-                }
-                });
+    // Update hidden input with full number
+    function updateFullNumber() {
+        const fullNumber = iti.getNumber();
+        if (fullNumber) {
+            document.querySelector("#full_phone").value = fullNumber;
+        }
+    }
 
-                // on keyup / change flag: reset
-                input.addEventListener('change', reset);
-                input.addEventListener('keyup', reset);
+    phoneInput.addEventListener('input', updateFullNumber);
+    phoneInput.addEventListener('countrychange', updateFullNumber);
+
+    // Handle country change
+    phoneInput.addEventListener('countrychange', function() {
+        const countryCode = '+' + iti.getSelectedCountryData().dialCode;
+        const currentValue = phoneInput.value.replace(/^\+\d+/, '');
+        phoneInput.value = countryCode + currentValue;
+    });
+
+    // Initialize the hidden field
+    updateFullNumber();
+});
 </script>
+
 
 @endsection

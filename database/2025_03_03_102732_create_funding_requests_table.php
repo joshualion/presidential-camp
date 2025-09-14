@@ -20,8 +20,7 @@ return new class extends Migration
             $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');
         
             // Relationships
-            $table->foreignId('receiver_id')->constrained('users')->onDelete('set null'); // Originator & receiver
-            $table->foreignId('admin_id')->nullable()->constrained('users')->onDelete('set null'); // Approver of funds
+            $table->foreignId('user_id')->constrained('users')->onDelete('set null'); // Originator & receiver
             $table->foreignId('country_id')->nullable()->constrained('countries')->onDelete('set null');
             $table->foreignId('region_id')->nullable()->constrained('regions')->onDelete('set null');
             $table->foreignId('state_id')->nullable()->constrained('states')->onDelete('set null');

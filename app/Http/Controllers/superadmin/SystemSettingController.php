@@ -286,6 +286,7 @@ class SystemSettingController extends Controller
         
 
         if ($response->successful() && $response->json('valid')) {
+            Log::info('License Server Response:', $response->json()); // Debugging
             $apiToken = $response->json('api_token'); // Get token from response
         
             DB::table('system_settings')->update([
