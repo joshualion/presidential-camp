@@ -5,10 +5,12 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\AgeGrade;
 use App\Models\Country;
+use App\Models\FederalConstituency;
 use App\Models\LocalGovernmentArea;
 use App\Models\PollingUnit;
 use App\Models\Region;
 use App\Models\Religion;
+use App\Models\SenatorialDistrict;
 use App\Models\State;
 use App\Models\SystemSetting;
 use App\Models\Ward;
@@ -19,6 +21,9 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Spatie\Permission\Models\Role;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\MembersExport;
+
 
 
 class MembersController extends Controller
@@ -67,48 +72,54 @@ class MembersController extends Controller
     private function filterMemberByAccessLevel()
     {
         $profileData = $this->getProfileData();
-    
+
         // Define access level hierarchy
         $accessLevels = [
             'superadmin',
             'nationaladmin',
             'regionaladmin',
             'stateadmin',
+            'senatorialadmin',
+            'federaladmin',
             'lgaadmin',
             'wardadmin',
             'puadmin',
             'user',
         ];
-    
+
         // Determine the current access level index
         $currentLevelIndex = array_search($profileData->access_level, $accessLevels);
         if ($currentLevelIndex === false) {
             throw new \Exception('Invalid access level: ' . $profileData->access_level);
         }
-    
+
         // Include all access levels below the current one
         $includedLevels = array_slice($accessLevels, $currentLevelIndex);
-    
+
         // Start building the query
         $membersQuery = User::query()->whereIn('access_level', $includedLevels);
-    
+
         // Apply geographical constraints based on the current user's access level
         if ($profileData->access_level === 'regionaladmin') {
             $membersQuery->where('region_id', $profileData->region_id);
         } elseif ($profileData->access_level === 'stateadmin') {
             $membersQuery->where('state_id', $profileData->state_id);
+        } elseif ($profileData->access_level === 'senatorialadmin') {
+            $membersQuery->where('senatorial_district_id', $profileData->senatorial_district_id);
+        } elseif ($profileData->access_level === 'federaladmin') {
+            $membersQuery->where('federal_constituency_id', $profileData->federal_constituency_id);
         } elseif ($profileData->access_level === 'lgaadmin') {
             $membersQuery->where('lga_id', $profileData->lga_id);
         } elseif ($profileData->access_level === 'wardadmin') {
             $membersQuery->where('ward_id', $profileData->ward_id);
-        } elseif ($profileData->access_level === 'pollingunitadmin') {
+        } elseif (in_array($profileData->access_level, ['puadmin', 'pollingunitadmin'], true)) {
             $membersQuery->where('polling_unit_id', $profileData->polling_unit_id);
         }
-    
+
         return $membersQuery;
     }
-    
-    
+
+
 
      public function allMembers($uuid = null)
      {
@@ -129,24 +140,28 @@ class MembersController extends Controller
          return view('backend.'.$profileData->access_level.'.member.members', compact( 'profileData',  'roles', 'PuLgaStateRegionCountryUUID'));
      }
 
-   
+
     public function getMembersData($uuid = null)
 {
     // Get base query from filterMemberByAccessLevel
     $membersQuery = $this->filterMemberByAccessLevel();
 
     // Apply additional filtering if UUID is provided
-    if ($uuid) {
-        if ($pu = PollingUnit::where('uuid', $uuid)->first()) {
-            $membersQuery->where('polling_unit_id', $pu->id);
-        } elseif ($ward = Ward::where('uuid', $uuid)->first()) {
-            $membersQuery->where('ward_id', $ward->id);
-        } elseif ($lga = LocalGovernmentArea::where('uuid', $uuid)->first()) {
-            $membersQuery->where('lga_id', $lga->id);
-        } elseif ($state = State::where('uuid', $uuid)->first()) {
-            $membersQuery->where('state_id', $state->id);
-        } elseif ($region = Region::where('uuid', $uuid)->first()) {
-            $membersQuery->where('region_id', $region->id);
+        if ($uuid) {
+            if ($pu = PollingUnit::where('uuid', $uuid)->first()) {
+                $membersQuery->where('polling_unit_id', $pu->id);
+            } elseif ($ward = Ward::where('uuid', $uuid)->first()) {
+                $membersQuery->where('ward_id', $ward->id);
+            } elseif ($lga = LocalGovernmentArea::where('uuid', $uuid)->first()) {
+                $membersQuery->where('lga_id', $lga->id);
+            } elseif ($federalConstituency = FederalConstituency::where('uuid', $uuid)->first()) {
+                $membersQuery->where('federal_constituency_id', $federalConstituency->id);
+            } elseif ($senatorialDistrict = SenatorialDistrict::where('uuid', $uuid)->first()) {
+                $membersQuery->where('senatorial_district_id', $senatorialDistrict->id);
+            } elseif ($state = State::where('uuid', $uuid)->first()) {
+                $membersQuery->where('state_id', $state->id);
+            } elseif ($region = Region::where('uuid', $uuid)->first()) {
+                $membersQuery->where('region_id', $region->id);
         } elseif ($country = Country::where('uuid', $uuid)->first()) {
             $membersQuery->where('country_id', $country->id);
         }
@@ -170,6 +185,10 @@ class MembersController extends Controller
                 return '<span class="badge badge-pill bg-secondary">' . $role->name . '</span>';
             })->implode(' ');
         })
+
+        ->addColumn('Voter_status', function ($member) {
+            return ucfirst($member->validVoter);
+        })
         ->addColumn('action', function ($member) {
             $profileData = $this->getProfileData();
 
@@ -190,12 +209,12 @@ class MembersController extends Controller
 
             // Conditionally add Edit/Delete buttons
             if ($profileData->hasAnyRole([
-                    'National ICT/Media Director',
-                    'Regional ICT/Media Director',
-                    'State ICT/Media Director',
-                    'LGA ICT/Media Director',
-                    'Ward ICT/Media Director',
-                    'PU ICT/Media Director'
+                    'National ICT Director',
+                    'Regional ICT Director',
+                    'State ICT Director',
+                    'LGA ICT Director',
+                    'Ward ICT Director',
+                    'PU ICT Director'
                 ]) || $profileData->access_level == 'superadmin') {
                 $actionButtons .= '
                     <a href="' . route($profileData->access_level . '.member.edit', $member->uuid) . '">
@@ -214,6 +233,7 @@ class MembersController extends Controller
         ->rawColumns(['role', 'action'])
         ->make(true);
 }
+
 
     public function allExcoMembers($uuid = null)
      {
@@ -278,6 +298,16 @@ class MembersController extends Controller
                 ->where('access_level', '!=', 'user')
                 ->where('lga_id', $lga->id);
 
+            } elseif ($federalConstituency = FederalConstituency::where('uuid', $uuid)->first()) {
+                $members = User::query()->where('access_level', '!=', 'superadmin')
+                ->where('access_level', '!=', 'user')
+                ->where('federal_constituency_id', $federalConstituency->id);
+
+            } elseif ($senatorialDistrict = SenatorialDistrict::where('uuid', $uuid)->first()) {
+                $members = User::query()->where('access_level', '!=', 'superadmin')
+                ->where('access_level', '!=', 'user')
+                ->where('senatorial_district_id', $senatorialDistrict->id);
+
             } elseif ($state = State::where('uuid', $uuid)->first()) {
                 // Fetch members directly by State ID
                 $members = User::query()->where('access_level', '!=', 'superadmin')
@@ -322,6 +352,10 @@ class MembersController extends Controller
                      return '<span class="badge badge-pill bg-secondary">' . $role->name . '</span>';
                  })->implode(' ');
              })
+
+             ->addColumn('Voter_status', function($member) {
+                return ucfirst($member->validVoter);
+             })
              ->addColumn('action', function($member) {
                  $profileData = $this->getProfileData();
 
@@ -356,12 +390,12 @@ class MembersController extends Controller
                  // Conditionally show Edit and Delete buttons based on roles/access_level
                  if (
                      $profileData->hasAnyRole([
-                         'National ICT/Media Director',
-                         'Regional ICT/Media Director',
-                         'State ICT/Media Director',
-                         'LGA ICT/Media Director',
-                         'Ward ICT/Media Director',
-                         'PU ICT/Media Director'
+                         'National ICT Director',
+                         'Regional ICT Director',
+                         'State ICT Director',
+                         'LGA ICT Director',
+                         'Ward ICT Director',
+                         'PU ICT Director'
                      ]) || $profileData->access_level == 'superadmin'
                  ) {
                      $actionButtons .= '
@@ -449,6 +483,16 @@ class MembersController extends Controller
                 ->where('access_level',  'user')
                 ->where('lga_id', $lga->id);
 
+            } elseif ($federalConstituency = FederalConstituency::where('uuid', $uuid)->first()) {
+                $members = User::query()->where('access_level', '!=', 'superadmin')
+                ->where('access_level',  'user')
+                ->where('federal_constituency_id', $federalConstituency->id);
+
+            } elseif ($senatorialDistrict = SenatorialDistrict::where('uuid', $uuid)->first()) {
+                $members = User::query()->where('access_level', '!=', 'superadmin')
+                ->where('access_level',  'user')
+                ->where('senatorial_district_id', $senatorialDistrict->id);
+
             } elseif ($state = State::where('uuid', $uuid)->first()) {
                 // Fetch members directly by State ID
                 $members = User::query()->where('access_level', '!=', 'superadmin')
@@ -493,6 +537,10 @@ class MembersController extends Controller
                      return '<span class="badge badge-pill bg-secondary">' . $role->name . '</span>';
                  })->implode(' ');
              })
+
+                ->addColumn('Voter_status', function($member) {
+                    return ucfirst($member->validVoter);
+                })
              ->addColumn('action', function($member) {
                  $profileData = $this->getProfileData();
 
@@ -527,12 +575,12 @@ class MembersController extends Controller
                  // Conditionally show Edit and Delete buttons based on roles/access_level
                  if (
                      $profileData->hasAnyRole([
-                         'National ICT/Media Director',
-                         'Regional ICT/Media Director',
-                         'State ICT/Media Director',
-                         'LGA ICT/Media Director',
-                         'Ward ICT/Media Director',
-                         'PU ICT/Media Director'
+                         'National ICT Director',
+                         'Regional ICT Director',
+                         'State ICT Director',
+                         'LGA ICT Director',
+                         'Ward ICT Director',
+                         'PU ICT Director'
                      ]) || $profileData->access_level == 'superadmin'
                  ) {
                      $actionButtons .= '
@@ -565,6 +613,7 @@ class MembersController extends Controller
          $states = State::all();
          $lgas =   LocalGovernmentArea::all();
          $wards = Ward::all();
+         $pus = PollingUnit::all();
 
 
                 // Fetch all roles
@@ -593,6 +642,13 @@ class MembersController extends Controller
              'access_level' => 'required',
          ]);
 
+          // 👇 determine if this new user should be forced into credentials update
+    $requiresUpdate = false;
+
+    if (str_contains($request->email, '@example.com') || $request->password === 'password') {
+        $requiresUpdate = true;
+    }
+
          if(empty($request->roles)){
              $access_level = 'user';
          }else{
@@ -612,6 +668,8 @@ class MembersController extends Controller
              'state_id' => $request->state_id,
              'lga_id' => $request->lga_id,
              'ward_id' => $request->ward_id,
+             'polling_unit_id'=> $request->pu_id,
+             'requires_update' => $requiresUpdate, // ✅ here’s the key!
          ]);
 
          // Assign Role
@@ -651,7 +709,7 @@ class MembersController extends Controller
      }
 
      public function editMember($uuid)
-     {        
+     {
 
          $pageTitle = 'Edit Member';
         //$member = User::with('roles')->where('uuid', $uuid)->first(); // Fetch member with roles
@@ -664,7 +722,8 @@ class MembersController extends Controller
                 'stateadmin' => 4,
                 'lgaadmin' => 5,
                 'wardadmin' => 6,
-                'pollingunitadmin' => 7,
+                'puadmin' => 7,
+                'user' => 8,
             ];
 
         // Fetch the logged-in user's profile data
@@ -678,7 +737,7 @@ class MembersController extends Controller
         $memberAccessLevel = $accessLevels[$member->access_level] ?? null; // Target member
 
         // Check if either access level is undefined
-        if ($userAccessLevel === null || $memberAccessLevel === null) {
+        if($userAccessLevel === null || $memberAccessLevel === null) {
             $notification = [
                 "message" => "An invalid access level was detected. Please contact the administrator.",
                 "type" => "error", // This can be 'error', 'success', 'info', or 'warning'
@@ -715,8 +774,8 @@ class MembersController extends Controller
             return  $member->roles->contains('id', $role->id);
         });
 
-      
- 
+
+
          return view('backend.'.$profileData->access_level.'.member.member', compact(
              'profileData', 'pageTitle', 'member', 'roles', 'countries',
              'regions', 'states', 'lgas', 'wards', 'pollingUnits', 'religions', 'ageGrades'
@@ -837,7 +896,8 @@ class MembersController extends Controller
             'stateadmin' => 4,
             'lgaadmin' => 5,
             'wardadmin' => 6,
-            'pollingunitadmin' => 7,
+            'puadmin' => 7,
+            'user' => 8,
         ];
 
 
@@ -898,7 +958,8 @@ class MembersController extends Controller
             'stateadmin' => 4,
             'lgaadmin' => 5,
             'wardadmin' => 6,
-            'pollingunitadmin' => 7,
+            'puadmin' => 7,
+            'user' => 8,
         ];
 
 
@@ -957,7 +1018,7 @@ class MembersController extends Controller
          $member = User::where('uuid', $uuid)->first();
 
 
-         
+
          // Access level hierarchy
          $accessLevels = [
             'superadmin' => 1,
@@ -966,7 +1027,7 @@ class MembersController extends Controller
             'stateadmin' => 4,
             'lgaadmin' => 5,
             'wardadmin' => 6,
-            'pollingunitadmin' => 7,
+            'puadmin' => 7,
         ];
 
 
@@ -1115,12 +1176,12 @@ class MembersController extends Controller
                     // Conditionally show Edit and Delete buttons based on roles/access_level
                     if (
                         $profileData->hasAnyRole([
-                            'National ICT/Media Director',
-                            'Regional ICT/Media Director',
-                            'State ICT/Media Director',
-                            'LGA ICT/Media Director',
-                            'Ward ICT/Media Director',
-                            'PU ICT/Media Director'
+                            'National ICT Director',
+                            'Regional ICT Director',
+                            'State ICT Director',
+                            'LGA ICT Director',
+                            'Ward ICT Director',
+                            'PU ICT Director'
                         ]) || $profileData->access_level == 'superadmin'
                     ) {
                         $actionButtons .= '
@@ -1224,6 +1285,9 @@ class MembersController extends Controller
                     return '<span class="badge badge-pill bg-secondary">' . $role->name . '</span>';
                 })->implode(' ');
             })
+            ->addColumn('Voter_status', function($member) {
+                return ucfirst($member->validVoter);
+            })
             ->addColumn('action', function($member) {
                 $profileData = $this->getProfileData();
 
@@ -1258,12 +1322,12 @@ class MembersController extends Controller
                 // Conditionally show Edit and Delete buttons based on roles/access_level
                 if (
                     $profileData->hasAnyRole([
-                        'National ICT/Media Director',
-                        'Regional ICT/Media Director',
-                        'State ICT/Media Director',
-                        'LGA ICT/Media Director',
-                        'Ward ICT/Media Director',
-                        'PU ICT/Media Director'
+                        'National ICT Director',
+                        'Regional ICT Director',
+                        'State ICT Director',
+                        'LGA ICT Director',
+                        'Ward ICT Director',
+                        'PU ICT Director'
                     ]) || $profileData->access_level == 'superadmin'
                 ) {
                     $actionButtons .= '
@@ -1307,16 +1371,30 @@ class MembersController extends Controller
                     ->orderBy('name', 'asc')
                     ->get();
             } else {
-                // If not a state, check for region
-                $region = Region::where('uuid', $uuid)->first();
+                $senatorialDistrict = SenatorialDistrict::where('uuid', $uuid)->first();
 
-                if ($region) {
+                if ($senatorialDistrict) {
+                    $lgas = LocalGovernmentArea::where('senatorial_district_id', $senatorialDistrict->id)
+                        ->orderBy('name', 'asc')
+                        ->get();
+                } else {
+                    $federalConstituency = FederalConstituency::where('uuid', $uuid)->first();
+
+                    if ($federalConstituency) {
+                        $lgas = LocalGovernmentArea::where('federal_constituency_id', $federalConstituency->id)
+                            ->orderBy('name', 'asc')
+                            ->get();
+                    } else {
+                        // If not a boundary, check for region
+                        $region = Region::where('uuid', $uuid)->first();
+
+                        if ($region) {
                     // Fetch LGAs in states that belong to this region
                     $states = State::where('region_id', $region->id)->pluck('id');
                     $lgas = LocalGovernmentArea::whereIn('state_id', $states)
                         ->orderBy('name', 'asc')
                         ->get();
-                } else {
+                        } else {
                     // If not a region, check for country
                     $country = Country::where('uuid', $uuid)->first();
 
@@ -1327,6 +1405,8 @@ class MembersController extends Controller
                         $lgas = LocalGovernmentArea::whereIn('state_id', $states)
                             ->orderBy('name', 'asc')
                             ->get();
+                    }
+                        }
                     }
                 }
             }
@@ -1378,6 +1458,10 @@ class MembersController extends Controller
                     return '<span class="badge badge-pill bg-secondary">' . $role->name . '</span>';
                 })->implode(' ');
             })
+
+            ->addColumn('Voter_status', function($member) {
+                return ucfirst($member->validVoter);
+            })
             ->addColumn('action', function($member) {
                 $profileData = $this->getProfileData();
 
@@ -1412,12 +1496,12 @@ class MembersController extends Controller
                 // Conditionally show Edit and Delete buttons based on roles/access_level
                 if (
                     $profileData->hasAnyRole([
-                        'National ICT/Media Director',
-                        'Regional ICT/Media Director',
-                        'State ICT/Media Director',
-                        'LGA ICT/Media Director',
-                        'Ward ICT/Media Director',
-                        'PU ICT/Media Director'
+                        'National ICT Director',
+                        'Regional ICT Director',
+                        'State ICT Director',
+                        'LGA ICT Director',
+                        'Ward ICT Director',
+                        'PU ICT Director'
                     ]) || $profileData->access_level == 'superadmin'
                 ) {
                     $actionButtons .= '
@@ -1439,6 +1523,72 @@ class MembersController extends Controller
             })
             ->rawColumns(['role', 'action']) // Ensures that HTML in the 'role' and 'action' columns is rendered properly
             ->make(true);
+    }
+
+
+    public function membersBySenatorialDistricts($uuid = null)
+    {
+        $profileData = $this->getProfileData();
+        $districts = SenatorialDistrict::with(['state', 'users'])->orderBy('name', 'asc');
+
+        if ($uuid) {
+            if ($state = State::where('uuid', $uuid)->first()) {
+                $districts->where('state_id', $state->id);
+            } elseif ($region = Region::where('uuid', $uuid)->first()) {
+                $stateIds = State::where('region_id', $region->id)->pluck('id');
+                $districts->whereIn('state_id', $stateIds);
+            } elseif ($country = Country::where('uuid', $uuid)->first()) {
+                $regionIds = Region::where('country_id', $country->id)->pluck('id');
+                $stateIds = State::whereIn('region_id', $regionIds)->pluck('id');
+                $districts->whereIn('state_id', $stateIds);
+            } elseif ($district = SenatorialDistrict::where('uuid', $uuid)->first()) {
+                $districts->where('id', $district->id);
+            }
+        }
+
+        $view = 'backend.' . $profileData->access_level . '.member.membersBySenatorialDistrict';
+        if (! View::exists($view)) {
+            $view = 'backend.shared.member.membersBySenatorialDistrict';
+        }
+
+        return view($view, [
+            'districts' => $districts->get(),
+            'profileData' => $profileData,
+        ]);
+    }
+
+
+    public function membersByFederalConstituencies($uuid = null)
+    {
+        $profileData = $this->getProfileData();
+        $constituencies = FederalConstituency::with(['state', 'senatorialDistrict', 'users'])->orderBy('name', 'asc');
+
+        if ($uuid) {
+            if ($senatorialDistrict = SenatorialDistrict::where('uuid', $uuid)->first()) {
+                $constituencies->where('senatorial_district_id', $senatorialDistrict->id);
+            } elseif ($state = State::where('uuid', $uuid)->first()) {
+                $constituencies->where('state_id', $state->id);
+            } elseif ($region = Region::where('uuid', $uuid)->first()) {
+                $stateIds = State::where('region_id', $region->id)->pluck('id');
+                $constituencies->whereIn('state_id', $stateIds);
+            } elseif ($country = Country::where('uuid', $uuid)->first()) {
+                $regionIds = Region::where('country_id', $country->id)->pluck('id');
+                $stateIds = State::whereIn('region_id', $regionIds)->pluck('id');
+                $constituencies->whereIn('state_id', $stateIds);
+            } elseif ($constituency = FederalConstituency::where('uuid', $uuid)->first()) {
+                $constituencies->where('id', $constituency->id);
+            }
+        }
+
+        $view = 'backend.' . $profileData->access_level . '.member.membersByFederalConstituency';
+        if (! View::exists($view)) {
+            $view = 'backend.shared.member.membersByFederalConstituency';
+        }
+
+        return view($view, [
+            'constituencies' => $constituencies->get(),
+            'profileData' => $profileData,
+        ]);
     }
 
 
@@ -1503,6 +1653,10 @@ class MembersController extends Controller
                     return '<span class="badge badge-pill bg-secondary">' . $role->name . '</span>';
                 })->implode(' ');
             })
+
+            ->addColumn('Voter_status', function($member) {
+                return ucfirst($member->validVoter);
+            })
             ->addColumn('action', function($member) {
                 $profileData = $this->getProfileData();
 
@@ -1537,12 +1691,12 @@ class MembersController extends Controller
                 // Conditionally show Edit and Delete buttons based on roles/access_level
                 if (
                     $profileData->hasAnyRole([
-                        'National ICT/Media Director',
-                        'Regional ICT/Media Director',
-                        'State ICT/Media Director',
-                        'LGA ICT/Media Director',
-                        'Ward ICT/Media Director',
-                        'PU ICT/Media Director'
+                        'National ICT Director',
+                        'Regional ICT Director',
+                        'State ICT Director',
+                        'LGA ICT Director',
+                        'Ward ICT Director',
+                        'PU ICT Director'
                     ]) || $profileData->access_level == 'superadmin'
                 ) {
                     $actionButtons .= '
@@ -1629,6 +1783,11 @@ class MembersController extends Controller
                     return '<span class="badge badge-pill bg-secondary">' . $role->name . '</span>';
                 })->implode(' ');
             })
+
+            ->addColumn('Voter_status', function($member) {
+                return ucfirst($member->validVoter);
+            })
+            
             ->addColumn('action', function($member) {
                 $profileData = $this->getProfileData();
 
@@ -1663,12 +1822,12 @@ class MembersController extends Controller
                 // Conditionally show Edit and Delete buttons based on roles/access_level
                 if (
                     $profileData->hasAnyRole([
-                        'National ICT/Media Director',
-                        'Regional ICT/Media Director',
-                        'State ICT/Media Director',
-                        'LGA ICT/Media Director',
-                        'Ward ICT/Media Director',
-                        'PU ICT/Media Director'
+                        'National ICT Director',
+                        'Regional ICT Director',
+                        'State ICT Director',
+                        'LGA ICT Director',
+                        'Ward ICT Director',
+                        'PU ICT Director'
                     ]) || $profileData->access_level == 'superadmin'
                 ) {
                     $actionButtons .= '
@@ -1693,6 +1852,118 @@ class MembersController extends Controller
     }
 
 
+    //Members by Vote Eligibility in PU
+     public function puMembersByVoteEligibility($uuid = null){
+                $profileData = $this->getProfileData();
 
+                if($uuid) {
+                    $WardLgaStateRegionCountryUUID = $uuid;
+                   }else{
+                    //get system Country
+                    $Setting= SystemSetting::find(1);
+                    $countryName = $Setting->system_country;
+                    $country = Country::where('name',  $countryName)->first();
+
+                    $WardLgaStateRegionCountryUUID = $country->uuid;
+                   }
+                return view('backend.' . $profileData->access_level . '.member.puMembersByVoteEligibility', compact('WardLgaStateRegionCountryUUID', 'profileData'));
+     }
+
+
+    public function viewPuMembersByVoteEligibility($uuid){
+        $profileData = $this->getProfileData();
+
+        // Find state by UUID or return a 404 error if not found
+        $pu = PollingUnit::where('uuid', $uuid)->firstOrFail();
+
+        // Retrieve members belonging to the region
+        $members = User::where('polling_unit_id', $pu->id)->where('validVoter', 'yes')->get();
+
+        return view('backend.' . $profileData->access_level . '.member.viewMembersByPu', compact('pu', 'members', 'profileData'));
+	}
+
+
+
+     public function viewPuMembersByVoteIneligibility($uuid){
+        $profileData = $this->getProfileData();
+
+        // Find state by UUID or return a 404 error if not found
+        $pu = PollingUnit::where('uuid', $uuid)->firstOrFail();
+
+        // Retrieve members belonging to the region
+        $members = User::where('polling_unit_id', $pu->id)->where('validVoter', 'no')->get();
+
+        return view('backend.' . $profileData->access_level . '.member.viewMembersByPu', compact('pu', 'members', 'profileData'));
+	 }
+
+    public function getEligiblePuMembersData($uuid)
+    {
+        $pu = PollingUnit::where('uuid', $uuid)->firstOrFail();
+
+        $members = User::query()
+            ->where('access_level', '!=', 'superadmin')
+            ->where('polling_unit_id', $pu->id)
+            ->where('validVoter', 'yes'); // ✅ filter eligibility
+
+        return datatables()->eloquent($members)
+            ->filterColumn('name', function ($query, $keyword) {
+                $query->where('firstname', 'like', "%{$keyword}%")
+                    ->orWhere('lastname', 'like', "%{$keyword}%");
+            })
+            ->addIndexColumn()
+            ->addColumn('name', fn($member) => $member->firstname . ' ' . $member->lastname)
+            ->addColumn('access_level', fn($member) => $member->access_level)
+            ->addColumn('role', function ($member) {
+                return $member->roles->map(fn($role) =>
+                    '<span class="badge badge-pill bg-secondary">' . $role->name . '</span>'
+                )->implode(' ');
+            })
+            ->addColumn('action', function ($member) {
+                $profileData = $this->getProfileData();
+                return view('backend.partials.member_actions', compact('member', 'profileData'))->render();
+            })
+            ->rawColumns(['role', 'action'])
+            ->make(true);
+    }
+
+
+    // Export Members to Excel
+    public function exportMembers(Request $request)
+    {
+        $selectedHeaders = $request->input('headers', []);
+
+        $allowedHeaders = [
+            'firstname',
+            'lastname',
+            'email',
+            'phone',
+            'gender',
+            'validVoter',
+            'vin',
+            'region_id',
+            'state_id',
+            'lga_id',
+            'ward_id',
+            'polling_unit_id',
+            'age_grade_id',
+            'religion_id',
+            'address',
+            'occupation',
+            'qualification',
+            'access_level',
+            'created_at',
+        ];
+
+        $safeHeaders = array_values(array_intersect($allowedHeaders, (array) $selectedHeaders));
+
+        if (empty($safeHeaders)) {
+            return back()->with('error', 'Please select at least one column to export.');
+        }
+
+        // Get filtered members (same logic you use for DataTables)
+        $membersQuery = $this->filterMemberByAccessLevel()->get($safeHeaders);
+
+        return Excel::download(new MembersExport($membersQuery, $safeHeaders), 'members.xlsx');
+    }
 
 }

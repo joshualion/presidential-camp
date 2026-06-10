@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Services\PackageGovernanceService;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
@@ -18,12 +19,17 @@ class SystemSettingsSeeder extends Seeder
     public function run(): void
     {
         $now = Carbon::now();
+        $package = app(PackageGovernanceService::class)
+            ->normalize(env('CAMPAIGN_PACKAGE_TYPE', PackageGovernanceService::PRESIDENTIAL));
+
         DB::table('system_settings')->insert([
+            'package' => $package,
             'logo' => '',
             'favicon'=> 'favicon.png',
             'login_page_background' => '',
             'dark_theme_color' => '#008751',
             'light_theme_color' => '#f7f7f7',
+            'sidebar_theme_mode' => 'light',
             'system_name' => 'Political Campaign Management Solution',
             'campaign_slogan' => 'Promoting Good Governance, Transparency and Trust',
             'system_email' => 'info@campaignmanager.ng',
@@ -31,13 +37,14 @@ class SystemSettingsSeeder extends Seeder
             'system_currency' => 'NGN',
             'company_address' => '123 Almond St, Lagos, Nigeria',
             'company_phone' => '+1234567890',
+            'require_bank_details' => false,
             'activation_code' => '',
             'facebook' => 'https://www.facebook.com/campaignmanagerng',
             'twitter' => 'https://www.twitter.com/campaignmanagerng',
             'linkedin' => 'https://www.linkedin.com/campaignmanagerng',
             'instagram' => 'https://www.instagram.com/campaignmanagerng',
             'youtube' => 'https://www.youtube.com/campaignmanagerng',
-            'copyright' => '<div class="float-left d-none d-sm-inline-block">Copyright &copy; 2024 <a href="https://diginettechnologies.com/" target="_blank">Diginet Tech Africa Limited </a> - All rights reserved. </div>',
+            'copyright' => '<div class="float-left d-none d-sm-inline-block">Copyright &copy; 2024 <a href="#" target="_blank">Govware Solutions Limited </a> - All rights reserved. </div>',
             'disclaimer' => '',
             'tos' => '
             <h3>Terms & Conditions</h3>

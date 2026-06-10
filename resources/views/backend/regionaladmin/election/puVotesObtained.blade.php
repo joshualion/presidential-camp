@@ -32,12 +32,12 @@
                     <div class="card-tools">
                         @if(
                                 $profileData->hasAnyRole([
-                                    'National ICT/Media Director',
-                                    'Regional ICT/Media Director',
-                                    'State ICT/Media Director',
-                                    'LGA ICT/Media Director',
-                                    'Ward ICT/Media Director',
-                                    'PU ICT/Media Director',
+                                    'National ICT Director',
+                                    'Regional ICT Director',
+                                    'State ICT Director',
+                                    'LGA ICT Director',
+                                    'Ward ICT Director',
+                                    'PU ICT Director',
                                     'Pu Agent'
                                 ]) || $profileData->access_level == 'superadmin' )
                         <a href="{{ route($profileData->access_level.'.vote.add') }}"><button class="btn btn-default btn-sm"> <i class="fa fa-plus-square"></i> Add Vote Records </button></a>

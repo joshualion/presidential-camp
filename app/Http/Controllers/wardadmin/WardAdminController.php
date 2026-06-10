@@ -8,6 +8,7 @@ use App\Models\Country;
 use App\Models\Religion;
 use App\Models\SystemSetting;
 use App\Models\User;
+use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -17,6 +18,7 @@ use App\Models\State;
 use App\Models\Ward;
 use App\Models\LocalGovernmentArea;
 use App\Models\PollingUnit;
+use App\Services\LocationDashboardMetricsService;
 use Carbon\Carbon;
 use Spatie\Permission\Models\Role;
 
@@ -27,7 +29,7 @@ class WardAdminController extends Controller
     public function __construct()
     {
 
-        $pageTitle = 'LGA Admin Dashboard';
+        $pageTitle = 'Ward Admin Dashboard';
         View::share('pageTitle', $pageTitle);
     }
 
@@ -110,6 +112,8 @@ class WardAdminController extends Controller
             ->where('created_at', '>=', Carbon::now()->subDays(1))
             ->count();
 
+        $dashboardMetrics = app(LocationDashboardMetricsService::class)->forUser($profileData);
+
         return view(
             'backend.' . $profileData->access_level . '.dashboard',
             compact(
@@ -123,7 +127,8 @@ class WardAdminController extends Controller
                 'excoCount',
                 'memberCount',
                 'userCount',
-                'newMembers'
+                'newMembers',
+                'dashboardMetrics'
             )
         );
     }
@@ -158,6 +163,10 @@ class WardAdminController extends Controller
       {
           $profileData = $this->getProfileData();
 
+          $requireBank = optional(SystemSetting::first())->require_bank_details;
+          $bankRule = $requireBank ? 'required|string|max:255' : 'nullable|string|max:255';
+          $accountRule = $requireBank ? 'required|string|size:10' : 'nullable|string|size:10';
+
           // Validation rules
          $validatedData = $request->validate([
             'firstname' => 'required|string|max:255',
@@ -183,8 +192,8 @@ class WardAdminController extends Controller
             'ward_id' => 'required|exists:wards,id',
             'polling_unit_id' => 'required|exists:polling_units,id',
             'religion_id' => 'required|exists:religions,id',
-            'bank' => 'nullable|string|max:255',
-            'bank_account_number' => 'nullable|string|size:10',
+            'bank' => $bankRule,
+            'bank_account_number' => $accountRule,
             'address' => 'nullable|string|max:255',
             'occupation' => 'nullable|string|max:255',
             'qualification' => 'nullable|string|max:255',
@@ -215,7 +224,7 @@ class WardAdminController extends Controller
 
           if ($request->hasFile('photo')) {
               $file = $request->file('photo');
-              $filename = date('YmdHi') . $file->getClientOriginalName();
+              $filename = (string) Str::uuid() . '.' . $file->getClientOriginalExtension();
               $file->move(public_path('uploads/member_images/'), $filename);
               @unlink(public_path('uploads/member_images/') . $profileData->photo);
               $profileData->photo = $filename;

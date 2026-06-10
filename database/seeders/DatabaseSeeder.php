@@ -45,12 +45,13 @@ class DatabaseSeeder extends Seeder
         $this->call(SystemSettingsSeeder::class);
         $this->call(SMTPSettingsSeeder::class);
         $this->call(PaymentGatewaySeeder::class);
+        $this->call(CommunityRulesSeeder::class);
 
         // Roles & Permissions
         $this->call(RolesTableSeeder::class);
         $this->call(PermissionsTableSeeder::class);
 
-        //Product seeders       
+        //Product seeders
         $this->call(ProductCategoriesSeeder::class);
         $this->call(ProductsSeeder::class);
 

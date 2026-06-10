@@ -5,6 +5,7 @@ use App\Http\Controllers\AjaxController;
 use App\Http\Controllers\BulksmsController;
 use App\Http\Controllers\BulkSmsSettingController;
 use App\Http\Controllers\ChartsController;
+use App\Http\Controllers\DashboardStatsController;
 use App\Http\Controllers\ElectionController;
 use App\Http\Controllers\LiveChatController;
 use App\Http\Controllers\LocationController;
@@ -17,10 +18,25 @@ use App\Http\Controllers\superadmin\SuperAdminController;
 use App\Http\Controllers\superadmin\SystemSettingController;
 use App\Http\Controllers\RolePermissionController;
 use App\Http\Controllers\VolunteerGroupController;
+use App\Livewire\SuperAdminDashboard;
 use Illuminate\Support\Facades\Route;
 
 
 // Manage Locations
+Route::get('/superadmin/location/senatorial-districts', [LocationController::class, 'allSenatorialDistricts'])->name('superadmin.location.senatorial-districts')->middleware(['auth','access_level:superadmin']);
+Route::get('/superadmin/location/senatorial-district/add', [LocationController::class, 'addSenatorialDistrict'])->name('superadmin.location.senatorial-district.add')->middleware(['auth','access_level:superadmin']);
+Route::post('/superadmin/location/senatorial-district/store', [LocationController::class, 'storeSenatorialDistrict'])->name('superadmin.location.senatorial-district.store')->middleware(['auth','access_level:superadmin']);
+Route::get('/superadmin/location/senatorial-district/edit/{uuid}', [LocationController::class, 'editSenatorialDistrict'])->name('superadmin.location.senatorial-district.edit')->middleware(['auth','access_level:superadmin']);
+Route::post('/superadmin/location/senatorial-district/update/{uuid}', [LocationController::class, 'updateSenatorialDistrict'])->name('superadmin.location.senatorial-district.update')->middleware(['auth','access_level:superadmin']);
+Route::delete('/superadmin/location/senatorial-district/delete/{uuid}', [LocationController::class, 'deleteSenatorialDistrict'])->name('superadmin.location.senatorial-district.delete')->middleware(['auth','access_level:superadmin']);
+
+Route::get('/superadmin/location/federal-constituencies', [LocationController::class, 'allFederalConstituencies'])->name('superadmin.location.federal-constituencies')->middleware(['auth','access_level:superadmin']);
+Route::get('/superadmin/location/federal-constituency/add', [LocationController::class, 'addFederalConstituency'])->name('superadmin.location.federal-constituency.add')->middleware(['auth','access_level:superadmin']);
+Route::post('/superadmin/location/federal-constituency/store', [LocationController::class, 'storeFederalConstituency'])->name('superadmin.location.federal-constituency.store')->middleware(['auth','access_level:superadmin']);
+Route::get('/superadmin/location/federal-constituency/edit/{uuid}', [LocationController::class, 'editFederalConstituency'])->name('superadmin.location.federal-constituency.edit')->middleware(['auth','access_level:superadmin']);
+Route::post('/superadmin/location/federal-constituency/update/{uuid}', [LocationController::class, 'updateFederalConstituency'])->name('superadmin.location.federal-constituency.update')->middleware(['auth','access_level:superadmin']);
+Route::delete('/superadmin/location/federal-constituency/delete/{uuid}', [LocationController::class, 'deleteFederalConstituency'])->name('superadmin.location.federal-constituency.delete')->middleware(['auth','access_level:superadmin']);
+
 Route::get('/superadmin/location/localgovernments', [LocationController::class, 'allLocalGovernments'])->name('superadmin.location.lgas')->middleware(['auth','access_level:superadmin']);
 Route::get('/superadmin/location/localgovernment/add', [LocationController::class, 'addLocalGovernment'])->name('superadmin.location.lga.add')->middleware(['auth','access_level:superadmin']);
 Route::post('/superadmin/location/localgovernment/store', [LocationController::class, 'storeLocalGovernment'])->name('superadmin.location.lga.store')->middleware(['auth','access_level:superadmin']);
@@ -28,13 +44,12 @@ Route::get('/superadmin/location/localgovernment/edit/{uuid}', [LocationControll
 Route::post('/superadmin/location/localgovernment/update/{uuid}', [LocationController::class, 'updateLocalGovernment'])->name('superadmin.location.lga.update')->middleware(['auth','access_level:superadmin']);
 Route::delete('/superadmin/location/localgovernment/delete/{uuid}', [LocationController::class, 'deleteLocalGovernment'])->name('superadmin.location.lga.delete')->middleware(['auth','access_level:superadmin']);
 
-//import LGA Form
+// Import LGA Form
 Route::get('/superadmin/location/importlgas', [LocationController::class, 'importLgasForm'])->name('superadmin.location.lga.import')->middleware(['auth','access_level:superadmin']);
 // Export Route
 Route::get('/superadmin/location/exportlgas', [LocationController::class, 'exportLgas'])->name('superadmin.location.lga.exportLgas')->middleware(['auth','access_level:superadmin']);
-// Import Route['auth',
+// Import Route
 Route::post('/superadmin/location/importlgas', [LocationController::class, 'importLgas'])->name('superadmin.location.lga.importLgas')->middleware(['auth','access_level:superadmin']);
-
 
 Route::get('/superadmin/location/wards', [LocationController::class, 'allWards'])->name('superadmin.location.wards')->middleware(['auth','access_level:superadmin']);
 Route::get('/superadmin/location/ward/add', [LocationController::class, 'addWard'])->name('superadmin.location.ward.add')->middleware(['auth','access_level:superadmin']);
@@ -43,15 +58,14 @@ Route::get('/superadmin/location/ward/edit/{uuid}', [LocationController::class, 
 Route::post('/superadmin/location/ward/update/{uuid}', [LocationController::class, 'updateWard'])->name('superadmin.location.ward.update')->middleware(['auth','access_level:superadmin']);
 Route::delete('/superadmin/location/ward/delete/{uuid}', [LocationController::class, 'deleteWard'])->name('superadmin.location.ward.delete')->middleware(['auth','access_level:superadmin']);
 
-//import PU Form
+// Import Ward Form
 Route::get('/superadmin/location/importwards', [LocationController::class, 'importWardsForm'])->name('superadmin.location.ward.import')->middleware(['auth','access_level:superadmin']);
 
 // Export Route
 Route::get('/superadmin/location/exportwards', [LocationController::class, 'exportWards'])->name('superadmin.location.ward.exportWards')->middleware(['auth','access_level:superadmin']);
 
 // Import Route
-Route::post('/superadmin/location/importwards', [LocationController::class, 'importWards'])->name('superadmin.location.ward.importWards')->middleware(['access_level:superadmin']);
-
+Route::post('/superadmin/location/importwards', [LocationController::class, 'importWards'])->name('superadmin.location.ward.importWards')->middleware(['auth','access_level:superadmin']);
 
 Route::get('/superadmin/location/pollingunits', [LocationController::class, 'allPollingUnits'])->name('superadmin.location.pus')->middleware(['auth','access_level:superadmin']);
 Route::get('/superadmin/location/pollingunit/add', [LocationController::class, 'addPollingUnit'])->name('superadmin.location.pu.add')->middleware(['auth','access_level:superadmin']);
@@ -60,7 +74,7 @@ Route::get('/superadmin/location/pollingunit/edit/{uuid}', [LocationController::
 Route::post('/superadmin/location/pollingunit/update/{uuid}', [LocationController::class, 'updatePollingUnit'])->name('superadmin.location.pu.update')->middleware(['auth','access_level:superadmin']);
 Route::delete('/superadmin/location/pollingunit/delete/{uuid}', [LocationController::class, 'deletePollingUnit'])->name('superadmin.location.pu.delete')->middleware(['auth','access_level:superadmin']);
 
-//import PU Form
+// Import PU Form
 Route::get('/superadmin/import-polling-units', [LocationController::class, 'importPollingUnitsForm'])->name('superadmin.location.pu.import')->middleware(['auth','access_level:superadmin']);
 // Export Route
 Route::get('/superadmin/export-polling-units', [LocationController::class, 'exportPollingUnits'])->name('superadmin.location.pu.exportPollingUnits')->middleware(['auth','access_level:superadmin']);
@@ -68,14 +82,16 @@ Route::get('/superadmin/export-polling-units', [LocationController::class, 'expo
 // Import Route
 Route::post('/superadmin/import-polling-units', [LocationController::class, 'importPollingUnits'])->name('superadmin.location.pu.importPollingUnits')->middleware(['auth','access_level:superadmin']);
 
+
 Route::get('/superadmin/logout', [SuperAdminController::class, 'superAdminLogout'])->name('superadmin.logout')->middleware(['auth','access_level:superadmin']);
 
 //PORTAL ROUTES
 Route::middleware(['auth','check_onboarding'])->group(function () {
 
-  
+
  // Super Admin Profile & Dashboard Routes
  Route::get('/superadmin/dashboard', [SuperAdminController::class, 'superAdminDashBoard'])->name('superadmin.dashboard')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
+ Route::get('/superadmin/dashboard/stats', [DashboardStatsController::class, 'cards'])->name('superadmin.dashboard.stats')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
  Route::get('/superadmin/profile', [SuperAdminController::class, 'superadminProfile'])->name('superadmin.profile')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
  Route::post('/superadmin/profile/store', [SuperAdminController::class, 'superadminProfileStore'])->name('superadmin.profile.store')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
  Route::get('/superadmin/change/password', [SuperAdminController::class, 'superadminChangePassword'])->name('superadmin.change.password')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
@@ -86,11 +102,16 @@ Route::middleware(['auth','check_onboarding'])->group(function () {
   //superadmin system Setting
   Route::get('/superadmin/system/settings/', [SystemSettingController::class,'SystemSettings'])->name('superadmin.settings.system')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
   Route::post('/superadmin/settings/system/update', [SystemSettingController::class,'updateSystemsSettings'])->name('superadmin.settings.system.update')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
+  Route::post('/superadmin/settings/sidebar-theme', [SystemSettingController::class,'updateSidebarTheme'])->name('superadmin.settings.sidebar-theme')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
 
   //Admin Payment Setting
-  Route::get('/superadmin/settings/paymentgateway', [PaymentGatewayController::class,'getPaymentGateways'])->name('superadmin.settings.paymentgateway');
-  Route::post('/superadmin/settings/paymentgateway/update', [PaymentGatewayController::class,'UpdatePaymentGateway'])->name('superadmin.settings.paymentgateway.update');
-  
+  Route::get('/superadmin/settings/paymentgateway', [PaymentGatewayController::class,'getPaymentGateways'])
+      ->name('superadmin.settings.paymentgateway')
+      ->middleware(['auth','access_level:superadmin']);
+  Route::post('/superadmin/settings/paymentgateway/update', [PaymentGatewayController::class,'UpdatePaymentGateway'])
+      ->name('superadmin.settings.paymentgateway.update')
+      ->middleware(['auth','access_level:superadmin']);
+
   //Admin SMTP Setting
   Route::get('/superadmin/settings/smtp', [SystemSettingController::class,'SmtpSettings'])->name('superadmin.settings.smtp')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
   Route::post('/superadmin/settings/smtp/update', [SystemSettingController::class,'UpdateSmtpSettings'])->name('superadmin.settings.smtp.update')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
@@ -175,6 +196,10 @@ Route::get('/superadmin/region/members/data/{uuid}', [MembersController::class, 
 Route::get('/superadmin/members/bystate/{uuid?}', [MembersController::class, 'membersByStates'])->name('superadmin.members.byState')->middleware('access_level:superadmin,regionadmin,stateadmin');
 Route::get('/superadmin/members/state/{uuid}', [MembersController::class, 'ViewMembersByState'])->name('superadmin.member.state.view')->middleware('access_level:superadmin,regionadmin,regionadmin,stateadmin');
 Route::get('/superadmin/state/members/data/{uuid}', [MembersController::class, 'getStateMembersData'])->name('superadmin.state.members.data');
+// Members By Senatorial District
+Route::get('/superadmin/members/bysenatorialdistrict/{uuid?}', [MembersController::class, 'membersBySenatorialDistricts'])->name('superadmin.members.bySenatorialDistrict')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
+// Members By Federal Constituency
+Route::get('/superadmin/members/byfederalconstituency/{uuid?}', [MembersController::class, 'membersByFederalConstituencies'])->name('superadmin.members.byFederalConstituency')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
 // Members By Local Government
 Route::get('/superadmin/members/bylga/{uuid?}', [MembersController::class, 'membersByLocalGovernments'])->name('superadmin.members.byLga')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
 Route::get('/superadmin/members/lga/{uuid}', [MembersController::class, 'viewMembersByLocalGovernments'])->name('superadmin.member.lga.view')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
@@ -195,12 +220,17 @@ Route::get('/superadmin/members/bypu/{uuid?}', [MembersController::class, 'membe
 Route::get('/superadmin/members/bypu/ajax/{uuid?}', [AjaxController::class, 'membersByPusAjax'])->name('superadmin.members.byPu.ajax')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
 Route::get('/superadmin/members/pu/{uuid}', [MembersController::class, 'viewMembersByPu'])->name('superadmin.member.pu.view')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
 Route::get('/superadmin/pu/members/data/{uuid}', [MembersController::class, 'getPuMembersData'])->name('superadmin.pu.members.data');
+// Eligible Members By Pu
+Route::get('/superadmin/eligible/members/bypu/{uuid?}', [MembersController::class, 'puMembersByVoteEligibility'])->name('superadmin.eligible.members.byPu')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
+Route::get('/superadmin/eligible/members/pu/{uuid}', [MembersController::class, 'viewPuMembersByVoteEligibility'])->name('superadmin.eligible.member.pu.view')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
+// Eligible Members By Pu (DataTables endpoint)
+Route::get('/superadmin/eligible/members/bypu/ajax/{uuid?}', [AjaxController::class, 'eligibleMembersByPusAjax'])->name('superadmin.eligible.members.byPu.ajax')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
 
 // License Activation
 Route::get('/superadmin/activate', [SystemSettingController::class, 'showActivationForm'])->name('activation.form')->middleware(['auth','access_level:superadmin','EnsureSystemNotActivated']);
 Route::post('/superadmin/activate', [SystemSettingController::class, 'validateActivationCode'])->name('validate.licence')->middleware(['auth','access_level:superadmin', 'throttle:5,1']);
 
-//Locations Management Routes 
+//Locations Management Routes
 //Manage Regions
 Route::get('/superadmin/location/region/dashboard/{uuid}', [SuperAdminController::class, 'RegionDashBoard'])->name('superadmin.location.region.dashboard')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
 Route::get('/superadmin/region/member/distribution/gender/{uuid}', [ChartsController::class, 'GenderDistributionByRegion'])->name('superadmin.region.member.distribution.gender')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
@@ -213,6 +243,20 @@ Route::post('/superadmin/location/region/store', [LocationController::class, 'st
 Route::get('/superadmin/location/region/edit/{uuid}', [LocationController::class, 'editRegion'])->name('superadmin.location.region.edit')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
 Route::post('/superadmin/location/region/update/{uuid}', [LocationController::class, 'updateRegion'])->name('superadmin.location.region.update')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
 Route::delete('/superadmin/location/region/delete/{uuid}', [LocationController::class, 'deleteRegion'])->name('superadmin.location.region.delete')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
+
+// Manage Senatorial Districts
+Route::get('/superadmin/location/senatorial-district/dashboard/{uuid}', [SuperAdminController::class, 'senatorialDistrictDashBoard'])->name('superadmin.location.senatorial-district.dashboard')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
+Route::get('/superadmin/senatorial-district/member/distribution/gender/{uuid}', [ChartsController::class, 'GenderDistributionBySenatorialDistrict'])->name('superadmin.senatorial-district.member.distribution.gender')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
+Route::get('/superadmin/senatorial-district/member/distribution/age/{uuid}', [ChartsController::class, 'AgeDistributionBySenatorialDistrict'])->name('superadmin.senatorial-district.member.distribution.age')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
+Route::get('/superadmin/senatorial-district/member/distribution/lga/{uuid}', [ChartsController::class, 'lgaDistributionBySenatorialDistrict'])->name('superadmin.senatorial-district.member.distribution.lga')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
+Route::get('/superadmin/senatorial-district/member/distribution/voter/{uuid}', [ChartsController::class, 'VoterDistributionBySenatorialDistrict'])->name('superadmin.senatorial-district.member.distribution.voter')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
+
+// Manage Federal Constituencies
+Route::get('/superadmin/location/federal-constituency/dashboard/{uuid}', [SuperAdminController::class, 'federalConstituencyDashBoard'])->name('superadmin.location.federal-constituency.dashboard')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
+Route::get('/superadmin/federal-constituency/member/distribution/gender/{uuid}', [ChartsController::class, 'GenderDistributionByFederalConstituency'])->name('superadmin.federal-constituency.member.distribution.gender')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
+Route::get('/superadmin/federal-constituency/member/distribution/age/{uuid}', [ChartsController::class, 'AgeDistributionByFederalConstituency'])->name('superadmin.federal-constituency.member.distribution.age')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
+Route::get('/superadmin/federal-constituency/member/distribution/lga/{uuid}', [ChartsController::class, 'lgaDistributionByFederalConstituency'])->name('superadmin.federal-constituency.member.distribution.lga')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
+Route::get('/superadmin/federal-constituency/member/distribution/voter/{uuid}', [ChartsController::class, 'VoterDistributionByFederalConstituency'])->name('superadmin.federal-constituency.member.distribution.voter')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
 
 // Manage States
 Route::get('/superadmin/location/state/dashboard/{uuid}', [SuperAdminController::class, 'StateDashBoard'])->name('superadmin.location.state.dashboard')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
@@ -287,6 +331,7 @@ Route::delete('/superadmin/election/setting/politicalparty/delete/{uuid}', [Poli
 // Election Management CRUD
 
 Route::get('/superadmin/elections', [ElectionController::class, 'allElections'])->name('superadmin.elections')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
+Route::get('/superadmin/election/operations-center', [ElectionController::class, 'operationsCenter'])->name('superadmin.election.operations')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
 Route::get('/superadmin/election/add', [ElectionController::class, 'addElection'])->name('superadmin.election.add')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
 Route::post('/superadmin/election/store', [ElectionController::class, 'storeElection'])->name('superadmin.election.store')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
 Route::get('/superadmin/election/edit/{uuid}', [ElectionController::class, 'editElection'])->name('superadmin.election.edit')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
@@ -297,13 +342,13 @@ Route::delete('/superadmin/election/delete/{uuid}', [ElectionController::class, 
 Route::get('/superadmin/election/result/{uuid}', [ElectionController::class, 'electionResult'])->name('superadmin.election.results')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
 
 // Election PU Votes Report
-Route::get('/superadmin/election/votes/{uuid}', [ElectionController::class, 'manageVotesByPu'])->name('superadmin.election.votesByPu')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
+Route::get('/superadmin/election/votes/{uuid?}', [ElectionController::class, 'manageVotesByPu'])->name('superadmin.election.votesByPu')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
 Route::get('/superadmin/election/votes/data/{uuid}', [ElectionController::class, 'VotesByPuData'])->name('superadmin.election.votesByPuData')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
 
 
 // Election PU Incident Report
 Route::get('/superadmin/election/incident/{uuid}/{polling_unit_id}', [ElectionController::class, 'manageIncidentByPu'])->name('superadmin.election.incident')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
-   
+
 
 //Manage Votes
 Route::get('/superadmin/votes', [ElectionController::class, 'allVotes'])->name('superadmin.votes')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
@@ -316,7 +361,7 @@ Route::delete('/superadmin/vote/delete/{uuid}', [ElectionController::class, 'del
 //Manage Incidents
 Route::get('/superadmin/incident/add', [ElectionController::class, 'addIncident'])->name('superadmin.incident.add')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
 Route::post('/superadmin/incident/store', [ElectionController::class, 'storeIcident'])->name('superadmin.incident.store')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
- 
+
   // Bulksms Settings Routes
   Route::get('/superadmin/bulksms/setting', [BulkSmsSettingController::class, 'index'])->name('superadmin.bulksms.setting')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
   Route::post('/superadmin/bulksms/setting/store', [BulkSmsSettingController::class, 'store'])->name('superadmin.bulksms.setting.store')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
@@ -330,7 +375,7 @@ Route::post('/superadmin/incident/store', [ElectionController::class, 'storeIcid
   Route::get('/superadmin/chat/messenger', [LiveChatController::class,'index'])->name('superadmin.livechat.send')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
   Route::get('/superadmin/chat/messages', [LiveChatController::class, 'fetchMessages'])->name('superadmin.livechat.fetch.messages')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
   Route::post('/superadmin/chat/send', [LiveChatController::class, 'sendMessage'])->name('superadmin.livechat.send.messages')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
- 
+
   /* Finance Management Routes*/
 
   // Products(income Sources) Management
@@ -352,4 +397,3 @@ Route::post('/superadmin/incident/store', [ElectionController::class, 'storeIcid
 
 
 });
-

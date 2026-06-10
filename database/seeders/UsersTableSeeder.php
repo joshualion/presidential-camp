@@ -13,12 +13,14 @@ class UsersTableSeeder extends Seeder
     {
         $access_levels = [
             'superadmin' => 'Presidential Candidate',
-            'nationaladmin' => 'National ICT/Media Director',
-            'regionaladmin' => 'Regional ICT/Media Director',
-            'stateadmin' => 'State ICT/Media Director',
-            'lgaadmin' => 'LGA ICT/Media Director',
-            'wardadmin' => 'Ward ICT/Media Director',
-            'puadmin' => 'PU ICT/Media Director',
+            'nationaladmin' => 'National ICT Director',
+            'regionaladmin' => 'Regional ICT Director',
+            'stateadmin' => 'State ICT Director',
+            'senatorialadmin' => 'Senatorial ICT Director',
+            'federaladmin' => 'Federal Constituency ICT Director',
+            'lgaadmin' =>  'LGA ICT Director',
+            'wardadmin' => 'Ward ICT Director',
+            'puadmin' => 'PU ICT Director',
             'user' => 'Member',
         ];
 
@@ -42,8 +44,8 @@ class UsersTableSeeder extends Seeder
                 'access_level' => $access_level,
                 'email_verified_at' => now(),
                 'country_id' => 1,
-                'region_id' => 5,
-                'state_id' => 26,
+                'region_id' => 1,
+                'state_id' => 1,
                 'lga_id' => null,
                 'ward_id' => null,
                 'polling_unit_id' => null,

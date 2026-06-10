@@ -108,7 +108,7 @@
 
                   <!-- /.tab-pane -->
                   <div class="tab-pane active" id="editprofile">
-                  <form class="form-horizontal" id="profileData" method="POST" action="{{route('nationaladmin.profile.store')}}" enctype="multipart/form-data">
+                  <form class="form-horizontal" id="profileData" method="POST" action="{{route($profileData->access_level.'.profile.store')}}" enctype="multipart/form-data">
                             @csrf
 
                             @method('POST')
@@ -232,7 +232,7 @@
                         </div>
                         </div>
                         </div>
-                        
+
                         <!-- Voting Region -->
 <div class="form-group row">
     <label for="region_id" class="col-sm-2 col-form-label">Voting Region</label>
@@ -341,11 +341,11 @@
                         <div class="form-group row">
                             <label for="bank" class="col-sm-2 col-form-label">Bank Name</label>
                             <div class="col-sm-10">
-                                <input type="text" 
-                                    class="form-control @error('bank') is-invalid @enderror" 
-                                    name="bank" 
-                                    id="bank" 
-                                    value="{{ old('bank', $profileData->bank) }}" 
+                                <input type="text"
+                                    class="form-control @error('bank') is-invalid @enderror"
+                                    name="bank"
+                                    id="bank"
+                                    value="{{ old('bank', $profileData->bank) }}"
                                     placeholder="Enter your bank name">
                             </div>
                             @error('bank')
@@ -357,11 +357,11 @@
                         <div class="form-group row">
                             <label for="bank_account_number" class="col-sm-2 col-form-label">Account Number</label>
                             <div class="col-sm-10">
-                                <input type="text" 
-                                    class="form-control @error('bank_account_number') is-invalid @enderror" 
-                                    name="bank_account_number" 
-                                    id="bank_account_number" 
-                                    value="{{ old('bank_account_number', $profileData->bank_account_number) }}" 
+                                <input type="text"
+                                    class="form-control @error('bank_account_number') is-invalid @enderror"
+                                    name="bank_account_number"
+                                    id="bank_account_number"
+                                    value="{{ old('bank_account_number', $profileData->bank_account_number) }}"
                                     placeholder="Enter your account number"
                                     oninput="this.value = this.value.replace(/[^0-9]/g, '')">
                             </div>

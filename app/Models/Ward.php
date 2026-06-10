@@ -5,10 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
+use App\Models\Concerns\HasLocationScope;
 
 class Ward extends Model
 {
-    use HasFactory;
+    use HasFactory, HasLocationScope;
     protected $guarded = [];
 
     public function localGovernmentArea(){

@@ -7,8 +7,14 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use App\Services\FileStorageService;
 use App\Events\NewPostCreated;
+use App\Events\NewActivityNotification;
+use App\Models\ActivityNotification;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\View;
+use Illuminate\Support\Facades\Log;
+use App\Models\SystemSetting;
+use Carbon\Carbon;
+use Illuminate\Support\Str;
 
 class HomeController extends Controller
 {
@@ -87,26 +93,82 @@ class HomeController extends Controller
 
 
     // HomeController.php
-    public function followBack(Request $request)
+    public function followUser(User $user)
     {
-        $user = Auth::user();
-        $userToFollow = User::findOrFail($request->user_id);
+        $me = Auth::user();
+        if (!$me || $me->id === $user->id) {
+            return response()->json(['success' => false, 'message' => 'Invalid follow request'], 422);
+        }
 
-        // Follow the user
-        $user->follow($userToFollow);
+        $me->follow($user);
 
-        return response()->json(['success' => true]);
+        return response()->json([
+            'success' => true,
+            'following' => true,
+            'followers_count' => $user->followers()->count(),
+        ]);
     }
 
-    public function unfollow(Request $request)
+    public function unfollowUser(User $user)
     {
-        $user = Auth::user();
-        $userToUnfollow = User::findOrFail($request->user_id);
+        $me = Auth::user();
+        if (!$me || $me->id === $user->id) {
+            return response()->json(['success' => false, 'message' => 'Invalid unfollow request'], 422);
+        }
 
-        // Unfollow the user
-        $user->unfollow($userToUnfollow);
+        $me->unfollow($user);
 
-        return response()->json(['success' => true]);
+        return response()->json([
+            'success' => true,
+            'following' => false,
+            'followers_count' => $user->followers()->count(),
+        ]);
+    }
+
+    public function followersOf(User $user)
+    {
+        $followers = $user->followers()
+            ->select('users.id', 'users.firstname', 'users.lastname', 'users.username', 'users.photo')
+            ->paginate(20);
+
+        $followers->getCollection()->transform(function ($u) {
+            return [
+                'id' => $u->id,
+                'name' => trim(($u->firstname ?? '') . ' ' . ($u->lastname ?? '')) ?: ($u->username ?? 'User'),
+                'username' => $u->username,
+                'photo_url' => $u->photo ? url('uploads/member_images/' . $u->photo) : url('uploads/no_image.jpg'),
+            ];
+        });
+
+        return response()->json(['followers' => $followers]);
+    }
+
+    public function followingOf(User $user)
+    {
+        $following = $user->following()
+            ->select('users.id', 'users.firstname', 'users.lastname', 'users.username', 'users.photo')
+            ->paginate(20);
+
+        $following->getCollection()->transform(function ($u) {
+            return [
+                'id' => $u->id,
+                'name' => trim(($u->firstname ?? '') . ' ' . ($u->lastname ?? '')) ?: ($u->username ?? 'User'),
+                'username' => $u->username,
+                'photo_url' => $u->photo ? url('uploads/member_images/' . $u->photo) : url('uploads/no_image.jpg'),
+            ];
+        });
+
+        return response()->json(['following' => $following]);
+    }
+
+    public function myFollowingIds()
+    {
+        $me = Auth::user();
+        if (!$me) {
+            return response()->json(['ids' => []]);
+        }
+        $ids = $me->following()->pluck('users.id');
+        return response()->json(['ids' => $ids]);
     }
 
 
@@ -190,11 +252,39 @@ class HomeController extends Controller
     public function storePost(Request $request)
     {
         try {
+            $settings = SystemSetting::first();
+            $postMaxLength = $settings->community_post_max_length ?? 750;
+            $commentMaxLength = $settings->community_comment_max_length ?? 750; // fallback used elsewhere
+            $attachmentMaxMb = $settings->community_attachment_max_mb ?? 10;
+            $allowImages = ($settings->community_allow_images ?? 1) ? true : false;
+            $allowVideos = ($settings->community_allow_videos ?? 1) ? true : false;
+            $dailyPostLimit = $settings->community_daily_post_limit ?? null;
+            $attachmentMaxKb = $attachmentMaxMb * 1024;
+
+            // Enforce daily post limit
+            if ($dailyPostLimit) {
+                $todayCount = Post::where('user_id', Auth::id())->whereDate('created_at', Carbon::today())->count();
+                if ($todayCount >= $dailyPostLimit) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'Daily post limit reached. Try again tomorrow.',
+                    ], 429);
+                }
+            }
+
+            $photoRule = $allowImages
+                ? "nullable|image|max:{$attachmentMaxKb}"
+                : 'prohibited';
+
+            $videoRule = $allowVideos
+                ? "nullable|mimes:mp4,mov,avi|max:{$attachmentMaxKb}"
+                : 'prohibited';
+
             // Validate the request
             $validatedData = $request->validate([
-                'content' => 'nullable|string|required_without_all:photo,video',
-                'photo' => 'nullable|image|max:2048|required_without_all:content,video', // Max 2MB
-                'video' => 'nullable|mimes:mp4,mov,avi|max:10240|required_without_all:content,photo', // Max 10MB
+                'content' => "nullable|string|max:{$postMaxLength}|required_without_all:photo,video",
+                'photo' => $photoRule . '|required_without_all:content,video',
+                'video' => $videoRule . '|required_without_all:content,photo',
                 'audience' => 'required|string',
             ], [
                 'content.required_without_all' => 'You must provide content, a photo, or a video.',
@@ -255,15 +345,26 @@ class HomeController extends Controller
                 'pu_id' => $pu_id,
                 'post_type' => $photoFilename && $videoFilename ? 'mixed' : ($photoFilename ? 'image' : ($videoFilename ? 'video' : 'text')),
             ]);
-    
+
             if (!$post) {
                 throw new \Exception('Failed to create the post.');
             }
-    
-            // Broadcast the event (if WebSocket is available)
+
+            $post->load('user');
+
+            // Broadcast the event (if WebSocket is available), but fail soft to allow polling fallback
             if (config('app.web_socket_availability')) {
-                broadcast(new NewPostCreated($post))->toOthers();
+                try {
+                    broadcast(new NewPostCreated($post))->toOthers();
+                } catch (\Throwable $e) {
+                    Log::warning('Post broadcast failed, falling back to polling', [
+                        'error' => $e->getMessage(),
+                    ]);
+                }
             }
+
+            // Create activity notification for this post
+            $this->createActivityNotificationForPost($profileData, $post, $validatedData['audience']);
     
             // Respond with the new post
             return response()->json([
@@ -293,15 +394,77 @@ class HomeController extends Controller
         }
     }
 
+    private function createActivityNotificationForPost(User $actor, Post $post, string $audience): void
+    {
+        $scopeOrder = ['pu' => 0, 'ward' => 1, 'lga' => 2, 'state' => 3, 'region' => 4, 'public' => 5];
+        $accessScopeMap = [
+            'superadmin' => 'public',
+            'nationaladmin' => 'public',
+            'regionaladmin' => 'region',
+            'stateadmin' => 'state',
+            'lgaadmin' => 'lga',
+            'wardadmin' => 'ward',
+            'puadmin' => 'pu',
+            'user' => 'pu',
+        ];
+
+        $actorScope = $accessScopeMap[$actor->access_level] ?? 'pu';
+        $actorRank = $scopeOrder[$actorScope] ?? 0;
+        $audienceRank = $scopeOrder[$audience] ?? $actorRank;
+        $targetScope = $actorRank <= $audienceRank ? $actorScope : $audience;
+
+        $scopeId = null;
+        switch ($targetScope) {
+            case 'region':
+                $scopeId = $actor->region_id;
+                break;
+            case 'state':
+                $scopeId = $actor->state_id;
+                break;
+            case 'lga':
+                $scopeId = $actor->lga_id;
+                break;
+            case 'ward':
+                $scopeId = $actor->ward_id;
+                break;
+            case 'pu':
+                $scopeId = $actor->polling_unit_id;
+                break;
+            default:
+                $scopeId = null;
+        }
+
+        $notification = ActivityNotification::create([
+            'type' => 'post',
+            'actor_id' => $actor->id,
+            'subject_type' => Post::class,
+            'subject_id' => $post->id,
+            'scope' => $targetScope,
+            'scope_id' => $scopeId,
+            'data' => [
+                'message' => trim(($actor->firstname ?? '') . ' ' . ($actor->lastname ?? '')) . ' made a new post',
+                'post_id' => $post->id,
+                'snippet' => mb_substr(strip_tags((string) $post->content), 0, 100),
+            ],
+        ]);
+
+        try {
+            broadcast(new NewActivityNotification($notification))->toOthers();
+        } catch (\Throwable $e) {
+            // Silent failover to polling
+        }
+    }
+
 public function fetchPosts(Request $request)
 {
     // Get the audience, page, and last_post_timestamp parameters from the request
     $audience = $request->input('audience', 'public');
     $lastPostTimestamp = $request->input('last_post_timestamp'); // Timestamp of the latest post in the feed
     $perPage = $request->input('per_page', 10); // Number of posts per page
+    $userId = Auth::id();
 
     // Initialize the query builder for posts
-    $query = Post::with('user');  // Assuming the relationship is named 'user'
+    $query = Post::with('user')->withCount('comments')->withCount('likedBy as likes_count');
 
     // Get profile data for filtering
     $profileData = $this->getProfileData();
@@ -315,42 +478,62 @@ public function fetchPosts(Request $request)
         case 'region':
             // Filter posts based on the region_id (user's region vs post's region)
             $regionId = $profileData->region_id;
-            $query->where(function($q) use ($regionId) {
-                $q->where('audience', 'public')
-                ->orWhere('region_id', $regionId);
-            });
+            if ($regionId) {
+                $query->where(function ($q) use ($regionId) {
+                    $q->where('audience', 'public')
+                        ->orWhere('region_id', $regionId);
+                });
+            } else {
+                $query->where('audience', 'public');
+            }
             break;
         case 'state':
             // Filter posts based on the state_id (user's state vs post's state)
             $stateId = $profileData->state_id;
-            $query->where(function($q) use ($stateId) {
-                $q->where('audience', 'public')
-                ->orWhere('state_id', $stateId);
-            });
+            if ($stateId) {
+                $query->where(function ($q) use ($stateId) {
+                    $q->where('audience', 'public')
+                        ->orWhere('state_id', $stateId);
+                });
+            } else {
+                $query->where('audience', 'public');
+            }
             break;
         case 'lga':
             // Filter posts based on the lga_id (user's LGA vs post's LGA)
             $lgaId = $profileData->lga_id;
-            $query->where(function($q) use ($lgaId) {
-                $q->where('audience', 'public')
-                ->orWhere('lga_id', $lgaId);
-            });
+            if ($lgaId) {
+                $query->where(function ($q) use ($lgaId) {
+                    $q->where('audience', 'public')
+                        ->orWhere('lga_id', $lgaId);
+                });
+            } else {
+                $query->where('audience', 'public');
+            }
             break;
         case 'ward':
             // Filter posts based on the ward_id (user's ward vs post's ward)
             $wardId = $profileData->ward_id;
-            $query->where(function($q) use ($wardId) {
-                $q->where('audience', 'public')
-                ->orWhere('ward_id', $wardId);
-            });
+            if ($wardId) {
+                $query->where(function ($q) use ($wardId) {
+                    $q->where('audience', 'public')
+                        ->orWhere('ward_id', $wardId);
+                });
+            } else {
+                $query->where('audience', 'public');
+            }
             break;
         case 'pu':
             // Filter posts based on the pu_id (user's polling unit vs post's polling unit)
             $puId = $profileData->polling_unit_id;
-            $query->where(function($q) use ($puId) {
-                $q->where('audience', 'public')
-                ->orWhere('pu_id', $puId);
-            });
+            if ($puId) {
+                $query->where(function ($q) use ($puId) {
+                    $q->where('audience', 'public')
+                        ->orWhere('pu_id', $puId);
+                });
+            } else {
+                $query->where('audience', 'public');
+            }
             break;
         default:
             // If the audience is not recognized, fall back to public
@@ -366,83 +549,55 @@ public function fetchPosts(Request $request)
     // Order by creation date and paginate the results
     $posts = $query->latest()->paginate($perPage);
 
+    // Append liked_by_me and liker_names for UI
+    $posts->getCollection()->transform(function ($post) use ($userId) {
+        $post->liked_by_me = $userId ? $post->likedBy()->where('user_id', $userId)->exists() : false;
+        $post->liker_names = $post->likedBy()
+            ->limit(5)
+            ->get()
+            ->map(function ($u) {
+                $name = trim(($u->firstname ?? '') . ' ' . ($u->lastname ?? ''));
+                return $name ?: ($u->name ?? $u->email ?? 'Unknown');
+            })
+            ->filter()
+            ->values();
+        return $post;
+    });
+
     return response()->json($posts);
   }
 
    
     public function fetchAuthUserPosts(Request $request)
     {
-       
-        // Get the audience, page, and last_post_timestamp parameters from the request
-        $audience = $request->input('audience', 'public');
-        $lastPostTimestamp = $request->input('last_post_timestamp'); // Timestamp of the latest post in the feed
-    
-        // Get profile data for filtering
-        $profileData = $this->getProfileData();
-        // Initialize the query builder for posts
-        $query = Post::with('user')->where('user_id', $profileData->id);  // Assuming the relationship is named 'user'
+        $userId = Auth::id();
+        if (!$userId) {
+            return response()->json([]);
+        }
 
-    
-        // Check audience type and apply filters accordingly
-        switch ($audience) {
-            case 'public':
-                // No additional filtering for public audience
-                $query->where('audience', 'public');
-                break;
-            case 'region':
-                // Filter posts based on the region_id (user's region vs post's region)
-                $regionId = $profileData->region_id;
-                $query->where(function($q) use ($regionId) {
-                    $q->where('audience', 'public')
-                    ->orWhere('region_id', $regionId);
-                });
-                break;
-            case 'state':
-                // Filter posts based on the state_id (user's state vs post's state)
-                $stateId = $profileData->state_id;
-                $query->where(function($q) use ($stateId) {
-                    $q->where('audience', 'public')
-                    ->orWhere('state_id', $stateId);
-                });
-                break;
-            case 'lga':
-                // Filter posts based on the lga_id (user's LGA vs post's LGA)
-                $lgaId = $profileData->lga_id;
-                $query->where(function($q) use ($lgaId) {
-                    $q->where('audience', 'public')
-                    ->orWhere('lga_id', $lgaId);
-                });
-                break;
-            case 'ward':
-                // Filter posts based on the ward_id (user's ward vs post's ward)
-                $wardId = $profileData->ward_id;
-                $query->where(function($q) use ($wardId) {
-                    $q->where('audience', 'public')
-                    ->orWhere('ward_id', $wardId);
-                });
-                break;
-            case 'pu':
-                // Filter posts based on the pu_id (user's polling unit vs post's polling unit)
-                $puId = $profileData->polling_unit_id;
-                $query->where(function($q) use ($puId) {
-                    $q->where('audience', 'public')
-                    ->orWhere('pu_id', $puId);
-                });
-                break;
-            default:
-                // If the audience is not recognized, fall back to public
-                $query->where('audience', 'public');
-                break;
-        }
-    
-        // Filter posts created after the last_post_timestamp
-        if ($lastPostTimestamp) {
-            $query->where('created_at', '>', $lastPostTimestamp);
-        }
-    
-        // Order by creation date and get the results
-        $posts = $query->latest()->get();
-    
+        $perPage = (int) $request->input('per_page', 10);
+
+        $posts = Post::with('user')
+            ->withCount('comments')
+            ->withCount('likedBy as likes_count')
+            ->where('user_id', $userId)
+            ->latest()
+            ->paginate($perPage);
+
+        $posts->getCollection()->transform(function ($post) use ($userId) {
+            $post->liked_by_me = $post->likedBy()->where('user_id', $userId)->exists();
+            $post->liker_names = $post->likedBy()
+                ->limit(5)
+                ->get()
+                ->map(function ($u) {
+                    $name = trim(($u->firstname ?? '') . ' ' . ($u->lastname ?? ''));
+                    return $name ?: ($u->username ?? 'User');
+                })
+                ->filter()
+                ->values();
+            return $post;
+        });
+
         return response()->json($posts);
     }
 
@@ -454,6 +609,7 @@ public function fetchPosts(Request $request)
         // Get followers and following counts
         $followersCount = $userData->followers()->count();
         $followingCount = $userData->following()->count();
+        $postsCount = $userData->posts()->count();
          // Get paginated followers and following data
         $followers = $userData->followers()->paginate(10); // Paginate with 10 items per page
         $following = $userData->following()->paginate(10); // Paginate with 10 items per pagefollowing = $profileData->following()->get(); // Users this profile is following
@@ -466,6 +622,7 @@ public function fetchPosts(Request $request)
              'userSupportGroups',
             'followersCount',
             'followingCount',
+            'postsCount',
             'followers',
             'following',
             'pageTitle'
@@ -473,88 +630,47 @@ public function fetchPosts(Request $request)
     }
 
 
-    public function viewUserProfilePost(Request $request, $username){
-        
-       
-        // Get the audience, page, and last_post_timestamp parameters from the request
-        $audience = $request->input('audience', 'public');
-        $lastPostTimestamp = $request->input('last_post_timestamp'); // Timestamp of the latest post in the feed
-    
-        // Get profile data for filtering
-        $profileData = $this->getProfileData();
+    public function viewUserProfilePost(Request $request, $username)
+    {
+        $me = Auth::id();
+        $perPage = (int) $request->input('per_page', 10);
+        $userData = User::where('username', $username)->firstOrFail();
 
-        //Get User Data
-        $userData = User::where('username',$username)->first();
-        // Initialize the query builder for posts
- $query = Post::with('user')->where('user_id', $userData->id);  // Assuming the relationship is named 'user'
+        $posts = Post::with('user')
+            ->withCount('comments')
+            ->withCount('likedBy as likes_count')
+            ->where('user_id', $userData->id)
+            ->latest()
+            ->paginate($perPage);
 
-    
-        // Check audience type and apply filters accordingly
-        switch ($audience) {
-            case 'public':
-                // No additional filtering for public audience
-                $query->where('audience', 'public');
-                break;
-            case 'region':
-                // Filter posts based on the region_id (user's region vs post's region)
-                $regionId = $profileData->region_id;
-                $query->where(function($q) use ($regionId) {
-                    $q->where('audience', 'public')
-                    ->orWhere('region_id', $regionId);
-                });
-                break;
-            case 'state':
-                // Filter posts based on the state_id (user's state vs post's state)
-                $stateId = $profileData->state_id;
-                $query->where(function($q) use ($stateId) {
-                    $q->where('audience', 'public')
-                    ->orWhere('state_id', $stateId);
-                });
-                break;
-            case 'lga':
-                // Filter posts based on the lga_id (user's LGA vs post's LGA)
-                $lgaId = $profileData->lga_id;
-                $query->where(function($q) use ($lgaId) {
-                    $q->where('audience', 'public')
-                    ->orWhere('lga_id', $lgaId);
-                });
-                break;
-            case 'ward':
-                // Filter posts based on the ward_id (user's ward vs post's ward)
-                $wardId = $profileData->ward_id;
-                $query->where(function($q) use ($wardId) {
-                    $q->where('audience', 'public')
-                    ->orWhere('ward_id', $wardId);
-                });
-                break;
-            case 'pu':
-                // Filter posts based on the pu_id (user's polling unit vs post's polling unit)
-                $puId = $profileData->polling_unit_id;
-                $query->where(function($q) use ($puId) {
-                    $q->where('audience', 'public')
-                    ->orWhere('pu_id', $puId);
-                });
-                break;
-            default:
-                // If the audience is not recognized, fall back to public
-                $query->where('audience', 'public');
-                break;
-        }
-    
-        // Filter posts created after the last_post_timestamp
-        if ($lastPostTimestamp) {
-            $query->where('created_at', '>', $lastPostTimestamp);
-        }
-    
-        // Order by creation date and get the results
-        $posts = $query->latest()->get();
-    
+        $posts->getCollection()->transform(function ($post) use ($me) {
+            $post->liked_by_me = $me ? $post->likedBy()->where('user_id', $me)->exists() : false;
+            $post->liker_names = $post->likedBy()
+                ->limit(5)
+                ->get()
+                ->map(function ($u) {
+                    $name = trim(($u->firstname ?? '') . ' ' . ($u->lastname ?? ''));
+                    return $name ?: ($u->username ?? 'User');
+                })
+                ->filter()
+                ->values();
+            return $post;
+        });
+
         return response()->json($posts);
+    }
+
+    public function messagesPage()
+    {
+        $pageTitle = "Messages";
+        $profileData = $this->getProfileData();
+        return view('backend.messages', compact('profileData', 'pageTitle'));
     }
 
      // Show the edit form
      public function editPost(Post $post)
      {
+         $this->ensureCanManagePost($post);
          return response()->json([
              'post' => $post,
          ]);
@@ -563,24 +679,171 @@ public function fetchPosts(Request $request)
      // Update the post
      public function updatePost(Request $request, Post $post)
      {
+         $this->ensureCanManagePost($post);
+         $settings = SystemSetting::first();
+         $postMaxLength = $settings->community_post_max_length ?? 750;
          // Validate incoming request
          $validatedData = $request->validate([
-             'title' => 'required|string|max:255',
-             'content' => 'required|string',
+             'content' => "required|string|max:{$postMaxLength}",
          ]);
- 
+
          // Update the post
-         $post->update($validatedData);
- 
-         return response()->json([
-             'message' => 'Post updated successfully!',
-             'post' => $post,
+         $post->update([
+             'content' => $validatedData['content'],
          ]);
-     }
+
+     return response()->json([
+         'message' => 'Post updated successfully!',
+         'post' => $post->fresh('user'),
+     ]);
+ }
+
+    public function likePost(Post $post)
+    {
+        $userId = Auth::id();
+        if (!$userId) {
+            return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 401);
+        }
+
+        $alreadyLiked = $post->likedBy()->where('user_id', $userId)->exists();
+
+        if ($alreadyLiked) {
+            // Unlike
+            $post->likedBy()->detach($userId);
+        } else {
+            // Like
+            $post->likedBy()->attach($userId);
+            $this->notifyPostLike($post, Auth::user());
+        }
+
+        $likes = $post->likedBy()->count();
+
+        return response()->json([
+            'status' => 'success',
+            'likes' => $likes,
+            'liked' => !$alreadyLiked,
+        ]);
+    }
+
+    private function notifyPostLike(Post $post, User $actor): void
+    {
+        if (!$actor || $post->user_id === $actor->id) {
+            return;
+        }
+
+        $scopeOrder = ['pu' => 0, 'ward' => 1, 'lga' => 2, 'state' => 3, 'region' => 4, 'public' => 5];
+        $accessScopeMap = [
+            'superadmin' => 'public',
+            'nationaladmin' => 'public',
+            'regionaladmin' => 'region',
+            'stateadmin' => 'state',
+            'lgaadmin' => 'lga',
+            'wardadmin' => 'ward',
+            'puadmin' => 'pu',
+            'user' => 'pu',
+        ];
+
+        $actorScope = $accessScopeMap[$actor->access_level] ?? 'pu';
+        $actorRank = $scopeOrder[$actorScope] ?? 0;
+        $postAudience = $post->audience ?? 'pu';
+        $audienceRank = $scopeOrder[$postAudience] ?? $actorRank;
+        $targetScope = $actorRank <= $audienceRank ? $actorScope : $postAudience;
+
+        $scopeId = null;
+        switch ($targetScope) {
+            case 'region':
+                $scopeId = $actor->region_id;
+                break;
+            case 'state':
+                $scopeId = $actor->state_id;
+                break;
+            case 'lga':
+                $scopeId = $actor->lga_id;
+                break;
+            case 'ward':
+                $scopeId = $actor->ward_id;
+                break;
+            case 'pu':
+                $scopeId = $actor->polling_unit_id;
+                break;
+            default:
+                $scopeId = null;
+        }
+
+        $postOwner = $post->user;
+        $ownerUsername = $postOwner?->username;
+        $postUrl = $ownerUsername
+            ? url("/community/{$ownerUsername}/profile/timeline#post-{$post->id}")
+            : url("/community/feed#post-{$post->id}");
+
+        $notification = ActivityNotification::create([
+            'type' => 'like',
+            'actor_id' => $actor->id,
+            'subject_type' => Post::class,
+            'subject_id' => $post->id,
+            'scope' => 'direct',
+            'scope_id' => $post->user_id, // notify post owner only
+            'data' => [
+                'message' => trim(($actor->firstname ?? '') . ' ' . ($actor->lastname ?? '')) . ' liked your post',
+                'post_id' => $post->id,
+                'url' => $postUrl,
+            ],
+        ]);
+
+        try {
+            broadcast(new NewActivityNotification($notification))->toOthers();
+        } catch (\Throwable $e) {
+            // ignore broadcast failure
+        }
+    }
+
+    public function postLikers(Request $request, Post $post)
+    {
+        $page = max((int) $request->input('page', 1), 1);
+        $perPage = min(max((int) $request->input('per_page', 50), 1), 200);
+
+        $paginator = $post->likedBy()
+            ->select('users.id', 'users.firstname', 'users.lastname', 'users.email', 'users.username', 'users.photo')
+            ->paginate($perPage, ['*'], 'page', $page);
+
+        $likers = $paginator->getCollection()->map(function ($u) {
+            $displayName = trim(($u->firstname ?? '') . ' ' . ($u->lastname ?? ''));
+            $displayName = $displayName ?: ($u->email ?? $u->username ?? 'Unknown');
+
+            $photoUrl = $u->photo
+                ? url('uploads/member_images/' . $u->photo)
+                : url('uploads/no_image.jpg');
+
+            $profileUrl = $u->username
+                ? url('/community/' . $u->username . '/profile/timeline')
+                : '#';
+
+            return [
+                'id' => $u->id,
+                'name' => $displayName,
+                'email' => $u->email,
+                'username' => $u->username,
+                'photo_url' => $photoUrl,
+                'profile_url' => $profileUrl,
+            ];
+        })->values();
+
+        return response()->json([
+            'status' => 'success',
+            'likers' => $likers,
+            'meta' => [
+                'page' => $paginator->currentPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+                'last_page' => $paginator->lastPage(),
+            ],
+        ]);
+    }
  
      // Delete the post
      public function destroyPost(Post $post)
      {
+         $this->ensureCanManagePost($post);
          // Delete the post
          $post->delete();
  
@@ -599,12 +862,12 @@ public function fetchPosts(Request $request)
      
          // Validate file type and size
          $request->validate([
-             'photo' => 'required|image|mimes:jpeg,png,jpg,gif|max:1024', // 1MB max
+             'photo' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:5120', // 5MB max
          ]);
      
          if ($request->hasFile('photo')) {
              $file = $request->file('photo');
-             $filename = date('YmdHi') . '_' . $file->getClientOriginalName();
+             $filename = (string) Str::uuid() . '.' . $file->getClientOriginalExtension();
              
              // Move file to both locations
              $file->move(public_path('uploads/member_images/'), $filename);
@@ -664,12 +927,12 @@ public function fetchPosts(Request $request)
      
          // Validate file type and size
          $request->validate([
-             'cover_image' => 'required|image|mimes:jpeg,png,jpg,gif|max:1024', // 1MB max
+             'cover_image' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:5120', // 5MB max
          ]);
      
          if ($request->hasFile('cover_image')) {
              $file = $request->file('cover_image');
-             $filename = date('YmdHi') . '_' . $file->getClientOriginalName();
+             $filename = (string) Str::uuid() . '.' . $file->getClientOriginalExtension();
              
              // Move file to both locations
              $file->move(public_path('uploads/member_images/'), $filename);
@@ -721,10 +984,17 @@ public function fetchPosts(Request $request)
      
          return response()->json(['success' => false, 'error' => 'File upload failed']);
      }
-     
-
     
     
+    
+    private function ensureCanManagePost(Post $post): void
+    {
+        $user = Auth::user();
+        $isOwner = $user && $post->user_id === $user->id;
+        $isSuperAdmin = $user && $user->hasRole('superadmin');
 
-
+        if (!($isOwner || $isSuperAdmin)) {
+            abort(403, 'You are not allowed to modify this post.');
+        }
+    }
 }

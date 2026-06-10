@@ -24,6 +24,8 @@
                                         <th>Region</th>
                                         <th>State</th>
                                         <th>Members</th>
+                                        <th>Eligible Voters</th>
+                                        <th>Ineligible Voters</th>
                                         <th>Action</th>
                                     </tr>
                                     </thead>
@@ -37,7 +39,16 @@
                                                     <span class="badge bg-secondary text-white">
                                                         {{ $state->users->where('access_level', '!=', 'superadmin')->count() }}
                                                     </span>
-                                                    
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-success text-white">
+                                                        {{ $state->users->where('access_level', '!=', 'superadmin')->where('validVoter', 'yes')->count() }}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-danger text-white">
+                                                        {{ $state->users->where('access_level', '!=', 'superadmin')->where('validVoter', 'no')->count() }}
+                                                    </span>
                                                 </td>
                                                 <td>
                                                     <a href="{{ route($profileData->access_level.'.member.state.view', $state->uuid) }}"><button class="btn btn-danger"><i class="fas fa-eye"></i> View Members</button></a>
@@ -55,6 +66,8 @@
                                         <th>Region</th>
                                         <th>state</th>
                                         <th>Members</th>
+                                        <th>Eligible Voters</th>
+                                        <th>Ineligible Voters</th>
                                         <th>Action</th>
                                     </tr>
                                     </tfoot>

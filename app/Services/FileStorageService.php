@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\SystemSetting;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class FileStorageService
 {
@@ -25,20 +26,16 @@ class FileStorageService
      */
     public function storeFile($file, $path, $oldFilePath = null)
     {
-        $filename = date('YmdHi') . $file->getClientOriginalName();
+        $extension = $file->getClientOriginalExtension();
+        $filename = Str::uuid()->toString() . ($extension ? '.' . $extension : '');
 
-        if ($this->systemSetting->enable_s3_storage) {
-            // Ensure dynamic S3 configuration
+        if ($this->systemSetting && $this->systemSetting->enable_s3_storage) {
             $this->configureS3();
 
-            // Upload to S3
             $s3Path = $path . '/' . $filename;
             $uploaded = Storage::disk('s3')->put($s3Path, file_get_contents($file));
-            // Use a file stream
-               // $uploaded = Storage::disk('s3')->put($s3Path, fopen($file->getRealPath(), 'r'));
 
             if ($uploaded) {
-                // Delete old file from S3, if provided
                 if ($oldFilePath) {
                     $oldS3Path = $path . '/' . $oldFilePath;
                     if (Storage::disk('s3')->exists($oldS3Path)) {
@@ -47,21 +44,14 @@ class FileStorageService
                 }
                 return $filename;
             }
-        } elseif ($this->systemSetting->enable_local_storage) {
-            // Upload to local storage
-            $file->move(public_path('uploads/' . $path), $filename);
-
-            // Delete old file locally, if provided
-            if ($oldFilePath) {
-                $oldFilePathFull = public_path('uploads/' . $path . '/' . $oldFilePath);
-                if (file_exists($oldFilePathFull)) {
-                    unlink($oldFilePathFull);
-                }
-            }
-            return $filename;
         }
 
-        return false; // Return false if neither storage is enabled
+        if ($this->systemSetting && $this->systemSetting->enable_local_storage) {
+            return $this->storeLocally($file, $path, $filename, $oldFilePath);
+        }
+
+        // Fallback to local storage if system settings are missing or misconfigured.
+        return $this->storeLocally($file, $path, $filename, $oldFilePath);
     }
 
     /**
@@ -88,6 +78,10 @@ class FileStorageService
      */
     protected function configureS3()
     {
+        if (!$this->systemSetting) {
+            return;
+        }
+
         config([
             'filesystems.disks.s3.key' => $this->systemSetting->s3_key,
             'filesystems.disks.s3.secret' => $this->systemSetting->s3_secret,
@@ -97,19 +91,60 @@ class FileStorageService
         ]);
     }
 
+    protected function hasS3Config(): bool
+    {
+        $setting = $this->systemSetting ?? SystemSetting::first();
+        return $setting
+            && !empty($setting->s3_key)
+            && !empty($setting->s3_secret)
+            && !empty($setting->s3_region)
+            && !empty($setting->s3_bucket);
+    }
+
+    protected function storeLocally($file, string $path, string $filename, ?string $oldFilePath = null)
+    {
+        $targetDirectory = public_path('uploads/' . trim($path, '/'));
+
+        if (!is_dir($targetDirectory)) {
+            mkdir($targetDirectory, 0755, true);
+        }
+
+        $file->move($targetDirectory, $filename);
+
+        if ($oldFilePath) {
+            $oldFilePathFull = $targetDirectory . '/' . $oldFilePath;
+            if (is_file($oldFilePathFull)) {
+                @unlink($oldFilePathFull);
+            }
+        }
+
+        return $filename;
+    }
 
     public function getFileUrl(string $path): string
     {
-        $SystemSetting = SystemSetting::first();
-    
-        if ($SystemSetting->enable_s3_storage) {
-            return Storage::disk('s3')->url($path);
-        } elseif ($SystemSetting->enable_local_storage) {
-            return asset('uploads/' . $path);
+        $systemSetting = $this->systemSetting ?? SystemSetting::first();
+
+        $normalizedPath = ltrim($path, '/');
+        $normalizedPath = Str::startsWith($normalizedPath, 'uploads/')
+            ? substr($normalizedPath, strlen('uploads/'))
+            : $normalizedPath;
+
+        $localPath = public_path('uploads/' . $normalizedPath);
+
+        // Prefer existing local file (covers legacy uploads even when S3 is turned on)
+        if (is_file($localPath)) {
+            return asset('uploads/' . $normalizedPath);
         }
-    
-        throw new \Exception("No valid storage option is enabled.");
+
+        // If S3 is enabled OR we have S3 credentials (even if storing locally now), generate the S3 URL
+        if ($this->hasS3Config()) {
+            $this->configureS3();
+            return Storage::disk('s3')->url($path);
+        }
+
+        // Fallback to local asset
+        return asset('uploads/' . $normalizedPath);
     }
-    
 
 }

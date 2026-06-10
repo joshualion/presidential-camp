@@ -85,7 +85,7 @@
 
                  <h3 class="card-title"> Member's Infomation</h3>
                  <div class="card-tools">
-                    @if(($profileData->hasRole('National ICT/Media Director')) || ($profileData->hasRole('Regional ICT/Media Director')) || ($profileData->hasAnyRole('State ICT/Media Director')) || ($profileData->hasAnyRole('LGA ICT/Media Director')) || ($profileData->hasAnyRole('Ward ICT/Media Director')) || ($profileData->hasAnyRole('PU ICT/Media Director')) || ( $profileData->access_level == 'superadmin'))
+                    @if(($profileData->hasRole('National ICT Director')) || ($profileData->hasRole('Regional ICT Director')) || ($profileData->hasAnyRole('State ICT Director')) || ($profileData->hasAnyRole('LGA ICT Director')) || ($profileData->hasAnyRole('Ward ICT Director')) || ($profileData->hasAnyRole('PU ICT Director')) || ( $profileData->access_level == 'superadmin'))
 
                         <a href="{{ route($profileData->access_level.'.member.edit', $member->uuid) }}"><button class="btn btn-default"> <i class="fas fa-pencil"></i> Edit Member</button></a>
 
@@ -296,12 +296,12 @@
 </div>
 
 @if(isset($profileData->role) && (
-        $profileData->role->name == 'National ICT/Media Director' ||
-        $profileData->role->name == 'Regional ICT/Media Director' ||
-        $profileData->role->name == 'State ICT/Media Director' ||
-        $profileData->role->name == 'LGA ICT/Media Director' ||
-        $profileData->role->name == 'Ward ICT/Media Director' ||
-        $profileData->role->name == 'PU ICT/Media Director'
+        $profileData->role->name == 'National ICT Director' ||
+        $profileData->role->name == 'Regional ICT Director' ||
+        $profileData->role->name == 'State ICT Director' ||
+        $profileData->role->name == 'LGA ICT Director' ||
+        $profileData->role->name == 'Ward ICT Director' ||
+        $profileData->role->name == 'PU ICT Director'
     ) ||  $profileData->access_level == 'superadmin')
 
 <!-- Access Level -->

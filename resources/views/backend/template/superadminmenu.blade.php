@@ -1,7 +1,8 @@
 
 @if(Auth::user()->access_level == 'superadmin')
+@php($packageVisibility = $packageVisibility ?? app(\App\Services\PackageVisibilityService::class))
 <nav class="mt-2">
-      <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
+      <ul class="nav nav-pills nav-sidebar flex-column sidebar-nav" data-widget="treeview" role="menu" data-accordion="false">
 
             <li class="tab nav-item menu-close">
                         <a href="/superadmin/dashboard" class="nav-link">
@@ -14,7 +15,7 @@
 
             </li>
 
-        
+
             {{-- Members --}}
             <li class="tab nav-item menu-close">
               <a href="#" class="nav-link">
@@ -33,19 +34,7 @@
                   </a>
                 </li>
 
-                <li class="nav-item">
-                  <a href="/superadmin/members/region" class="nav-link">
-                    <i class="fas fa-tachometer-alt nav-icon"></i>
-                    <p>Members By Region</p>
-                  </a>
-                </li>
 
-                <li class="nav-item">
-                  <a href="/superadmin/members/bystate" class="nav-link">
-                  <i class="fas fa-user nav-icon"></i>
-                    <p>members by States</p>
-                  </a>
-                </li>
 
                 <li class="nav-item">
                   <a href="/superadmin/members/bylga" class="nav-link">
@@ -83,20 +72,24 @@
                       </a>
                       <ul class="nav nav-treeview">
 
-                      <li class="nav-item">
+                        <li class="nav-item">
                           <a href="/superadmin/elections" class="nav-link">
                             <i class="fas fa-award nav-icon"></i>
                             <p>Manage Elections</p>
                           </a>
                         </li>
+                        <li class="nav-item">
+                          <a href="/superadmin/election/operations-center" class="nav-link">
+                            <i class="fas fa-broadcast-tower nav-icon"></i>
+                            <p>Situation Room</p>
+                          </a>
+                        </li>
                         @if(
                           $profileData->hasAnyRole([
-                              'National ICT/Media Director',
-                              'Regional ICT/Media Director',
-                              'State ICT/Media Director',
-                              'LGA ICT/Media Director',
-                              'Ward ICT/Media Director',
-                              'PU ICT/Media Director',
+                              'State ICT Director',
+                              'LGA ICT Director',
+                              'Ward ICT Director',
+                              'PU ICT Director',
                               'Pu Agent'
                           ]) || $profileData->access_level == 'superadmin' )
                         <li class="nav-item">
@@ -152,7 +145,7 @@
   </li> --}}
   {{-- / Reports --}}
 
-  {{-- Finances --}}
+  {{-- Finances --}} {{--
   <li class="tab nav-item menu-close">
       <a href="#" class="nav-link">
         <i class="nav-icon fas fa-money-bill"></i>
@@ -166,7 +159,7 @@
         <li class="nav-item">
           <a href="/superadmin/products" class="nav-link">
             <i class="fas fa-shopping-cart nav-icon"></i>
-            <p>Income Sources</p>
+            <p>Funding Sources</p>
           </a>
       </li>
 
@@ -191,7 +184,7 @@
             <i class="fas fa-shopping-cart nav-icon"></i>
             <p>Sales Records</p>
           </a>
-        </li> --}}
+        </li>
 
         <li class="nav-item">
           <a href="/superadmin/state/dashboard" class="nav-link">
@@ -247,19 +240,25 @@
               </a>
               <ul class="nav nav-treeview">
 
-                <li class="nav-item">
-                  <a href="/superadmin/bulksms/send" class="nav-link">
-                    <i class="fas fa-sms	 nav-icon"></i>
-                    <p>Send SMS</p>
-                  </a>
-                </li>
+                  <li class="nav-item">
+                    <a href="/superadmin/bulksms/send" class="nav-link">
+                      <i class="fas fa-sms	 nav-icon"></i>
+                      <p>Send SMS</p>
+                    </a>
+                  </li>
+                  <li class="nav-item">
+                    <a href="/messages" class="nav-link">
+                      <i class="fas fa-comments nav-icon"></i>
+                      <p>Internal Communication</p>
+                    </a>
+                  </li>
 
                  <li class="nav-item">
                   <a href="/superadmin/chat/messenger" class="nav-link">
                   <i class="fas fa-comment-alt nav-icon"></i>
                     <p>Live Chat</p>
                   </a>
-                </li> 
+                </li>
                 <!-- <li class="nav-item">
                   <a href="#" class="nav-link">
                   <i class="fas fa-envelope-square nav-icon"></i>
@@ -329,38 +328,64 @@
               </a>
               <ul class="nav nav-treeview">
 
-                <li class="nav-item">
-                  <a href="/superadmin/location/regions" class="nav-link">
-                    <i class="	fas fa-map-marker	 nav-icon"></i>
-                    <p>Regions</p>
-                  </a>
-                </li>
+                @if($packageVisibility->canSeeRegionalModules())
+                  <li class="nav-item">
+                    <a href="/superadmin/location/regions" class="nav-link">
+                      <i class="	fas fa-map-marker	 nav-icon"></i>
+                      <p>Regions</p>
+                    </a>
+                  </li>
+                @endif
 
+                @if($packageVisibility->canSeeStateModules())
+                  <li class="nav-item">
+                    <a href="/superadmin/location/states/" class="nav-link">
+                    <i class="fas fa-map-marker-alt nav-icon"></i>
+                      <p>States</p>
+                    </a>
+                  </li>
+                @endif
+                @if($packageVisibility->canSeeSenatorialModules())
                 <li class="nav-item">
-                  <a href="/superadmin/location/states/" class="nav-link">
-                  <i class="fas fa-map-marker-alt nav-icon"></i>
-                    <p>States</p>
+                  <a href="/superadmin/location/senatorial-districts" class="nav-link">
+                  <i class="fas fa-map nav-icon"></i>
+                    <p>Senatorial Districts</p>
                   </a>
                 </li>
+                @endif
+                @if($packageVisibility->canSeeFederalModules())
+                <li class="nav-item">
+                  <a href="/superadmin/location/federal-constituencies" class="nav-link">
+                  <i class="fas fa-landmark nav-icon"></i>
+                    <p>Federal Constituencies</p>
+                  </a>
+                </li>
+                @endif
+                @if($packageVisibility->canSeeLgaModules())
                 <li class="nav-item">
                   <a href="/superadmin/location/localgovernments" class="nav-link">
                   <i class="fas fa-map-pin nav-icon"></i>
                     <p>LGA's</p>
                   </a>
                 </li>
+                @endif
 
+                @if($packageVisibility->canSeeWardModules())
                 <li class="nav-item">
                   <a href="/superadmin/location/wards" class="nav-link">
                   <i class="fas fa-map-marked-alt nav-icon"></i>
                     <p> Wards</p>
                   </a>
                 </li>
+                @endif
+                @if($packageVisibility->canSeePollingUnitModules())
                 <li class="nav-item">
                   <a href="/superadmin/location/pollingunits" class="nav-link">
                   <i class="fas fa-monument nav-icon"></i>
                     <p> Polling Units</p>
                   </a>
                 </li>
+                @endif
               </ul>
 
   </li>
@@ -376,7 +401,7 @@
                 </p>
               </a>
               <ul class="nav nav-treeview">
-          @if(($profileData->hasRole('National ICT/Media Director')) || ( $profileData->access_level == 'superadmin'))
+          @if(($profileData->hasRole('National ICT Director')) || ( $profileData->access_level == 'superadmin'))
 
                 <li class="nav-item">
                   <a href="/superadmin/system/settings" class="nav-link">
@@ -392,12 +417,14 @@
                   </a>
                 </li>
 
+                {{-- Payment Settings temporarily disabled pending finance module completion.
                 <li class="nav-item">
                   <a href="/superadmin/settings/paymentgateway" class="nav-link">
                   <i class="fas fa-credit-card nav-icon"></i>
                     <p> Payment Settings</p>
                   </a>
                 </li>
+                --}}
 
                 <li class="nav-item">
                   <a href="/superadmin/setting/volunteer/group" class="nav-link">
@@ -406,7 +433,7 @@
                   </a>
                 </li>
 
-                
+
 
                 <li class="nav-item">
                   <a href="/superadmin/election/setting/politicalparty" class="nav-link">

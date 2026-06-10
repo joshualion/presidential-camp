@@ -3,6 +3,7 @@ use App\Http\Controllers\AjaxController;
 use App\Http\Controllers\BulksmsController;
 use App\Http\Controllers\BulkSmsSettingController;
 use App\Http\Controllers\ChartsController;
+use App\Http\Controllers\DashboardStatsController;
 use App\Http\Controllers\ElectionController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\MembersController;
@@ -17,6 +18,7 @@ Route::middleware(['auth','check_onboarding'])->group(function () {
 
  // Regional Admin Profile & Dashboard Routes
  Route::get('/regional/dashboard', [RegionalAdminController::class, 'regionalAdminDashBoard'])->name('regionaladmin.dashboard')->middleware('access_level:regionaladmin');
+ Route::get('/regional/dashboard/stats', [DashboardStatsController::class, 'cards'])->name('regionaladmin.dashboard.stats')->middleware('access_level:regionaladmin');
  Route::get('/regional/profile', [RegionalAdminController::class, 'regionaladminProfile'])->name('regionaladmin.profile')->middleware('access_level:regionaladmin');
  Route::post('/regional/profile/store', [RegionalAdminController::class, 'regionaladminProfileStore'])->name('regionaladmin.profile.store')->middleware('access_level:regionaladmin');
  Route::get('/regional/change/password', [RegionalAdminController::class, 'regionaladminChangePassword'])->name('regionaladmin.change.password')->middleware('access_level:regionaladmin');
@@ -68,6 +70,10 @@ Route::get('/regional/region/members/data/{uuid}', [MembersController::class, 'g
 Route::get('/regional/members/bystate/{uuid?}', [MembersController::class, 'membersByStates'])->name('regionaladmin.members.byState')->middleware('access_level:regionaladmin,regionadmin,stateadmin');
 Route::get('/regional/members/state/{uuid}', [MembersController::class, 'ViewMembersByState'])->name('regionaladmin.member.state.view')->middleware('access_level:regionaladmin,regionadmin,regionadmin,stateadmin');
 Route::get('/regional/state/members/data/{uuid}', [MembersController::class, 'getStateMembersData'])->name('regionaladmin.state.members.data');
+// Members By Senatorial District
+Route::get('/regional/members/bysenatorialdistrict/{uuid?}', [MembersController::class, 'membersBySenatorialDistricts'])->name('regionaladmin.members.bySenatorialDistrict')->middleware('access_level:regionaladmin');
+// Members By Federal Constituency
+Route::get('/regional/members/byfederalconstituency/{uuid?}', [MembersController::class, 'membersByFederalConstituencies'])->name('regionaladmin.members.byFederalConstituency')->middleware('access_level:regionaladmin');
 // Members By Local Government
 Route::get('/regional/members/bylga/{uuid?}', [MembersController::class, 'membersByLocalGovernments'])->name('regionaladmin.members.byLga')->middleware('access_level:regionaladmin');
 Route::get('/regional/members/lga/{uuid}', [MembersController::class, 'viewMembersByLocalGovernments'])->name('regionaladmin.member.lga.view')->middleware('access_level:regionaladmin');
@@ -118,6 +124,20 @@ Route::post('/regional/location/state/store', [LocationController::class, 'store
 Route::get('/regional/location/state/edit/{uuid}', [LocationController::class, 'editState'])->name('regionaladmin.location.state.edit')->middleware('access_level:regionaladmin');
 Route::post('/regional/location/state/update/{uuid}', [LocationController::class, 'updateState'])->name('regionaladmin.location.state.update')->middleware('access_level:regionaladmin');
 Route::delete('/regional/location/state/delete/{uuid}', [LocationController::class, 'deleteState'])->name('regionaladmin.location.state.delete')->middleware('access_level:regionaladmin');
+
+// Manage Senatorial Districts
+Route::get('/regional/location/senatorial-district/dashboard/{uuid}', [RegionalAdminController::class, 'senatorialDistrictDashBoard'])->name('regionaladmin.location.senatorial-district.dashboard')->middleware('access_level:regionaladmin');
+Route::get('/regional/senatorial-district/member/distribution/gender/{uuid}', [ChartsController::class, 'GenderDistributionBySenatorialDistrict'])->name('regionaladmin.senatorial-district.member.distribution.gender')->middleware('access_level:regionaladmin');
+Route::get('/regional/senatorial-district/member/distribution/age/{uuid}', [ChartsController::class, 'AgeDistributionBySenatorialDistrict'])->name('regionaladmin.senatorial-district.member.distribution.age')->middleware('access_level:regionaladmin');
+Route::get('/regional/senatorial-district/member/distribution/lga/{uuid}', [ChartsController::class, 'lgaDistributionBySenatorialDistrict'])->name('regionaladmin.senatorial-district.member.distribution.lga')->middleware('access_level:regionaladmin');
+Route::get('/regional/senatorial-district/member/distribution/voter/{uuid}', [ChartsController::class, 'VoterDistributionBySenatorialDistrict'])->name('regionaladmin.senatorial-district.member.distribution.voter')->middleware('access_level:regionaladmin');
+
+// Manage Federal Constituencies
+Route::get('/regional/location/federal-constituency/dashboard/{uuid}', [RegionalAdminController::class, 'federalConstituencyDashBoard'])->name('regionaladmin.location.federal-constituency.dashboard')->middleware('access_level:regionaladmin');
+Route::get('/regional/federal-constituency/member/distribution/gender/{uuid}', [ChartsController::class, 'GenderDistributionByFederalConstituency'])->name('regionaladmin.federal-constituency.member.distribution.gender')->middleware('access_level:regionaladmin');
+Route::get('/regional/federal-constituency/member/distribution/age/{uuid}', [ChartsController::class, 'AgeDistributionByFederalConstituency'])->name('regionaladmin.federal-constituency.member.distribution.age')->middleware('access_level:regionaladmin');
+Route::get('/regional/federal-constituency/member/distribution/lga/{uuid}', [ChartsController::class, 'lgaDistributionByFederalConstituency'])->name('regionaladmin.federal-constituency.member.distribution.lga')->middleware('access_level:regionaladmin');
+Route::get('/regional/federal-constituency/member/distribution/voter/{uuid}', [ChartsController::class, 'VoterDistributionByFederalConstituency'])->name('regionaladmin.federal-constituency.member.distribution.voter')->middleware('access_level:regionaladmin');
 
 // manage Local Governments
 Route::get('/regional/location/localgovernment/dashboard/{uuid}', [RegionalAdminController::class, 'localGovernmentDashBoard'])->name('regionaladmin.location.lga.dashboard')->middleware('access_level:regionaladmin');
@@ -191,6 +211,7 @@ Route::post('/regional/import-polling-units', [LocationController::class, 'impor
 // Election Management CRUD
 
 Route::get('/regional/elections', [ElectionController::class, 'allElections'])->name('regionaladmin.elections')->middleware('access_level:regionaladmin');
+Route::get('/regional/election/operations-center', [ElectionController::class, 'operationsCenter'])->name('regionaladmin.election.operations')->middleware('access_level:regionaladmin');
 Route::get('/regional/election/add', [ElectionController::class, 'addElection'])->name('regionaladmin.election.add')->middleware('access_level:regionaladmin');
 Route::post('/regional/election/store', [ElectionController::class, 'storeElection'])->name('regionaladmin.election.store')->middleware('access_level:regionaladmin');
 Route::get('/regional/election/edit/{uuid}', [ElectionController::class, 'editElection'])->name('regionaladmin.election.edit')->middleware('access_level:regionaladmin');
@@ -201,7 +222,7 @@ Route::delete('/regional/election/delete/{uuid}', [ElectionController::class, 'd
 Route::get('/regional/election/result/{uuid}', [ElectionController::class, 'electionResult'])->name('regionaladmin.election.results')->middleware('access_level:regionaladmin');
 
 // Election PU Votes Report
-Route::get('/regional/election/votes/{uuid}', [ElectionController::class, 'manageVotesByPu'])->name('regionaladmin.election.votesByPu')->middleware('access_level:regionaladmin');
+Route::get('/regional/election/votes/{uuid?}', [ElectionController::class, 'manageVotesByPu'])->name('regionaladmin.election.votesByPu')->middleware('access_level:regionaladmin');
 Route::get('/regional/election/votes/data/{uuid}', [ElectionController::class, 'VotesByPuData'])->name('regionaladmin.election.votesByPuData')->middleware('access_level:regionaladmin');
 
 
@@ -232,4 +253,3 @@ Route::get('/regional/bulksms/send', [BulksmsController::class, 'index'])->name(
 Route::post('/regional/bulksms/send/sms', [BulkSmsController::class, 'sendsms'])->name('regionaladmin.bulksms.send.sms')->middleware('access_level:regionaladmin');
 
 });
-

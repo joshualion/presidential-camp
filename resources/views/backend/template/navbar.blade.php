@@ -14,8 +14,16 @@
       <li class="nav-item d-none d-sm-inline-block">
         <a href="#" class="nav-link"></a>
       </li>
+      <li class="nav-item d-none d-md-inline-block">
+        @php($packageContext = app(\App\Services\PackageGovernanceService::class)->context())
+        <span class="nav-link">
+          <span class="badge text-white" style="background-color: {{ $SystemSetting->dark_theme_color ?? '#008751' }}; border-color: {{ $SystemSetting->dark_theme_color ?? '#008751' }};">
+            {{ $packageContext['label'] }}
+          </span>
+        </span>
+      </li>
     </ul>
-  
+
 
     <!-- Right navbar links -->
     <ul class="navbar-nav ml-auto">
@@ -42,7 +50,7 @@
       </li>
 
       <!-- Message and notifications icons here -->
-      
+
       <li class="nav-item">
         <a class="nav-link" data-widget="fullscreen" href="#" role="button">
           <i class="fas fa-expand-arrows-alt"></i>

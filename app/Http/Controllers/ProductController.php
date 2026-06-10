@@ -148,7 +148,7 @@ class ProductController extends Controller
 
         if ($request->hasFile('image')) {
             $file = $request->file('image');
-            $filename = date('YmdHi') . $file->getClientOriginalName();
+            $filename = (string) Str::uuid() . '.' . $file->getClientOriginalExtension();
             $file->move(public_path('uploads/product_images/'), $filename);
         }
 
@@ -201,7 +201,7 @@ class ProductController extends Controller
         // Step 3: Handle File Uploads for Image (if a new image is provided)
         if ($request->hasFile('image')) {
             $file = $request->file('image');
-            $filename = date('YmdHi') . $file->getClientOriginalName();
+            $filename = (string) Str::uuid() . '.' . $file->getClientOriginalExtension();
             $file->move(public_path('uploads/product_images/'), $filename);
 
             // Remove the old image file if it exists

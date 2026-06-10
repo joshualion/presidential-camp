@@ -300,33 +300,33 @@
             @if(auth()->user()->access_level == 'superadmin' || auth()->user()->access_level == 'nationaladmin')
                 <option value="nationaladmin" {{ ($member->access_level == 'nationaladmin') ? 'selected' : '' }}>National Admin Access</option>
             @endif
-            
+
             @if(auth()->user()->access_level == 'superadmin' || auth()->user()->access_level == 'nationaladmin' || auth()->user()->access_level == 'regionaladmin')
                 <option value="regionaladmin" {{ ($member->access_level == 'regionaladmin') ? 'selected' : '' }}>Regional Admin Access</option>
             @endif
-            
+
             @if(auth()->user()->access_level == 'superadmin' || auth()->user()->access_level == 'nationaladmin' || auth()->user()->access_level == 'regionaladmin' || auth()->user()->access_level == 'stateadmin')
                 <option value="stateadmin" {{ ($member->access_level == 'stateadmin') ? 'selected' : '' }}>State Admin Access</option>
             @endif
-            
+
             @if(auth()->user()->access_level == 'superadmin' || auth()->user()->access_level == 'nationaladmin' || auth()->user()->access_level == 'regionaladmin' || auth()->user()->access_level == 'stateadmin' || auth()->user()->access_level == 'lgaadmin')
                 <option value="lgaadmin" {{ ($member->access_level == 'lgaadmin') ? 'selected' : '' }}>LGA Admin Access</option>
             @endif
-            
+
             @if(auth()->user()->access_level == 'superadmin' || auth()->user()->access_level == 'nationaladmin' || auth()->user()->access_level == 'regionaladmin' || auth()->user()->access_level == 'stateadmin' || auth()->user()->access_level == 'lgaadmin' || auth()->user()->access_level == 'wardadmin')
                 <option value="wardadmin" {{ ($member->access_level == 'wardadmin') ? 'selected' : '' }}>Ward Admin Access</option>
             @endif
-            
+
             @if(auth()->user()->access_level == 'superadmin' || auth()->user()->access_level == 'nationaladmin' || auth()->user()->access_level == 'regionaladmin' || auth()->user()->access_level == 'stateadmin' || auth()->user()->access_level == 'lgaadmin' || auth()->user()->access_level == 'wardadmin' || auth()->user()->access_level == 'puadmin')
                 <option value="puadmin" {{ ($member->access_level == 'puadmin') ? 'selected' : '' }}>Polling Unit Admin Access</option>
             @endif
-            
+
             <option value="user" {{ ($member->access_level == 'user') ? 'selected' : '' }}>Member Access</option>
-            
+
             @if(auth()->user()->access_level == 'superadmin')
                 <option value="superadmin" {{ ($member->access_level == 'superadmin') ? 'selected' : '' }}>Super Admin Access</option>
             @endif
-            
+
         </select>
         @error('access_level')
             <div class="invalid-feedback">{{ $message }}</div>
@@ -334,7 +334,7 @@
     </div>
 </div>
 
-@if(($profileData->hasRole('National ICT/Media Director')) || ($profileData->hasRole('Regional ICT/Media Director')) || ($profileData->hasAnyRole('State ICT/Media Director')) || ($profileData->hasAnyRole('LGA ICT/Media Director')) || ($profileData->hasAnyRole('Ward ICT/Media Director')) || ($profileData->hasAnyRole('PU ICT/Media Director')) || ( $profileData->access_level == 'superadmin'))
+@if(($profileData->hasRole('National ICT Director')) || ($profileData->hasRole('Regional ICT Director')) || ($profileData->hasAnyRole('State ICT Director')) || ($profileData->hasAnyRole('LGA ICT Director')) || ($profileData->hasAnyRole('Ward ICT Director')) || ($profileData->hasAnyRole('PU ICT Director')) || ( $profileData->access_level == 'superadmin'))
 
 
 <!-- Role -->

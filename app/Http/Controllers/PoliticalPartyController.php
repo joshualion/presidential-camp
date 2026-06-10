@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\View;
 use App\Models\PoliticalParty;
 use App\Models\User;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Str;
 
 class PoliticalPartyController extends Controller
 {
@@ -64,7 +65,7 @@ class PoliticalPartyController extends Controller
         $politicalParty->slogan = $request->slogan;
         if($request->hasFile('logo')){
             $file = $request->file('logo');
-            $logofilename = date('YmdHi') . $file->getClientOriginalName();
+            $logofilename = (string) Str::uuid() . '.' . $file->getClientOriginalExtension();
             $file->move(public_path('uploads/system_images/politicalparty/'), $logofilename);
             @unlink(public_path('uploads/system_images/politicalparty/') . $politicalParty->logo);
             $politicalParty->logo = $logofilename;
@@ -126,7 +127,7 @@ class PoliticalPartyController extends Controller
         $politicalParty->logo = null;
     } elseif ($request->hasFile('logo')) {
         $file = $request->file('logo');
-        $logofilename = date('YmdHi') . $file->getClientOriginalName();
+        $logofilename = (string) Str::uuid() . '.' . $file->getClientOriginalExtension();
         $file->move(public_path('uploads/system_images/politicalparty/'), $logofilename);
         @unlink(public_path('uploads/system_images/politicalparty/') . $politicalParty->logo);
         $politicalParty->logo = $logofilename;

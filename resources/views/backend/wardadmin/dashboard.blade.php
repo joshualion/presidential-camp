@@ -4,7 +4,7 @@
 
 <div class="card card-primary">
               <div class="card-header">
-                    <h3 class="card-title">{{$ward->name}} Ward Statistics</h3>
+                    <h3 class="card-title">{{ $dashboardMetrics['scope']['title'] ?? 'Dashboard Statistics' }}</h3>
                     <div class="card-tools">
                     <button type="button" class="btn btn-tool" data-card-widget="collapse">
                         <i class="fas fa-minus"></i>
@@ -15,161 +15,14 @@
                     </div>
               </div>
           <div class="card-body">
-
-                   <!-- Small boxes (Stat box) -->
-            <div class="row">
-                     <!-- col -->
-                    <div class="col-lg-4 col-4">
-                        <!-- small box -->
-                        <div class="small-box bg-success">
-                          <div class="inner">
-                          <h3>{{$puWithUsersCount}}</h3>
-                            <p>Out of <strong>{{$puCount}}</strong> PUs in {{$ward->name}}</p>
-                            <p style="float: right;">
-                              <b>
-                                  @php
-                                      if ($puCount > 0) {
-                                          echo number_format(($puWithUsersCount / $puCount) * 100, 2);
-                                      } else {
-                                          echo '0.00'; // Handle the case where $puCount is zero
-                                      }
-                                  @endphp %
-                              </b>
-                            </p>
-                          </div>
-                          <div class="icon">
-                            <i class="ion ion-pu"></i>
-                          </div>
-                          <a href="{{route($profileData->access_level.'.members.byPu', $ward->uuid)}}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
-                        </div>
-                    </div>
-                    <!-- ./col -->
-
-                     <!-- /col -->
-                    <div class="col-lg-4 col-4">
-                              <!-- small box -->
-                              <div class="small-box bg-primary">
-                                <div class="inner">
-                                <h3>{{$eligibleVotersCount}}</h3>
-                                  <p>Eligible Voters in {{$ward->name}} Ward</p>
-                                  <p style="float: right;">
-                                    <b>
-                                        @php
-                                            if ($userCount> 0) {
-                                                echo number_format(($eligibleVotersCount / $userCount) * 100, 2);
-                                            } else {
-                                                echo '0.00'; // Handle the case where $puCount is zero
-                                            }
-                                        @endphp %
-                                    </b>
-                                  </p>
-                                </div>
-                                <div class="icon">
-                                  <i class="ion ion-pu"></i>
-                                </div>
-                                <a href="#" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
-                              </div>
-                    </div>
-                            <!-- ./col -->
-
-
-                      <!-- /col -->
-                    <div class="col-lg-4 col-4">
-                        <!-- small box -->
-                        <div class="small-box bg-danger">
-                          <div class="inner">
-                          <h3>{{$inEligibleVotersCount}}</h3>
-                            <p>Ineligible voters in {{$ward->name}} Ward</p>
-                            <p style="float: right;">
-                              <b>
-                                  @php
-                                      if ($userCount> 0) {
-                                          echo number_format(($inEligibleVotersCount / $userCount) * 100, 2);
-                                      } else {
-                                          echo '0.00'; // Handle the case where $puCount is zero
-                                      }
-                                  @endphp %
-                              </b>
-                            </p>
-                          </div>
-                          <div class="icon">
-                            <i class="ion ion-pu"></i>
-                          </div>
-                          <a href="#" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
-                        </div>
-                      </div>
-                      <!-- ./col -->
-
-
-                    </div>
-                    <!-- ./col -->
-
-
-                  <!-- Small boxes (Stat box) -->
-                  <div class="row">
-                            <div class="col-lg-3 col-6">
-                              <!-- small box -->
-                              <div class="small-box bg-danger">
-                                <div class="inner">
-                                <h3>{{ $newMembers }}</h3>
-                                  <p>New Member(s) Today</p>
-                                  <p style="float: right;">
-
-                                  </p>
-                                </div>
-                                <div class="icon">
-                                  <i class="ion ion-map"></i>
-                                </div>
-                                <a href="#" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
-                              </div>
-                            </div>
-                            <!-- ./col -->
-                            <div class="col-lg-3 col-6">
-                              <!-- small box -->
-                              <div class="small-box bg-secondary">
-                                <div class="inner">
-                                  <h3>{{$excoCount}}</h3>
-
-                                  <p>Team Leaders</p>
-                                </div>
-                                <div class="icon">
-                                  <i class="ion ion-person"></i>
-                                </div>
-                                <a href="{{route($profileData->access_level.'.leaders', $ward->uuid)}}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
-                              </div>
-                            </div>
-                            <!-- ./col -->
-                            <div class="col-lg-3 col-6">
-                              <!-- small box -->
-                              <div class="small-box bg-primary">
-                                <div class="inner">
-                                  <h3>{{$memberCount}}</h3>
-                                  <p>Regular Members</p>
-                                </div>
-                                <div class="icon">
-                                  <i class="ion ion-person-add"></i>
-                                </div>
-                                <a href="{{route($profileData->access_level.'.regulars', $ward->uuid)}}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
-                              </div>
-                            </div>
-                            <!-- ./col -->
-                            <div class="col-lg-3 col-6">
-                              <!-- small box -->
-                              <div class="small-box bg-success">
-                                <div class="inner">
-                                  <h3>{{$userCount}}</h3>
-
-                                  <p>All Members</p>
-                                </div>
-                                <div class="icon">
-                                  <i class="ion ion-person"></i>
-                                </div>
-                                <a href="{{route($profileData->access_level.'.member.ward.view', $ward->uuid)}}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
-                              </div>
-                            </div> <!-- ./col -->
-                  </div><!-- /.row -->
+                    @include('backend.shared.dashboard-stat-grid', [
+                        'dashboardMetrics' => $dashboardMetrics,
+                        'groups' => ['coverage', 'people', 'membership_activity'],
+                    ])
           </div> <!-- /.card-body -->
 </div>
+
+@include('backend.shared.dashboard-election-stat-section', ['dashboardMetrics' => $dashboardMetrics])
 
 <!-- Demographics -->
 <div class="row">
@@ -187,7 +40,7 @@
                 <i class="fas fa-times"></i>
               </button>
             </div>
-          </div>
+          </div> 
           <div class="card-body" style="display: block;"><div class="chartjs-size-monitor"><div class="chartjs-size-monitor-expand"><div class=""></div></div><div class="chartjs-size-monitor-shrink"><div class=""></div></div></div>
             <canvas id="pieChart" style="min-height: 250px; height: 241px; max-height: 250px; max-width: 100%; display: block; width: 470px;" width="470" height="241" class="chartjs-render-monitor"></canvas>
           </div>
@@ -344,5 +197,10 @@
 </script>
 
 
+
+@include('backend.shared.dashboard-stat-polling', [
+    'statsEndpoint' => route('wardadmin.dashboard.stats'),
+    'pollInterval' => 30000,
+])
 
 @endsection

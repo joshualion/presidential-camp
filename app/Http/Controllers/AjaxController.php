@@ -5,7 +5,9 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\Country;
 use App\Models\Election;
+use App\Models\FederalConstituency;
 use App\Models\Region;
+use App\Models\SenatorialDistrict;
 use App\Models\User;
 use App\Models\Vote;
 use Illuminate\Http\Request;
@@ -17,6 +19,7 @@ use App\Models\PollingUnit;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Role;
+use App\Services\LocationScopeService;
 
 class AjaxController extends Controller
 {
@@ -57,6 +60,33 @@ class AjaxController extends Controller
         return response()->json($pollingUnit);
     }
 
+    public function ajaxGetSenatorialDistricts(Request $request)
+    {
+        $senatorialDistricts['senatorialDistricts'] = SenatorialDistrict::where('state_id', $request->state_id)
+            ->orderBy('name')
+            ->get(['name', 'id']);
+
+        return response()->json($senatorialDistricts);
+    }
+
+    public function ajaxGetFederalConstituenciesByState(Request $request)
+    {
+        $federalConstituencies['federalConstituencies'] = FederalConstituency::where('state_id', $request->state_id)
+            ->orderBy('name')
+            ->get(['name', 'id']);
+
+        return response()->json($federalConstituencies);
+    }
+
+    public function ajaxGetFederalConstituenciesBySenatorialDistrict(Request $request)
+    {
+        $federalConstituencies['federalConstituencies'] = FederalConstituency::where('senatorial_district_id', $request->senatorial_district_id)
+            ->orderBy('name')
+            ->get(['name', 'id']);
+
+        return response()->json($federalConstituencies);
+    }
+
 
     public function getRolesByAccessLevel($accessLevel)
         {
@@ -70,7 +100,7 @@ class AjaxController extends Controller
         public function  getLgaData()
         {
 
-            $lgas = LocalGovernmentArea::with('state')->orderBy('name');
+            $lgas = LocalGovernmentArea::with(['state.region', 'senatorialDistrict', 'federalConstituency'])->orderBy('name');
 
                 return datatables()->eloquent($lgas)
                             ->filterColumn('name', function ($query, $keyword) {
@@ -87,6 +117,16 @@ class AjaxController extends Controller
                                     $q->where('name', 'like', "%{$keyword}%");
                                 });
                             })
+                            ->filterColumn('senatorial_district', function ($query, $keyword) {
+                                $query->whereHas('senatorialDistrict', function ($q) use ($keyword) {
+                                    $q->where('name', 'like', "%{$keyword}%");
+                                });
+                            })
+                            ->filterColumn('federal_constituency', function ($query, $keyword) {
+                                $query->whereHas('federalConstituency', function ($q) use ($keyword) {
+                                    $q->where('name', 'like', "%{$keyword}%");
+                                });
+                            })
 
                     ->addIndexColumn() // This will automatically add a serial number column
                     ->addColumn('name', function($lga) {
@@ -98,6 +138,12 @@ class AjaxController extends Controller
                     })
                     ->addColumn('region', function($lga) {
                         return optional($lga->state->region)->name;
+                    })
+                    ->addColumn('senatorial_district', function($lga) {
+                        return optional($lga->senatorialDistrict)->name;
+                    })
+                    ->addColumn('federal_constituency', function($lga) {
+                        return optional($lga->federalConstituency)->name;
                     })
 
 
@@ -126,9 +172,103 @@ class AjaxController extends Controller
 
         }
 
+        public function getSenatorialDistrictData()
+        {
+            $districts = SenatorialDistrict::with('state')->orderBy('name');
+
+            return datatables()->eloquent($districts)
+                ->filterColumn('name', function ($query, $keyword) {
+                    $query->where('name', 'like', "%{$keyword}%");
+                })
+                ->filterColumn('state', function ($query, $keyword) {
+                    $query->whereHas('state', function ($q) use ($keyword) {
+                        $q->where('name', 'like', "%{$keyword}%");
+                    });
+                })
+                ->addIndexColumn()
+                ->addColumn('name', function($district) {
+                    return $district->name;
+                })
+                ->addColumn('state', function($district) {
+                    return optional($district->state)->name;
+                })
+                ->addColumn('action', function($district) {
+                    $profileData = $this->getProfileData();
+
+                    return '
+                        <a href="' . route($profileData->access_level.'.location.senatorial-district.edit', $district->uuid) . '">
+                            <button class="btn btn-success">
+                                <i class="fas fa-pencil-alt"></i> Edit
+                            </button>
+                        </a>
+                        <form action="' . route($profileData->access_level.'.location.senatorial-district.delete', $district->uuid) . '" method="POST" style="display:inline-block;" data-associated-users="false">
+                            ' . csrf_field() . method_field('DELETE') . '
+                            <button type="submit" class="btn btn-danger delete-btn">
+                                <i class="fas fa-trash"></i> Delete
+                            </button>
+                        </form>
+                    ';
+                })
+                ->rawColumns(['action'])
+                ->make(true);
+        }
+
+        public function getFederalConstituencyData()
+        {
+            $constituencies = FederalConstituency::with(['state', 'senatorialDistrict'])->orderBy('name');
+
+            return datatables()->eloquent($constituencies)
+                ->filterColumn('name', function ($query, $keyword) {
+                    $query->where('name', 'like', "%{$keyword}%");
+                })
+                ->filterColumn('state', function ($query, $keyword) {
+                    $query->whereHas('state', function ($q) use ($keyword) {
+                        $q->where('name', 'like', "%{$keyword}%");
+                    });
+                })
+                ->filterColumn('senatorial_district', function ($query, $keyword) {
+                    $query->whereHas('senatorialDistrict', function ($q) use ($keyword) {
+                        $q->where('name', 'like', "%{$keyword}%");
+                    });
+                })
+                ->addIndexColumn()
+                ->addColumn('name', function($constituency) {
+                    return $constituency->name;
+                })
+                ->addColumn('state', function($constituency) {
+                    return optional($constituency->state)->name;
+                })
+                ->addColumn('senatorial_district', function($constituency) {
+                    return optional($constituency->senatorialDistrict)->name;
+                })
+                ->addColumn('action', function($constituency) {
+                    $profileData = $this->getProfileData();
+
+                    return '
+                        <a href="' . route($profileData->access_level.'.location.federal-constituency.edit', $constituency->uuid) . '">
+                            <button class="btn btn-success">
+                                <i class="fas fa-pencil-alt"></i> Edit
+                            </button>
+                        </a>
+                        <form action="' . route($profileData->access_level.'.location.federal-constituency.delete', $constituency->uuid) . '" method="POST" style="display:inline-block;" data-associated-users="false">
+                            ' . csrf_field() . method_field('DELETE') . '
+                            <button type="submit" class="btn btn-danger delete-btn">
+                                <i class="fas fa-trash"></i> Delete
+                            </button>
+                        </form>
+                    ';
+                })
+                ->rawColumns(['action'])
+                ->make(true);
+        }
+
         public function getWardData()
         {
-            $wards = Ward::with('localGovernmentArea.state.region');
+            $wards = Ward::with([
+                'localGovernmentArea.state.region',
+                'localGovernmentArea.senatorialDistrict',
+                'localGovernmentArea.federalConstituency'
+            ]);
 
 
                 return datatables()->eloquent($wards)
@@ -150,6 +290,16 @@ class AjaxController extends Controller
                         $q->where('name', 'like', "%{$keyword}%");
                     });
                 })
+                ->filterColumn('senatorial_district', function ($query, $keyword) {
+                    $query->whereHas('localGovernmentArea.senatorialDistrict', function ($q) use ($keyword) {
+                        $q->where('name', 'like', "%{$keyword}%");
+                    });
+                })
+                ->filterColumn('federal_constituency', function ($query, $keyword) {
+                    $query->whereHas('localGovernmentArea.federalConstituency', function ($q) use ($keyword) {
+                        $q->where('name', 'like', "%{$keyword}%");
+                    });
+                })
                     ->addIndexColumn() // This will automatically add a serial number column
                     ->addColumn('name', function($ward) {
                         return $ward->name;
@@ -162,6 +312,12 @@ class AjaxController extends Controller
                     })
                     ->addColumn('region', function($ward) {
                         return optional($ward->localGovernmentArea->state->region)->name;
+                    })
+                    ->addColumn('senatorial_district', function($ward) {
+                        return optional($ward->localGovernmentArea->senatorialDistrict)->name;
+                    })
+                    ->addColumn('federal_constituency', function($ward) {
+                        return optional($ward->localGovernmentArea->federalConstituency)->name;
                     })
 
                     ->addColumn('action', function($ward) {
@@ -191,64 +347,94 @@ class AjaxController extends Controller
 
 
 
-    public function getPUData()
-    {
-        $pus = PollingUnit::with('ward.localGovernmentArea.state.region');
-        return datatables()->eloquent($pus)
-                ->filterColumn('name', function ($query, $keyword) {
-                    $query->where('name', 'like', "%{$keyword}%");
-                })
-                ->filterColumn('ward', function ($query, $keyword) {
-                    $query->whereHas('ward', function ($q) use ($keyword) {
-                        $q->where('name', 'like', "%{$keyword}%");
-                    });
-                })
+        public function getPUData()
+        {
+            $pus = PollingUnit::with([
+                'ward.localGovernmentArea.state.region',
+                'ward.localGovernmentArea.senatorialDistrict',
+                'ward.localGovernmentArea.federalConstituency',
+                'senatorialDistrict',
+                'federalConstituency'
+            ]);
+            return datatables()->eloquent($pus)
+                    ->filterColumn('name', function ($query, $keyword) {
+                        $query->where('name', 'like', "%{$keyword}%");
+                    })
+                    ->filterColumn('ward', function ($query, $keyword) {
+                        $query->whereHas('ward', function ($q) use ($keyword) {
+                            $q->where('name', 'like', "%{$keyword}%");
+                        });
+                    })
 
-                ->filterColumn('state', function ($query, $keyword) {
-                    $query->whereHas('ward.localGovernmentArea.state', function ($q) use ($keyword) {
-                        $q->where('name', 'like', "%{$keyword}%");
-                    });
+                    ->filterColumn('state', function ($query, $keyword) {
+                        $query->whereHas('ward.localGovernmentArea.state', function ($q) use ($keyword) {
+                            $q->where('name', 'like', "%{$keyword}%");
+                        });
+                    })
+                    ->filterColumn('region', function ($query, $keyword) {
+                        $query->whereHas('ward.localGovernmentArea.state.region', function ($q) use ($keyword) {
+                            $q->where('name', 'like', "%{$keyword}%");
+                        });
+                    })
+                    ->filterColumn('senatorial_district', function ($query, $keyword) {
+                        $query->where(function ($q) use ($keyword) {
+                            $q->whereHas('senatorialDistrict', function ($subQuery) use ($keyword) {
+                                $subQuery->where('name', 'like', "%{$keyword}%");
+                            })->orWhereHas('ward.localGovernmentArea.senatorialDistrict', function ($subQuery) use ($keyword) {
+                                $subQuery->where('name', 'like', "%{$keyword}%");
+                            });
+                        });
+                    })
+                    ->filterColumn('federal_constituency', function ($query, $keyword) {
+                        $query->where(function ($q) use ($keyword) {
+                            $q->whereHas('federalConstituency', function ($subQuery) use ($keyword) {
+                                $subQuery->where('name', 'like', "%{$keyword}%");
+                            })->orWhereHas('ward.localGovernmentArea.federalConstituency', function ($subQuery) use ($keyword) {
+                                $subQuery->where('name', 'like', "%{$keyword}%");
+                            });
+                        });
+                    })
+                ->addIndexColumn()
+                ->addColumn('name', function($pu) {
+                    return $pu->name;
                 })
-                ->filterColumn('region', function ($query, $keyword) {
-                    $query->whereHas('ward.localGovernmentArea.state.region', function ($q) use ($keyword) {
-                        $q->where('name', 'like', "%{$keyword}%");
-                    });
+                ->addColumn('ward', function($pu) {
+                    return optional($pu->ward)->name;
                 })
-            ->addIndexColumn()
-            ->addColumn('name', function($pu) {
-                return $pu->name;
-            })
-            ->addColumn('ward', function($pu) {
-                return optional($pu->ward)->name;
-            })
-            ->addColumn('lga', function($pu) {
-                return optional($pu->ward->localGovernmentArea)->name;
-            })
-            ->addColumn('state', function($pu) {
-                return optional($pu->ward->localGovernmentArea->state)->name;
-            })
-            ->addColumn('region', function($pu) {
-                return optional($pu->ward->localGovernmentArea->state->region)->name;
-            })
-            ->addColumn('action', function($pu) {
-                $profileData = $this->getProfileData();
-                return '
-                    <a href="' . route($profileData->access_level . '.location.pu.edit', $pu->uuid) . '">
-                        <button class="btn btn-success btn-sm">
-                            <i class="fas fa-pencil-alt"></i> Edit
-                        </button>
-                    </a>
-                    <form action="' . route($profileData->access_level . '.location.pu.delete', $pu->uuid) . '" method="POST" style="display:inline-block;" data-associated-users="false">
-                        ' . csrf_field() . method_field('DELETE') . '
-                        <button type="submit" class="btn btn-danger btn-sm delete-btn">
-                            <i class="fas fa-trash"></i> Delete
-                        </button>
-                    </form>
-                ';
-            })
-            ->rawColumns(['action'])
-            ->make(true);
-    }
+                ->addColumn('lga', function($pu) {
+                    return optional($pu->ward->localGovernmentArea)->name;
+                })
+                ->addColumn('state', function($pu) {
+                    return optional($pu->ward->localGovernmentArea->state)->name;
+                })
+                ->addColumn('region', function($pu) {
+                    return optional($pu->ward->localGovernmentArea->state->region)->name;
+                })
+                ->addColumn('senatorial_district', function($pu) {
+                    return optional($pu->senatorialDistrict)->name ?: optional($pu->ward->localGovernmentArea->senatorialDistrict)->name;
+                })
+                ->addColumn('federal_constituency', function($pu) {
+                    return optional($pu->federalConstituency)->name ?: optional($pu->ward->localGovernmentArea->federalConstituency)->name;
+                })
+                ->addColumn('action', function($pu) {
+                    $profileData = $this->getProfileData();
+                    return '
+                        <a href="' . route($profileData->access_level . '.location.pu.edit', $pu->uuid) . '">
+                            <button class="btn btn-success btn-sm">
+                                <i class="fas fa-pencil-alt"></i> Edit
+                            </button>
+                        </a>
+                        <form action="' . route($profileData->access_level . '.location.pu.delete', $pu->uuid) . '" method="POST" style="display:inline-block;" data-associated-users="false">
+                            ' . csrf_field() . method_field('DELETE') . '
+                            <button type="submit" class="btn btn-danger btn-sm delete-btn">
+                                <i class="fas fa-trash"></i> Delete
+                            </button>
+                        </form>
+                    ';
+                })
+                ->rawColumns(['action'])
+                ->make(true);
+        }
 
 
 
@@ -274,6 +460,22 @@ class AjaxController extends Controller
                                         ->whereIn('lga_id', $lgas)
                                         ->orderBy('name', 'asc');
                            } else {
+                               $senatorialDistrict = SenatorialDistrict::where('uuid', $uuid)->first();
+
+                               if ($senatorialDistrict) {
+                                   $lgas = LocalGovernmentArea::where('senatorial_district_id', $senatorialDistrict->id)->pluck('id');
+                                   $wards = Ward::with('localGovernmentArea')
+                                            ->whereIn('lga_id', $lgas)
+                                            ->orderBy('name', 'asc');
+                               } else {
+                               $federalConstituency = FederalConstituency::where('uuid', $uuid)->first();
+
+                               if ($federalConstituency) {
+                                   $lgas = LocalGovernmentArea::where('federal_constituency_id', $federalConstituency->id)->pluck('id');
+                                   $wards = Ward::with('localGovernmentArea')
+                                            ->whereIn('lga_id', $lgas)
+                                            ->orderBy('name', 'asc');
+                               } else {
                                $region = Region::where('uuid', $uuid)->first();
 
                                if ($region) {
@@ -295,6 +497,8 @@ class AjaxController extends Controller
                                                 whereIn('lga_id', $lgas)
                                                 ->orderBy('name', 'asc');
                                    }
+                               }
+                               }
                                }
                            }
                        }
@@ -322,15 +526,21 @@ class AjaxController extends Controller
                        return optional($ward->localGovernmentArea)->name;
                    })
                    ->addColumn('members', function($ward) {
-                     return $ward->users()->count();
+                     return  '<span class="badge badge-secondary">'. $ward->users()->count().'</span>';
                    })
+                   ->addColumn('eligible_voters', function($ward) {
+                    return '<span class="badge badge-success">'. $ward->users()->where('validVoter', 'yes')->count().'</span>';
+                  })
+                  ->addColumn('ineligible_voters', function($ward) {
+                    return '<span class="badge badge-danger">'. $ward->users()->where('validVoter', 'no')->count().'</span>';
+                  })
                    ->addColumn('action', function($ward) {
                     $profileData = $this->getProfileData();
                     $button = '';
 
                     return '
                         <a href="' . route($profileData->access_level.'.member.ward.view', $ward->uuid) . '">
-                            <button class="btn btn-danger ">
+                            <button class="btn btn-secondary">
                                 <i class="fas fa-eye"></i> View Members
                             </button>
                         </a>
@@ -344,7 +554,7 @@ class AjaxController extends Controller
                     ';
                    })
 
-                ->rawColumns(['members', 'action']) // Ensures that HTML in the 'role' and 'action' columns is rendered properly
+                ->rawColumns(['members', 'eligible_voters', 'ineligible_voters', 'action']) // Ensures that HTML in the 'role' and 'action' columns is rendered properly
                 ->make(true);
 
     }
@@ -370,6 +580,24 @@ class AjaxController extends Controller
                 $lgas = LocalGovernmentArea::where('state_id', $state->id)->pluck('id');
                 $wards = Ward::whereIn('lga_id', $lgas)->pluck('id');
                 $pollingUnits = PollingUnit::whereIn('ward_id', $wards)
+                                            ->orderBy('name', 'ASC');
+
+            } elseif ($senatorialDistrict = SenatorialDistrict::where('uuid', $uuid)->first()) {
+                $lgas = LocalGovernmentArea::where('senatorial_district_id', $senatorialDistrict->id)->pluck('id');
+                $wards = Ward::whereIn('lga_id', $lgas)->pluck('id');
+                $pollingUnits = PollingUnit::where(function ($query) use ($senatorialDistrict, $wards) {
+                                                $query->where('senatorial_district_id', $senatorialDistrict->id)
+                                                    ->orWhereIn('ward_id', $wards);
+                                            })
+                                            ->orderBy('name', 'ASC');
+
+            } elseif ($federalConstituency = FederalConstituency::where('uuid', $uuid)->first()) {
+                $lgas = LocalGovernmentArea::where('federal_constituency_id', $federalConstituency->id)->pluck('id');
+                $wards = Ward::whereIn('lga_id', $lgas)->pluck('id');
+                $pollingUnits = PollingUnit::where(function ($query) use ($federalConstituency, $wards) {
+                                                $query->where('federal_constituency_id', $federalConstituency->id)
+                                                    ->orWhereIn('ward_id', $wards);
+                                            })
                                             ->orderBy('name', 'ASC');
 
             } elseif ($region = Region::where('uuid', $uuid)->first()) {
@@ -406,15 +634,19 @@ class AjaxController extends Controller
                    })
                    ->addIndexColumn() // This will automatically add a serial number column
 
-                   ->addColumn('ward', function($pollingUnits) {
-                       return optional($pollingUnits->ward)->name;
-                   })
+
                    ->addColumn('pu', function($pollingUnits) {
                     return $pollingUnits->name;
                 })
-                   ->addColumn('members', function($pollingUnits) {
-                     return $pollingUnits->users()->count();
+                    ->addColumn('members', function($ward) {
+                     return  '<span class="badge badge-secondary">'. $ward->users()->count().'</span>';
                    })
+                   ->addColumn('eligible_voters', function($ward) {
+                    return '<span class="badge badge-success">'. $ward->users()->where('validVoter', 'yes')->count().'</span>';
+                  })
+                  ->addColumn('ineligible_voters', function($ward) {
+                    return '<span class="badge badge-danger">'. $ward->users()->where('validVoter', 'no')->count().'</span>';
+                  })
                    ->addColumn('action', function($pollingUnits) {
                     $profileData = $this->getProfileData();
                     $button = '';
@@ -435,18 +667,75 @@ class AjaxController extends Controller
                     ';
                    })
 
-                ->rawColumns(['members', 'action']) // Ensures that HTML in the 'role' and 'action' columns is rendered properly
+                ->rawColumns(['members', 'eligible_voters', 'ineligible_voters', 'action']) // Ensures that HTML in the 'role' and 'action' columns is rendered properly
                 ->make(true);
 
     }
 
+    public function eligibleMembersByPusAjax($uuid = null)
+    {
+        if ($uuid) {
+            if ($ward = Ward::where('uuid', $uuid)->first()) {
+                $pollingUnits = PollingUnit::where('ward_id', $ward->id)->orderBy('name', 'ASC');
+            } elseif ($lga = LocalGovernmentArea::where('uuid', $uuid)->first()) {
+                $wards = Ward::where('lga_id', $lga->id)->pluck('id');
+                $pollingUnits = PollingUnit::whereIn('ward_id', $wards)->orderBy('name', 'ASC');
+            } elseif ($state = State::where('uuid', $uuid)->first()) {
+                $lgas = LocalGovernmentArea::where('state_id', $state->id)->pluck('id');
+                $wards = Ward::whereIn('lga_id', $lgas)->pluck('id');
+                $pollingUnits = PollingUnit::whereIn('ward_id', $wards)->orderBy('name', 'ASC');
+            } elseif ($region = Region::where('uuid', $uuid)->first()) {
+                $states = State::where('region_id', $region->id)->pluck('id');
+                $lgas = LocalGovernmentArea::whereIn('state_id', $states)->pluck('id');
+                $wards = Ward::whereIn('lga_id', $lgas)->pluck('id');
+                $pollingUnits = PollingUnit::whereIn('ward_id', $wards)->orderBy('name', 'ASC');
+            } elseif ($country = Country::where('uuid', $uuid)->first()) {
+                $regions = Region::where('country_id', $country->id)->pluck('id');
+                $states = State::whereIn('region_id', $regions)->pluck('id');
+                $lgas = LocalGovernmentArea::whereIn('state_id', $states)->pluck('id');
+                $wards = Ward::whereIn('lga_id', $lgas)->pluck('id');
+                $pollingUnits = PollingUnit::whereIn('ward_id', $wards)->orderBy('name', 'ASC');
+            }
+        } else {
+            $pollingUnits = PollingUnit::query()->orderBy('name', 'ASC');
+        }
+
+        return datatables()->eloquent($pollingUnits)
+            ->addIndexColumn()
+            ->addColumn('pu', fn($pu) => $pu->name)
+            ->addColumn('members', fn($pu) => $pu->users()->where('validVoter', 'yes')->count())
+            ->addColumn('action', function ($pu) {
+                $profileData = $this->getProfileData();
+                return '
+                    <a href="' . route($profileData->access_level.'.eligible.member.pu.view', $pu->uuid) . '">
+                        <button class="btn btn-danger">
+                            <i class="fas fa-eye"></i> View Eligible Members
+                        </button>
+                    </a>
+                    <a href="' . route($profileData->access_level.'.location.pu.dashboard', $pu->uuid) . '">
+                        <button class="btn btn-success">
+                            <i class="fas fa-chart-bar"></i> PU Dashboard
+                        </button>
+                    </a>
+                ';
+            })
+            ->rawColumns(['action'])
+            ->make(true);
+    }
 
 
-    //SMS Ajax Methods  
+
+
+
+
+
+
+
+    //SMS Ajax Methods
 
 public function getGroupRecipients(Request $request)
 {
-    
+
     $recipientsQuery = User::query()
     ->where('access_level' ,'!=', 'superadmin')
     ->whereNotNull('phone');
@@ -470,8 +759,9 @@ public function getGroupRecipients(Request $request)
         $recipientsQuery->where('polling_unit_id', $request->pu_id);
     }
 
-     
-  
+    app(LocationScopeService::class)->applyScope($recipientsQuery, $this->getProfileData(), 'users', 'users');
+
+
 
     $total = $recipientsQuery->count();
 
@@ -480,8 +770,8 @@ public function getGroupRecipients(Request $request)
 
 
 
-    
-    
+
+
 
 
 

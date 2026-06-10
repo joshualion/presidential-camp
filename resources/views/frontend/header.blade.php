@@ -1,38 +1,57 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>
-        @if($SystemSetting)
-        {{$pageTitle}} - {{$SystemSetting->system_name}}
-        @else
-        Political Campaign & Election Management Solution
-        @endif
-    </title>
-     @vite(['resources/js/app.js'])
+<title>
+    @if($SystemSetting)
+    {{$pageTitle}} - {{$SystemSetting->system_name}}
+    @else
+    Political Campaign & Election Management Solution
+    @endif
+</title>
+{{-- Load app CSS + JS through Vite to ensure Vue and styles are included in dev and prod --}}
+@vite(['resources/css/app.css', 'resources/js/app.js'])
 
-    <!-- Bootstrap 5 CSS -->
-    <link id="bootstrap-css" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    
-    <!-- FontAwesome Icons -->
-    <link id="fontawesome-css" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+<!-- jQuery (needed by legacy scripts on the page) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
 
-      <!-- SweetAlerts -->
-  <link rel="stylesheet" href="{{asset('assets/plugins/sweetalert2/sweetalert2.min.css')}}" />
+<!-- Bootstrap 5 CSS -->
+<link id="bootstrap-css" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 
-    <!-- Custom CSS -->    
-    <link rel="stylesheet" href="{{asset('frontend/css/style.css')}}"> 
-    <link id="theme-stylesheet" href="{{asset('frontend/css/theme-light.css')}}" rel="stylesheet">
-    <style>
-    
+<!-- FontAwesome Icons -->
+<link id="fontawesome-css" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+
+  <!-- SweetAlerts -->
+<link rel="stylesheet" href="{{asset('assets/plugins/sweetalert2/sweetalert2.min.css')}}" />
+
+<!-- Custom CSS -->
+<link rel="stylesheet" href="{{asset('frontend/css/style.css')}}">
+<link id="theme-stylesheet" href="{{asset('frontend/css/theme-light.css')}}" rel="stylesheet">
+
+@php
+    if (!empty($SystemSetting->favicon)) {
+        $favicon = asset('uploads/system_images/' . $SystemSetting->favicon);
+    } else {
+        $favicon = null;
+    }
+@endphp
+
+@if($favicon)
+    <link rel="icon" type="image/png" href="{{ asset($favicon) }}">
+    <link rel="apple-touch-icon" href="{{ asset($favicon) }}">
+@else
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('apple-touch-icon.png') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('favicon-32x32.png') }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('favicon-16x16.png') }}">
+@endif
+
+<style>
+
     html, body {
-  height: 100%;
-  margin: 0;
-  overflow-y: auto; /* Ensure the scrollbar is for the entire page */
-}
+    height: 100%;
+    margin: 0;
+    overflow-y: auto; /* Ensure the scrollbar is for the entire page */
+    }
 
   .btn-xs{
     padding: 0.25rem 0.5rem; /* Adjust padding */
@@ -46,34 +65,34 @@
     font-family: 'Arial', sans-serif; /* Ensure it matches your theme */
     border-radius: 8px;
   }
-  
+
   .swal2-title {
     color: {{ $SystemSetting->dark_theme_color ?? ' #008751'}} !important; /* Adjust title color */
   }
-  
+
   .swal2-confirm {
     background-color: {{ $SystemSetting->dark_theme_color ?? ' #008751'}} !important; /* Your theme’s primary button color */
     color: white !important;
     border-radius: 6px;
     padding: 8px 16px;
   }
-  
+
   .swal2-cancel {
     background-color: #dc3545 !important; /* Your theme’s danger color */
     color: white !important;
     border-radius: 6px;
     padding: 8px 16px;
   }
-  
+
   .swal2-confirm:hover {
     background-color:{{ $SystemSetting->dark_theme_color ?? ' #008751'}} !important;
     color: {{ $SystemSetting->light_theme_color ?? ' #008751'}} !important;
   }
-  
+
   .swal2-cancel:hover {
     background-color: #b52b32 !important;
   }
-       
+
       /* Custom Styles */
     .navbar-nav .nav-link {
         transition: transform 0.3s, box-shadow 0.3s;
@@ -85,29 +104,29 @@
     }
 
 
-        
+
     h1{
       color: {{ $SystemSetting->dark_theme_color ?? ' #008751'}} !important;
     }
 
     .os-scrollbar{
      background-color: {{ $SystemSetting->dark_theme_color ?? ' #008751'}} !important;
-      
+
     }
 
     .embossed-image {
             position: relative;
             display: inline-block;
-            filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.9)) 
+            filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.9))
                     drop-shadow(-2px -2px 4px rgba(255, 255, 255, 0.1));
             /* Adjust these values for different embossing effects */
         }
 
-        
+
 
      .bg-primary{
      background-color: {{ $SystemSetting->dark_theme_color ?? ' #008751'}} !important;
-     
+
     }
 
     h5 {
@@ -163,13 +182,14 @@
 
     .card-title{
       text-transform:uppercase;
-      color: #c3e6cb;
+     /* color: #c3e6cb; */
+    color: {{ $SystemSetting->light_theme_color ?? '#fafaf1' }} !important;
     }
 
     .profile-sidebar-text{
         font-size:14px !important;
-        color: {{ $SystemSetting->dark_theme_color ?? '#008751'}} !important;        
-      
+        color: {{ $SystemSetting->dark_theme_color ?? '#008751'}} !important;
+
     }
 
     .navbar-bg{
@@ -228,11 +248,11 @@
         .profile-nav, a{
             text-transform: capitalize !important;
             color: {{ $SystemSetting->dark_theme_color ?? '#008751' }} !important;
-            
-        }
-        
 
-        /* Navbar Styles */      
+        }
+
+
+        /* Navbar Styles */
         .navbar {
             background-color:#f8f9fa ; /* Success green for navbar */
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
@@ -280,8 +300,9 @@
 
         .sidebar .nav-link.active,
         .sidebar .nav-link:hover {
-            background-color: #c3e6cb; /* Lighter green for active and hover */
-            color: {{ $SystemSetting->dark_theme_color ?? ' #008751'}} !important; 
+            /* background-color: #c3e6cb; Lighter green for active and hover */
+            background-color: {{ $SystemSetting->light_theme_color ?? ' #fafaf1'}} !important;
+            color: {{ $SystemSetting->dark_theme_color ?? ' #008751'}} !important;
         }
 
         /* General Styling */
@@ -311,5 +332,4 @@
           display: block; /* Remove any extra space below the image */
         }
 
-    </style>
-</head>
+</style>

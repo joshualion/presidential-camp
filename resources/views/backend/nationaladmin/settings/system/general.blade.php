@@ -3,7 +3,7 @@
 
 
 @php
- $packages = array('national');
+ $packages = app(\App\Services\PackageGovernanceService::class)->options();
 @endphp
 
 <section class="content">

@@ -19,10 +19,20 @@
                     <form action="{{ route($profileData->access_level.'.election.store') }}" method="POST" enctype="multipart/form-data">
                         @csrf
 
+                        <div class="form-group row">                            
+                            <label for="name" class="col-sm-4 col-form-label">Which State Election?</label>
+                            <div class="col-sm-8">
+                                <input type="text" class="form-control @error('name') @enderror" name="name" required placeholder="example: Governorship Election" />
+
+                            </div>
+                            @error('name')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        
+                        </div>
 
                         <div class="form-group row">
-                            <input type="hidden" name="name" value="Presidential Election" />
-
+                    
                             <label for="party_id" class="col-sm-4 col-form-label">Choose Your Political Party</label>
                             <div class="col-sm-8">
                             <select  class="form-control @error('party_id') is-invalid @enderror" name="party_id" id="party_id">

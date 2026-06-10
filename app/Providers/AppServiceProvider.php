@@ -2,6 +2,13 @@
 
 namespace App\Providers;
 
+use App\Models\ElectionIncident;
+use App\Models\PictureEvidence;
+use App\Models\PollingUnitResult;
+use App\Models\User;
+use App\Models\VideoEvidence;
+use App\Models\Vote;
+use App\Observers\DashboardStatSnapshotObserver;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Schema;
@@ -26,7 +33,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-       
+        User::observe(DashboardStatSnapshotObserver::class);
+        Vote::observe(DashboardStatSnapshotObserver::class);
+        PollingUnitResult::observe(DashboardStatSnapshotObserver::class);
+        ElectionIncident::observe(DashboardStatSnapshotObserver::class);
+        PictureEvidence::observe(DashboardStatSnapshotObserver::class);
+        VideoEvidence::observe(DashboardStatSnapshotObserver::class);
 
         if(Schema::hasTable('s_m_t_p_settings')){
             $smtpSettings = SMTPSetting::first();

@@ -1,10 +1,8 @@
 @extends('backend.template.backend-master')
 @section('content')
-
-
 <div class="card card-primary">
               <div class="card-header">
-                    <h3 class="card-title">{{$state->name}} Statistics</h3>
+                    <h3 class="card-title">{{ $dashboardMetrics['scope']['title'] ?? 'Dashboard Statistics' }}</h3>
                     <div class="card-tools">
                     <button type="button" class="btn btn-tool" data-card-widget="collapse">
                         <i class="fas fa-minus"></i>
@@ -15,182 +13,15 @@
                     </div>
               </div>
           <div class="card-body">
+                    @include('backend.shared.dashboard-stat-grid', [
+                        'dashboardMetrics' => $dashboardMetrics,
+                        'groups' => ['coverage', 'people', 'membership_activity'],
+                    ])
 
-                   <!-- Small boxes (Stat box) -->
-                  <div class="row">
-
-                    <!-- ./col -->
-                    <div class="col-lg-3 col-6">
-                      <!-- small box -->
-                      <div class="small-box bg-success">
-                        <div class="inner">
-                          <h3>{{$statesWithUsersCount}}</h3>
-                          <p>Out of <strong>{{$stateCount}}</strong> State</p>
-                          <p style="float: right;">
-                            <b>
-                                @php
-                                    if ($stateCount > 0) {
-                                        echo number_format(($statesWithUsersCount / $stateCount) * 100, 2);
-                                    } else {
-                                        echo '0.00'; // Handle the case where $lgaCount is zero
-                                    }
-                                @endphp %
-                            </b>
-                          </p>
-                        </div>
-                        <div class="icon">
-                          <i class="ion ion-lga"></i>
-                        </div>
-                        <a href="{{route($profileData->access_level.'.members.byLga', $state->uuid)}}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
-                      </div>
-                    </div>
-                    <!-- ./col -->
-
-                            <!-- ./col -->
-                            <div class="col-lg-3 col-6">
-                              <!-- small box -->
-                              <div class="small-box bg-warning">
-                                <div class="inner">
-                                  <h3>{{$lgasWithUsersCount}}</h3>
-                                  <p>Out of <strong>{{$lgaCount}}</strong> LGAs in {{$state->name}}</p>
-                                  <p style="float: right;">
-                                    <b>
-                                        @php
-                                            if ($lgaCount > 0) {
-                                                echo number_format(($lgasWithUsersCount / $lgaCount) * 100, 2);
-                                            } else {
-                                                echo '0.00'; // Handle the case where $lgaCount is zero
-                                            }
-                                        @endphp %
-                                    </b>
-                                  </p>
-                                </div>
-                                <div class="icon">
-                                  <i class="ion ion-lga"></i>
-                                </div>
-                                <a href="{{route($profileData->access_level.'.members.byLga', $state->uuid)}}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
-                              </div>
-                            </div>
-                            <!-- ./col -->
-                            <div class="col-lg-3 col-6">
-                              <!-- small box -->
-                              <div class="small-box bg-info">
-                                <div class="inner">
-                                <h3>{{$wardWithUsersCount}}</h3>
-                                  <p>Out of <strong>{{$wardCount}}</strong> Wards in {{$state->name}}</p>
-                                  <p style="float: right;">
-                                    <b>
-                                        @php
-                                            if ($wardCount > 0) {
-                                                echo number_format(($wardWithUsersCount / $wardCount) * 100, 2);
-                                            } else {
-                                                echo '0.00'; // Handle the case where $wardCount is zero
-                                            }
-                                        @endphp %
-                                    </b>
-                                  </p>
-                                </div>
-                                <div class="icon">
-                                  <i class="ion ion-ward"></i>
-                                </div>
-                                <a href="{{route($profileData->access_level.'.members.byWard', $state->uuid)}}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
-                              </div>
-                            </div>
-                            <!-- ./col -->
-                            <div class="col-lg-3 col-6">
-                              <!-- small box -->
-                              <div class="small-box bg-danger">
-                                <div class="inner">
-                                <h3>{{$puWithUsersCount}}</h3>
-                                  <p>Out of <strong>{{$puCount}}</strong> PUs in {{$state->name}}</p>
-                                  <p style="float: right;">
-                                    <b>
-                                        @php
-                                            if ($puCount > 0) {
-                                                echo number_format(($puWithUsersCount / $puCount) * 100, 2);
-                                            } else {
-                                                echo '0.00'; // Handle the case where $puCount is zero
-                                            }
-                                        @endphp %
-                                    </b>
-                                  </p>
-                                </div>
-                                <div class="icon">
-                                  <i class="ion ion-pu"></i>
-                                </div>
-                                <a href="{{route($profileData->access_level.'.members.byPu', $state->uuid)}}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
-                              </div>
-                            </div>
-                            <!-- ./col -->
-
-
-                  </div><!-- /.row -->
-
-                  <!-- Small boxes (Stat box) -->
-                  <div class="row">
-                            <div class="col-lg-3 col-6">
-                              <!-- small box -->
-                              <div class="small-box bg-danger">
-                                <div class="inner">
-                                <h3>{{ $newMembers }}</h3>
-                                  <p>New Member(s) Today</p>
-                                  <p style="float: right;">
-
-                                  </p>
-                                </div>
-                                <div class="icon">
-                                  <i class="ion ion-map"></i>
-                                </div>
-                                <a href="#" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
-                              </div>
-                            </div>
-                            <!-- ./col -->
-                            <div class="col-lg-3 col-6">
-                              <!-- small box -->
-                              <div class="small-box bg-secondary">
-                                <div class="inner">
-                                  <h3>{{$excoCount}}</h3>
-
-                                  <p>Team Leaders</p>
-                                </div>
-                                <div class="icon">
-                                  <i class="ion ion-person"></i>
-                                </div>
-                                <a href="{{route($profileData->access_level.'.leaders', $state->uuid)}}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
-                              </div>
-                            </div>
-                            <!-- ./col -->
-                            <div class="col-lg-3 col-6">
-                              <!-- small box -->
-                              <div class="small-box bg-primary">
-                                <div class="inner">
-                                  <h3>{{$memberCount}}</h3>
-                                  <p>Regular Members</p>
-                                </div>
-                                <div class="icon">
-                                  <i class="ion ion-person-add"></i>
-                                </div>
-                                <a href="{{route($profileData->access_level.'.regulars', $state->uuid)}}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
-                              </div>
-                            </div>
-                            <!-- ./col -->
-                            <div class="col-lg-3 col-6">
-                              <!-- small box -->
-                              <div class="small-box bg-success">
-                                <div class="inner">
-                                  <h3>{{$userCount}}</h3>
-
-                                  <p>All Members</p>
-                                </div>
-                                <div class="icon">
-                                  <i class="ion ion-person"></i>
-                                </div>
-                                <a href="{{route($profileData->access_level.'.member.state.view', $state->uuid)}}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
-                              </div>
-                            </div> <!-- ./col -->
-                  </div><!-- /.row -->
           </div> <!-- /.card-body -->
 </div>
+
+@include('backend.shared.dashboard-election-stat-section', ['dashboardMetrics' => $dashboardMetrics])
 
 <!-- Demographics -->
 <div class="row">
@@ -532,5 +363,10 @@
 </script>
 
 
+
+@include('backend.shared.dashboard-stat-polling', [
+    'statsEndpoint' => route('stateadmin.dashboard.stats'),
+    'pollInterval' => 30000,
+])
 
 @endsection

@@ -19,12 +19,13 @@ class CheckUserOnboarding
     {
         $user = Auth::user();
 
+
         // Step 1: Check if credentials need to be updated
         if ($this->requiresCredentialUpdate($user)) {
             return redirect()->route('update.credentials');
         }
 
-        
+
         // Step 2: Check if profile is incomplete
         if (!$this->isProfileComplete($user)) {
             return redirect()->route('complete.profile');
@@ -47,12 +48,11 @@ class CheckUserOnboarding
      */
     protected function requiresCredentialUpdate($user): bool
     {
-        // Dynamic checks: email contains @example.com or password is "password"
-        $dynamicCheck = strpos($user->email, '@example.com') !== false || 
-                        Hash::check('password', $user->password);
+         // Example rules: reject test emails or default password
+        $badEmail = str_contains($user->email, '@example.com');
+        $badPassword = Hash::check('password', $user->password);
 
-        // Static check: requires_update column in the database
-        return $dynamicCheck || $user->requires_update;
+        return $badEmail || $badPassword || $user->requires_update;
     }
 
     /**
@@ -63,6 +63,29 @@ class CheckUserOnboarding
      */
     protected function isProfileComplete($user): bool
     {
-        return $user->firstname && $user->lastname && $user->phone && $user->lga_id;
+        $requireBank = optional(\App\Models\SystemSetting::first())->require_bank_details;
+        $hasBank = $user->bank && $user->bank_account_number;
+
+        $baseComplete = $user->firstname && $user->lastname && $user->phone;
+        $locationComplete = match ($user->access_level) {
+            'nationaladmin' => true,
+            'regionaladmin' => !empty($user->region_id),
+            'stateadmin' => !empty($user->state_id),
+            'senatorialadmin' => !empty($user->senatorial_district_id),
+            'federaladmin' => !empty($user->federal_constituency_id),
+            'lgaadmin' => !empty($user->lga_id),
+            'wardadmin' => !empty($user->ward_id),
+            'puadmin', 'user' => !empty($user->polling_unit_id),
+            default => !empty($user->lga_id) && !empty($user->ward_id) && !empty($user->polling_unit_id),
+        };
+
+        if ($requireBank && $user->access_level !== 'user') {
+            if (!$hasBank) {
+                session()->flash('warning', 'Bank details are required. Please update your profile.');
+            }
+            return $baseComplete && $locationComplete && $hasBank;
+        }
+
+        return $baseComplete && $locationComplete;
     }
 }

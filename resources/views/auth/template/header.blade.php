@@ -29,14 +29,27 @@
 
 {{-- Favicon --}}
 
-<link rel="apple-touch-icon" sizes="180x180" href="{{asset('/apple-touch-icon.png')}}">
-<link rel="icon" type="image/png" sizes="32x32" href="{{asset('/favicon-32x32.png')}}">
-<link rel="icon" type="image/png" sizes="16x16" href="{{asset('/favicon-16x16.png')}}">
+@php
+    if (!empty($SystemSetting->favicon)) {
+        $favicon = asset('uploads/system_images/' . $SystemSetting->favicon);
+    } else {
+        $favicon = null;
+    }
+@endphp
+
+@if($favicon)
+    <link rel="icon" type="image/png" href="{{ asset($favicon) }}">
+    <link rel="apple-touch-icon" href="{{ asset($favicon) }}">
+@else
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('apple-touch-icon.png') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('favicon-32x32.png') }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('favicon-16x16.png') }}">
+@endif
+
 <link rel="manifest" href="{{asset('/site.webmanifest')}}">
   <style>
      body {
       background-image: url("{{ !empty($SystemSetting->login_page_background) ? asset('uploads/system_images/' . $SystemSetting->login_page_background) : asset('aso-rock.jpg') }}");
-       
       background-size: cover;
       background-repeat: no-repeat;
       background-attachment: fixed;
@@ -66,7 +79,7 @@
 <div class="register-box">
   <div class="register-logo">
     <a href="/">
-        <img src="{{ !empty($SystemSetting->logo) ? url('uploads/system_images/'.$SystemSetting->logo) : url('logo.png') }}" alt="Logo" class="brand-image" width="40%" height="40%" >
+        <img src="{{ !empty($SystemSetting->logo) ? url('uploads/system_images/'.$SystemSetting->logo) : url('logo.png') }}" alt="Logo" class="brand-image" style="opacity: .8; width:150px;height:auto;">
 
     </a>
 

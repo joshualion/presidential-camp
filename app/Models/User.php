@@ -9,17 +9,49 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Spatie\Permission\Traits\HasRoles;
+use App\Models\Concerns\HasLocationScope;
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable, HasRoles;
+    use HasFactory, Notifiable, HasRoles, HasLocationScope;
 
     /**
-     * The attributes that are mass assignable.
+     * Explicitly define safe mass-assignable attributes to prevent privilege escalation.
      *
      * @var array<int, string>
      */
-    protected $guarded = [];
+    protected $fillable = [
+        'firstname',
+        'lastname',
+        'username',
+        'email',
+        'password',
+        'country_id',
+        'region_id',
+        'state_id',
+        'senatorial_district_id',
+        'federal_constituency_id',
+        'lga_id',
+        'ward_id',
+        'polling_unit_id',
+        'religion_id',
+        'age_grade_id',
+        'phone',
+        'validVoter',
+        'vin',
+        'bank',
+        'bank_account_number',
+        'address',
+        'occupation',
+        'qualification',
+        'photo',
+        'cover_image',
+        'access_level',
+        'referral_code',
+        'referred_by',
+        'status',
+        'requires_update',
+    ];
 
     /**
      * The attributes that should be hidden for serialization.
@@ -72,6 +104,14 @@ class User extends Authenticatable
 
     public function pollingUnit(){
        return $this->belongsTo(PollingUnit::class);
+    }
+
+    public function senatorialDistrict(){
+        return $this->belongsTo(SenatorialDistrict::class);
+    }
+
+    public function federalConstituency(){
+        return $this->belongsTo(FederalConstituency::class);
     }
 
     public function religion(){
@@ -142,6 +182,8 @@ class User extends Authenticatable
             'superadmin', 'nationaladmin' => 'public',
             'regionaladmin' => 'region',
             'stateadmin' => 'state',
+            'senatorialadmin' => 'senatorial',
+            'federaladmin' => 'federal',
             'lgaadmin' => 'lga',
             'wardadmin' => 'ward',
             'puadmin', 'user' => 'pu',
@@ -199,6 +241,49 @@ class User extends Authenticatable
         }
         return $hasPermission;
     }
+
+
+    public function referrals()
+{
+    return $this->hasMany(Referral::class, 'referrer_id');
+}
+
+public function invitedBy()
+{
+    return $this->belongsTo(User::class, 'referred_by');
+}
+
+public function invitees()
+{
+    return $this->hasMany(User::class, 'referred_by');
+}
+
+
+        protected static function booted()
+        {
+            static::creating(function ($user) {
+                if (empty($user->referral_code)) {
+                    $user->referral_code = self::generateReferralCode();
+                }
+            });
+        }
+
+        public static function generateReferralCode()
+        {
+            do {
+                $code = strtoupper(Str::random(6));
+            } while (self::where('referral_code', $code)->exists());
+
+            return $code;
+        }
+
+
+
+        public function getReferralLinkAttribute()
+        {
+            return url('/register?ref=' . $this->referral_code);
+        }
+
 
 
      //boot method for uuid

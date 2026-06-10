@@ -1,7 +1,7 @@
 @extends('backend.template.backend-master')
 @section('content')
 
-@php 
+@php
  $state = \App\Models\State::find(Auth::user()->state_id);
 @endphp
 
@@ -23,8 +23,10 @@
                                     <thead>
                                     <tr>
                                         <th>S/N</th>
-                                        <th>Local Government Area</th>
+                                        <th>LGA</th>
                                         <th>Members</th>
+                                        <th>Eligible Voters</th>
+                                        <th>Ineligible Voters</th>
                                         <th>Action</th>
                                     </tr>
                                     </thead>
@@ -40,7 +42,20 @@
 
                                                 </td>
                                                 <td>
-                                                    <a href="{{ route($profileData->access_level.'.member.lga.view', $lga->uuid) }}"><button class="btn btn-danger"><i class="fas fa-eye"></i> View Members</button></a>
+                                                    <span class="badge bg-success text-white">
+                                                        {{ $lga->users->where('access_level', '!=', 'superadmin') ->where('validVoter', 'yes')->count() }}
+                                                    </span>
+
+                                                </td>
+
+                                                  <td>
+                                                    <span class="badge bg-danger text-white">
+                                                        {{ $lga->users->where('access_level', '!=', 'superadmin') ->where('validVoter', 'no')->count() }}
+                                                    </span>
+
+                                                </td>
+                                                <td>
+                                                    <a href="{{ route($profileData->access_level.'.member.lga.view', $lga->uuid) }}"><button class="btn btn-secondary"><i class="fas fa-eye"></i> View Members</button></a>
 
                                                     <a href="{{ route($profileData->access_level.'.location.lga.dashboard', $lga->uuid) }}" > <button class="btn btn-success "><i class="fas fa-chart-line"></i> Goto LGA Dashboard</button></a>
                                                 </td>
@@ -52,8 +67,10 @@
                                     <tfoot>
                                     <tr>
                                         <th>S/N</th>
-                                        <th>Local Government Area</th>
+                                        <th>LGA</th>
                                         <th>Members</th>
+                                        <th>Eligible Voters</th>
+                                        <th>Ineligible Voters</th>
                                         <th>Action</th>
                                     </tr>
                                     </tfoot>

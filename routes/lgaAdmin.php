@@ -5,6 +5,7 @@ use App\Http\Controllers\AjaxController;
 use App\Http\Controllers\BulksmsController;
 use App\Http\Controllers\BulkSmsSettingController;
 use App\Http\Controllers\ChartsController;
+use App\Http\Controllers\DashboardStatsController;
 use App\Http\Controllers\ElectionController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\MembersController;
@@ -19,6 +20,7 @@ Route::middleware(['auth','check_onboarding'])->group(function () {
 
  // Regional Admin Profile & Dashboard Routes
  Route::get('/lga/dashboard', [LgaAdminController::class, 'lgaAdminDashBoard'])->name('lgaadmin.dashboard')->middleware('access_level:lgaadmin');
+ Route::get('/lga/dashboard/stats', [DashboardStatsController::class, 'cards'])->name('lgaadmin.dashboard.stats')->middleware('access_level:lgaadmin');
  Route::get('/lga/profile', [LgaAdminController::class, 'lgaadminProfile'])->name('lgaadmin.profile')->middleware('access_level:lgaadmin');
  Route::post('/lga/profile/store', [LgaAdminController::class, 'lgaadminProfileStore'])->name('lgaadmin.profile.store')->middleware('access_level:lgaadmin');
  Route::get('/lga/change/password', [LgaAdminController::class, 'lgaadminChangePassword'])->name('lgaadmin.change.password')->middleware('access_level:lgaadmin');
@@ -189,6 +191,7 @@ Route::post('/lga/import-polling-units', [LocationController::class, 'importPoll
 
 // Election Management CRUD
 Route::get('/lga/elections', [ElectionController::class, 'allElections'])->name('lgaadmin.elections')->middleware('access_level:lgaadmin');
+Route::get('/lga/election/operations-center', [ElectionController::class, 'operationsCenter'])->name('lgaadmin.election.operations')->middleware('access_level:lgaadmin');
 Route::get('/lga/election/add', [ElectionController::class, 'addElection'])->name('lgaadmin.election.add')->middleware('access_level:lgaadmin');
 Route::post('/lga/election/store', [ElectionController::class, 'storeElection'])->name('lgaadmin.election.store')->middleware('access_level:lgaadmin');
 Route::get('/lga/election/edit/{uuid}', [ElectionController::class, 'editElection'])->name('lgaadmin.election.edit')->middleware('access_level:lgaadmin');
@@ -199,7 +202,7 @@ Route::delete('/lga/election/delete/{uuid}', [ElectionController::class, 'delete
 Route::get('/lga/election/result/{uuid}', [ElectionController::class, 'electionResult'])->name('lgaadmin.election.results')->middleware('access_level:lgaadmin');
 
 // Election PU Votes Report
-Route::get('/lga/election/votes/{uuid}', [ElectionController::class, 'manageVotesByPu'])->name('lgaadmin.election.votesByPu')->middleware('access_level:lgaadmin');
+Route::get('/lga/election/votes/{uuid?}', [ElectionController::class, 'manageVotesByPu'])->name('lgaadmin.election.votesByPu')->middleware('access_level:lgaadmin');
 Route::get('/lga/election/votes/data/{uuid}', [ElectionController::class, 'VotesByPuData'])->name('lgaadmin.election.votesByPuData')->middleware('access_level:lgaadmin');
 
 
@@ -230,4 +233,3 @@ Route::get('/lga/bulksms/send', [BulksmsController::class, 'index'])->name('lgaa
 Route::post('/lga/bulksms/send/sms', [BulkSmsController::class, 'sendsms'])->name('lgaadmin.bulksms.send.sms')->middleware('access_level:lgaadmin');
 
 });
-

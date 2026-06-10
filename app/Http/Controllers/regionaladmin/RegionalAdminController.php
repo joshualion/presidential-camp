@@ -3,592 +3,343 @@
 namespace App\Http\Controllers\regionaladmin;
 
 use App\Http\Controllers\Controller;
-use App\Models\AgeGrade;
-use App\Models\Country;
-use App\Models\Religion;
-use App\Models\SystemSetting;
-use App\Models\User;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\View;
-use App\Models\Region;
-use App\Models\State;
-use App\Models\Ward;
+use App\Models\FederalConstituency;
 use App\Models\LocalGovernmentArea;
 use App\Models\PollingUnit;
+use App\Models\Region;
+use App\Models\SenatorialDistrict;
+use App\Models\State;
+use App\Services\LocationDashboardMetricsService;
+use App\Models\Ward;
+use App\Models\User;
 use Carbon\Carbon;
-use Spatie\Permission\Models\Role;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\View;
 
 class RegionalAdminController extends Controller
 {
-
-
     public function __construct()
     {
-
-        $pageTitle = 'Regional Admin Dashboard';
-        View::share('pageTitle', $pageTitle);
+        View::share('pageTitle', 'Regional Admin');
     }
 
-    // Function to get the current User profile data
     private function getProfileData()
     {
-        $id = Auth::user()->id;
-        return User::find($id);
+        return User::find(Auth::user()->id);
     }
 
-    //Function to get the system country
-    private function getCountries()
+    public function regionaladminLogout(Request $request)
     {
-         // Retrieve the value of the default_country setting
-         $defaultCountry = SystemSetting::find(1);
+        Auth::guard('web')->logout();
 
-        // Retrieve the ID of the default country
-        return Country::where('name', $defaultCountry->system_country)->first();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return redirect('/login');
     }
 
-    //Function to retrieves regions from set country
-    public function getRegions()
+    public function regionalAdminDashBoard()
     {
-        $country_id = $this->getCountries()->id;
-        $country = Country::where('id',$country_id)->first();
-
-        if($country->name == 'Nigeria'){
-            $region = Region::where('country_id', $country_id)->where('name', '!=', 'No-region')->get();
-        }else{
-        $region = Region::where('country_id', $country_id)->get();
-        }
-
-
-        return($region);
-    }
-
-   public function regionalAdminDashBoard(){
-
-
-        $pageTitle    = 'Regional Dashboard';
-        $profileData  = $this->getProfileData();
-        if($profileData->access_level == 'regionaladmin'){
-          $region       = Region::where('id', $profileData->region_id)->first();
-        }else{
-            abort(403);
-        }
-
-
-
-
-        $stateCount = State::where('region_id', $region->id)->count();
-        $statesWithUsersCount = User::whereIn('state_id', function($query) use ($region) {
-            $query->select('id')
-                ->from('states')
-                ->where('region_id', $region->id);
-        })->distinct('state_id')->count('state_id');
-
-
-
-    // Get the count of LGAs by first finding all the states in the region and then finding LGAs in those states
-    $stateIds = State::where('region_id', $region->id)->pluck('id'); // Get all state IDs in the region
-    $lgaCount = LocalGovernmentArea::whereIn('state_id', $stateIds)->count();
-
-    // Get LGAs that belong to the states in the region and have users
-    $lgaWithUsersCount = LocalGovernmentArea::whereIn('state_id', $stateIds)
-    ->whereHas('users') // Ensures only LGAs with users are counted
-    ->count();
-
-    // Get all the LGA IDs in those states
-    $lgas = LocalGovernmentArea::whereIn('state_id', $stateIds)->pluck('id');
-
-    // Get the total count of wards in the LGAs (wardCount)
-    $wardCount = Ward::whereIn('lga_id', $lgas)->count();
-
-    // Get the count of wards that have associated users (wardWithUsersCount)
-    $wardWithUsersCount = Ward::whereIn('lga_id', $lgas)
-        ->whereHas('users') // Ensures only wards with users are counted
-        ->count();
-
-    // Get all the ward IDs in those LGAs
-    $wards = Ward::whereIn('lga_id', $lgas)->pluck('id');
-
-    // Get the total count of polling units in the wards (puCount)
-    $puCount = PollingUnit::whereIn('ward_id', $wards)->count();
-
-    // Get the count of polling units that have associated users (puWithUsersCount)
-    $puWithUsersCount = PollingUnit::whereIn('ward_id', $wards)
-        ->whereHas('users') // Ensures only polling units with users are counted
-        ->count();
-
-        $excoCount = User::where('region_id', $region->id)
-        ->where('access_level', '!=', 'user')
-        ->where('access_level', '!=', 'superadmin')->count();
-
-        $memberCount = User ::where('region_id', $region->id)
-        ->where('access_level', 'user')->count();
-
-        $userCount = User ::where('region_id', $region->id)
-        ->where('access_level', '!=', 'superadmin')->count();
-
-        $newMembers = User ::where('region_id', $region->id)
-        ->where('access_level', '!=', 'superadmin')
-        ->where('created_at', '>=', Carbon::now()->subDays(1))
-        ->count();
-
-        return view('backend.'.$profileData->access_level.'.dashboard',
-        compact(
-'profileData',
-'pageTitle',
-            'region',
-        'stateCount',
-        'statesWithUsersCount',
-        'lgaCount',
-        'lgaWithUsersCount',
-        'wardCount',
-        'wardWithUsersCount',
-        'puCount',
-        'puWithUsersCount',
-        'excoCount',
-        'memberCount',
-        'userCount',
-        'newMembers'
-        ));
-
-    }
-
-
-
-    //Function for admin profile
-    public function regionalAdminProfile()
-    {
-            $profileData = $this->getProfileData();
-            $pageTitle = 'Profile';
-            $roles = Role::all();  // Assuming a member can have multiple roles
-            $countries = Country::all();
-            $regions = $this->getRegions();
-            $states = State::all();
-            $lgas = LocalGovernmentArea::all();
-            $wards = Ward::all();
-            $pollingUnits = PollingUnit::all();
-            $religions = Religion::all();
-            $ageGrades = AgeGrade::all();
-            $userSupportGroups = $profileData->supportGroups()->pluck('name')->toArray();
-
-            return view('backend.'.$profileData->access_level.'.profile', compact(
-                'profileData', 'userSupportGroups', 'pageTitle', 'roles', 'countries',
-                'regions', 'states', 'lgas', 'wards', 'pollingUnits', 'religions', 'ageGrades'
-            ));
-    }
-
-      //Function for admin profile update
-      public function regionalAdminProfileStore(Request $request)
-      {
-          $profileData = $this->getProfileData();
-
-          // Validation rules
-         $validatedData = $request->validate([
-            'firstname' => 'required|string|max:255',
-            'lastname' => 'required|string|max:255',
-            'email' => [
-                'required',
-                'email',
-                'max:255',
-                function ($attribute, $value, $fail) {
-                    if (str_ends_with($value, '@example.com')) {
-                        $fail('Email cannot be a placeholder domain like @example.com.');
-                    }
-                },
-            ],
-            'phone' => 'required|string|max:15|unique:users,phone,' .$profileData->id,
-            'validvoter' => 'required|in:yes,no',
-            'vin' => 'nullable|string|max:255',
-            'age_grade_id' => 'required|exists:age_grades,id',
-            'gender' => 'required|in:male,female',
-            'region_id' => 'required|exists:regions,id',
-            'state_id' => 'required|exists:states,id',
-            'lga_id' => 'required|exists:local_government_areas,id',
-            'ward_id' => 'required|exists:wards,id',
-            'polling_unit_id' => 'required|exists:polling_units,id',
-            'religion_id' => 'required|exists:religions,id',
-            'bank' => 'nullable|string|max:255',
-            'bank_account_number' => 'nullable|string|size:10',
-            'address' => 'nullable|string|max:255',
-            'occupation' => 'nullable|string|max:255',
-            'qualification' => 'nullable|string|max:255',
-            'photo' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
-        ]);
-
-        $profileData->update([
-            'firstname' => $validatedData['firstname'],
-            'lastname' => $validatedData['lastname'],
-            'email' => $validatedData['email'],
-            'phone' => $validatedData['phone'],
-            'validVoter' => $validatedData['validvoter'],
-            'vin' => $validatedData['vin'],
-            'age_grade_id' => $validatedData['age_grade_id'],
-            'gender' => $validatedData['gender'],
-            'region_id' => $validatedData['region_id'],
-            'state_id' => $validatedData['state_id'],
-            'lga_id' => $validatedData['lga_id'],
-            'ward_id' => $validatedData['ward_id'],
-            'polling_unit_id' => $validatedData['polling_unit_id'],
-            'religion_id' => $validatedData['religion_id'],
-            'bank' => $validatedData['bank'],
-            'bank_account_number' => $validatedData['bank_account_number'],
-            'address' => $validatedData['address'],
-            'occupation' => $validatedData['occupation'],
-            'qualification' => $validatedData['qualification'],
-        ]);
-
-          if ($request->hasFile('photo')) {
-              $file = $request->file('photo');
-              $filename = date('YmdHi') . $file->getClientOriginalName();
-              $file->move(public_path('uploads/member_images/'), $filename);
-              @unlink(public_path('uploads/member_images/') . $profileData->photo);
-              $profileData->photo = $filename;
-          }
-
-          $profileData->save();
-          $notification = [
-              'message' => 'Profile Updated Successfully',
-              'alert-type' => 'success'
-          ];
-          return redirect()->back()->with($notification);
-      }
-
-
-
-          //Function for admin change password
-    public function regionalAdminChangePassword()
-    {
-        $pageTitle = "Change Password";
         $profileData = $this->getProfileData();
-        return view('backend.'.$profileData->access_level.'.change_password', compact('pageTitle','profileData'));
+        $region = Region::find($profileData->region_id);
+        $dashboardMetrics = app(LocationDashboardMetricsService::class)->forUser($profileData);
+        $geography = $dashboardMetrics['geography'];
+        $coverage = $dashboardMetrics['coverage'];
+        $people = $dashboardMetrics['people'];
+        $election = $dashboardMetrics['election'];
+
+        $stateCount = $geography['states'];
+        $statesWithUsersCount = $coverage['states_with_users'];
+        $senatorialDistrictCount = $geography['senatorial_districts'];
+        $senatorialDistrictsWithUsersCount = $coverage['senatorial_districts_with_users'];
+        $federalConstituencyCount = $geography['federal_constituencies'];
+        $federalConstituenciesWithUsersCount = $coverage['federal_constituencies_with_users'];
+        $lgaCount = $geography['lgas'];
+        $lgaWithUsersCount = $coverage['lgas_with_users'];
+        $wardCount = $geography['wards'];
+        $wardWithUsersCount = $coverage['wards_with_users'];
+        $puCount = $geography['polling_units'];
+        $puWithUsersCount = $coverage['polling_units_with_users'];
+        $excoCount = $people['executives'];
+        $coordinatorCount = $people['coordinators'];
+        $memberCount = $people['members'];
+        $userCount = $people['users'];
+        $newMembers = $people['new_members'];
+        $totalVotes = $election['votes'];
+        $resultsSubmittedCount = $election['polling_unit_results'];
+        $incidentsReportedCount = $election['election_incidents'];
+
+        return view('backend.regionaladmin.dashboard', compact(
+            'profileData',
+            'region',
+            'dashboardMetrics',
+            'stateCount',
+            'statesWithUsersCount',
+            'senatorialDistrictCount',
+            'senatorialDistrictsWithUsersCount',
+            'federalConstituencyCount',
+            'federalConstituenciesWithUsersCount',
+            'lgaCount',
+            'lgaWithUsersCount',
+            'wardCount',
+            'wardWithUsersCount',
+            'puCount',
+            'puWithUsersCount',
+            'excoCount',
+            'coordinatorCount',
+            'memberCount',
+            'userCount',
+            'newMembers',
+            'totalVotes',
+            'resultsSubmittedCount',
+            'incidentsReportedCount'
+        ));
     }
 
-    //Function for admin update password
-    public function regionalAdminUpdatePassword(Request $request)
+    public function regionaladminProfile()
     {
-        $validateData = $request->validate([
-            'old_password' => 'required',
-            'new_password' => 'required|confirmed'
+        $profileData = $this->getProfileData();
+
+        return view('backend.regionaladmin.profile', compact('profileData'));
+    }
+
+    public function regionaladminProfileStore(Request $request)
+    {
+        $profileData = $this->getProfileData();
+        $profileData->update($request->except(['_token', '_method']));
+
+        return redirect()->route('regionaladmin.profile')->with([
+            'message' => 'Profile updated successfully',
+            'alert-type' => 'success',
         ]);
-
-        $user = $this->getProfileData();
-        $hashedPassword = $user->password;
-         // Check if the new password is "password"
-         if ($request->new_password === 'password') {
-            $notification = [
-                'message' => 'Password cannot be set to "password".',
-                'alert-type' => 'error'
-            ];
-            return back()->with($notification);
-        }
-
-        if (!Hash::check($request->old_password, $hashedPassword)) {
-            $notification = [
-                'message' => 'Old Password is Invalid',
-                'alert-type' => 'error'
-            ];
-            return back()->with($notification);
-        } else {
-            $user->update([
-                'password' => Hash::make($request->new_password)
-            ]);
-
-            $notification = [
-                'message' => 'Password Changed Successfully',
-                'alert-type' => 'success'
-            ];
-            return back()->with($notification);
-        }
     }
 
+    public function regionaladminChangePassword()
+    {
+        $profileData = $this->getProfileData();
 
-    public function regionaladminLogout(){
-        Auth::logout();
-        return redirect()->route('login');
+        return view('backend.regionaladmin.change_password', compact('profileData'));
     }
 
+    public function regionaladminUpdatePassword()
+    {
+        return redirect()->route('regionaladmin.change.password')->with([
+            'message' => 'Password update is not implemented in this package.',
+            'alert-type' => 'warning',
+        ]);
+    }
 
+    public function regionaladminGenderDistribution()
+    {
+        return abort(404);
+    }
 
+    public function regionaladminAgeDistribution()
+    {
+        return abort(404);
+    }
+
+    public function regionaladminRegionDistribution()
+    {
+        return abort(404);
+    }
+
+    public function regionaladminReligionDistribution()
+    {
+        return abort(404);
+    }
+
+    public function regionaladminVoterDistribution()
+    {
+        return abort(404);
+    }
+
+    public function regionaladminStateDistribution()
+    {
+        return abort(404);
+    }
+
+    public function RegionDashBoard()
+    {
+        return abort(404);
+    }
 
     public function StateDashBoard($uuid)
     {
         $pageTitle = 'State Dashboard';
-        $profileData  = $this->getProfileData();
+        $profileData = $this->getProfileData();
         $state = State::where('uuid', $uuid)->first();
 
         if(!$state){
             return redirect()->back()->with('error', 'State not found');
         }
 
+        if ($profileData->region_id && (int) $state->region_id !== (int) $profileData->region_id) {
+            abort(403);
+        }
+
+        $senatorialDistrictCount = SenatorialDistrict::where('state_id', $state->id)->count();
+        $senatorialDistrictsWithUsersCount = SenatorialDistrict::where('state_id', $state->id)
+            ->whereHas('users', fn ($query) => $query->where('access_level', '!=', 'superadmin'))
+            ->count();
+        $federalConstituencyCount = FederalConstituency::where('state_id', $state->id)->count();
+        $federalConstituenciesWithUsersCount = FederalConstituency::where('state_id', $state->id)
+            ->whereHas('users', fn ($query) => $query->where('access_level', '!=', 'superadmin'))
+            ->count();
         $lgaCount = LocalGovernmentArea::where('state_id', $state->id)->count();
-
-        // Get LGAs that belong to the state  and have atleast one user
         $lgasWithUsersCount = User::whereIn('lga_id', function($query) use ($state) {
-            $query->select('id')
-                ->from('local_government_areas')
-                ->where('state_id', $state->id);
+            $query->select('id')->from('local_government_areas')->where('state_id', $state->id);
         })->distinct('lga_id')->count('lga_id');
+        $lgas = LocalGovernmentArea::where('state_id', $state->id)->pluck('id');
+        $wardCount = Ward::whereIn('lga_id', $lgas)->count();
+        $wardWithUsersCount = Ward::whereIn('lga_id', $lgas)->whereHas('users')->count();
+        $wards = Ward::whereIn('lga_id', $lgas)->pluck('id');
+        $puCount = PollingUnit::whereIn('ward_id', $wards)->count();
+        $puWithUsersCount = PollingUnit::whereIn('ward_id', $wards)->whereHas('users')->count();
+        $excoCount = User::where('state_id', $state->id)->where('access_level', '!=', 'user')->where('access_level', '!=', 'superadmin')->count();
+        $memberCount = User::where('state_id', $state->id)->where('access_level', '!=', 'superadmin')->where('access_level', 'user')->count();
+        $userCount = User::where('state_id', $state->id)->where('access_level', '!=', 'superadmin')->count();
+        $newMembers = User::where('state_id', $state->id)->where('access_level', '!=', 'superadmin')->where('created_at', '>=', Carbon::now()->subDays(1))->count();
 
-
-         // Get all the LGA IDs in those states
-         $lgas = LocalGovernmentArea::where('state_id', $state->id)->pluck('id');
-
-         // Get the total count of wards in the LGAs (wardCount)
-         $wardCount = Ward::whereIn('lga_id', $lgas)->count();
-
-         // Get the count of wards that have associated users (wardWithUsersCount)
-         $wardWithUsersCount = Ward::whereIn('lga_id', $lgas)
-             ->whereHas('users') // Ensures only wards with users are counted
-             ->count();
-
-         // Get all the ward IDs in those LGAs
-         $wards = Ward::whereIn('lga_id', $lgas)->pluck('id');
-
-         // Get the total count of polling units in the wards (puCount)
-         $puCount = PollingUnit::whereIn('ward_id', $wards)->count();
-
-         // Get the count of polling units that have associated users (puWithUsersCount)
-         $puWithUsersCount = PollingUnit::whereIn('ward_id', $wards)
-             ->whereHas('users') // Ensures only polling units with users are counted
-             ->count();
-             $excoCount = User::where('state_id', $state->id)
-             ->where('access_level', '!=', 'user')
-             ->where('access_level', '!=', 'superadmin')->count();
-
-             $memberCount = User ::where('state_id', $state->id)
-             ->where('access_level', '!=', 'superadmin')
-             ->where('access_level', 'user')->count();
-
-             $userCount = User ::where('state_id', $state->id)
-             ->where('access_level', '!=', 'superadmin')->count();
-
-             $newMembers = User ::where('state_id', $state->id)
-             ->where('access_level', '!=', 'superadmin')
-             ->where('created_at', '>=', Carbon::now()->subDays(1))
-             ->count();
-
-
-
-            return view('backend.'.$profileData->access_level.'.state.dashboard',
-                    compact(
-                        'profileData',
-                        'pageTitle',
-                        'state',
-                        'lgaCount',
-                        'lgasWithUsersCount',
-                        'wardCount',
-                        'wardWithUsersCount',
-                        'puCount',
-                        'puWithUsersCount',
-                        'excoCount',
-                        'memberCount',
-                        'userCount',
-                        'newMembers'
-                    ));
-
-
+        return view('backend.'.$profileData->access_level.'.state.dashboard',
+            compact('profileData', 'pageTitle', 'state', 'senatorialDistrictCount', 'senatorialDistrictsWithUsersCount', 'federalConstituencyCount', 'federalConstituenciesWithUsersCount', 'lgaCount', 'lgasWithUsersCount', 'wardCount', 'wardWithUsersCount', 'puCount', 'puWithUsersCount', 'excoCount', 'memberCount', 'userCount', 'newMembers'));
     }
 
-
-    public function localGovernmentDashBoard($uuid)
+    public function senatorialDistrictDashBoard($uuid)
     {
-        $pageTitle = 'Local Government Dashboard';
-        $profileData  = $this->getProfileData();
-        $lga = LocalGovernmentArea::where('uuid', $uuid)->first();
+        $pageTitle = 'Senatorial District Dashboard';
+        $profileData = $this->getProfileData();
+        $district = SenatorialDistrict::with('state')->where('uuid', $uuid)->first();
 
-        if(!$lga){
-            return redirect()->back()->with('error', 'LGA not found');
+        if(!$district){
+            return redirect()->back()->with('error', 'Senatorial District not found');
         }
 
+        $lgaCount = LocalGovernmentArea::where('senatorial_district_id', $district->id)->count();
+        $lgaWithUsersCount = LocalGovernmentArea::where('senatorial_district_id', $district->id)->whereHas('users')->count();
+        $lgas = LocalGovernmentArea::where('senatorial_district_id', $district->id)->pluck('id');
+        $wardCount = Ward::whereIn('lga_id', $lgas)->count();
+        $wardWithUsersCount = Ward::whereIn('lga_id', $lgas)->whereHas('users')->count();
+        $wards = Ward::whereIn('lga_id', $lgas)->pluck('id');
 
-
-         // Get the total count of wards in the LGAs (wardCount)
-         $wardCount = Ward::where('lga_id', $lga->id)->count();
-
-         // Get the count of wards that have associated users (wardWithUsersCount)
-         $wardWithUsersCount = Ward::where('lga_id', $lga->id)
-             ->whereHas('users') // Ensures only wards with users are counted
-             ->count();
-
-         // Get all the ward IDs in those LGAs
-         $wards = Ward::where('lga_id', $lga->id)->pluck('id');
-
-         // Get the total count of polling units in the wards (puCount)
-         $puCount = PollingUnit::whereIn('ward_id', $wards)->count();
-
-         // Get the count of polling units that have associated users (puWithUsersCount)
-         $puWithUsersCount = PollingUnit::whereIn('ward_id', $wards)
-             ->whereHas('users') // Ensures only polling units with users are counted
-             ->count();
-             $excoCount = User::where('lga_id', $lga->id)
-             ->where('access_level', '!=', 'user')
-             ->where('access_level', '!=', 'superadmin')->count();
-
-             $memberCount = User ::where('lga_id', $lga->id)
-             ->where('access_level', '!=', 'superadmin')
-             ->where('access_level', 'user')->count();
-
-             $userCount = User ::where('lga_id', $lga->id)
-             ->where('access_level', '!=', 'superadmin')->count();
-
-             $newMembers = User ::where('lga_id', $lga->id)
-             ->where('access_level', '!=', 'superadmin')
-             ->where('created_at', '>=', Carbon::now()->subDays(1))
-             ->count();
-
-
-
-            return view('backend.'.$profileData->access_level.'.lga.dashboard',
-                    compact(
-                        'profileData',
-                        'pageTitle',
-                        'lga',
-                        'wardCount',
-                        'wardWithUsersCount',
-                        'puCount',
-                        'puWithUsersCount',
-                        'excoCount',
-                        'memberCount',
-                        'userCount',
-                        'newMembers'
-                    ));
-
-
-    }
-
-
-    public function wardDashBoard($uuid)
-
-    {
-        $pageTitle = 'Ward Dashboard';
-        $profileData  = $this->getProfileData();
-        $ward = Ward::where('uuid', $uuid)->first();
-
-        if(!$ward){
-            $notification = [
-                'message' => 'Ward not found',
-                'alert-type' => 'error'
-            ];
-
-            return redirect()->back()->with($notification);
+        $puCount = PollingUnit::where('senatorial_district_id', $district->id)->count();
+        if ($puCount === 0) {
+            $puCount = PollingUnit::whereIn('ward_id', $wards)->count();
         }
 
+        $puWithUsersCount = PollingUnit::where('senatorial_district_id', $district->id)->whereHas('users')->count();
+        if ($puWithUsersCount === 0) {
+            $puWithUsersCount = PollingUnit::whereIn('ward_id', $wards)->whereHas('users')->count();
+        }
 
+        $excoCount = User::where('senatorial_district_id', $district->id)
+            ->where('access_level', '!=', 'user')
+            ->where('access_level', '!=', 'superadmin')->count();
 
-         // Get the total count of wards in the LGAs (wardCount)
-         $puCount = PollingUnit::where('ward_id', $ward->id)->count();
+        $memberCount = User::where('senatorial_district_id', $district->id)
+            ->where('access_level', '!=', 'superadmin')
+            ->where('access_level', 'user')->count();
 
-         // Get the count of wards that have associated users (wardWithUsersCount)
-         $puWithUsersCount =PollingUnit::where('ward_id', $ward->id)
-             ->whereHas('users') // Ensures only wards with users are counted
-             ->count();
+        $userCount = User::where('senatorial_district_id', $district->id)
+            ->where('access_level', '!=', 'superadmin')->count();
 
+        $newMembers = User::where('senatorial_district_id', $district->id)
+            ->where('access_level', '!=', 'superadmin')
+            ->where('created_at', '>=', Carbon::now()->subDays(1))
+            ->count();
 
-             $excoCount = User::where('ward_id', $ward->id)
-             ->where('access_level', '!=', 'user')
-             ->where('access_level', '!=', 'superadmin')->count();
-
-             $memberCount = User ::where('ward_id', $ward->id)
-             ->where('access_level', '!=', 'superadmin')
-             ->where('access_level', 'user')->count();
-
-             $eligibleVotersCount = User ::where('ward_id', $ward->id)
-             ->where('access_level', '!=', 'superadmin')
-             ->where('validvoter', 'yes')->count();
-
-             $inEligibleVotersCount = User ::where('ward_id', $ward->id)
-             ->where('access_level', '!=', 'superadmin')
-             ->where('validvoter', 'No')->count();
-
-             $userCount = User ::where('ward_id', $ward->id)
-             ->where('access_level', '!=', 'superadmin')->count();
-
-             $newMembers = User ::where('ward_id', $ward->id)
-             ->where('access_level', '!=', 'superadmin')
-             ->where('created_at', '>=', Carbon::now()->subDays(1))
-             ->count();
-
-
-
-            return view('backend.'.$profileData->access_level.'.ward.dashboard',
-                    compact(
-                        'profileData',
-                        'pageTitle',
-                        'ward',
-                        'puCount',
-                        'puWithUsersCount',
-                        'excoCount',
-                        'memberCount',
-                        'eligibleVotersCount',
-                        'inEligibleVotersCount',
-                        'userCount',
-                        'newMembers'
-                    ));
-
-
+        return view('backend.shared.senatorial-district.dashboard',
+            compact(
+                'profileData',
+                'pageTitle',
+                'district',
+                'lgaCount',
+                'lgaWithUsersCount',
+                'wardCount',
+                'wardWithUsersCount',
+                'puCount',
+                'puWithUsersCount',
+                'excoCount',
+                'memberCount',
+                'userCount',
+                'newMembers'
+            ));
     }
 
-    public function puDashBoard($uuid)
-
+    public function federalConstituencyDashBoard($uuid)
     {
-        $pageTitle = 'Polling Unit Dashboard';
-        $profileData  = $this->getProfileData();
-        $pu = PollingUnit::where('uuid', $uuid)->first();
+        $pageTitle = 'Federal Constituency Dashboard';
+        $profileData = $this->getProfileData();
+        $constituency = FederalConstituency::with('state')->where('uuid', $uuid)->first();
 
-                if(!$pu){
-                    $notification = [
-                        'message' => 'Polling Unit not found',
-                        'alert-type' => 'error'
-                    ];
+        if(!$constituency){
+            return redirect()->back()->with('error', 'Federal Constituency not found');
+        }
 
-                    return redirect()->back()->with($notification);
-                }
+        $lgaCount = LocalGovernmentArea::where('federal_constituency_id', $constituency->id)->count();
+        $lgaWithUsersCount = LocalGovernmentArea::where('federal_constituency_id', $constituency->id)->whereHas('users')->count();
+        $lgas = LocalGovernmentArea::where('federal_constituency_id', $constituency->id)->pluck('id');
+        $wardCount = Ward::whereIn('lga_id', $lgas)->count();
+        $wardWithUsersCount = Ward::whereIn('lga_id', $lgas)->whereHas('users')->count();
+        $wards = Ward::whereIn('lga_id', $lgas)->pluck('id');
 
-             $excoCount = User::where('polling_unit_id', $pu->id)
-             ->where('access_level', '!=', 'user')
-             ->where('access_level', '!=', 'superadmin')->count();
+        $puCount = PollingUnit::where('federal_constituency_id', $constituency->id)->count();
+        if ($puCount === 0) {
+            $puCount = PollingUnit::whereIn('ward_id', $wards)->count();
+        }
 
-             $memberCount = User ::where('polling_unit_id', $pu->id)
-             ->where('access_level', '!=', 'superadmin')
-             ->where('access_level', 'user')->count();
+        $puWithUsersCount = PollingUnit::where('federal_constituency_id', $constituency->id)->whereHas('users')->count();
+        if ($puWithUsersCount === 0) {
+            $puWithUsersCount = PollingUnit::whereIn('ward_id', $wards)->whereHas('users')->count();
+        }
 
+        $excoCount = User::where('federal_constituency_id', $constituency->id)
+            ->where('access_level', '!=', 'user')
+            ->where('access_level', '!=', 'superadmin')->count();
 
-             $eligibleVotersCount = User ::where('polling_unit_id', $pu->id)
-             ->where('access_level', '!=', 'superadmin')
-             ->where('validvoter', 'yes')->count();
+        $memberCount = User::where('federal_constituency_id', $constituency->id)
+            ->where('access_level', '!=', 'superadmin')
+            ->where('access_level', 'user')->count();
 
-             $inEligibleVotersCount = User ::where('polling_unit_id', $pu->id)
-             ->where('access_level', '!=', 'superadmin')
-             ->where('validvoter', 'No')->count();
+        $userCount = User::where('federal_constituency_id', $constituency->id)
+            ->where('access_level', '!=', 'superadmin')->count();
 
-             $userCount = User ::where('polling_unit_id', $pu->id)
-             ->where('access_level', '!=', 'superadmin')->count();
+        $newMembers = User::where('federal_constituency_id', $constituency->id)
+            ->where('access_level', '!=', 'superadmin')
+            ->where('created_at', '>=', Carbon::now()->subDays(1))
+            ->count();
 
-             $newMembers = User ::where('polling_unit_id', $pu->id)
-             ->where('access_level', '!=', 'superadmin')
-             ->where('created_at', '>=', Carbon::now()->subDays(1))
-             ->count();
-
-
-
-            return view('backend.'.$profileData->access_level.'.pu.dashboard',
-                    compact(
-                        'profileData',
-                        'pageTitle',
-                        'pu',
-                        'excoCount',
-                        'memberCount',
-                        'eligibleVotersCount',
-                        'inEligibleVotersCount',
-                        'userCount',
-                        'newMembers'
-                    ));
-
-
+        return view('backend.shared.federal-constituency.dashboard',
+            compact(
+                'profileData',
+                'pageTitle',
+                'constituency',
+                'lgaCount',
+                'lgaWithUsersCount',
+                'wardCount',
+                'wardWithUsersCount',
+                'puCount',
+                'puWithUsersCount',
+                'excoCount',
+                'memberCount',
+                'userCount',
+                'newMembers'
+            ));
     }
 
+    public function localGovernmentDashBoard()
+    {
+        return abort(404);
+    }
 
+    public function wardDashBoard()
+    {
+        return abort(404);
+    }
 
-
+    public function PuDashBoard()
+    {
+        return abort(404);
+    }
 }

@@ -9,21 +9,21 @@
                 <div class="card card-primary">
                     <div class="card-header">
                         <h3 class="card-title">
-                            Incident Report for 
-                            {{ $pollingUnit->name }} 
-                            in {{ $pollingUnit->ward->name }} Ward, 
-                            {{ $pollingUnit->ward->localGovernmentArea->name }} LGA of 
+                            Incident Report for
+                            {{ $pollingUnit->name }}
+                            in {{ $pollingUnit->ward->name }} Ward,
+                            {{ $pollingUnit->ward->localGovernmentArea->name }} LGA of
                             {{ $pollingUnit->ward->localGovernmentArea->state->name }} State
                         </h3>
                         <div class="card-tools">
                             @if(
                                 $profileData->hasAnyRole([
-                                    'National ICT/Media Director',
-                                    'Regional ICT/Media Director',
-                                    'State ICT/Media Director',
-                                    'LGA ICT/Media Director',
-                                    'Ward ICT/Media Director',
-                                    'PU ICT/Media Director',
+                                    'National ICT Director',
+                                    'Regional ICT Director',
+                                    'State ICT Director',
+                                    'LGA ICT Director',
+                                    'Ward ICT Director',
+                                    'PU ICT Director',
                                     'Pu Agent'
                                 ]) || $profileData->access_level == 'superadmin' && $profileData->polling_unit_id == $pollingUnit->id)
                             <a href="{{ route($profileData->access_level.'.incident.add') }}">
@@ -54,8 +54,8 @@
                                             <div class="row">
                                                 @foreach ($incident->pictureEvidences as $picture)
                                                     <div class="col-md-4 mb-3">
-                                                        <img src="{{ asset('storage/' . $picture->file_path) }}" 
-                                                             alt="Picture Evidence" 
+                                                        <img src="{{ asset('storage/' . $picture->file_path) }}"
+                                                             alt="Picture Evidence"
                                                              class="img-fluid rounded">
                                                     </div>
                                                 @endforeach

@@ -3,7 +3,7 @@
 
 
 @php
- $packages = array('national');
+ $packages = app(\App\Services\PackageGovernanceService::class)->options();
 @endphp
 
 <section class="content">
@@ -63,6 +63,12 @@
 
                                             </div>
 
+                                            <div class="tab-pane fade show" id="community-rules" role="tabpanel">
+
+                                                @include('backend.'.$profileData->access_level.'.settings.system.community_rules')
+
+                                            </div>
+
                                             <div class="tab-pane fade show" id="social-media" role="tabpanel">
 
                                                 @include('backend.'.$profileData->access_level.'.settings.system.social_media')
@@ -89,7 +95,7 @@
 
                                             <div class="tab-pane fade show" id="copyright-settings" role="tabpanel">
 
-                                                @include('backend.'.$profileData->access_level.'.settings.system.legal')
+                                                @include('backend.'.$profileData->access_level.'.settings.system.copyright')
 
                                             </div>
 

@@ -13,6 +13,9 @@
         <a class="nav-link" id="cloud_storage-settings-tab" href="#cloud_storage-settings" role="tab">File Storage Settings</a>
     </li>
     <li class="nav-item">
+        <a class="nav-link" id="community-rules-tab" href="#community-rules" role="tab">Community Rules</a>
+    </li>
+    <li class="nav-item">
         <a class="nav-link" id="social-media-tab" href="#social-media" role="tab">Social Media </a>
     </li>
     <li class="nav-item">
@@ -37,6 +40,5 @@
     @endif
 
 </ul>
-
 
 

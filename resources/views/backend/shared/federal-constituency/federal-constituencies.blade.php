@@ -1,0 +1,93 @@
+<section class="content">
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-12">
+                <div class="card card-primary">
+                    <div class="card-header">
+                        <h3 class="card-title">All Federal Constituencies - <span class="badge badge-light">{{ number_format($constituencies->count(), 0) }}</span></h3>
+                        <div class="card-tools">
+                            <a href="{{ route($profileData->access_level.'.location.federal-constituency.add') }}"><button class="btn btn-default"> <i class="fa fa-plus-square"></i> Add Federal Constituency</button></a>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <table id="myfederalconstituencies" class="table table-bordered table-striped">
+                            <thead>
+                            <tr>
+                                <th>S/N</th>
+                                <th>Name</th>
+                                <th>State</th>
+                                <th>Senatorial District</th>
+                                <th>Action</th>
+                            </tr>
+                            </thead>
+                            <tbody></tbody>
+                            <tfoot>
+                            <tr>
+                                <th>S/N</th>
+                                <th>Name</th>
+                                <th>State</th>
+                                <th>Senatorial District</th>
+                                <th>Action</th>
+                            </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        document.body.addEventListener('click', function (event) {
+            if (event.target.classList.contains('delete-btn')) {
+                event.preventDefault();
+                const form = event.target.closest('form');
+
+                Swal.fire({
+                    title: 'Confirm Delete',
+                    text: 'Are you sure you want to delete this Federal Constituency?',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#3085d6',
+                    confirmButtonText: 'Yes, delete it!'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        form.submit();
+                    }
+                });
+            }
+        });
+    });
+</script>
+
+<script src="{{ asset('assets/plugins/jquery/jquery.min.js') }}"></script>
+<script>
+    $(document).ready(function() {
+        $('#myfederalconstituencies').DataTable({
+            "processing": true,
+            "serverSide": true,
+            "ajax": "{{ route('federal-constituencies.data') }}",
+            "pageLength": 10,
+            "searching": true,
+            "lengthMenu": [[10, 20, 50, 100], [10, 20, 50, 100]],
+            "columns": [
+                {
+                    "data": null,
+                    "render": function (data, type, row, meta) {
+                        return meta.row + meta.settings._iDisplayStart + 1;
+                    },
+                    "orderable": false
+                },
+                { "data": "name", "searchable": true },
+                { "data": "state", "searchable": true },
+                { "data": "senatorial_district", "searchable": true },
+                { "data": "action", "orderable": false, "searchable": false }
+            ],
+            "responsive": true,
+            "autoWidth": false,
+        });
+    });
+</script>

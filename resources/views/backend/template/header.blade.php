@@ -59,10 +59,26 @@
   <meta name="csrf-token" content="content">
    <meta name="csrf-token" content="{{ csrf_token() }}">
 
-<link rel="apple-touch-icon" sizes="180x180" href="{{asset('/apple-touch-icon.png')}}">
-<link rel="icon" type="image/png" sizes="32x32" href="{{asset('/favicon-32x32.png')}}">
-<link rel="icon" type="image/png" sizes="16x16" href="{{asset('/favicon-16x16.png')}}">
+@php
+    if (!empty($SystemSetting->favicon)) {
+        $favicon = asset('uploads/system_images/' . $SystemSetting->favicon);
+    } else {
+        $favicon = null;
+    }
+@endphp
+
+@if($favicon)
+    <link rel="icon" type="image/png" href="{{ asset($favicon) }}">
+    <link rel="apple-touch-icon" href="{{ asset($favicon) }}">
+@else
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('apple-touch-icon.png') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('favicon-32x32.png') }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('favicon-16x16.png') }}">
+@endif
+
+
 <link rel="manifest" href="{{asset('/site.webmanifest')}}">
+
 <!-- Toaster CSS -->
 <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.css" >
 
@@ -74,7 +90,7 @@
 
     .os-scrollbar{
      background-color: {{ $SystemSetting->dark_theme_color ?? ' #008751'}} !important;
-      
+
     }
 
     a{
@@ -167,20 +183,53 @@
 
     }
 
-</style>
+    .content-wrapper .row > [class*="col-"] > .small-box {
+      display: flex;
+      flex-direction: column;
+      height: calc(100% - 20px);
+      min-height: 145px;
+      width: 100%;
+    }
 
+    .content-wrapper .row > [class*="col-"] > .small-box > .inner {
+      flex: 1 1 auto;
+    }
+
+    .content-wrapper .row > [class*="col-"] > .small-box > .small-box-footer {
+      margin-top: auto;
+    }
+
+    .content-wrapper .row > [class*="col-"] > .small-box .inner p {
+      overflow-wrap: anywhere;
+    }
+
+</style>
+   @livewireStyles
 </head>
 <body class="hold-transition sidebar-mini layout-fixed">
+<script>
+  window.requireBankDetails = {{ ($SystemSetting->require_bank_details ?? false) ? 'true' : 'false' }};
+  if (!window.requireBankDetails) {
+    document.addEventListener('DOMContentLoaded', function () {
+      ['bank', 'bank_account_number'].forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el && el.closest('.form-group')) {
+          el.closest('.form-group').style.display = 'none';
+        }
+      });
+    });
+  }
+</script>
 <div class="wrapper">
 
   <!-- Preloader -->
   @desktop()
-  <div class="preloader flex-column justify-content-center align-items-center">
+  {{-- <div class="preloader flex-column justify-content-center align-items-center">
     <img class="animation__shake" src="{{ !empty($SystemSetting->logo) ? url('uploads/system_images/'.$SystemSetting->logo) : url('logo.png') }}" alt="Logo" height="15%" width="15%">
-  </div>
+  </div> --}}
   @enddesktop()
   @mobile()
-  <div class="preloader flex-column justify-content-center align-items-center">
+  {{-- <div class="preloader flex-column justify-content-center align-items-center">
     <img class="animation__shake" src="{{ !empty($SystemSetting->favicon) ? url('uploads/system_images/'.$SystemSetting->favicon) : url('uploads/system_images/favicon.png') }}" alt="Logo" height="15%" width="15%">
-  </div>
+  </div> --}}
   @endmobile()

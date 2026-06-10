@@ -13,12 +13,12 @@
                     <div class="card-tools">
                         @if(
                             $profileData->hasAnyRole([
-                                'National ICT/Media Director',
-                                'Regional ICT/Media Director',
-                                'State ICT/Media Director',
-                                'LGA ICT/Media Director',
-                                'Ward ICT/Media Director',
-                                'PU ICT/Media Director',
+                                'National ICT Director',
+                                'Regional ICT Director',
+                                'State ICT Director',
+                                'LGA ICT Director',
+                                'Ward ICT Director',
+                                'PU ICT Director',
                                 'Pu Agent'
                             ]) || $profileData->access_level == 'superadmin')
                                 <a href="{{ route($profileData->access_level.'.member.add') }}"><button class="btn btn-default"> <i class="fa fa-plus-square"></i> Add New Member</button></a>
@@ -115,7 +115,7 @@
         "processing": true,
         "serverSide": true,
         "searching": true,
-        "ajax": "{{ route($profileData->access_level.'.members.data') }}", // Define a route to get the paginated data
+        "ajax": "{{ route($profileData->access_level.'.members.data', $PuLgaStateRegionCountryUUID ?? null) }}", // Define a route to get the paginated data
         "pageLength": 25, // Default number of rows per page
         "lengthMenu": [ [10, 25, 50, 100], [10, 25, 50, 100] ],
         "columns": [

@@ -17,13 +17,15 @@
                                      style="width: 25px; height: 25px; object-fit: cover;">
                                 <span>{{ $follower->firstname }} {{ $follower->lastname }}</span>
                             </a>
-                            <!-- Follow Back Button (only show if the follower is not being followed) -->
-                            @if (!$profileData->isFollowing($follower))
-                                <button class="btn btn-sm btn-success follow-back-btn" data-user-id="{{ $follower->id }}">
-                                    Follow Back
+                            @if ($profileData->id !== $follower->id)
+                                @php $isFollowing = $profileData->isFollowing($follower); @endphp
+                                <button
+                                    class="btn btn-sm follow-toggle-btn {{ $isFollowing ? 'btn-outline-secondary' : 'btn-primary text-white' }}"
+                                    data-user-id="{{ $follower->id }}"
+                                    data-following="{{ $isFollowing ? '1' : '0' }}"
+                                >
+                                    {{ $isFollowing ? 'Unfollow' : 'Follow' }}
                                 </button>
-                            @else
-                                <span class="badge bg-secondary">Following</span>
                             @endif
                         </li>
                     @endforeach
@@ -58,13 +60,19 @@
                                      alt="Profile Picture" 
                                      class="rounded-square me-2" 
                                      style="width: 25px; height: 25px; object-fit: cover;">
-                                <span>{{ $followed->firstname }} {{ $followed->lastname }}</span>
-                            </a>
-                            <!-- Unfollow Button -->
-                            <button class="btn btn-sm btn-danger unfollow-btn" data-user-id="{{ $followed->id }}">
-                                Unfollow
+                            <span>{{ $followed->firstname }} {{ $followed->lastname }}</span>
+                        </a>
+                        @if ($profileData->id !== $followed->id)
+                            @php $isFollowing = $profileData->isFollowing($followed); @endphp
+                            <button
+                                class="btn btn-sm follow-toggle-btn {{ $isFollowing ? 'btn-outline-secondary' : 'btn-primary text-white' }}"
+                                data-user-id="{{ $followed->id }}"
+                                data-following="{{ $isFollowing ? '1' : '0' }}"
+                            >
+                                {{ $isFollowing ? 'Unfollow' : 'Follow' }}
                             </button>
-                        </li>
+                        @endif
+                    </li>
                     @endforeach
                 </ul>
                 @if ($following->hasPages())
@@ -82,46 +90,29 @@
 
 <script>
     $(document).ready(function () {
-        // Follow Back Button Click
-        $(document).on('click', '.follow-back-btn', function () {
+        const toggleFollowState = (btn, isFollowing) => {
+            btn.attr('data-following', isFollowing ? '1' : '0');
+            if (isFollowing) {
+                btn.removeClass('btn-primary text-white').addClass('btn-outline-secondary').text('Unfollow');
+            } else {
+                btn.removeClass('btn-outline-secondary').addClass('btn-primary text-white').text('Follow');
+            }
+        };
+
+        // Follow / Unfollow Button Click
+        $(document).on('click', '.follow-toggle-btn', function () {
             const userId = $(this).data('user-id');
             const button = $(this);
+            const isFollowing = button.data('following') === 1 || button.data('following') === '1';
+            const method = isFollowing ? 'DELETE' : 'POST';
 
             $.ajax({
-                url: '{{ route("follow.back") }}',
-                type: 'POST',
-                data: {
-                    _token: '{{ csrf_token() }}',
-                    user_id: userId
-                },
+                url: `/community/users/${userId}/follow`,
+                type: method,
+                data: { _token: '{{ csrf_token() }}' },
                 success: function (response) {
                     if (response.success) {
-                        // Replace the Follow Back button with a "Following" badge
-                        button.replaceWith('<span class="badge bg-secondary">Following</span>');
-                    }
-                },
-                error: function (xhr) {
-                    alert('An error occurred. Please try again.');
-                }
-            });
-        });
-
-        // Unfollow Button Click
-        $(document).on('click', '.unfollow-btn', function () {
-            const userId = $(this).data('user-id');
-            const button = $(this);
-
-            $.ajax({
-                url: '{{ route("unfollow") }}',
-                type: 'POST',
-                data: {
-                    _token: '{{ csrf_token() }}',
-                    user_id: userId
-                },
-                success: function (response) {
-                    if (response.success) {
-                        // Remove the list item from the modal
-                        button.closest('li').remove();
+                        toggleFollowState(button, !isFollowing);
                     }
                 },
                 error: function (xhr) {

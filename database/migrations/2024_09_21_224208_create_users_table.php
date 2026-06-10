@@ -21,7 +21,7 @@ return new class extends Migration
             $table->string('lastname')->nullable();
             $table->string('phone')->unique()->nullable();
             $table->string('vin')->nullable();
-            $table->string('photo')->nullable();            
+            $table->string('photo')->nullable();
             $table->string('cover_image')->nullable();
             $table->string('address')->nullable();
             $table->string('occupation')->nullable();
@@ -31,7 +31,7 @@ return new class extends Migration
             $table->enum('validVoter', ['yes', 'no'])->default('no');
             $table->enum('gender', ['male', 'female'])->nullable();
             $table->enum('status', ['active', 'inactive'])->default('active');
-            $table->enum('access_level', ['superadmin', 'nationaladmin', 'regionaladmin', 'stateadmin', 'lgaadmin', 'wardadmin', 'puadmin','user'])->default('user');
+            $table->enum('access_level', ['superadmin', 'nationaladmin', 'regionaladmin', 'stateadmin', 'senatorialadmin', 'federaladmin', 'lgaadmin', 'wardadmin', 'puadmin','user'])->default('user');
             $table->timestamp('email_verified_at')->nullable();
             $table->unsignedBigInteger('country_id')->nullable();
             $table->unsignedBigInteger('region_id')->nullable();

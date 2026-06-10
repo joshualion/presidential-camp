@@ -85,10 +85,13 @@
 
                  <h3 class="card-title"> Member's Infomation</h3>
                  <div class="card-tools">
-                    @if(($profileData->hasRole('National ICT/Media Director')) || ($profileData->hasRole('Regional ICT/Media Director')) || ($profileData->hasAnyRole('State ICT/Media Director')) || ($profileData->hasAnyRole('LGA ICT/Media Director')) || ($profileData->hasAnyRole('Ward ICT/Media Director')) || ($profileData->hasAnyRole('PU ICT/Media Director')) || ( $profileData->access_level == 'superadmin'))
+                    @if(($profileData->hasRole('National ICT Director')) || ($profileData->hasRole('Regional ICT Director')) || ($profileData->hasAnyRole('State ICT Director')) || ($profileData->hasAnyRole('LGA ICT Director')) || ($profileData->hasAnyRole('Ward ICT Director')) || ($profileData->hasAnyRole('PU ICT Director')) || ( $profileData->access_level == 'superadmin'))
 
                         <a href="{{ route($profileData->access_level.'.member.edit', $member->uuid) }}"><button class="btn btn-default"> <i class="fas fa-pencil"></i> Edit Member</button></a>
-
+                        <!-- Button to trigger modal -->
+                        <button type="button" class="btn btn-success" data-toggle="modal" data-target="#vinModal">
+                          Verify Voter Status
+                        </button>
                     @endif
                 </div>
 
@@ -296,12 +299,12 @@
 </div>
 
 @if(isset($profileData->role) && (
-        $profileData->role->name == 'National ICT/Media Director' ||
-        $profileData->role->name == 'Regional ICT/Media Director' ||
-        $profileData->role->name == 'State ICT/Media Director' ||
-        $profileData->role->name == 'LGA ICT/Media Director' ||
-        $profileData->role->name == 'Ward ICT/Media Director' ||
-        $profileData->role->name == 'PU ICT/Media Director'
+        $profileData->role->name == 'National ICT Director' ||
+        $profileData->role->name == 'Regional ICT Director' ||
+        $profileData->role->name == 'State ICT Director' ||
+        $profileData->role->name == 'LGA ICT Director' ||
+        $profileData->role->name == 'Ward ICT Director' ||
+        $profileData->role->name == 'PU ICT Director'
     ) ||  $profileData->access_level == 'superadmin')
 
 <!-- Access Level -->
@@ -610,4 +613,46 @@
                 input.addEventListener('change', reset);
                 input.addEventListener('keyup', reset);
 </script>
+
+<!-- Modal -->
+<div class="modal fade" id="vinModal" tabindex="-1" role="dialog" aria-labelledby="vinModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="vinModalLabel">Verify Voter Status</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body text-center">
+        <p class="text-muted mb-2">Copy the VIN below and click the button to verify:</p>
+
+        <div class="input-group mb-3">
+          <input type="text" id="userVin" class="form-control text-center" readonly
+                 value="{{ !empty($member->vin) ? $member->vin : 'Nil' }}">
+          <div class="input-group-append">
+            <button class="btn btn-outline-secondary" type="button" onclick="copyVin()">Copy</button>
+          </div>
+        </div>
+
+        <button class="btn btn-primary btn-block" onclick="openINEC()">Go to INEC Verification</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- JS for Copy + Pop-up -->
+<script>
+  function copyVin() {
+    const vinInput = document.getElementById('userVin');
+    vinInput.select();
+    document.execCommand('copy');
+    alert('VIN copied to clipboard!');
+  }
+
+  function openINEC() {
+    window.open('https://cvr.inecnigeria.org/vvs', '_blank', 'width=900,height=700');
+  }
+</script>
+
 @endsection

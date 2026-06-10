@@ -5,16 +5,26 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
+use App\Models\Concerns\HasLocationScope;
 
 class LocalGovernmentArea extends Model
 {
-    use HasFactory;
+    use HasFactory, HasLocationScope;
 
     protected $guarded = [];
 
     public function state(){
         return $this->belongsTo(State::class);
     }
+
+    public function senatorialDistrict(){
+        return $this->belongsTo(SenatorialDistrict::class);
+    }
+
+    public function federalConstituency(){
+        return $this->belongsTo(FederalConstituency::class);
+    }
+
     public function wards(){
         return $this->hasMany(Ward::class, 'lga_id');
     }

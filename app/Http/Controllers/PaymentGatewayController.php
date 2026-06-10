@@ -20,6 +20,13 @@ class PaymentGatewayController extends Controller
         View::share('pageTitle', $pageTitle);
     }
 
+    private function ensureSuperAdmin(): void
+    {
+        if (!Auth::check() || Auth::user()->access_level !== 'superadmin') {
+            abort(403, 'Only superadmins can manage payment gateways.');
+        }
+    }
+
     // Function to get the profile data
     private function getProfileData()
     {
@@ -29,6 +36,7 @@ class PaymentGatewayController extends Controller
     // Display a list of payment gateways
     public function getPaymentGateways()
     {
+        $this->ensureSuperAdmin();
         $gateways = PaymentGateway::all();
         $profileData = $this->getProfileData();
         return view('backend.'.$profileData->access_level.'.settings.payment.gateways', compact('gateways','profileData'));
@@ -39,10 +47,23 @@ class PaymentGatewayController extends Controller
     // Update the specified payment gateway in the database
     public function updatePaymentGateway(Request $request)
     {
+        $this->ensureSuperAdmin();
+
+        $request->validate([
+            'id' => 'required|integer|exists:payment_gateways,id',
+            'name' => 'required|string',
+            'is_active' => 'nullable|boolean',
+            'sandbox_mode' => 'nullable|boolean',
+            'flutterwave_live_api_key' => 'nullable|string|max:255',
+            'flutterwave_test_api_key' => 'nullable|string|max:255',
+            'paystack_live_api_key' => 'nullable|string|max:255',
+            'paystack_test_api_key' => 'nullable|string|max:255',
+            'usdt_trc20_wallet_address' => 'nullable|string|max:255',
+        ]);
+
         $gateway_id = $request->id;
         $gateway = PaymentGateway::findOrFail($gateway_id);
 
-        // Validate the request data here
         $commonAttributes = [
             'name' => $request->name,
             'is_active' => $request->is_active,

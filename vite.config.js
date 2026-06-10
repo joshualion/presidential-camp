@@ -3,6 +3,9 @@ import laravel from 'laravel-vite-plugin';
 import vue from '@vitejs/plugin-vue';
 
 export default defineConfig({
+    define: {
+        __VUE_PROD_DEVTOOLS__: true,
+    },
     plugins: [
         laravel({
             input: [

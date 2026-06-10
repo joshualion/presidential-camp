@@ -31,7 +31,7 @@ $profileImage = !empty($profileData->photo) ? url('uploads/member_images/'.$prof
             </h2>
         </div>
     </div>
-</div> 
+</div>
 
 <!-- Modals and Scripts remain unchanged -->
 
@@ -43,7 +43,7 @@ $profileImage = !empty($profileData->photo) ? url('uploads/member_images/'.$prof
             <div class="card shadow-sm">
                 <div class="card-body">
                     <h5 class="card-title"><i class="fas fa-tachometer-alt me-2"></i>Dashboard</h5>
-                    <p class="card-text">Admin Backend</p>
+                    <p class="card-text">Backend</p>
                     <a href="{{ route($profileData->access_level . '.dashboard') }}">
                         <button class="btn btn-primary btn-sm w-100 text-white"><i class="fas fa-eye"></i> Dashboard</button>
                     </a>
@@ -118,9 +118,9 @@ $profileImage = !empty($profileData->photo) ? url('uploads/member_images/'.$prof
 </div>
 
 <!-- Main Container for post and ads -->
-<div class="container mt-4">     
-   
-    
+<div class="container mt-4">
+
+
     <div class="row">
         <!-- Left Side: Create & View Post Section -->
         <div class="col-md-9">
@@ -129,7 +129,7 @@ $profileImage = !empty($profileData->photo) ? url('uploads/member_images/'.$prof
             </div>
 
             <div class="shadow-sm">
-                <div class=" card card-body">   
+                <div class=" card card-body">
                     <h5 class="card-title"><i class="fas fa-comment me-2"></i> Posts</h5>
                     <div id="app" class="newsfeed">
                         <profile-feed :audience="'{{ $userAudience }}'"></profile-feed>
@@ -154,7 +154,7 @@ $profileImage = !empty($profileData->photo) ? url('uploads/member_images/'.$prof
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Update Cover Photo</h5>
-                <button type="button" class="btn-close" data-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <form id="updateCoverForm" enctype="multipart/form-data">
@@ -173,7 +173,7 @@ $profileImage = !empty($profileData->photo) ? url('uploads/member_images/'.$prof
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Update Profile Photo</h5>
-                <button type="button" class="btn-close" data-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <form id="updateProfileForm" enctype="multipart/form-data">
@@ -193,11 +193,23 @@ $profileImage = !empty($profileData->photo) ? url('uploads/member_images/'.$prof
 
 <script>
     $(document).ready(function() {
+    const hideModalCleanly = (modalId) => {
+        const el = document.getElementById(modalId);
+        if (!el) return;
+        const modal = bootstrap.Modal.getOrCreateInstance(el);
+        modal.hide();
+        // Remove any lingering backdrop and body lock
+        const backdrop = document.querySelector('.modal-backdrop');
+        if (backdrop) backdrop.remove();
+        document.body.classList.remove('modal-open');
+        document.body.style.removeProperty('padding-right');
+    };
+
     // Handle Profile Photo Upload
     $('#updateProfileForm').submit(function(e) {
         e.preventDefault();
         var formData = new FormData(this);
-        
+
         $.ajax({
             url: "{{ route('update.profile.photo') }}",
             type: "POST",
@@ -207,10 +219,13 @@ $profileImage = !empty($profileData->photo) ? url('uploads/member_images/'.$prof
             success: function(response) {
                 if(response.success) {
                     $('.profile-user-img').attr('src', response.image_url);
-                    $('#updateProfileModal').modal('hide');
+                    hideModalCleanly('updateProfileModal');
                 } else {
-                    alert(response.error);
+                    alert(response.error || 'Upload failed. Please try a different image.');
                 }
+            },
+            error: function(xhr) {
+                alert(xhr.responseJSON?.message || 'Upload failed. Please try a different image (max 5MB, jpg/png/gif/webp).');
             }
         });
     });
@@ -229,10 +244,13 @@ $profileImage = !empty($profileData->photo) ? url('uploads/member_images/'.$prof
             success: function(response) {
                 if(response.success) {
                     $('.cover-image').css('background-image', 'url(' + response.image_url + ')');
-                    $('#updateCoverModal').modal('hide');
+                    hideModalCleanly('updateCoverModal');
                 } else {
-                    alert(response.error);
+                    alert(response.error || 'Upload failed. Please try a different image.');
                 }
+            },
+            error: function(xhr) {
+                alert(xhr.responseJSON?.message || 'Upload failed. Please try a different image (max 5MB, jpg/png/gif/webp).');
             }
         });
     });
@@ -249,7 +267,7 @@ $profileImage = !empty($profileData->photo) ? url('uploads/member_images/'.$prof
     }
 
     .profile-user-img {
-        
+
     }
 
     .create-post {
@@ -269,7 +287,7 @@ $profileImage = !empty($profileData->photo) ? url('uploads/member_images/'.$prof
         position: relative;
         z-index: 1;
         border: 4px solid #fff; /* Add a border to make the profile image stand out */
-       
+
     }
 
     /* Position the camera icon directly on top of the profile photo in the bottom right corner */
@@ -278,7 +296,7 @@ $profileImage = !empty($profileData->photo) ? url('uploads/member_images/'.$prof
         bottom: 15px;
         width: 30px;
         height: 30px;
-        
+
         padding: 0;
         border-radius: 50%;
     }
@@ -294,4 +312,3 @@ $profileImage = !empty($profileData->photo) ? url('uploads/member_images/'.$prof
         }
     }
 </style>
-

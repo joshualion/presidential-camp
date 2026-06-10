@@ -11,7 +11,7 @@ $state = \App\Models\State::find(Auth::user()->state_id);
 @if(Auth::user()->access_level == 'stateadmin')
 
 <nav class="mt-2">
-      <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
+      <ul class="nav nav-pills nav-sidebar flex-column sidebar-nav" data-widget="treeview" role="menu" data-accordion="false">
 
             <li class="tab nav-item menu-close">
                         <a href="/state/dashboard" class="nav-link">
@@ -42,7 +42,7 @@ $state = \App\Models\State::find(Auth::user()->state_id);
                               <p>All Members</p>
                             </a>
                           </li>
-                         
+
 
                           <li class="nav-item">
                             <a href="/state/members/bylga/{{$state->uuid}}" class="nav-link">
@@ -86,14 +86,20 @@ $state = \App\Models\State::find(Auth::user()->state_id);
                 <p>Manage Elections</p>
               </a>
             </li>
+            <li class="nav-item">
+              <a href="/state/election/operations-center" class="nav-link">
+                <i class="fas fa-broadcast-tower nav-icon"></i>
+                <p>Situation Room</p>
+              </a>
+            </li>
             @if(
               $profileData->hasAnyRole([
-                  'National ICT/Media Director',
-                  'state ICT/Media Director',
-                  'State ICT/Media Director',
-                  'LGA ICT/Media Director',
-                  'Ward ICT/Media Director',
-                  'PU ICT/Media Director',
+                  'National ICT Director',
+                  'state ICT Director',
+                  'State ICT Director',
+                  'LGA ICT Director',
+                  'Ward ICT Director',
+                  'PU ICT Director',
                   'Pu Agent'
               ]) || $profileData->access_level == 'superadmin' )
             <li class="nav-item">
@@ -114,10 +120,10 @@ $state = \App\Models\State::find(Auth::user()->state_id);
 </li>
 {{-- / Election --}}
 
-           
+
 
             {{-- Finances --}}
-            <li class="tab nav-item menu-close">
+            {{-- <li class="tab nav-item menu-close">
                 <a href="#" class="nav-link">
                   <i class="nav-icon fas fa-money-bill"></i>
                   <p>
@@ -125,7 +131,7 @@ $state = \App\Models\State::find(Auth::user()->state_id);
                     <i class="right fas fa-angle-left"></i>
                   </p>
                 </a>
-                <ul class="nav nav-treeview">           
+                <ul class="nav nav-treeview">
 
                 <li class="nav-item">
                     <a href="/state/dashboard" class="nav-link">
@@ -134,7 +140,7 @@ $state = \App\Models\State::find(Auth::user()->state_id);
                     </a>
                   </li>
 
-                  
+
 
                   <li class="nav-item">
                     <a href="/state/state/dashboard" class="nav-link">
@@ -144,7 +150,7 @@ $state = \App\Models\State::find(Auth::user()->state_id);
                   </li>
 
                 </ul>
-            </li>
+            </li> --}}
             {{-- / Finances --}}
 
 
@@ -196,6 +202,12 @@ $state = \App\Models\State::find(Auth::user()->state_id);
                               <p>Send SMS</p>
                             </a>
                           </li>
+                          <li class="nav-item">
+                            <a href="/messages" class="nav-link">
+                              <i class="fas fa-comments nav-icon"></i>
+                              <p>Internal Communication</p>
+                            </a>
+                          </li>
 
                           <!-- <li class="nav-item">
                             <a href="#" class="nav-link">
@@ -221,9 +233,9 @@ $state = \App\Models\State::find(Auth::user()->state_id);
             </li>
             {{-- / Messaging --}}
 
-               
 
-          
+
+
 
             {{-- Settings --}}
             <li class="tab nav-item menu-close">
@@ -234,7 +246,21 @@ $state = \App\Models\State::find(Auth::user()->state_id);
                             <i class="right fas fa-angle-left"></i>
                           </p>
                         </a>
-                        <ul class="nav nav-treeview">                   
+                        <ul class="nav nav-treeview">
+
+                          <li class="nav-item">
+                            <a href="/state/location/senatorial-districts" class="nav-link">
+                            <i class="fas fa-map nav-icon"></i>
+                              <p>Senatorial Districts</p>
+                            </a>
+                          </li>
+
+                          <li class="nav-item">
+                            <a href="/state/location/federal-constituencies" class="nav-link">
+                            <i class="fas fa-landmark nav-icon"></i>
+                              <p>Federal Constituencies</p>
+                            </a>
+                          </li>
 
                           <li class="nav-item">
                             <a href="/state/bulksms/setting" class="nav-link">
@@ -246,7 +272,7 @@ $state = \App\Models\State::find(Auth::user()->state_id);
 
             </li>
 
-       
+
 
             {{-- Profile Menu --}}
             <li class="tab nav-item menu-close">
@@ -266,7 +292,7 @@ $state = \App\Models\State::find(Auth::user()->state_id);
                             </a>
                           </li>
 
-                          
+
 
                           <li class="nav-item">
                             <a href="/state/change/password" class="nav-link">

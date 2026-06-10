@@ -13,9 +13,11 @@ use App\Models\State;
 use App\Models\SupportGroup;
 use App\Models\SystemSetting;
 use App\Models\Ward;
+use App\Services\PackageGovernanceService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 
 class ProfileCompletionController extends Controller
 {
@@ -34,24 +36,24 @@ class ProfileCompletionController extends Controller
        {
             // Retrieve the value of the default_country setting
             $defaultCountry = SystemSetting::find(1);
-   
+
            // Retrieve the ID of the default country
            return Country::where('name', $defaultCountry->system_country)->first();
        }
-   
+
        //Function to retrieves regions from set country
        public function getRegions()
        {
            $country_id = $this->getCountries()->id;
            $country = Country::where('id',$country_id)->first();
-   
+
            if($country->name == 'Nigeria'){
                $region = Region::where('country_id', $country_id)->where('name', '!=', 'No-region')->get();
            }else{
            $region = Region::where('country_id', $country_id)->get();
            }
-   
-   
+
+
            return($region);
        }
 
@@ -65,6 +67,7 @@ class ProfileCompletionController extends Controller
     $SystemSetting = SystemSetting::find(1);
     $profileData = $this->getProfileData();
     $pageTitle = 'Complete Your Profile';
+    $package = app(PackageGovernanceService::class)->normalize($SystemSetting?->package);
 
     // Fetch additional data required for the profile form
     $countries = Country::all();
@@ -81,9 +84,9 @@ class ProfileCompletionController extends Controller
         $redirectRoute = null;
         $notification = null;
 
-        switch ($SystemSetting->package) {
-            case 'national':
-                if ($profileData->access_level == 'nationaladmin' && $profileData->hasRole('National ICT/Media Director') || $profileData->access_level == 'superadmin') {
+        switch ($package) {
+            case PackageGovernanceService::PRESIDENTIAL:
+                if (($profileData->access_level == 'nationaladmin' && $profileData->hasRole('National ICT Director')) || $profileData->access_level == 'superadmin') {
                     $notification = [
                         'type' => 'success',
                         'message' => ' Please add or upload LGAs, Wards, and Polling Units.',
@@ -93,75 +96,65 @@ class ProfileCompletionController extends Controller
                     $notification = 'The system is not completely set up. Please contact the Administrator.';
                 }
                 break;
-        
-            case 'regional':
-                if ($profileData->access_level == 'regionaladmin' && $profileData->hasRole('Regional ICT/Media Director') || $profileData->access_level == 'superadmin') {
-                    $notification = [
-                        'type' => 'success',
-                        'message' => ' Please add or upload LGAs, Wards and Polling Units.',
-                    ];
-                    $redirectRoute = $profileData->access_level.'.location.lgas';
-                } else {
-                    $notification = 'The system is not completely set up. Please contact the Regional ICT/Media Director.';
-                }
-                break;
-        
-            case 'state':
-                if ($profileData->access_level == 'stateadmin' && $profileData->hasRole('State ICT/Media Director') || $profileData->access_level == 'superadmin') {
+
+            case PackageGovernanceService::GOVERNORSHIP:
+                if (($profileData->access_level == 'stateadmin' && $profileData->hasRole('State ICT Director')) || $profileData->access_level == 'superadmin') {
                     $notification = [
                         'type' => 'success',
                         'message' => ' Please add or upload LGAs, Wards & Polling Units.',
                     ];
                     $redirectRoute = $profileData->access_level.'.location.lgas';
                 } else {
-                    $notification = 'The system is not completely set up. Please contact the State ICT/Media Director.';
+                    $notification = 'The system is not completely set up. Please contact the State ICT Director.';
                 }
                 break;
-        
-            case 'lga': // New case for LGA
-                if ($profileData->access_level == 'lgaadmin' && $profileData->hasRole('LGA ICT/Media Director') || $profileData->access_level == 'superadmin') {
+
+            case PackageGovernanceService::CHAIRMANSHIP:
+                if (($profileData->access_level == 'lgaadmin' && $profileData->hasRole('LGA ICT Director')) || $profileData->access_level == 'superadmin') {
                     $notification = [
                         'type' => 'success',
                         'message' => ' Please add or upload Wards and Polling Units.',
                     ];
                     $redirectRoute = $profileData->access_level.'.location.wards';
                 } else {
-                    $notification = 'The system is not completely set up. Please contact the LGA ICT/Media Director.';
+                    $notification = 'The system is not completely set up. Please contact the LGA ICT Director.';
                 }
                 break;
-        
-            case 'ward':
-                if ($profileData->access_level == 'wardadmin' && $profileData->hasRole('Ward ICT/Media Director') || $profileData->access_level == 'superadmin') {
+
+            case PackageGovernanceService::SENATORIAL:
+                if (($profileData->access_level == 'senatorialadmin' && $profileData->hasRole('Senatorial District ICT Director')) || $profileData->access_level == 'superadmin') {
                     $notification = [
                         'type' => 'success',
-                        'message' => ' Please verify Polling Units.',
+                        'message' => ' Please add or upload LGAs, Wards, and Polling Units for this Senatorial District.',
                     ];
-                    $redirectRoute = $profileData->access_level.'.location.polling_units';
+                    $redirectRoute = $profileData->access_level == 'superadmin'
+                        ? 'superadmin.location.lgas'
+                        : 'senatorialadmin.dashboard';
                 } else {
-                    $notification = 'The system is not completely set up. Please contact the Ward ICT/Media Director.';
+                    $notification = 'The system is not completely set up. Please contact the Senatorial District ICT Director.';
                 }
                 break;
-        
-            case 'senate':
-            case 'reps':
-            case 'assembly':
-                if ($profileData->hasRole('Campaign ICT/Media Director')) {
+
+            case PackageGovernanceService::FEDERAL:
+                if (($profileData->access_level == 'federaladmin' && $profileData->hasRole('Federal Constituency ICT Director')) || $profileData->access_level == 'superadmin') {
                     $notification = [
                         'type' => 'success',
-                        'message' => ' Please oversee the campaign System setup.',
+                        'message' => ' Please add or upload LGAs, Wards, and Polling Units for this Federal Constituency.',
                     ];
-                    $redirectRoute = 'campaignadmin.setup.oversee';
+                    $redirectRoute = $profileData->access_level == 'superadmin'
+                        ? 'superadmin.location.lgas'
+                        : 'federaladmin.dashboard';
                 } else {
-                    $notification = 'The system is not completely set up. Please contact the Campaign ICT/Media Director.';
+                    $notification = 'The system is not completely set up. Please contact the Federal Constituency ICT Director.';
                 }
                 break;
-        
+
             default:
                 $notification = 'Invalid system package. Please contact the Administrator.';
                 break;
         }
 
-        // If ICT/Media Director, redirect to the appropriate setup page
+        // If ICT Director, redirect to the appropriate setup page
         if ($redirectRoute) {
             return redirect()->route($redirectRoute)->with($notification);
         }
@@ -172,7 +165,7 @@ class ProfileCompletionController extends Controller
 
     // Render the profile completion form
     return view('backend.' . $profileData->access_level . '.complete-profile', compact(
-        'profileData', 'pageTitle', 'countries', 'regions', 'states', 
+        'profileData', 'pageTitle', 'countries', 'regions', 'states',
         'lgas', 'wards', 'pollingUnits', 'religions', 'ageGrades'
     ));
 }
@@ -187,6 +180,9 @@ class ProfileCompletionController extends Controller
     public function complete(Request $request)
     {
         $profileData = $this->getProfileData();
+        $requireBank = optional(SystemSetting::first())->require_bank_details;
+        $bankRule = $requireBank ? 'required|string|max:255' : 'nullable|string|max:255';
+        $accountRule = $requireBank ? 'required|string|size:10' : 'nullable|string|size:10';
 
          // Validation rules
          $validatedData = $request->validate([
@@ -204,8 +200,8 @@ class ProfileCompletionController extends Controller
             'ward_id' => 'required|exists:wards,id',
             'polling_unit_id' => 'required|exists:polling_units,id',
             'religion_id' => 'required|exists:religions,id',
-            'bank' => 'nullable|string|max:255',
-            'bank_account_number' => 'nullable|string|size:10',
+            'bank' => $bankRule,
+            'bank_account_number' => $accountRule,
             'address' => 'nullable|string|max:255',
             'occupation' => 'nullable|string|max:255',
             'qualification' => 'nullable|string|max:255',
@@ -227,20 +223,20 @@ class ProfileCompletionController extends Controller
             'ward_id' => $validatedData['ward_id'],
             'polling_unit_id' => $validatedData['polling_unit_id'],
             'religion_id' => $validatedData['religion_id'],
-            'bank' => $validatedData['bank'],
-            'bank_account_number' => $validatedData['bank_account_number'],
+            'bank' => $validatedData['bank'] ?? null,
+            'bank_account_number' => $validatedData['bank_account_number'] ?? null,
             'address' => $validatedData['address'],
             'occupation' => $validatedData['occupation'],
             'qualification' => $validatedData['qualification'],
         ]);
 
-          if ($request->hasFile('photo')) {
-              $file = $request->file('photo');
-              $filename = date('YmdHi') . $file->getClientOriginalName();
-              $file->move(public_path('uploads/member_images/'), $filename);
-              @unlink(public_path('uploads/member_images/') . $profileData->photo);
-              $profileData->photo = $filename;
-          }
+        if ($request->hasFile('photo')) {
+            $file = $request->file('photo');
+            $filename = (string) Str::uuid() . '.' . $file->getClientOriginalExtension();
+            $file->move(public_path('uploads/member_images/'), $filename);
+            @unlink(public_path('uploads/member_images/') . $profileData->photo);
+            $profileData->photo = $filename;
+        }
 
 
 
@@ -252,7 +248,7 @@ class ProfileCompletionController extends Controller
             'alert-type' => 'success',
         ];
 
-        
+
         return redirect()->route( $profileData->access_level.'.dashboard')->with($notification);
     }
 
@@ -266,7 +262,7 @@ class ProfileCompletionController extends Controller
 
          return view('backend.'.$profileData->access_level.'.select-support-group', compact('supportGroups', 'profileData', 'pageTitle', 'userSupportGroups'));
      }
- 
+
      // Handle the submission of selected support groups
      public function storeSupportGroup(Request $request)
      {
@@ -274,9 +270,9 @@ class ProfileCompletionController extends Controller
              'support_groups' => 'required|array|min:1',
              'support_groups.*' => 'exists:support_groups,id',
          ]);
-     
+
          $profileData = $this->getProfileData();
-     
+
          // Sync the user's selected groups (add/remove as necessary)
          $profileData->supportGroups()->sync($request->input('support_groups'));
          $profileData->save();
@@ -289,11 +285,11 @@ class ProfileCompletionController extends Controller
          $Setting = SystemSetting::find(1);
 
          if($Setting->frontend_community==1){
-            return redirect()->route('timeline')->with($notification);     
-         }else{     
+            return redirect()->route('timeline')->with($notification);
+         }else{
          return redirect()->route($profileData->access_level.'.dashboard')->with($notification);
          }
-         
+
         }
-     
+
 }

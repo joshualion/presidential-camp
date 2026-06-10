@@ -4,11 +4,64 @@ use Illuminate\Support\Facades\Auth;
 $userAudience = $userData ? $userData->getAudience() : 'public';
 $coverImage = $userData->cover_image ? url('uploads/member_images/'.$userData->cover_image) : url('uploads/no_image.jpg');
 $profileImage = !empty($userData->photo) ? url('uploads/member_images/'.$userData->photo) : url('uploads/no_image.jpg');
+// Determine if viewer can initiate message (must be same or higher access level)
+$ranks = [
+    'superadmin' => 8,
+    'nationaladmin' => 7,
+    'regionaladmin' => 6,
+    'stateadmin' => 5,
+    'lgaadmin' => 4,
+    'wardadmin' => 3,
+    'puadmin' => 2,
+    'user' => 1,
+];
+$viewerRank = $ranks[$profileData->access_level ?? 'user'] ?? 1;
+$targetRank = $ranks[$userData->access_level ?? 'user'] ?? 1;
+$canMessage = $profileData->id !== $userData->id && $viewerRank >= $targetRank;
 @endphp
+
+<style>
+    .card-title {
+        color: {{ $SystemSetting->dark_theme_color ?? '#008751' }} !important;
+    }
+</style>
 
 <!-- Cover Image -->
 <div class="cover-image position-relative" style="background-image: url({{ $coverImage }});">
-    
+    @if($canMessage)
+        <button
+            type="button"
+            class="btn message-cover-btn"
+            onclick="window.dispatchEvent(new CustomEvent('open-messenger', { detail: { userId: {{ $userData->id }} } }))"
+            title="Send Message"
+        >
+            <i class="fas fa-comment-dots me-2"></i> Message
+        </button>
+    @endif
+</div>
+
+<!-- Start Chat Modal -->
+<div class="modal fade" id="startChatModal" tabindex="-1" aria-labelledby="startChatModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="startChatModalLabel">Send a message to {{ $userData->firstname }} {{ $userData->lastname }}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form id="startChatForm">
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Message</label>
+            <textarea class="form-control" name="message" rows="3" placeholder="Type your message..." required></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary text-white">Send</button>
+        </div>
+      </form>
+    </div>
+  </div>
 </div>
 
 <!-- Profile Image and Name -->
@@ -17,7 +70,7 @@ $profileImage = !empty($userData->photo) ? url('uploads/member_images/'.$userDat
         <div class="col-md-2 profile-img-overlap position-relative">
             <div class="profile-img-container position-relative" style="width: 120px; height: 120px;">
                 <img class="profile-user-img img-fluid img-circle shadow-lg" src="{{ $profileImage }}" alt="profile" width="120" height="120">
-                
+
             </div>
         </div>
         <div class="col-md-10">
@@ -26,7 +79,7 @@ $profileImage = !empty($userData->photo) ? url('uploads/member_images/'.$userDat
             </h2>
         </div>
     </div>
-</div> 
+</div>
 
 <!-- Modals and Scripts remain unchanged -->
 
@@ -37,11 +90,11 @@ $profileImage = !empty($userData->photo) ? url('uploads/member_images/'.$userDat
         <div class="col-md-4 mb-4">
             <div class="card shadow-sm">
                 <div class="card-body">
-                    <h5 class="card-title"><i class="fas fa-tachometer-alt me-2"></i>Follow</h5>
-                    <p class="card-text">Follow {{$userData->firstname}}</p>
-                    <a href="#">
-                        <button class="btn btn-primary btn-sm w-100 text-white"><i class="fas fa-eye"></i> Follow</button>
-                    </a>
+                    <h5 class="card-title"><i class="fas fa-file-alt me-2"></i>Posts</h5>
+                    <p class="card-text">{{ number_format($postsCount ?? 0) }} Posts</p>
+                    <button class="btn btn-primary btn-sm w-100 text-white" onclick="scrollToPosts()">
+                        <i class="fas fa-arrow-down"></i> View Posts
+                    </button>
                 </div>
             </div>
         </div>
@@ -113,18 +166,23 @@ $profileImage = !empty($userData->photo) ? url('uploads/member_images/'.$userDat
 </div>
 
 <!-- Main Container for post and ads -->
-<div class="container mt-4">     
-   
-    
+<div class="container mt-4">
+
+
     <div class="row">
         <!-- Left Side: Create & View Post Section -->
-        <div class="col-md-9">            
+        <div class="col-md-9" id="user-posts-section">
 
-            <div class="shadow-sm">
-                <div class=" card card-body">   
+                    <div class="shadow-sm">
+                <div class=" card card-body">
                     <h5 class="card-title"><i class="fas fa-comment me-2"></i> Posts</h5>
                     <div id="app" class="newsfeed">
-                        {{-- <profile-feed :audience="'{{ $userAudience }}'"></profile-feed> --}}
+                        <profile-feed
+                          :audience="'{{ $userAudience }}'"
+                          :profile-data='@json($profileData)'
+                          :username="'{{ $userData->username }}'"
+                        ></profile-feed>
+                        <messenger-widget :profile-data='@json($profileData)'></messenger-widget>
                     </div>
                 </div>
             </div>
@@ -147,11 +205,22 @@ $profileImage = !empty($userData->photo) ? url('uploads/member_images/'.$userDat
 
 <script>
     $(document).ready(function() {
+    const hideModalCleanly = (modalId) => {
+        const el = document.getElementById(modalId);
+        if (!el) return;
+        const modal = bootstrap.Modal.getOrCreateInstance(el);
+        modal.hide();
+        const backdrop = document.querySelector('.modal-backdrop');
+        if (backdrop) backdrop.remove();
+        document.body.classList.remove('modal-open');
+        document.body.style.removeProperty('padding-right');
+    };
+
     // Handle Profile Photo Upload
     $('#updateProfileForm').submit(function(e) {
         e.preventDefault();
         var formData = new FormData(this);
-        
+
         $.ajax({
             url: "{{ route('update.profile.photo') }}",
             type: "POST",
@@ -161,10 +230,13 @@ $profileImage = !empty($userData->photo) ? url('uploads/member_images/'.$userDat
             success: function(response) {
                 if(response.success) {
                     $('.profile-user-img').attr('src', response.image_url);
-                    $('#updateProfileModal').modal('hide');
+                    hideModalCleanly('updateProfileModal');
                 } else {
-                    alert(response.error);
+                    alert(response.error || 'Upload failed. Please try a different image.');
                 }
+            },
+            error: function(xhr) {
+                alert(xhr.responseJSON?.message || 'Upload failed. Please try a different image (max 5MB, jpg/png/gif/webp).');
             }
         });
     });
@@ -183,15 +255,62 @@ $profileImage = !empty($userData->photo) ? url('uploads/member_images/'.$userDat
             success: function(response) {
                 if(response.success) {
                     $('.cover-image').css('background-image', 'url(' + response.image_url + ')');
-                    $('#updateCoverModal').modal('hide');
+                    hideModalCleanly('updateCoverModal');
                 } else {
-                    alert(response.error);
+                    alert(response.error || 'Upload failed. Please try a different image.');
                 }
+            },
+            error: function(xhr) {
+                alert(xhr.responseJSON?.message || 'Upload failed. Please try a different image (max 5MB, jpg/png/gif/webp).');
             }
         });
     });
 });
 
+    // Smooth scroll to posts section
+    function scrollToPosts() {
+        const postsSection = document.getElementById('user-posts-section');
+        if (!postsSection) return;
+        postsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    // Start conversation modal submission
+    const startChatForm = document.getElementById('startChatForm');
+    if (startChatForm) {
+        startChatForm.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const btn = startChatForm.querySelector('button[type="submit"]');
+            const textarea = startChatForm.querySelector('textarea[name="message"]');
+            const body = textarea.value.trim();
+            if (!body) {
+                alert('Please enter a message.');
+                return;
+            }
+            btn.disabled = true;
+            try {
+                await fetch("{{ url('/messages/start') }}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        recipient_id: "{{ $userData->id }}",
+                        message: body,
+                    }),
+                });
+                textarea.value = '';
+                const modalEl = document.getElementById('startChatModal');
+                const modal = bootstrap.Modal.getInstance(modalEl);
+                if (modal) modal.hide();
+            } catch (error) {
+                alert('Unable to send message. Please try again.');
+            } finally {
+                btn.disabled = false;
+            }
+        });
+    }
 </script>
 
 <style>
@@ -203,7 +322,7 @@ $profileImage = !empty($userData->photo) ? url('uploads/member_images/'.$userDat
     }
 
     .profile-user-img {
-        
+
     }
 
     .create-post {
@@ -216,14 +335,14 @@ $profileImage = !empty($userData->photo) ? url('uploads/member_images/'.$userDat
     }
 
     /* Ensure the profile image button stays within the profile image */
-    .profile-img-container {
+.profile-img-container {
         overflow: hidden; /* Clip the button to the container */
         border-radius: 50%; /* Ensure the container is circular */
         margin-top: -45%; /* Ensure the profile image overlaps the cover image by 45% */
         position: relative;
         z-index: 1;
         border: 4px solid #fff; /* Add a border to make the profile image stand out */
-       
+
     }
 
     /* Position the camera icon directly on top of the profile photo in the bottom right corner */
@@ -232,7 +351,7 @@ $profileImage = !empty($userData->photo) ? url('uploads/member_images/'.$userDat
         bottom: 15px;
         width: 30px;
         height: 30px;
-        
+
         padding: 0;
         border-radius: 50%;
     }
@@ -247,5 +366,20 @@ $profileImage = !empty($userData->photo) ? url('uploads/member_images/'.$userDat
             bottom: 5px !important;
         }
     }
-</style>
 
+    .message-cover-btn {
+        position: absolute;
+        right: 12px;
+        bottom: 12px;
+        background: {{ $SystemSetting->dark_theme_color ?? '#008751' }};
+        color: #fff;
+        border: none;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+        font-weight: 600;
+    }
+
+    .message-cover-btn:hover {
+        opacity: 0.9;
+        color: #fff;
+    }
+</style>

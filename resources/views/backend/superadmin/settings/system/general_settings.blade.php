@@ -1,4 +1,8 @@
 
+@php
+    $currentPackage = app(\App\Services\PackageGovernanceService::class)->normalize($SystemSetting->package);
+@endphp
+
 @if($profileData->access_level == 'superadmin')
     <div class="form-group row">
         <label for="system_country" class="col-sm-3 col-form-label">System Country</label>
@@ -18,7 +22,7 @@
 
             </div>
             @error('system_country')
-                <div class="alert alert-danger">{{ $message }}</div>
+                <div class="alert alert-danger">{{ $errors->first('system_country') }}</div>
             @enderror
     </div>
 @else
@@ -29,13 +33,13 @@
     <div class="form-group row">
         <label for="package" class="col-sm-3 col-form-label">Package</label>
             <div class="col-sm-9">
-                <input type="hidden" name="package" value="{{ $SystemSetting->package }}" />
+                <input type="hidden" name="package" value="{{ $currentPackage }}" />
 
                 <select disabled  class="form-control @error('package') is_invalid @enderror" name="package" id="package">
                         <option value="" disabled selected>Select Package</option>
-                        @foreach($packages as $package)
-                            <option value="{{ $package }}" {{ $SystemSetting->package == $package ? 'selected' : '' }}>
-                                {{ ucfirst($package) }} <!-- Capitalizes the first letter of the package name -->
+                        @foreach($packages as $package => $label)
+                            <option value="{{ $package }}" {{ $currentPackage == $package ? 'selected' : '' }}>
+                                {{ $label }}
                             </option>
                         @endforeach
                 </select>
@@ -43,11 +47,11 @@
 
             </div>
             @error('package')
-                <div class="alert alert-danger">{{ $message }}</div>
+                <div class="alert alert-danger">{{ $errors->first('package') }}</div>
             @enderror
     </div>
 @else
-    <input type="hidden" name="package" value="{{ $SystemSetting->package }}" />
+    <input type="hidden" name="package" value="{{ $currentPackage }}" />
 @endif
 
         <div class="form-group row">
@@ -108,6 +112,16 @@
             @error('company_phone')
                 <div class="alert alert-danger">{{ $message }}</div>
             @enderror
+        </div>
+
+        <div class="form-group row">
+            <label for="require_bank_details" class="col-sm-3 col-form-label">Require Bank Details</label>
+            <div class="col-sm-9 d-flex align-items-center">
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" id="require_bank_details" name="require_bank_details" value="1" {{ $SystemSetting->require_bank_details ? 'checked' : '' }}>
+                    <label class="form-check-label" for="require_bank_details">Force all profiles to include bank name & account number</label>
+                </div>
+            </div>
         </div>
 
 

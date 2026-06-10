@@ -21,7 +21,7 @@
 
 
                         <div class="form-group row">
-                            <input type="hidden" name="name" value="Presidential Election" />
+                            <input type="text" name="name" value="e.g Governorship Election" />
 
                             <label for="party_id" class="col-sm-4 col-form-label">Choose Your Political Party</label>
                             <div class="col-sm-8">

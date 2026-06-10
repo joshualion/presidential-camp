@@ -1,6 +1,6 @@
 @extends('backend.template.backend-master')
 @section('content')
-@php 
+@php
  $state = \App\Models\State::find(Auth::user()->state_id);
 @endphp
 
@@ -22,9 +22,10 @@
                                     <thead>
                                     <tr>
                                         <th>S/N</th>
-                                        <th>LGA</th>
                                         <th>Ward</th>
                                         <th>Members</th>
+                                        <th>Eligible Voters</th>
+                                        <th>Ineligible Voters</th>
                                         <th>Action</th>
                                     </tr>
                                     </thead>
@@ -38,9 +39,10 @@
                                     <tfoot>
                                     <tr>
                                         <th>S/N</th>
-                                        <th>LGA</th>
                                         <th>ward</th>
                                         <th>Members</th>
+                                        <th>Eligible Voters</th>
+                                        <th>Ineligible Voters</th>
                                         <th>Action</th>
                                     </tr>
                                     </tfoot>
@@ -82,9 +84,11 @@
                    "searchable": false // Set to false because it’s just an index
                },
 
-               { "data": "lga", "searchable": true },
+               
                { "data": "ward", "searchable": true },
                { "data": "members", "searchable": false },
+                { "data": "eligible_voters", "searchable": false },
+                { "data": "ineligible_voters", "searchable": false },
                { "data": "action", "orderable": false, "searchable": false }
            ],
            "responsive": true,

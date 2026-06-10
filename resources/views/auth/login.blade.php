@@ -1,4 +1,12 @@
-
+<style>
+    body {
+      background-color: {{ $SystemSetting ? $SystemSetting->dark_theme_color : '#165828' }} !important;
+    }
+    .card-primary{
+      border-top: 3px solid {{ $SystemSetting ? $SystemSetting->dark_theme_color : '#165828' }} !important;
+      border-bottom: 3px solid {{ $SystemSetting ? $SystemSetting->dark_theme_color : '#165828' }} !important;
+    }
+</style>
 @include('auth.template.header')
 
 <div class="card card-primary">
@@ -9,7 +17,10 @@
             </h3><hr class="card card-primary"/>
             <p class="login-box-msg text-muted">Sign in to start your session</p>
         </div>
-        
+
+
+
+
     <!-- Session Status -->
     <x-auth-session-status class="mb-4" :status="session('status')" />
 

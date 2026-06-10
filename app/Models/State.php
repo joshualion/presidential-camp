@@ -22,6 +22,14 @@ class State extends Model
         return $this->hasMany(LocalGovernmentArea::class);
     }
 
+    public function senatorialDistricts(){
+        return $this->hasMany(SenatorialDistrict::class);
+    }
+
+    public function federalConstituencies(){
+        return $this->hasMany(FederalConstituency::class);
+    }
+
     public function users(){
         return $this->hasMany(User::class);
     }

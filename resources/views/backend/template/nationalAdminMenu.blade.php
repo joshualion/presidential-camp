@@ -1,11 +1,6 @@
-<style>
-    .nav-treeview{
-        background: #ffffff !important;
-    }
-</style>
 @if(Auth::user()->access_level == 'nationaladmin')
 <nav class="mt-2">
-      <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
+      <ul class="nav nav-pills nav-sidebar flex-column sidebar-nav" data-widget="treeview" role="menu" data-accordion="false">
 
             <li class="tab nav-item menu-close">
                         <a href="/national/dashboard" class="nav-link">
@@ -87,20 +82,26 @@
                                 </a>
                                 <ul class="nav nav-treeview">
 
-                                <li class="nav-item">
+                                  <li class="nav-item">
                                     <a href="/national/elections" class="nav-link">
                                       <i class="fas fa-award nav-icon"></i>
                                       <p>Manage Elections</p>
                                     </a>
                                   </li>
+                                  <li class="nav-item">
+                                    <a href="/national/election/operations-center" class="nav-link">
+                                      <i class="fas fa-broadcast-tower nav-icon"></i>
+                                      <p>Situation Room</p>
+                                    </a>
+                                  </li>
                                   @if(
                                     $profileData->hasAnyRole([
-                                        'National ICT/Media Director',
-                                        'Regional ICT/Media Director',
-                                        'State ICT/Media Director',
-                                        'LGA ICT/Media Director',
-                                        'Ward ICT/Media Director',
-                                        'PU ICT/Media Director',
+                                        'National ICT Director',
+                                        'Regional ICT Director',
+                                        'State ICT Director',
+                                        'LGA ICT Director',
+                                        'Ward ICT Director',
+                                        'PU ICT Director',
                                         'Pu Agent'
                                     ]) || $profileData->access_level == 'superadmin' )
                                   <li class="nav-item">
@@ -156,7 +157,7 @@
             </li> --}}
             {{-- / Reports --}}
 
-            {{-- Finances --}}
+            <!-- Finances temporarily disabled pending finance model review.
             <li class="tab nav-item menu-close">
                 <a href="#" class="nav-link">
                   <i class="nav-icon fas fa-money-bill"></i>
@@ -199,7 +200,7 @@
 
                 </ul>
             </li>
-            {{-- / Finances --}}
+            / Finances -->
 
 
             {{-- Events --}}
@@ -248,6 +249,12 @@
                             <a href="/national/bulksms/send" class="nav-link">
                               <i class="fas fa-sms	 nav-icon"></i>
                               <p>Send SMS</p>
+                            </a>
+                          </li>
+                          <li class="nav-item">
+                            <a href="/messages" class="nav-link">
+                              <i class="fas fa-comments nav-icon"></i>
+                              <p>Internal Communication</p>
                             </a>
                           </li>
 
@@ -340,6 +347,18 @@
                             </a>
                           </li>
                           <li class="nav-item">
+                            <a href="/national/location/senatorial-districts" class="nav-link">
+                            <i class="fas fa-map nav-icon"></i>
+                              <p>Senatorial Districts</p>
+                            </a>
+                          </li>
+                          <li class="nav-item">
+                            <a href="/national/location/federal-constituencies" class="nav-link">
+                            <i class="fas fa-landmark nav-icon"></i>
+                              <p>Federal Constituencies</p>
+                            </a>
+                          </li>
+                          <li class="nav-item">
                             <a href="/national/location/localgovernments" class="nav-link">
                             <i class="fas fa-map-pin nav-icon"></i>
                               <p>LGA's</p>
@@ -373,7 +392,7 @@
                           </p>
                         </a>
                         <ul class="nav nav-treeview">
-                    @if(($profileData->hasRole('National ICT/Media Director')) || ( $profileData->access_level == 'superadmin'))
+                    @if($profileData->access_level == 'superadmin')
 
                           <li class="nav-item">
                             <a href="/national/system/settings" class="nav-link">
@@ -389,12 +408,14 @@
                             </a>
                           </li>
 
+                          {{-- Payment Settings temporarily disabled pending finance model review.
                           <li class="nav-item">
                             <a href="/national/settings/paymentgateway" class="nav-link">
                             <i class="fas fa-credit-card nav-icon"></i>
                               <p> Payment Settings</p>
                             </a>
                           </li>
+                          --}}
 
                           <li class="nav-item">
                             <a href="/national/setting/volunteer/group" class="nav-link">
@@ -403,7 +424,7 @@
                             </a>
                           </li>
 
-                          
+
 
                           <li class="nav-item">
                             <a href="/national/election/setting/politicalparty" class="nav-link">
@@ -446,7 +467,7 @@
 
             </li>
 
-        @if(($profileData->hasRole('National ICT/Media Director')))
+        @if(($profileData->hasRole('National ICT Director')))
             {{-- Roles & Permission Menu --}}
             {{-- <li class="tab nav-item menu-close">
                 <a href="#" class="nav-link">
@@ -508,7 +529,7 @@
                             </a>
                           </li>
 
-                          
+
 
                           <li class="nav-item">
                             <a href="/national/change/password" class="nav-link">

@@ -11,7 +11,7 @@ $ward = \App\Models\Ward::find(Auth::user()->ward_id);
 @if(Auth::user()->access_level == 'wardadmin')
 
 <nav class="mt-2">
-      <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
+      <ul class="nav nav-pills nav-sidebar flex-column sidebar-nav" data-widget="treeview" role="menu" data-accordion="false">
 
             <li class="tab nav-item menu-close">
                         <a href="/ward/dashboard" class="nav-link">
@@ -42,9 +42,9 @@ $ward = \App\Models\Ward::find(Auth::user()->ward_id);
                               <i class="fas fa-user nav-icon"></i>
                               <p>All Members</p>
                             </a>
-                          </li>                  
+                          </li>
 
-                          
+
 
                           <li class="nav-item">
                             <a href="/ward/members/bypu/{{$ward->uuid}}" class="nav-link">
@@ -75,14 +75,20 @@ $ward = \App\Models\Ward::find(Auth::user()->ward_id);
                 <p>Manage Elections</p>
               </a>
             </li>
+            <li class="nav-item">
+              <a href="/ward/election/operations-center" class="nav-link">
+                <i class="fas fa-broadcast-tower nav-icon"></i>
+                <p>Situation Room</p>
+              </a>
+            </li>
             @if(
               $profileData->hasAnyRole([
-                  'National ICT/Media Director',
-                  'lga ICT/Media Director',
-                  'lga ICT/Media Director',
-                  'LGA ICT/Media Director',
-                  'Ward ICT/Media Director',
-                  'PU ICT/Media Director',
+                  'National ICT Director',
+                  'lga ICT Director',
+                  'lga ICT Director',
+                  'LGA ICT Director',
+                  'Ward ICT Director',
+                  'PU ICT Director',
                   'Pu Agent'
               ]) || $profileData->access_level == 'superadmin' )
             <li class="nav-item">
@@ -103,10 +109,10 @@ $ward = \App\Models\Ward::find(Auth::user()->ward_id);
 </li>
 {{-- / Election --}}
 
-           
+
 
             {{-- Finances --}}
-            <li class="tab nav-item menu-close">
+            {{-- <li class="tab nav-item menu-close">
                 <a href="#" class="nav-link">
                   <i class="nav-icon fas fa-money-bill"></i>
                   <p>
@@ -114,7 +120,7 @@ $ward = \App\Models\Ward::find(Auth::user()->ward_id);
                     <i class="right fas fa-angle-left"></i>
                   </p>
                 </a>
-                <ul class="nav nav-treeview">           
+                <ul class="nav nav-treeview">
 
                 <li class="nav-item">
                     <a href="/ward/dashboard" class="nav-link">
@@ -123,7 +129,7 @@ $ward = \App\Models\Ward::find(Auth::user()->ward_id);
                     </a>
                   </li>
 
-                  
+
 
                   <li class="nav-item">
                     <a href="/ward/lga/dashboard" class="nav-link">
@@ -133,7 +139,7 @@ $ward = \App\Models\Ward::find(Auth::user()->ward_id);
                   </li>
 
                 </ul>
-            </li>
+            </li> --}}
             {{-- / Finances --}}
 
 
@@ -185,6 +191,12 @@ $ward = \App\Models\Ward::find(Auth::user()->ward_id);
                               <p>Send SMS</p>
                             </a>
                           </li>
+                          <li class="nav-item">
+                            <a href="/messages" class="nav-link">
+                              <i class="fas fa-comments nav-icon"></i>
+                              <p>Internal Communication</p>
+                            </a>
+                          </li>
 
                           <!-- <li class="nav-item">
                             <a href="#" class="nav-link">
@@ -210,9 +222,9 @@ $ward = \App\Models\Ward::find(Auth::user()->ward_id);
             </li>
             {{-- / Messaging --}}
 
-               
 
-          
+
+
 
             {{-- Settings --}}
             <li class="tab nav-item menu-close">
@@ -223,7 +235,7 @@ $ward = \App\Models\Ward::find(Auth::user()->ward_id);
                             <i class="right fas fa-angle-left"></i>
                           </p>
                         </a>
-                        <ul class="nav nav-treeview">                   
+                        <ul class="nav nav-treeview">
 
                           <li class="nav-item">
                             <a href="/ward/bulksms/setting" class="nav-link">
@@ -235,7 +247,7 @@ $ward = \App\Models\Ward::find(Auth::user()->ward_id);
 
             </li>
 
-       
+
 
             {{-- Profile Menu --}}
             <li class="tab nav-item menu-close">
@@ -255,7 +267,7 @@ $ward = \App\Models\Ward::find(Auth::user()->ward_id);
                             </a>
                           </li>
 
-                         
+
 
                           <li class="nav-item">
                             <a href="/ward/change/password" class="nav-link">

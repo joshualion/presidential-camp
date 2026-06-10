@@ -31,6 +31,18 @@ class PermissionsTableSeeder extends Seeder
             ['name' => 'state_Update', 'guard_name' => 'web', 'group_name' => 'stateadmin', 'created_at' => $now, 'updated_at' => $now],
             ['name' => 'state_Delete', 'guard_name' => 'web', 'group_name' => 'stateadmin', 'created_at' => $now, 'updated_at' => $now],
 
+            // Senatorial District Admin Permissions
+            ['name' => 'senatorial_Create', 'guard_name' => 'web', 'group_name' => 'senatorialadmin', 'created_at' => $now, 'updated_at' => $now],
+            ['name' => 'senatorial_Read', 'guard_name' => 'web', 'group_name' => 'senatorialadmin', 'created_at' => $now, 'updated_at' => $now],
+            ['name' => 'senatorial_Update', 'guard_name' => 'web', 'group_name' => 'senatorialadmin', 'created_at' => $now, 'updated_at' => $now],
+            ['name' => 'senatorial_Delete', 'guard_name' => 'web', 'group_name' => 'senatorialadmin', 'created_at' => $now, 'updated_at' => $now],
+
+            // Federal Constituency Admin Permissions
+            ['name' => 'federal_Create', 'guard_name' => 'web', 'group_name' => 'federaladmin', 'created_at' => $now, 'updated_at' => $now],
+            ['name' => 'federal_Read', 'guard_name' => 'web', 'group_name' => 'federaladmin', 'created_at' => $now, 'updated_at' => $now],
+            ['name' => 'federal_Update', 'guard_name' => 'web', 'group_name' => 'federaladmin', 'created_at' => $now, 'updated_at' => $now],
+            ['name' => 'federal_Delete', 'guard_name' => 'web', 'group_name' => 'federaladmin', 'created_at' => $now, 'updated_at' => $now],
+
             // LGA Admin Permissions
             ['name' => 'lga_Create', 'guard_name' => 'web', 'group_name' => 'lgaadmin', 'created_at' => $now, 'updated_at' => $now],
             ['name' => 'lga_Read', 'guard_name' => 'web', 'group_name' => 'lgaadmin', 'created_at' => $now, 'updated_at' => $now],

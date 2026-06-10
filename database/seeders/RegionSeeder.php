@@ -14,34 +14,39 @@ class RegionSeeder extends Seeder
     public function run(): void
     {
         $regions = [
+
+
             [
                 'name' => 'North Central',
-                'description' => 'Includes states like Benue, Kogi, Kwara, Nasarawa, Niger, and Plateau.',
+                'description' => '',
             ],
+
             [
                 'name' => 'North East',
-                'description' => 'Comprises states like Adamawa, Bauchi, Borno, Gombe, Taraba, and Yobe.',
+                'description' => '',
             ],
+
             [
                 'name' => 'North West',
-                'description' => 'Encompasses states such as Kaduna, Kano, Katsina, Kebbi, Sokoto, and Zamfara.',
+                'description' => '',
             ],
+
             [
                 'name' => 'South East',
-                'description' => 'Consists of states like Abia, Anambra, Ebonyi, Enugu, and Imo.',
+                'description' => '',
             ],
+
             [
                 'name' => 'South South',
-                'description' => 'Includes states such as Akwa Ibom, Bayelsa, Cross River, Delta, Edo, and Rivers.',
+                'description' => '',
             ],
+
             [
                 'name' => 'South West',
-                'description' => 'Comprises states like Ekiti, Lagos, Ogun, Ondo, Osun, and Oyo.',
+                'description' => '',
             ],
-            [
-                'name' => 'No-region',
-                'description' => 'For countries that have no region.',
-            ],
+
+
         ];
 
         foreach ($regions as $region) {

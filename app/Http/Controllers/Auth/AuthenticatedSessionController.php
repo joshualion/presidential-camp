@@ -49,7 +49,7 @@ class AuthenticatedSessionController extends Controller
         }elseif (Auth::user()->access_level==='puadmin'){
             $url = '/pu/dashboard';
         }elseif (Auth::user()->access_level==='user') {
-            $url = '/member/dashboard';
+            $url = '/dashboard';
         }else{
             //logout User something has gone wrong
            Auth::guard('web')->logout();

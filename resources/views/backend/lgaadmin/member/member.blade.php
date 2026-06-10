@@ -333,7 +333,7 @@
     </div>
 </div>
 
-@if(($profileData->hasRole('National ICT/Media Director')) || ($profileData->hasRole('Regional ICT/Media Director')) || ($profileData->hasAnyRole('State ICT/Media Director')) || ($profileData->hasAnyRole('LGA ICT/Media Director')) || ($profileData->hasAnyRole('Ward ICT/Media Director')) || ($profileData->hasAnyRole('PU ICT/Media Director')) || ( $profileData->access_level == 'superadmin'))
+@if(($profileData->hasRole('National ICT Director')) || ($profileData->hasRole('Regional ICT Director')) || ($profileData->hasAnyRole('State ICT Director')) || ($profileData->hasAnyRole('LGA ICT Director')) || ($profileData->hasAnyRole('Ward ICT Director')) || ($profileData->hasAnyRole('PU ICT Director')) || ( $profileData->access_level == 'superadmin'))
 
 
 <!-- Role -->

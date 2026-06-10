@@ -5,44 +5,44 @@ use App\Http\Controllers\AjaxController;
 use App\Http\Controllers\BulksmsController;
 use App\Http\Controllers\BulkSmsSettingController;
 use App\Http\Controllers\ChartsController;
+use App\Http\Controllers\DashboardStatsController;
 use App\Http\Controllers\ElectionController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\MembersController;
-use App\Http\Controllers\wardadmin\wardAdminController;
+use App\Http\Controllers\wardadmin\WardAdminController;
 use Illuminate\Support\Facades\Route;
 
 
-Route::get('/ward/logout', [wardAdminController::class, 'wardadminLogout'])->name('wardadmin.logout')->middleware(['auth','access_level:wardadmin']);
-
+Route::get('/ward/logout', [WardAdminController::class, 'wardadminLogout'])->name('wardadmin.logout')->middleware(['auth','access_level:wardadmin']);
 
 Route::middleware(['auth','check_onboarding'])->group(function () {
 
  // Regional Admin Profile & Dashboard Routes
- Route::get('/ward/dashboard', [wardAdminController::class, 'wardAdminDashBoard'])->name('wardadmin.dashboard')->middleware('access_level:wardadmin');
- Route::get('/ward/profile', [wardAdminController::class, 'wardadminProfile'])->name('wardadmin.profile')->middleware('access_level:wardadmin');
- Route::post('/ward/profile/store', [wardAdminController::class, 'wardadminProfileStore'])->name('wardadmin.profile.store')->middleware('access_level:wardadmin');
- Route::get('/ward/change/password', [wardAdminController::class, 'wardadminChangePassword'])->name('wardadmin.change.password')->middleware('access_level:wardadmin');
- Route::post('/ward/update/password', [wardAdminController::class, 'wardadminUpdatePassword'])->name('wardadmin.update.password')->middleware('access_level:wardadmin');
- 
+ Route::get('/ward/dashboard', [WardAdminController::class, 'wardAdminDashBoard'])->name('wardadmin.dashboard')->middleware('access_level:wardadmin');
+ Route::get('/ward/dashboard/stats', [DashboardStatsController::class, 'cards'])->name('wardadmin.dashboard.stats')->middleware('access_level:wardadmin');
+ Route::get('/ward/profile', [WardAdminController::class, 'wardadminProfile'])->name('wardadmin.profile')->middleware('access_level:wardadmin');
+ Route::post('/ward/profile/store', [WardAdminController::class, 'wardadminProfileStore'])->name('wardadmin.profile.store')->middleware('access_level:wardadmin');
+ Route::get('/ward/change/password', [WardAdminController::class, 'wardadminChangePassword'])->name('wardadmin.change.password')->middleware('access_level:wardadmin');
+ Route::post('/ward/update/password', [WardAdminController::class, 'wardadminUpdatePassword'])->name('wardadmin.update.password')->middleware('access_level:wardadmin');
 
 
     /*Regional Admin Ajax Routes */
 
 //Gender Distribution
-Route::get('/ward/member/distribution/gender', [wardAdminController::class, 'wardadminGenderDistribution'])->name('wardadmin.member.distribution.gender')->middleware('access_level:wardadmin');
+Route::get('/ward/member/distribution/gender', [WardAdminController::class, 'wardadminGenderDistribution'])->name('wardadmin.member.distribution.gender')->middleware('access_level:wardadmin');
 
 // Age Distribution
-Route::get('/ward/member/distribution/age', [wardAdminController::class, 'wardadminAgeDistribution'])->name('wardadmin.member.distribution.age')->middleware('access_level:wardadmin');
+Route::get('/ward/member/distribution/age', [WardAdminController::class, 'wardadminAgeDistribution'])->name('wardadmin.member.distribution.age')->middleware('access_level:wardadmin');
 
 // Region Distribution
-Route::get('/ward/member/distribution/region', [wardAdminController::class, 'wardadminRegionDistribution'])->name('wardadmin.member.distribution.region')->middleware('access_level:wardadmin');
+Route::get('/ward/member/distribution/region', [WardAdminController::class, 'wardadminRegionDistribution'])->name('wardadmin.member.distribution.region')->middleware('access_level:wardadmin');
 /*End Super Admin Ajax Routes */
 // Religion Distribution
-Route::get('/ward/member/distribution/religion', [wardAdminController::class, 'wardadminReligionDistribution'])->name('wardadmin.member.distribution.religion')->middleware('access_level:wardadmin');
+Route::get('/ward/member/distribution/religion', [WardAdminController::class, 'wardadminReligionDistribution'])->name('wardadmin.member.distribution.religion')->middleware('access_level:wardadmin');
 // Valid Voter Distribution
-Route::get('/ward/member/distribution/voter', [wardAdminController::class, 'wardadminVoterDistribution'])->name('wardadmin.member.distribution.voter')->middleware('access_level:wardadmin');
+Route::get('/ward/member/distribution/voter', [WardAdminController::class, 'wardadminVoterDistribution'])->name('wardadmin.member.distribution.voter')->middleware('access_level:wardadmin');
 // State Distribution
-Route::get('/ward/member/distribution/state', [wardAdminController::class, 'wardadminStateDistribution'])->name('wardadmin.member.distribution.state')->middleware('access_level:wardadmin');
+Route::get('/ward/member/distribution/state', [WardAdminController::class, 'wardadminStateDistribution'])->name('wardadmin.member.distribution.state')->middleware('access_level:wardadmin');
 
 
 //Member Management
@@ -92,7 +92,7 @@ Route::get('/ward/pu/members/data/{uuid}', [MembersController::class, 'getPuMemb
 
 
 //Manage Regions
-Route::get('/ward/location/region/dashboard/{uuid}', [wardAdminController::class, 'RegionDashBoard'])->name('wardadmin.location.region.dashboard')->middleware('access_level:wardadmin');
+Route::get('/ward/location/region/dashboard/{uuid}', [WardAdminController::class, 'RegionDashBoard'])->name('wardadmin.location.region.dashboard')->middleware('access_level:wardadmin');
 Route::get('/ward/region/member/distribution/gender/{uuid}', [ChartsController::class, 'GenderDistributionByRegion'])->name('wardadmin.region.member.distribution.gender')->middleware('access_level:wardadmin');
 Route::get('/ward/region/member/distribution/age/{uuid}', [ChartsController::class, 'AgeDistributionByRegion'])->name('wardadmin.region.member.distribution.age')->middleware('access_level:wardadmin');
 Route::get('/ward/region/member/distribution/ward/{uuid}', [ChartsController::class, 'StateDistributionByRegion'])->name('wardadmin.region.member.distribution.state')->middleware('access_level:wardadmin');
@@ -105,7 +105,7 @@ Route::post('/ward/location/region/update/{uuid}', [LocationController::class, '
 Route::delete('/ward/location/region/delete/{uuid}', [LocationController::class, 'deleteRegion'])->name('wardadmin.location.region.delete')->middleware('access_level:wardadmin');
 
 // Manage States
-Route::get('/ward/location/ward/dashboard/{uuid}', [wardAdminController::class, 'StateDashBoard'])->name('wardadmin.location.state.dashboard')->middleware('access_level:wardadmin');
+Route::get('/ward/location/ward/dashboard/{uuid}', [WardAdminController::class, 'StateDashBoard'])->name('wardadmin.location.state.dashboard')->middleware('access_level:wardadmin');
 Route::get('/ward/state/member/distribution/gender/{uuid}', [ChartsController::class, 'GenderDistributionByState'])->name('wardadmin.state.member.distribution.gender')->middleware('access_level:wardadmin');
 Route::get('/ward/state/member/distribution/age/{uuid}', [ChartsController::class, 'AgeDistributionByState'])->name('wardadmin.state.member.distribution.age')->middleware('access_level:wardadmin');
 Route::get('/ward/state/member/distribution/ward/{uuid}', [ChartsController::class, 'LgaDistributionByState'])->name('wardadmin.state.member.distribution.lga')->middleware('access_level:wardadmin');
@@ -119,7 +119,7 @@ Route::post('/ward/location/ward/update/{uuid}', [LocationController::class, 'up
 Route::delete('/ward/location/ward/delete/{uuid}', [LocationController::class, 'deleteState'])->name('wardadmin.location.state.delete')->middleware('access_level:wardadmin');
 
 // manage Local Governments
-Route::get('/ward/location/localgovernment/dashboard/{uuid}', [wardAdminController::class, 'localGovernmentDashBoard'])->name('wardadmin.location.lga.dashboard')->middleware('access_level:wardadmin');
+Route::get('/ward/location/localgovernment/dashboard/{uuid}', [WardAdminController::class, 'localGovernmentDashBoard'])->name('wardadmin.location.lga.dashboard')->middleware('access_level:wardadmin');
 Route::get('/ward/lga/member/distribution/gender/{uuid}', [ChartsController::class, 'GenderDistributionByLga'])->name('wardadmin.lga.member.distribution.gender')->middleware('access_level:wardadmin');
 Route::get('/ward/lga/member/distribution/age/{uuid}', [ChartsController::class, 'AgeDistributionByLga'])->name('wardadmin.lga.member.distribution.age')->middleware('access_level:wardadmin');
 Route::get('/ward/lga/member/distribution/ward/{uuid}', [ChartsController::class, 'wardDistributionByLga'])->name('wardadmin.lga.member.distribution.ward')->middleware('access_level:wardadmin');
@@ -144,7 +144,7 @@ Route::post('/ward/location/importlgas', [LocationController::class, 'importLgas
 
 
 // manage Wards
-Route::get('/ward/location/ward/dashboard/{uuid}', [wardAdminController::class, 'wardDashBoard'])->name('wardadmin.location.ward.dashboard')->middleware('access_level:wardadmin');
+Route::get('/ward/location/ward/dashboard/{uuid}', [WardAdminController::class, 'wardDashBoard'])->name('wardadmin.location.ward.dashboard')->middleware('access_level:wardadmin');
 Route::get('/ward/ward/member/distribution/gender/{uuid}', [ChartsController::class, 'GenderDistributionByWard'])->name('wardadmin.ward.member.distribution.gender')->middleware('access_level:wardadmin');
 Route::get('/ward/ward/member/distribution/voter{uuid}', [ChartsController::class, 'VoterDistributionByWard'])->name('wardadmin.ward.member.distribution.voter')->middleware('access_level:wardadmin');
 
@@ -165,7 +165,7 @@ Route::get('/ward/location/exportwards', [LocationController::class, 'exportWard
 Route::post('/ward/location/importwards', [LocationController::class, 'importWards'])->name('wardadmin.location.ward.importWards')->middleware('access_level:wardadmin');
 
 //Manage Polling Units
-Route::get('/ward/location/pollingunit/dashboard/{uuid}', [wardAdminController::class, 'PuDashBoard'])->name('wardadmin.location.pu.dashboard')->middleware('access_level:wardadmin');
+Route::get('/ward/location/pollingunit/dashboard/{uuid}', [WardAdminController::class, 'PuDashBoard'])->name('wardadmin.location.pu.dashboard')->middleware('access_level:wardadmin');
 Route::get('/ward/pollingunit/member/distribution/gender/{uuid}', [ChartsController::class, 'GenderDistributionByPu'])->name('wardadmin.pu.member.distribution.gender')->middleware('access_level:wardadmin');
 Route::get('/ward/pollingunit/member/distribution/voter{uuid}', [ChartsController::class, 'VoterDistributionByPu'])->name('wardadmin.pu.member.distribution.voter')->middleware('access_level:wardadmin');
 
@@ -189,6 +189,7 @@ Route::post('/ward/import-polling-units', [LocationController::class, 'importPol
 
 // Election Management CRUD
 Route::get('/ward/elections', [ElectionController::class, 'allElections'])->name('wardadmin.elections')->middleware('access_level:wardadmin');
+Route::get('/ward/election/operations-center', [ElectionController::class, 'operationsCenter'])->name('wardadmin.election.operations')->middleware('access_level:wardadmin');
 Route::get('/ward/election/add', [ElectionController::class, 'addElection'])->name('wardadmin.election.add')->middleware('access_level:wardadmin');
 Route::post('/ward/election/store', [ElectionController::class, 'storeElection'])->name('wardadmin.election.store')->middleware('access_level:wardadmin');
 Route::get('/ward/election/edit/{uuid}', [ElectionController::class, 'editElection'])->name('wardadmin.election.edit')->middleware('access_level:wardadmin');
@@ -199,7 +200,7 @@ Route::delete('/ward/election/delete/{uuid}', [ElectionController::class, 'delet
 Route::get('/ward/election/result/{uuid}', [ElectionController::class, 'electionResult'])->name('wardadmin.election.results')->middleware('access_level:wardadmin');
 
 // Election PU Votes Report
-Route::get('/ward/election/votes/{uuid}', [ElectionController::class, 'manageVotesByPu'])->name('wardadmin.election.votesByPu')->middleware('access_level:wardadmin');
+Route::get('/ward/election/votes/{uuid?}', [ElectionController::class, 'manageVotesByPu'])->name('wardadmin.election.votesByPu')->middleware('access_level:wardadmin');
 Route::get('/ward/election/votes/data/{uuid}', [ElectionController::class, 'VotesByPuData'])->name('wardadmin.election.votesByPuData')->middleware('access_level:wardadmin');
 
 
@@ -210,7 +211,7 @@ Route::get('/ward/election/incident/{uuid}/{polling_unit_id}', [ElectionControll
 
     Route::get('/ward/incident/add', [ElectionController::class, 'addIncident'])->name('wardadmin.incident.add')->middleware('access_level:wardadmin');
     Route::post('/ward/incident/store', [ElectionController::class, 'storeIcident'])->name('wardadmin.incident.store')->middleware('access_level:wardadmin');
-    
+
 
 //Manage Votes
 Route::get('/ward/votes', [ElectionController::class, 'allVotes'])->name('wardadmin.votes')->middleware('access_level:wardadmin');
@@ -230,4 +231,3 @@ Route::get('/ward/bulksms/send', [BulksmsController::class, 'index'])->name('war
 Route::post('/ward/bulksms/send/sms', [BulkSmsController::class, 'sendsms'])->name('wardadmin.bulksms.send.sms')->middleware('access_level:wardadmin');
 
 });
-

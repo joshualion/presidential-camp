@@ -1,18 +1,18 @@
 @extends('backend.template.backend-master')
 @section('content')
 
-
-    <!-- Main content -->
 <section class="content">
     <div class="container-fluid">
+        @include('backend.shared.election.governance-summary-cards')
+
         <div class="row">
-            <!-- BAR CHART -->
             <div class="col-12">
                 <div class="card card-primary">
-                        <div class="card-header">
-                            <h3 class="card-title">
-                                @if($profileData->access_level == 'superadmin' || $profileData->access_level == 'nationaladmin')
-                                Nationwide Votes Distribution By Political Parties in {{$profileData->country->name}}                        @elseif($profileData->access_level == 'regionaladmin')
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            @if($profileData->access_level == 'superadmin' || $profileData->access_level == 'nationaladmin')
+                                Nationwide Votes Distribution By Political Parties in {{$profileData->country->name}}
+                            @elseif($profileData->access_level == 'regionaladmin')
                                 Regional Votes Distribution By Political Parties in {{ $profileData->region->name ?? 'Your Region' }}
                             @elseif($profileData->access_level == 'stateadmin')
                                 State Votes Distribution By Political Parties in {{ $profileData->state->name ?? 'Your State' }}
@@ -23,209 +23,205 @@
                             @elseif($profileData->access_level == 'pollingunitadmin')
                                 Polling Unit Votes Distribution By Political Parties in {{ $profileData->pollingUnit->name ?? 'Your Polling Unit' }}
                             @endif
-                            </h3>
-                            <div class="card-tools">
-                                <button type="button" class="btn btn-tool" data-card-widget="collapse">
-                                <i class="fas fa-minus"></i>
-                                </button>
-                                <button type="button" class="btn btn-tool" data-card-widget="remove">
-                                <i class="fas fa-times"></i>
-                                </button>
-                            </div>
-                        </div>
-                        <div class="card-body" style="display: block;">
-                                    <div class="chart"><div class="chartjs-size-monitor"><div class="chartjs-size-monitor-expand"><div class=""></div></div><div class="chartjs-size-monitor-shrink"><div class=""></div></div></div>
-                                        <canvas id="ResultBarChart" style="min-height: 250px; height: 250px; max-height: 250px; max-width: 100%; display: block; width: 487px;" width="487" height="250" class="chartjs-render-monitor"></canvas>
-                                    </div>
-                        </div>
-                </div>
-            </div><!-- /.col  -->
-       </div>
-       <!-- /.row -->
-
-            <div class="row">
-                <div class="col-12">
-                    <div class="card card-primary">
-                    <div class="card-header">
-                        <h3 class="card-title">
-                            @if($profileData->access_level == 'superadmin' || $profileData->access_level == 'nationaladmin')
-                            Nationwide Results Summary
-                        @elseif($profileData->access_level == 'regionaladmin')
-                            Regional Results Summary for {{ $profileData->region->name ?? 'Your Region' }}
-                        @elseif($profileData->access_level == 'stateadmin')
-                            State Results Summary for {{ $profileData->state->name ?? 'Your State' }}
-                        @elseif($profileData->access_level == 'lgaadmin')
-                            Local Government Area (LGA) Results Summary for {{ $profileData->lga->name ?? 'Your LGA' }}
-                        @elseif($profileData->access_level == 'wardadmin')
-                            Ward Results Summary for {{ $profileData->ward->name ?? 'Your Ward' }}
-                        @elseif($profileData->access_level == 'pollingunitadmin')
-                            Polling Unit Results Summary for {{ $profileData->pollingUnit->name ?? 'Your Polling Unit' }}
-                        @endif
-
                         </h3>
                         <div class="card-tools">
-                            <button type="button" class="btn btn-tool" data-card-widget="collapse">
-                                <i class="fas fa-minus"></i>
-                            </button>
-                            <button type="button" class="btn btn-tool" data-card-widget="remove">
-                                <i class="fas fa-times"></i>
-                            </button>
-
+                            <button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-minus"></i></button>
+                            <button type="button" class="btn btn-tool" data-card-widget="remove"><i class="fas fa-times"></i></button>
                         </div>
                     </div>
-                    <!-- /.card-header -->
-                    <div class="card-body">
+                    <div class="card-body" style="height: 340px;">
+                        <canvas id="ResultBarChart" style="min-height: 280px;"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-                        <table class="table table-bordered table-striped">
+        <div class="row">
+            <div class="col-lg-3 col-6">
+                <div class="small-box bg-info">
+                    <div class="inner">
+                        <h3>{{ number_format($summaryStats['total_polling_units']) }}</h3>
+                        <p>Total Polling Units</p>
+                    </div>
+                    <div class="icon"><i class="fas fa-chart-pie"></i></div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-6">
+                <div class="small-box bg-success">
+                    <div class="inner">
+                        <h3>{{ number_format($summaryStats['total_valid_votes']) }}</h3>
+                        <p>Total Valid Votes</p>
+                    </div>
+                    <div class="icon"><i class="fas fa-chart-bar"></i></div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-6">
+                <div class="small-box bg-warning">
+                    <div class="inner">
+                        <h3>{{ number_format($summaryStats['total_parties_participated']) }}</h3>
+                        <p>Total Parties</p>
+                    </div>
+                    <div class="icon"><i class="fas fa-users"></i></div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-6">
+                <div class="small-box bg-purple" style="background:#6f42c1 !important; color:#fff;">
+                    <div class="inner">
+                        <h3>{{ number_format($summaryStats['results_received_percent'], 2) }}<sup style="font-size: 16px">%</sup></h3>
+                        <p>Results Received</p>
+                    </div>
+                    <div class="icon"><i class="fas fa-dot-circle"></i></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card card-outline card-success">
+                    <div class="card-header">
+                        <h3 class="card-title">Vote Share by Party</h3>
+                    </div>
+                    <div class="card-body" style="height: 320px;">
+                        <canvas id="ResultDoughnutChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card card-outline card-info">
+                    <div class="card-header">
+                        <h3 class="card-title">Top Parties by Votes</h3>
+                    </div>
+                    <div class="card-body" style="height: 320px;">
+                        <canvas id="ResultTopPartiesChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-12">
+                <div class="card card-primary">
+                    <div class="card-header">
+                        <h3 class="card-title">Results Summary Ranking</h3>
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-striped table-hover mb-0">
                             <thead>
                                 <tr>
-                                    <th>S/N</th>
-                                    <th>Party Name</th>
-                                    <th>Votes Obtained</th>
-                                    <th>Comment</th>
+                                    <th style="width: 80px;">Rank</th>
+                                    <th>Party</th>
+                                    <th style="width: 180px;">Votes</th>
+                                    <th style="width: 220px;">Vote Share</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @foreach ($summary as $item)
-                                <tr>
-                                    <td>{{ $item['sn'] }}</td>
-                                    <td>{{ $item['party_name'] }}</td>
-                                    <td>{{ number_format($item['total_votes']) }}</td>
-                                    <td>{{ $item['comment'] }}</td>
-                                </tr>
+                                    @php
+                                        $share = $summaryStats['total_valid_votes'] > 0
+                                            ? round(($item['total_votes'] / $summaryStats['total_valid_votes']) * 100, 1)
+                                            : 0;
+                                    @endphp
+                                    <tr>
+                                        <td><span class="badge badge-dark">{{ $item['rank'] }}</span></td>
+                                        <td>{{ $item['party_name'] }}</td>
+                                        <td>{{ number_format($item['total_votes']) }}</td>
+                                        <td>
+                                            <div class="progress progress-xs">
+                                                <div class="progress-bar bg-primary" style="width: {{ $share }}%"></div>
+                                            </div>
+                                            <small>{{ $share }}%</small>
+                                        </td>
+                                    </tr>
                                 @endforeach
-
                             </tbody>
                         </table>
-
-
                     </div>
-                    <!-- /.card-body -->
-                    </div>
-                    <!-- /.card -->
                 </div>
             </div>
-            <!-- /.row -->
-
-            
-
+        </div>
     </div>
-        <!-- /.container-fluid -->
 </section>
-    <!-- /.content -->
 
-
-<!-- AdminLTE ChartJS -->
 <script src="{{ asset('assets/plugins/chart.js/Chart.min.js') }}"></script>
-{{-- <script>
+<script>
     document.addEventListener('DOMContentLoaded', function () {
         const chartUrl = "{{ route('election.chart.data', $election->uuid) }}";
+        const barCtx = document.getElementById('ResultBarChart').getContext('2d');
+        const doughnutCtx = document.getElementById('ResultDoughnutChart').getContext('2d');
+        const topPartiesCtx = document.getElementById('ResultTopPartiesChart').getContext('2d');
 
-        // Fetch chart data via AJAX
+        let resultBarChart;
+        let resultDoughnutChart;
+        let resultTopPartiesChart;
+
         fetch(chartUrl)
             .then(response => response.json())
             .then(data => {
-                // Extract labels and dataset from the JSON response
-                const labels = data.labels;
-                const dataset = data.datasets[0]; // Access the first dataset
-                
-                // Render the bar chart
-                const ctx = document.getElementById('ResultBarChart').getContext('2d');
-                new Chart(ctx, {
+                const labels = data.labels || [];
+                const votes = (data.datasets && data.datasets[0] && data.datasets[0].data) ? data.datasets[0].data : [];
+                const colors = (data.datasets && data.datasets[0] && data.datasets[0].backgroundColor) ? data.datasets[0].backgroundColor : [];
+
+                if (resultBarChart) resultBarChart.destroy();
+                resultBarChart = new Chart(barCtx, {
                     type: 'bar',
                     data: {
                         labels: labels,
                         datasets: [{
-                            label: dataset.label,
-                            data: dataset.data,
-                            backgroundColor: dataset.backgroundColor,
-                            borderColor: dataset.borderColor,
-                            borderWidth: dataset.borderWidth,
+                            label: 'Election Results',
+                            data: votes,
+                            backgroundColor: colors,
+                            borderColor: '#2c3e50',
+                            borderWidth: 1
                         }]
                     },
                     options: {
                         responsive: true,
-                        scales: {
-                            y: {
-                                beginAtZero: true
-                            }
-                        }
+                        maintainAspectRatio: false,
+                        scales: { y: { beginAtZero: true } },
+                        plugins: { legend: { display: false } }
+                    }
+                });
+
+                if (resultDoughnutChart) resultDoughnutChart.destroy();
+                resultDoughnutChart = new Chart(doughnutCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: labels,
+                        datasets: [{ data: votes, backgroundColor: colors }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { position: 'bottom' } }
+                    }
+                });
+
+                const partyRows = labels.map((label, idx) => ({ label, value: votes[idx] || 0, color: colors[idx] || '#007bff' }))
+                    .sort((a, b) => b.value - a.value)
+                    .slice(0, 8);
+
+                if (resultTopPartiesChart) resultTopPartiesChart.destroy();
+                resultTopPartiesChart = new Chart(topPartiesCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: partyRows.map(x => x.label),
+                        datasets: [{
+                            label: 'Votes',
+                            data: partyRows.map(x => x.value),
+                            backgroundColor: partyRows.map(x => x.color),
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        indexAxis: 'y',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: { x: { beginAtZero: true } }
                     }
                 });
             })
-            .catch(error => {
-                console.error('Error fetching chart data:', error);
-            });
-    });
-</script> --}}
-
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const chartUrl = "{{ route('election.chart.data', $election->uuid) }}";
-        const resultBarChartCanvas = document.getElementById('ResultBarChart').getContext('2d');
-        let resultBarChart;
-
-        function updateResultBarChart() {
-            fetch(chartUrl)
-                .then(response => response.json())
-                .then(data => {
-                    if (resultBarChart) {
-                        resultBarChart.destroy();
-                    }
-
-                    // Render the bar chart using the cleaner UI approach
-                    resultBarChart = new Chart(resultBarChartCanvas, {
-                        type: 'bar',
-                        data: {
-                            labels: data.labels,
-                            datasets: [{
-                                label: data.datasets[0].label,
-                                data: data.datasets[0].data,
-                                backgroundColor: data.datasets[0].backgroundColor,
-                                borderColor: data.datasets[0].borderColor,
-                                borderWidth: data.datasets[0].borderWidth
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            scales: {
-                                y: {
-                                    beginAtZero: true,
-                                    title: {
-                                        display: true,
-                                        text: 'Total Votes'
-                                    }
-                                },
-                                x: {
-                                    title: {
-                                        display: true,
-                                        text: 'Party'
-                                    }
-                                }
-                            },
-                            plugins: {
-                                legend: {
-                                    display: false
-                                }
-                            }
-                        }
-                    });
-                })
-                .catch(error => {
-                    console.error('Error fetching chart data:', error);
-                });
-        }
-
-        // Call the function to initialize the bar chart for election results
-        updateResultBarChart();
+            .catch(error => console.error('Error fetching chart data:', error));
     });
 </script>
-
-
-
 @endsection
-
-
-
-

@@ -11,7 +11,7 @@ $region = \App\Models\Region::find(Auth::user()->region_id);
 @if(Auth::user()->access_level == 'regionaladmin')
 
 <nav class="mt-2">
-      <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
+      <ul class="nav nav-pills nav-sidebar flex-column sidebar-nav" data-widget="treeview" role="menu" data-accordion="false">
 
             <li class="tab nav-item menu-close">
                         <a href="/regional/dashboard" class="nav-link">
@@ -92,14 +92,20 @@ $region = \App\Models\Region::find(Auth::user()->region_id);
                 <p>Manage Elections</p>
               </a>
             </li>
+            <li class="nav-item">
+              <a href="/regional/election/operations-center" class="nav-link">
+                <i class="fas fa-broadcast-tower nav-icon"></i>
+                <p>Situation Room</p>
+              </a>
+            </li>
             @if(
               $profileData->hasAnyRole([
-                  'National ICT/Media Director',
-                  'Regional ICT/Media Director',
-                  'State ICT/Media Director',
-                  'LGA ICT/Media Director',
-                  'Ward ICT/Media Director',
-                  'PU ICT/Media Director',
+                  'National ICT Director',
+                  'Regional ICT Director',
+                  'State ICT Director',
+                  'LGA ICT Director',
+                  'Ward ICT Director',
+                  'PU ICT Director',
                   'Pu Agent'
               ]) || $profileData->access_level == 'superadmin' )
             <li class="nav-item">
@@ -155,7 +161,7 @@ $region = \App\Models\Region::find(Auth::user()->region_id);
             </li> --}}
             {{-- / Reports --}}
 
-            {{-- Finances --}}
+            {{-- Finances temporarily disabled pending finance module completion.
             <li class="tab nav-item menu-close">
                 <a href="#" class="nav-link">
                   <i class="nav-icon fas fa-money-bill"></i>
@@ -164,7 +170,7 @@ $region = \App\Models\Region::find(Auth::user()->region_id);
                     <i class="right fas fa-angle-left"></i>
                   </p>
                 </a>
-                <ul class="nav nav-treeview">           
+                <ul class="nav nav-treeview">
 
                 <li class="nav-item">
                     <a href="/regional/dashboard" class="nav-link">
@@ -189,6 +195,7 @@ $region = \App\Models\Region::find(Auth::user()->region_id);
 
                 </ul>
             </li>
+            --}}
             {{-- / Finances --}}
 
 
@@ -240,6 +247,12 @@ $region = \App\Models\Region::find(Auth::user()->region_id);
                               <p>Send SMS</p>
                             </a>
                           </li>
+                          <li class="nav-item">
+                            <a href="/messages" class="nav-link">
+                              <i class="fas fa-comments nav-icon"></i>
+                              <p>Internal Communication</p>
+                            </a>
+                          </li>
 
                           <!-- <li class="nav-item">
                             <a href="#" class="nav-link">
@@ -265,9 +278,9 @@ $region = \App\Models\Region::find(Auth::user()->region_id);
             </li>
             {{-- / Messaging --}}
 
-               
 
-          
+
+
 
             {{-- Settings --}}
             <li class="tab nav-item menu-close">
@@ -278,7 +291,7 @@ $region = \App\Models\Region::find(Auth::user()->region_id);
                             <i class="right fas fa-angle-left"></i>
                           </p>
                         </a>
-                        <ul class="nav nav-treeview">                   
+                        <ul class="nav nav-treeview">
 
                           <li class="nav-item">
                             <a href="/regional/bulksms/setting" class="nav-link">
@@ -290,7 +303,7 @@ $region = \App\Models\Region::find(Auth::user()->region_id);
 
             </li>
 
-       
+
 
             {{-- Profile Menu --}}
             <li class="tab nav-item menu-close">
@@ -310,7 +323,7 @@ $region = \App\Models\Region::find(Auth::user()->region_id);
                             </a>
                           </li>
 
-                          
+
 
                           <li class="nav-item">
                             <a href="/regional/change/password" class="nav-link">

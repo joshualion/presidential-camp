@@ -12,7 +12,7 @@
         @if($SystemSetting->copyright)
            {!! $SystemSetting->copyright !!}
         @else
-            Copyright &copy; {{ date('Y') }} <a href="https://diginettechnologies.com/" target="_blank">Diginet Tech Africa Limited </a> - All rights reserved.
+            Copyright &copy; {{ date('Y') }} <a href="#" target="_blank">Govware Solutions Limited</a> - All rights reserved.
         @endif
 
         <div class="float-right d-none d-sm-inline-block">
@@ -167,5 +167,6 @@ $(document).ready(function() {
 <script src="{{asset('assets/plugins/datatables-buttons/js/buttons.print.min.js')}}"></script>
 <script src="{{asset('assets/plugins/datatables-buttons/js/buttons.colVis.min.js')}}"></script>
 
+ @livewireScripts
 </body>
 </html>

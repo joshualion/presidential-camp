@@ -6,9 +6,17 @@
     <div class="card-body">
         <ul class="nav flex-column">
             <div class="text-center mb-4">
-                <a class="nav-link text-dark" href="{{route('profile.timeline')}}">
-                    <img class="profile-user-img img-fluid img-circle shadow-sm" src="{{(!empty($profileData->photo)) ? url('uploads/member_images/'.$profileData->photo) : url('uploads/no_image.jpg')}}" alt="profile" width="60" height="60">
-                    <h6 class="mt-2" style="color: {{ $SystemSetting->dark_theme_color ?? '#008751' }};">{{$profileData->firstname}} {{$profileData->lastname}}</h6>
+                <a class="nav-link text-dark p-0" href="{{route('profile.timeline')}}">
+                    <div class="d-flex align-items-center justify-content-center gap-2">
+                        <img class="profile-user-img img-fluid img-circle shadow-sm" src="{{(!empty($profileData->photo)) ? url('uploads/member_images/'.$profileData->photo) : url('uploads/no_image.jpg')}}" alt="profile" width="60" height="60">
+                        <div class="text-start">
+                            <h6 class="mb-0 fw-bold" style="color: {{ $SystemSetting->dark_theme_color ?? '#008751' }};">{{$profileData->firstname}} {{$profileData->lastname}}</h6>
+                            @php
+                                $primaryRole = optional($profileData->roles->first())->name ?? ucfirst($profileData->access_level ?? 'member');
+                            @endphp
+                            <small class="text-muted d-block">{{ $primaryRole }}</small>
+                        </div>
+                    </div>
                 </a>
               
                @mobile()
@@ -66,7 +74,7 @@
             
             <hr class="my-3">
         @desktop()
-            <h6 class="card-title text-muted mb-2">
+            <h6 class="card-title mb-2" style="color: {{ $SystemSetting->dark_theme_color ?? '#008751' }} !important;">
                 <i class="fas fa-landmark me-2 "></i> Location
             </h6>
             @if(($SystemSetting) && ($SystemSetting->package == 'national'))
@@ -104,7 +112,7 @@
             </li>
 
             <hr class="my-3">
-            <h6 class="card-title text-muted mb-2">
+            <h6 class="card-title mb-2" style="color: {{ $SystemSetting->dark_theme_color ?? '#008751' }} !important;">
                 <i class="fas fa-users me-2 "></i> Volunteer Group(s)
             </h6>
             @foreach($userSupportGroups as $group)

@@ -13,9 +13,11 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\View;
+use Illuminate\Support\Str;
 use App\Models\SystemSetting;
 use App\Models\SMTPSetting;
 use App\Models\User;
+use App\Services\PackageGovernanceService;
 class SystemSettingController extends Controller
 {
     public function __construct()
@@ -65,6 +67,16 @@ class SystemSettingController extends Controller
                 'bank' => 'nullable|string|max:255',
                 'bank_account_number' => 'nullable|string|size:10',
                 'bank_account_name' => 'nullable|string|max:255',
+                'community_post_max_length' => 'nullable|integer|min:50|max:5000',
+                'community_comment_max_length' => 'nullable|integer|min:50|max:3000',
+                'community_daily_post_limit' => 'nullable|integer|min:1|max:500',
+                'community_daily_comment_limit' => 'nullable|integer|min:1|max:2000',
+                'community_attachment_max_mb' => 'nullable|integer|min:1|max:200',
+                'community_allow_images' => 'nullable|boolean',
+                'community_allow_videos' => 'nullable|boolean',
+                'community_guidelines' => 'nullable|string',
+                'require_bank_details' => 'sometimes|boolean',
+                'package' => 'nullable|string',
             ]);
 
 
@@ -77,10 +89,13 @@ class SystemSettingController extends Controller
                 }
                                 $site_id = $request->id;
                                 $SystemSetting= $this->getSystemSettings();
+                                $systemPackage = $request->filled('package')
+                                    ? app(PackageGovernanceService::class)->normalize($request->package)
+                                    : app(PackageGovernanceService::class)->normalize($SystemSetting?->package);
 
                         if($request->hasFile('logo')) {
                                     $file = $request->file('logo');
-                                    $logofilename = date('YmdHi') . $file->getClientOriginalName();
+                                    $logofilename = (string) Str::uuid() . '.' . $file->getClientOriginalExtension();
                                     $file->move(public_path('uploads/system_images/'), $logofilename);
                                     @unlink(public_path('uploads/system_images/') . $SystemSetting->logo);
                                     $SystemSetting->logo = $logofilename;
@@ -90,7 +105,7 @@ class SystemSettingController extends Controller
 
                         if($request->hasfile('login_page_background')){
                             $file = $request->file('login_page_background');
-                            $loginPageBg = date('YmdHi') . $file->getClientOriginalName();
+                            $loginPageBg = (string) Str::uuid() . '.' . $file->getClientOriginalExtension();
                             $file->move(public_path('uploads/system_images/'), $loginPageBg);
                             @unlink(public_path('uploads/system_images/') . $SystemSetting->login_page_background);
                             $SystemSetting->login_page_background = $loginPageBg;
@@ -101,7 +116,7 @@ class SystemSettingController extends Controller
 
                         if($request->hasFile('favicon')) {
                             $file = $request->file('favicon');
-                            $favicon = date('YmdHi') . $file->getClientOriginalName();
+                            $favicon = (string) Str::uuid() . '.' . $file->getClientOriginalExtension();
                             $file->move(public_path('uploads/system_images/'), $favicon);
                             @unlink(public_path('uploads/system_images/') . $SystemSetting->favicon);
                             $SystemSetting->favicon = $favicon;
@@ -111,7 +126,7 @@ class SystemSettingController extends Controller
                         }
 
                                     SystemSetting::findOrFail($site_id)->update([
-                                        'package' => $request->package,
+                                        'package' => $systemPackage,
                                         'system_country' => $request->system_country,
                                         'system_name' => $request->system_name,
                                         'campaign_slogan' => $request->campaign_slogan,
@@ -124,6 +139,7 @@ class SystemSettingController extends Controller
                                         'exchange_rate' => $request->exchange_rate,
                                         'company_address' => $request->company_address,
                                         'company_phone' => $request->company_phone,
+                                        'require_bank_details' => $request->has('require_bank_details') ? 1 : 0,
                                         'facebook' => $request->facebook,
                                         'twitter' => $request->twitter,
                                         'instagram' => $request->instagram,
@@ -146,6 +162,14 @@ class SystemSettingController extends Controller
                                         'bank' =>$request->bank,
                                         'bank_account_name'=> $request->bank_account_name,
                                         'bank_account_number'=> $request->bank_account_number,
+                                        'community_post_max_length' => $request->community_post_max_length,
+                                        'community_comment_max_length' => $request->community_comment_max_length,
+                                        'community_daily_post_limit' => $request->community_daily_post_limit,
+                                        'community_daily_comment_limit' => $request->community_daily_comment_limit,
+                                        'community_attachment_max_mb' => $request->community_attachment_max_mb,
+                                        'community_allow_images' => $request->community_allow_images ? 1 : 0,
+                                        'community_allow_videos' => $request->community_allow_videos ? 1 : 0,
+                                        'community_guidelines' => $request->community_guidelines,
                                     ]);
 
                                     $notification = array(
@@ -158,6 +182,32 @@ class SystemSettingController extends Controller
 
 
         }// End Method
+
+        /**
+         * Persist sidebar theme mode globally for all users.
+         */
+        public function updateSidebarTheme(Request $request)
+        {
+            $request->validate([
+                'mode' => 'required|in:light,brand',
+            ]);
+
+            $SystemSetting = $this->getSystemSettings();
+
+            if (!$SystemSetting) {
+                return response()->json([
+                    'message' => 'System settings not found',
+                ], 404);
+            }
+
+            $SystemSetting->sidebar_theme_mode = $request->mode;
+            $SystemSetting->save();
+
+            return response()->json([
+                'status' => 'ok',
+                'mode' => $request->mode,
+            ]);
+        }
 
         public function SmtpSettings(){
                 $profileData = $this->getProfileData();
@@ -254,7 +304,7 @@ class SystemSettingController extends Controller
         ]);
 
         $activationCode = $request->input('activation_code');
-        $systemPackage = $request->input('package');
+        $systemPackage = app(PackageGovernanceService::class)->normalize($request->input('package'));
         $originDomain = $request->getHost();
         $clientIP = $request->ip(); // Rate limit per IP
 

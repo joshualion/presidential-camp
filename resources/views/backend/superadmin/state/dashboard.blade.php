@@ -19,8 +19,58 @@
                    <!-- Small boxes (Stat box) -->
                   <div class="row">
 
+                            <div class="col-lg-3 col-6">
+                              <!-- small box -->
+                              <div class="small-box bg-primary">
+                                <div class="inner">
+                                  <h3>{{$senatorialDistrictsWithUsersCount}}</h3>
+                                  <p>Out of <strong>{{$senatorialDistrictCount}}</strong> Sen. Dists in {{$state->name}}</p>
+                                  <p style="float: right;">
+                                    <b>
+                                        @php
+                                            if ($senatorialDistrictCount > 0) {
+                                                echo number_format(($senatorialDistrictsWithUsersCount / $senatorialDistrictCount) * 100, 2);
+                                            } else {
+                                                echo '0.00';
+                                            }
+                                        @endphp %
+                                    </b>
+                                  </p>
+                                </div>
+                                <div class="icon">
+                                  <i class="fas fa-landmark"></i>
+                                </div>
+                                <a href="{{route($profileData->access_level.'.members.bySenatorialDistrict', $state->uuid)}}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
+                              </div>
+                            </div>
                             <!-- ./col -->
-                            <div class="col-lg-4 col-6">
+                            <div class="col-lg-3 col-6">
+                              <!-- small box -->
+                              <div class="small-box bg-purple">
+                                <div class="inner">
+                                  <h3>{{$federalConstituenciesWithUsersCount}}</h3>
+                                  <p>Out of <strong>{{$federalConstituencyCount}}</strong> Fed. Const in {{$state->name}}</p>
+                                  <p style="float: right;">
+                                    <b>
+                                        @php
+                                            if ($federalConstituencyCount > 0) {
+                                                echo number_format(($federalConstituenciesWithUsersCount / $federalConstituencyCount) * 100, 2);
+                                            } else {
+                                                echo '0.00';
+                                            }
+                                        @endphp %
+                                    </b>
+                                  </p>
+                                </div>
+                                <div class="icon">
+                                  <i class="fas fa-university"></i>
+                                </div>
+                                <a href="{{route($profileData->access_level.'.members.byFederalConstituency', $state->uuid)}}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
+                              </div>
+                            </div>
+                            <!-- ./col -->
+                            <!-- ./col -->
+                            <div class="col-lg-3 col-6">
                               <!-- small box -->
                               <div class="small-box bg-success">
                                 <div class="inner">
@@ -45,7 +95,7 @@
                               </div>
                             </div>
                             <!-- ./col -->
-                            <div class="col-lg-4 col-6">
+                            <div class="col-lg-3 col-6">
                               <!-- small box -->
                               <div class="small-box bg-info">
                                 <div class="inner">
@@ -70,7 +120,7 @@
                               </div>
                             </div>
                             <!-- ./col -->
-                            <div class="col-lg-4 col-6">
+                            <div class="col-lg-3 col-6">
                               <!-- small box -->
                               <div class="small-box bg-danger">
                                 <div class="inner">
@@ -94,6 +144,36 @@
                                 <a href="{{route($profileData->access_level.'.members.byPu', $state->uuid)}}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
                               </div>
                             </div>
+                            <!-- ./col -->
+                            <div class="col-lg-3 col-6">
+                            <!-- small box -->
+                            <div class="small-box bg-success">
+                                <div class="inner">
+                                @mobile()
+                                <h3>{{ round(($EligibleVotersCount/$userCount) * 100) }} <small>%</small></h3>
+                                <p> Voters </p>
+                                @elsemobile
+                                <h3>{{$EligibleVotersCount}} </h3>
+                                <p> Voters Out of <strong>{{$userCount}}</strong> Members</p>
+                                @endmobile
+                                <p style="float: right;">
+                                    <b>
+                                        @php
+                                            if ($userCount > 0) {
+                                                echo number_format(($EligibleVotersCount / $userCount) * 100, 2);
+                                            } else {
+                                                echo '0.00'; // Handle the case where $lgaCount is zero
+                                            }
+                                        @endphp %
+                                    </b>
+                                </p>
+                                </div>
+                                <div class="icon">
+                                <i class="ion ion-lga"></i>
+                                </div>
+                                <a href="{{route($profileData->access_level.'.members.byLga', $state->uuid)}}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
+                            </div>
+                        </div>
                             <!-- ./col -->
 
 

@@ -22,8 +22,9 @@
                                     <tr>
                                         <th>S/N</th>
                                         <th>Name</th>
-                                        <th>Access Level</th>
+                                        <th>Access</th>
                                         <th>Role</th>
+                                        <th>Eligible Voter</th>
                                         <th>Action</th>
                                     </tr>
                                     </thead>
@@ -33,8 +34,9 @@
                                     <tr>
                                         <th>S/N</th>
                                         <th>Name</th>
-                                        <th>Access Level</th>
+                                        <th>Access</th>
                                         <th>Role</th>
+                                        <th>Eligible Voter</th>
                                         <th>Action</th>
                                     </tr>
                                     </tfoot>
@@ -119,6 +121,7 @@
             { "data": "name" },
             { "data": "access_level" },
             { "data": "role" }, // Fix the column name here, it should match the one returned in JSON
+            { "data": "Voter_status" },
             { "data": "action", "orderable": false, "searchable": false }
         ],
         "responsive": true,

@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\Country;
+use App\Models\FederalConstituency;
 use App\Models\LocalGovernmentArea;
 use App\Models\PollingUnit;
 use App\Models\Region;
+use App\Models\SenatorialDistrict;
 use App\Models\State;
 use App\Models\SystemSetting;
 use App\Models\User;
@@ -20,16 +22,17 @@ use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class LocationController extends Controller
 {
 
         public function __construct()
         {
-
             $pageTitle = 'Locations';
             View::share('pageTitle', $pageTitle);
         }
+        
        // Function to get the profile data
        private function getProfileData()
        {
@@ -327,6 +330,209 @@ class LocationController extends Controller
 
 
 
+    /*  Senatorial District Management functions*/
+    public function allSenatorialDistricts()
+    {
+        $profileData = $this->getProfileData();
+        $districts = SenatorialDistrict::with('state')->orderBy('name')->get();
+
+        return view('backend.'.$profileData->access_level.'.senatorial-district.senatorial-districts', compact('profileData', 'districts'));
+    }
+
+    public function addSenatorialDistrict()
+    {
+        $profileData = $this->getProfileData();
+        $states = State::orderBy('name', 'ASC')->get();
+
+        return view('backend.'.$profileData->access_level.'.senatorial-district.add-senatorial-district', compact('profileData', 'states'));
+    }
+
+    public function storeSenatorialDistrict(Request $request)
+    {
+        $request->validate([
+            'name' => 'required',
+            'state_id' => 'required',
+        ]);
+
+        SenatorialDistrict::create([
+            'name' => $request->name,
+            'normalized_name' => Str::lower(trim($request->name)),
+            'state_id' => $request->state_id,
+        ]);
+
+        $profileData = $this->getProfileData();
+        $notification = [
+            'message' => 'Senatorial District added successfully',
+            'alert-type' => 'success'
+        ];
+
+        return redirect()->route($profileData->access_level.'.location.senatorial-districts')->with($notification);
+    }
+
+    public function editSenatorialDistrict($uuid)
+    {
+        $profileData = $this->getProfileData();
+        $district = SenatorialDistrict::where('uuid', $uuid)->firstOrFail();
+        $states = State::orderBy('name', 'ASC')->get();
+
+        return view('backend.'.$profileData->access_level.'.senatorial-district.edit-senatorial-district', compact('profileData', 'district', 'states'));
+    }
+
+    public function updateSenatorialDistrict(Request $request, $uuid)
+    {
+        $request->validate([
+            'name' => 'required',
+            'state_id' => 'required',
+        ]);
+
+        SenatorialDistrict::where('uuid', $uuid)->update([
+            'name' => $request->name,
+            'normalized_name' => Str::lower(trim($request->name)),
+            'state_id' => $request->state_id,
+        ]);
+
+        $profileData = $this->getProfileData();
+        $notification = [
+            'message' => 'Senatorial District updated successfully',
+            'alert-type' => 'success'
+        ];
+
+        return redirect()->route($profileData->access_level.'.location.senatorial-districts')->with($notification);
+    }
+
+    public function deleteSenatorialDistrict($uuid)
+    {
+        $profileData = $this->getProfileData();
+        $district = SenatorialDistrict::where('uuid', $uuid)->firstOrFail();
+
+        if (
+            $district->federalConstituencies()->count() > 0 ||
+            $district->localGovernmentAreas()->count() > 0 ||
+            $district->pollingUnits()->count() > 0 ||
+            $district->users()->count() > 0
+        ) {
+            $notification = [
+                'message' => 'Cannot delete Senatorial District. Federal constituencies, LGAs, polling units, or users are associated with this district.',
+                'alert-type' => 'error'
+            ];
+
+            return redirect()->back()->with($notification);
+        }
+
+        $district->delete();
+        $notification = [
+            'message' => 'Senatorial District deleted successfully',
+            'alert-type' => 'success'
+        ];
+
+        return redirect()->route($profileData->access_level.'.location.senatorial-districts')->with($notification);
+    }
+
+    /*  Federal Constituency Management functions*/
+    public function allFederalConstituencies()
+    {
+        $profileData = $this->getProfileData();
+        $constituencies = FederalConstituency::with(['state', 'senatorialDistrict'])->orderBy('name')->get();
+
+        return view('backend.'.$profileData->access_level.'.federal-constituency.federal-constituencies', compact('profileData', 'constituencies'));
+    }
+
+    public function addFederalConstituency()
+    {
+        $profileData = $this->getProfileData();
+        $states = State::orderBy('name', 'ASC')->get();
+        $senatorialDistricts = SenatorialDistrict::with('state')->orderBy('name', 'ASC')->get();
+
+        return view('backend.'.$profileData->access_level.'.federal-constituency.add-federal-constituency', compact('profileData', 'states', 'senatorialDistricts'));
+    }
+
+    public function storeFederalConstituency(Request $request)
+    {
+        $request->validate([
+            'name' => 'required',
+            'state_id' => 'required',
+            'senatorial_district_id' => 'nullable',
+        ]);
+
+        FederalConstituency::create([
+            'name' => $request->name,
+            'normalized_name' => Str::lower(trim($request->name)),
+            'state_id' => $request->state_id,
+            'senatorial_district_id' => $request->senatorial_district_id,
+        ]);
+
+        $profileData = $this->getProfileData();
+        $notification = [
+            'message' => 'Federal Constituency added successfully',
+            'alert-type' => 'success'
+        ];
+
+        return redirect()->route($profileData->access_level.'.location.federal-constituencies')->with($notification);
+    }
+
+    public function editFederalConstituency($uuid)
+    {
+        $profileData = $this->getProfileData();
+        $constituency = FederalConstituency::where('uuid', $uuid)->firstOrFail();
+        $states = State::orderBy('name', 'ASC')->get();
+        $senatorialDistricts = SenatorialDistrict::with('state')->orderBy('name', 'ASC')->get();
+
+        return view('backend.'.$profileData->access_level.'.federal-constituency.edit-federal-constituency', compact('profileData', 'constituency', 'states', 'senatorialDistricts'));
+    }
+
+    public function updateFederalConstituency(Request $request, $uuid)
+    {
+        $request->validate([
+            'name' => 'required',
+            'state_id' => 'required',
+            'senatorial_district_id' => 'nullable',
+        ]);
+
+        FederalConstituency::where('uuid', $uuid)->update([
+            'name' => $request->name,
+            'normalized_name' => Str::lower(trim($request->name)),
+            'state_id' => $request->state_id,
+            'senatorial_district_id' => $request->senatorial_district_id,
+        ]);
+
+        $profileData = $this->getProfileData();
+        $notification = [
+            'message' => 'Federal Constituency updated successfully',
+            'alert-type' => 'success'
+        ];
+
+        return redirect()->route($profileData->access_level.'.location.federal-constituencies')->with($notification);
+    }
+
+    public function deleteFederalConstituency($uuid)
+    {
+        $profileData = $this->getProfileData();
+        $constituency = FederalConstituency::where('uuid', $uuid)->firstOrFail();
+
+        if (
+            $constituency->localGovernmentAreas()->count() > 0 ||
+            $constituency->pollingUnits()->count() > 0 ||
+            $constituency->users()->count() > 0
+        ) {
+            $notification = [
+                'message' => 'Cannot delete Federal Constituency. LGAs, polling units, or users are associated with this constituency.',
+                'alert-type' => 'error'
+            ];
+
+            return redirect()->back()->with($notification);
+        }
+
+        $constituency->delete();
+        $notification = [
+            'message' => 'Federal Constituency deleted successfully',
+            'alert-type' => 'success'
+        ];
+
+        return redirect()->route($profileData->access_level.'.location.federal-constituencies')->with($notification);
+    }
+
+
+
     /*  LGA Management funtions*/
     public function allLocalGovernments()
     {
@@ -432,7 +638,7 @@ class LocationController extends Controller
             return redirect()->route($profileData->access_level.'.location.lgas')->with($notification);
     }
 
-    
+
     public function importLgasForm()
     {
         $profileData = $this->getProfileData();
@@ -442,7 +648,7 @@ class LocationController extends Controller
     public function exportLgas()
     {
         return Excel::download(new LocalGovernmentExport, 'local-governments.xlsx');
-    } 
+    }
 
     public function importLgas(Request $request)
     {
@@ -597,7 +803,7 @@ class LocationController extends Controller
     public function exportWards()
     {
         return Excel::download(new WardExport, 'wards.xlsx');
-    } 
+    }
 
     public function importWards(Request $request)
 {
@@ -664,7 +870,7 @@ class LocationController extends Controller
                     ->orderBy('local_government_areas.name', 'ASC')
                     ->orderBy('wards.name', 'ASC')
                     ->get(['wards.*', 'local_government_areas.name as lga_name']);
-                
+
         return view('backend.'.$profileData->access_level.'.pu.add-pu', compact('profileData', 'wards', 'lgas'));
     }
 
@@ -698,7 +904,7 @@ class LocationController extends Controller
     {
         $profileData = $this->getProfileData();
         $pu = PollingUnit::where('uuid', $uuid)->firstOrFail();
-         
+
             $lgas = LocalGovernmentArea::with('state')
             ->join('states', 'local_government_areas.state_id', '=', 'states.id')
             ->orderBy('states.name', 'ASC')
@@ -743,7 +949,7 @@ class LocationController extends Controller
                 'message' => 'Cannot delete Polling Unit. Users are associated with this Polling Unit.',
                 'alert-type' => 'error'
             ];
-            return redirect()->back()->with($notification);     
+            return redirect()->back()->with($notification);
         }
 
         // If no database  are associated, proceed with deletion
@@ -753,7 +959,7 @@ class LocationController extends Controller
             'alert-type' => 'success'
         ];
         return redirect()->route($profileData->access_level.'.location.pus')->with($notification);
-    }   
+    }
 
 
     public function importPollingUnitsForm()
@@ -775,14 +981,14 @@ class LocationController extends Controller
         $request->validate([
             'file' => 'required|mimes:xlsx',
         ]);
-    
+
         $import = new PollingUnitImport;
         Excel::import($import, $request->file('file'));
-    
+
         $successCount = $import->successfulInserts;
         $failureCount = $import->failedInserts;
         $duplicatesCount = $import->duplicates;
-    
+
         // Create notification message based on counts
         if ($failureCount > 0 && $successCount > 0) {
             $message = "Some polling units were imported successfully. However, there were issues with some rows. Please check for potential misspellings or missing local governments in your file.";
@@ -794,24 +1000,24 @@ class LocationController extends Controller
             $message = "{$successCount} polling units imported successfully.";
             $alertType = 'success';
         }
-    
+
         // Include duplicates count in the message if applicable
         if ($duplicatesCount > 0) {
             $message .= " {$duplicatesCount} polling units were not imported due to duplicates.";
         }
-    
+
         $notification = [
             'message' => $message,
             'alert-type' => $alertType
         ];
-    
+
         return redirect()->route($this->getProfileData()->access_level.'.location.pus')->with($notification);
     }
-    
 
 
 
-    
+
+
 
 
 

@@ -14,22 +14,30 @@ class Accesslevel
      *
      * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
      */
-    public function handle(Request $request, Closure $next, $access_level): Response
+    public function handle(Request $request, Closure $next, ...$accessLevels): Response
     {
-        if (($request->user()->access_level !== $access_level) ) {
-            //logout if auth exists but is not admin
-            if ($request->user()) {
+        $user = $request->user();
+
+        // Normalize accepted access levels from the variadic args
+        $allowedLevels = collect($accessLevels)
+            ->filter()
+            ->flatten()
+            ->map(fn ($level) => trim((string) $level))
+            ->filter()
+            ->values()
+            ->all();
+
+        if (!$user || empty($allowedLevels) || !in_array($user->access_level, $allowedLevels, true)) {
+            if ($user) {
                 Auth::guard('web')->logout();
                 $request->session()->invalidate();
                 $request->session()->regenerateToken();
             }
 
-            $notification = [
+            return redirect()->route('login')->with([
                 'message' => 'You have been logged out',
-                'alert-type' => 'error'
-            ];
-
-            return redirect()->route('login')->with($notification);
+                'alert-type' => 'error',
+            ]);
         }
 
 

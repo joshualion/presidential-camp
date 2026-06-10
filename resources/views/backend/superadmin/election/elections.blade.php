@@ -59,7 +59,7 @@ $badgeClasses = [
                         <td>
                             <a href="{{ route($profileData->access_level.'.election.results',  ($election->uuid))}}" ><button class="btn btn-success btn-sm"><i class="fas fa-chart-line"></i>  Results</button></a>
                         <a href="{{ route($profileData->access_level.'.election.votesByPu',  ($election->uuid))}}" ><button class="btn btn-dark btn-sm"><i class="fas fa-eye"></i>  Reports</button></a>
-                    @if(($profileData->hasRole('National ICT/Media Director')) || ( $profileData->access_level == 'superadmin'))
+                    @if(($profileData->hasRole('National ICT Director')) || ( $profileData->access_level == 'superadmin'))
                         <a href="{{ route($profileData->access_level.'.election.edit',  ($election->uuid))}}" ><button class="btn btn-primary btn-sm"><i class="fas fa-pencil-alt"></i> Edit</button></a>
                         <form action="{{ route($profileData->access_level.'.election.delete',  ($election->uuid)) }}" method="POST" style="display: inline-block;">
                             @csrf

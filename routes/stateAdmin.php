@@ -5,10 +5,10 @@ use App\Http\Controllers\AjaxController;
 use App\Http\Controllers\BulksmsController;
 use App\Http\Controllers\BulkSmsSettingController;
 use App\Http\Controllers\ChartsController;
+use App\Http\Controllers\DashboardStatsController;
 use App\Http\Controllers\ElectionController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\MembersController;
-use App\Http\Controllers\PoliticalPartyController;
 use App\Http\Controllers\stateadmin\StateAdminController;
 use Illuminate\Support\Facades\Route;
 
@@ -20,6 +20,7 @@ Route::middleware(['auth','check_onboarding'])->group(function () {
 
  // Regional Admin Profile & Dashboard Routes
  Route::get('/state/dashboard', [StateAdminController::class, 'stateAdminDashBoard'])->name('stateadmin.dashboard')->middleware('access_level:stateadmin');
+ Route::get('/state/dashboard/stats', [DashboardStatsController::class, 'cards'])->name('stateadmin.dashboard.stats')->middleware('access_level:stateadmin');
  Route::get('/state/profile', [StateAdminController::class, 'stateadminProfile'])->name('stateadmin.profile')->middleware('access_level:stateadmin');
  Route::post('/state/profile/store', [StateAdminController::class, 'stateadminProfileStore'])->name('stateadmin.profile.store')->middleware('access_level:stateadmin');
  Route::get('/state/change/password', [StateAdminController::class, 'stateadminChangePassword'])->name('stateadmin.change.password')->middleware('access_level:stateadmin');
@@ -68,6 +69,10 @@ Route::delete('/state/member/delete/{uuid}', [MembersController::class, 'deleteM
 Route::get('/state/members/bystate/{uuid?}', [MembersController::class, 'membersByStates'])->name('stateadmin.members.byState')->middleware('access_level:stateadmin,regionadmin,stateadmin');
 Route::get('/state/members/state/{uuid}', [MembersController::class, 'ViewMembersByState'])->name('stateadmin.member.state.view')->middleware('access_level:stateadmin,regionadmin,regionadmin,stateadmin');
 Route::get('/state/state/members/data/{uuid}', [MembersController::class, 'getStateMembersData'])->name('stateadmin.state.members.data');
+// Members By Senatorial District
+Route::get('/state/members/bysenatorialdistrict/{uuid?}', [MembersController::class, 'membersBySenatorialDistricts'])->name('stateadmin.members.bySenatorialDistrict')->middleware('access_level:stateadmin');
+// Members By Federal Constituency
+Route::get('/state/members/byfederalconstituency/{uuid?}', [MembersController::class, 'membersByFederalConstituencies'])->name('stateadmin.members.byFederalConstituency')->middleware('access_level:stateadmin');
 // Members By Local Government
 Route::get('/state/members/bylga/{uuid?}', [MembersController::class, 'membersByLocalGovernments'])->name('stateadmin.members.byLga')->middleware('access_level:stateadmin');
 Route::get('/state/members/lga/{uuid}', [MembersController::class, 'viewMembersByLocalGovernments'])->name('stateadmin.member.lga.view')->middleware('access_level:stateadmin');
@@ -118,6 +123,32 @@ Route::post('/state/location/state/store', [LocationController::class, 'storeSta
 Route::get('/state/location/state/edit/{uuid}', [LocationController::class, 'editState'])->name('stateadmin.location.state.edit')->middleware('access_level:stateadmin');
 Route::post('/state/location/state/update/{uuid}', [LocationController::class, 'updateState'])->name('stateadmin.location.state.update')->middleware('access_level:stateadmin');
 Route::delete('/state/location/state/delete/{uuid}', [LocationController::class, 'deleteState'])->name('stateadmin.location.state.delete')->middleware('access_level:stateadmin');
+
+// Manage Senatorial Districts
+Route::get('/state/location/senatorial-district/dashboard/{uuid}', [StateAdminController::class, 'senatorialDistrictDashBoard'])->name('stateadmin.location.senatorial-district.dashboard')->middleware('access_level:stateadmin');
+Route::get('/state/senatorial-district/member/distribution/gender/{uuid}', [ChartsController::class, 'GenderDistributionBySenatorialDistrict'])->name('stateadmin.senatorial-district.member.distribution.gender')->middleware('access_level:stateadmin');
+Route::get('/state/senatorial-district/member/distribution/age/{uuid}', [ChartsController::class, 'AgeDistributionBySenatorialDistrict'])->name('stateadmin.senatorial-district.member.distribution.age')->middleware('access_level:stateadmin');
+Route::get('/state/senatorial-district/member/distribution/lga/{uuid}', [ChartsController::class, 'lgaDistributionBySenatorialDistrict'])->name('stateadmin.senatorial-district.member.distribution.lga')->middleware('access_level:stateadmin');
+Route::get('/state/senatorial-district/member/distribution/voter/{uuid}', [ChartsController::class, 'VoterDistributionBySenatorialDistrict'])->name('stateadmin.senatorial-district.member.distribution.voter')->middleware('access_level:stateadmin');
+Route::get('/state/location/senatorial-districts', [LocationController::class, 'allSenatorialDistricts'])->name('stateadmin.location.senatorial-districts')->middleware('access_level:stateadmin');
+Route::get('/state/location/senatorial-district/add', [LocationController::class, 'addSenatorialDistrict'])->name('stateadmin.location.senatorial-district.add')->middleware('access_level:stateadmin');
+Route::post('/state/location/senatorial-district/store', [LocationController::class, 'storeSenatorialDistrict'])->name('stateadmin.location.senatorial-district.store')->middleware('access_level:stateadmin');
+Route::get('/state/location/senatorial-district/edit/{uuid}', [LocationController::class, 'editSenatorialDistrict'])->name('stateadmin.location.senatorial-district.edit')->middleware('access_level:stateadmin');
+Route::post('/state/location/senatorial-district/update/{uuid}', [LocationController::class, 'updateSenatorialDistrict'])->name('stateadmin.location.senatorial-district.update')->middleware('access_level:stateadmin');
+Route::delete('/state/location/senatorial-district/delete/{uuid}', [LocationController::class, 'deleteSenatorialDistrict'])->name('stateadmin.location.senatorial-district.delete')->middleware('access_level:stateadmin');
+
+// Manage Federal Constituencies
+Route::get('/state/location/federal-constituency/dashboard/{uuid}', [StateAdminController::class, 'federalConstituencyDashBoard'])->name('stateadmin.location.federal-constituency.dashboard')->middleware('access_level:stateadmin');
+Route::get('/state/federal-constituency/member/distribution/gender/{uuid}', [ChartsController::class, 'GenderDistributionByFederalConstituency'])->name('stateadmin.federal-constituency.member.distribution.gender')->middleware('access_level:stateadmin');
+Route::get('/state/federal-constituency/member/distribution/age/{uuid}', [ChartsController::class, 'AgeDistributionByFederalConstituency'])->name('stateadmin.federal-constituency.member.distribution.age')->middleware('access_level:stateadmin');
+Route::get('/state/federal-constituency/member/distribution/lga/{uuid}', [ChartsController::class, 'lgaDistributionByFederalConstituency'])->name('stateadmin.federal-constituency.member.distribution.lga')->middleware('access_level:stateadmin');
+Route::get('/state/federal-constituency/member/distribution/voter/{uuid}', [ChartsController::class, 'VoterDistributionByFederalConstituency'])->name('stateadmin.federal-constituency.member.distribution.voter')->middleware('access_level:stateadmin');
+Route::get('/state/location/federal-constituencies', [LocationController::class, 'allFederalConstituencies'])->name('stateadmin.location.federal-constituencies')->middleware('access_level:stateadmin');
+Route::get('/state/location/federal-constituency/add', [LocationController::class, 'addFederalConstituency'])->name('stateadmin.location.federal-constituency.add')->middleware('access_level:stateadmin');
+Route::post('/state/location/federal-constituency/store', [LocationController::class, 'storeFederalConstituency'])->name('stateadmin.location.federal-constituency.store')->middleware('access_level:stateadmin');
+Route::get('/state/location/federal-constituency/edit/{uuid}', [LocationController::class, 'editFederalConstituency'])->name('stateadmin.location.federal-constituency.edit')->middleware('access_level:stateadmin');
+Route::post('/state/location/federal-constituency/update/{uuid}', [LocationController::class, 'updateFederalConstituency'])->name('stateadmin.location.federal-constituency.update')->middleware('access_level:stateadmin');
+Route::delete('/state/location/federal-constituency/delete/{uuid}', [LocationController::class, 'deleteFederalConstituency'])->name('stateadmin.location.federal-constituency.delete')->middleware('access_level:stateadmin');
 
 // manage Local Governments
 Route::get('/state/location/localgovernment/dashboard/{uuid}', [StateAdminController::class, 'localGovernmentDashBoard'])->name('stateadmin.location.lga.dashboard')->middleware('access_level:stateadmin');
@@ -190,6 +221,7 @@ Route::post('/state/import-polling-units', [LocationController::class, 'importPo
 
 // Election Management CRUD
 Route::get('/state/elections', [ElectionController::class, 'allElections'])->name('stateadmin.elections')->middleware('access_level:stateadmin');
+Route::get('/state/election/operations-center', [ElectionController::class, 'operationsCenter'])->name('stateadmin.election.operations')->middleware('access_level:stateadmin');
 Route::get('/state/election/add', [ElectionController::class, 'addElection'])->name('stateadmin.election.add')->middleware('access_level:stateadmin');
 Route::post('/state/election/store', [ElectionController::class, 'storeElection'])->name('stateadmin.election.store')->middleware('access_level:stateadmin');
 Route::get('/state/election/edit/{uuid}', [ElectionController::class, 'editElection'])->name('stateadmin.election.edit')->middleware('access_level:stateadmin');
@@ -200,7 +232,7 @@ Route::delete('/state/election/delete/{uuid}', [ElectionController::class, 'dele
 Route::get('/state/election/result/{uuid}', [ElectionController::class, 'electionResult'])->name('stateadmin.election.results')->middleware('access_level:stateadmin');
 
 // Election PU Votes Report
-Route::get('/state/election/votes/{uuid}', [ElectionController::class, 'manageVotesByPu'])->name('stateadmin.election.votesByPu')->middleware('access_level:stateadmin');
+Route::get('/state/election/votes/{uuid?}', [ElectionController::class, 'manageVotesByPu'])->name('stateadmin.election.votesByPu')->middleware('access_level:stateadmin');
 Route::get('/state/election/votes/data/{uuid}', [ElectionController::class, 'VotesByPuData'])->name('stateadmin.election.votesByPuData')->middleware('access_level:stateadmin');
 
 
@@ -211,7 +243,7 @@ Route::get('/state/election/incident/{uuid}/{polling_unit_id}', [ElectionControl
 
     Route::get('/state/incident/add', [ElectionController::class, 'addIncident'])->name('stateadmin.incident.add')->middleware('access_level:stateadmin');
     Route::post('/state/incident/store', [ElectionController::class, 'storeIcident'])->name('stateadmin.incident.store')->middleware('access_level:stateadmin');
-    
+
 
 //Manage Votes
 Route::get('/state/votes', [ElectionController::class, 'allVotes'])->name('stateadmin.votes')->middleware('access_level:stateadmin');
@@ -231,4 +263,3 @@ Route::get('/state/bulksms/send', [BulksmsController::class, 'index'])->name('st
 Route::post('/state/bulksms/send/sms', [BulkSmsController::class, 'sendsms'])->name('stateadmin.bulksms.send.sms')->middleware('access_level:stateadmin');
 
 });
-

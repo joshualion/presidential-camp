@@ -116,12 +116,6 @@
                     @if(auth()->user()->access_level == 'superadmin')
                     <option value="superadmin">Super Admin Access</option>
                     @endif
-                    @if(auth()->user()->access_level == 'superadmin' || auth()->user()->access_level == 'nationaladmin' )
-                    <option value="nationaladmin">National Admin Access</option>
-                    @endif
-                    @if(auth()->user()->access_level == 'superadmin' || auth()->user()->access_level == 'nationaladmin' || auth()->user()->access_level == 'regionaladmin'  )
-                    <option value="regionaladmin">Regional Admin Access</option>
-                    @endif
                     @if(auth()->user()->access_level == 'superadmin' || auth()->user()->access_level == 'nationaladmin' || auth()->user()->access_level == 'regionaladmin' || auth()->user()->access_level == 'stateadmin' )
                     <option value="stateadmin">State Admin Access</option>
                      @endif

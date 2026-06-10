@@ -19,7 +19,18 @@
                         <form action="{{ route($profileData->access_level.'.election.update', $election->uuid) }}" method="POST" enctype="multipart/form-data">
                             @csrf
 
-                            <input type="hidden" name="name" value="{{ $election->name }}" />
+                            <div class="form-group row">                            
+                                <label for="name" class="col-sm-4 col-form-label">Which State Election?</label>
+                                <div class="col-sm-8">
+                                    <input type="text" class="form-control @error('name') @enderror" name="name" required value="{{ $election->name }}" />
+    
+                                </div>
+                                @error('name')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            
+                            </div>
+                            
 
                             <div class="form-group row">
                                 <label for="party_id" class="col-sm-4 col-form-label">Choose Your Political Party</label>

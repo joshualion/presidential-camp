@@ -2,18 +2,20 @@
 
 namespace App\Http\Controllers\Auth;
 
-use App\Http\Controllers\Controller;
-use App\Models\Country;
-use App\Models\SystemSetting;
 use App\Models\User;
-use Illuminate\Auth\Events\Registered;
-use Illuminate\Http\RedirectResponse;
+use App\Models\Country;
+use App\Models\Referral;
+use Illuminate\View\View;
 use Illuminate\Http\Request;
+use App\Models\SystemSetting;
+use Illuminate\Validation\Rules;
+use Spatie\Permission\Models\Role;
+use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\Rules;
-use Illuminate\View\View;
-use Spatie\Permission\Models\Role;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Auth\Events\Registered;
+use Illuminate\Support\Facades\RateLimiter;
 
 class RegisteredUserController extends Controller
 {
@@ -32,12 +34,37 @@ class RegisteredUserController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
+        //Security check 1
+        $key = 'register:'.$request->ip();
+        if (RateLimiter::tooManyAttempts($key, 5)) {
+            abort(429, 'Too many attempts. Slow down, cowboy.');
+        }
+        RateLimiter::hit($key, 60); // 1 minute cooldown
+
+        //2. Security check 2
+        if (!empty($request->input('nickname'))) {
+            abort(403, 'Bot detected');
+        }
+
+        //Security check 3
         $request->validate([
-            'username' => ['required', 'string', 'max:255'],
+            'logic_question' => ['required', function ($attribute, $value, $fail) {
+                $expected = session('logic_question_answer');
+                if ((int) trim($value) !== $expected) {
+                    $fail('Incorrect answer to the logic question.');
+                }
+            }],
+        ]);
+
+
+
+        $request->validate([
+            'username' => ['required', 'string', 'max:255', 'unique:'.User::class],
             'firstname'=> ['required','string'],
             'lastname' => ['required','string'],
             'email'    => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
+            'referral_code' => ['nullable|string|exists:users,referral_code'],
         ]);
 
         // Find the role by its Name
@@ -59,10 +86,29 @@ class RegisteredUserController extends Controller
         //assign role
         $user->roles()->attach($role->id);
 
+        // Handle referral logic
+        if ($request->filled('referral_code')) {
+            $referrer = User::where('referral_code', $request->referral_code)->first();
+
+            if ($referrer) {
+                // Mirror relation in referrals table
+                Referral::firstOrCreate([
+                    'referrer_id' => $referrer->id,
+                    'referee_id'  => $user->id, // <-- must match migration column
+                ]);
+
+                // Set parent directly in users table
+                $user->update([
+                    'referred_by' => $referrer->id,
+                ]);
+            }
+        }
+
+
 
         event(new Registered($user));
 
-        Auth::login($user);       
+        Auth::login($user);
 
         $setting = SystemSetting::find(1);
 

@@ -1,9 +1,7 @@
 @extends('backend.template.backend-master')
 @section('content')
 
-@php 
- $region = \App\Models\Region::find(Auth::user()->region_id);
-@endphp
+
 
     <!-- Main content -->
     <section class="content">
@@ -12,7 +10,7 @@
             <div class="col-12">
                 <div class="card card-primary">
                 <div class="card-header">
-                    <h3 class="card-title"> {{optional($region)->name }} Members By State</h3>
+                    <h3 class="card-title">Members By State</h3>
                     <div class="card-tools">
                         <a href="{{ route($profileData->access_level.'.member.add') }}"><button class="btn btn-default"> <i class="fa fa-plus-square"></i> Add New Member</button></a>
                     </div>
@@ -26,6 +24,8 @@
                                         <th>Region</th>
                                         <th>State</th>
                                         <th>Members</th>
+                                        <th>Eligible Voters</th>
+                                        <th>Ineligible Voters</th>
                                         <th>Action</th>
                                     </tr>
                                     </thead>
@@ -39,7 +39,16 @@
                                                     <span class="badge bg-secondary text-white">
                                                         {{ $state->users->where('access_level', '!=', 'superadmin')->count() }}
                                                     </span>
-                                                    
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-success text-white">
+                                                        {{ $state->users->where('access_level', '!=', 'superadmin')->where('validVoter', 'yes')->count() }}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-danger text-white">
+                                                        {{ $state->users->where('access_level', '!=', 'superadmin')->where('validVoter', 'no')->count() }}
+                                                    </span>
                                                 </td>
                                                 <td>
                                                     <a href="{{ route($profileData->access_level.'.member.state.view', $state->uuid) }}"><button class="btn btn-danger"><i class="fas fa-eye"></i> View Members</button></a>
@@ -57,6 +66,8 @@
                                         <th>Region</th>
                                         <th>state</th>
                                         <th>Members</th>
+                                        <th>Eligible Voters</th>
+                                        <th>Ineligible Voters</th>
                                         <th>Action</th>
                                     </tr>
                                     </tfoot>
