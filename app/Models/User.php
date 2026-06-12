@@ -106,6 +106,16 @@ class User extends Authenticatable
        return $this->belongsTo(PollingUnit::class);
     }
 
+    public function pollingUnitAgentAssignments()
+    {
+        return $this->hasMany(PollingUnitAgentAssignment::class);
+    }
+
+    public function approvedPollingUnitAgentAssignments()
+    {
+        return $this->hasMany(PollingUnitAgentAssignment::class)->approved();
+    }
+
     public function senatorialDistrict(){
         return $this->belongsTo(SenatorialDistrict::class);
     }

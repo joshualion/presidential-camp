@@ -1,12 +1,70 @@
+<style>
+    .nav-treeview{
+        background: #ffffff !important;
+    }
+</style>
+
+@php
+    $district = \App\Models\SenatorialDistrict::find(Auth::user()->senatorial_district_id);
+@endphp
+
 @if(Auth::user()->access_level == 'senatorialadmin')
 <nav class="mt-2">
     <ul class="nav nav-pills nav-sidebar flex-column sidebar-nav" data-widget="treeview" role="menu" data-accordion="false">
         <li class="tab nav-item menu-close">
             <a href="/senatorial/dashboard" class="nav-link">
                 <i class="nav-icon fas fa-home"></i>
-                <p>Dashboard</p>
+                <p>
+                    Dashboard
+                    <i class="right fas fa-angle-left"></i>
+                </p>
             </a>
         </li>
+
+        {{-- Members --}}
+        <li class="tab nav-item menu-close">
+            <a href="#" class="nav-link">
+                <i class="nav-icon fas fa-users"></i>
+                <p>
+                    Members
+                    <i class="right fas fa-angle-left"></i>
+                </p>
+            </a>
+            <ul class="nav nav-treeview">
+                <li class="nav-item">
+                    <a href="/senatorial/members/fetch/{{ $district?->uuid }}" class="nav-link">
+                        <i class="fas fa-user nav-icon"></i>
+                        <p>All Members</p>
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <a href="/senatorial/members/bylga/{{ $district?->uuid }}" class="nav-link">
+                        <i class="fas fa-user nav-icon"></i>
+                        <p>Members by LGA</p>
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <a href="/senatorial/members/byward/{{ $district?->uuid }}" class="nav-link">
+                        <i class="fas fa-user nav-icon"></i>
+                        <p>Members By Wards</p>
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <a href="/senatorial/members/bypu/{{ $district?->uuid }}" class="nav-link">
+                        <i class="fas fa-user nav-icon"></i>
+                        <p>Members By PU</p>
+                    </a>
+                </li>
+
+            </ul>
+        </li>
+        {{-- / Members --}}
+
+        @include('backend.template.partials.agentMenu')
+
         <li class="tab nav-item menu-close">
             <a href="#" class="nav-link">
                 <i class="nav-icon fas fa-award"></i>
@@ -28,17 +86,7 @@
                         <p>Situation Room</p>
                     </a>
                 </li>
-                @if(
-                    $profileData->hasAnyRole([
-                        'National ICT Director',
-                        'Regional ICT Director',
-                        'State ICT Director',
-                        'Senatorial ICT Director',
-                        'LGA ICT Director',
-                        'Ward ICT Director',
-                        'PU ICT Director',
-                        'Pu Agent'
-                    ]) || $profileData->access_level == 'superadmin' )
+                @if(app(\App\Services\PollingUnitResultPermissionService::class)->userHasAnyApprovedAssignment($profileData))
                 <li class="nav-item">
                     <a href="/senatorial/vote/add" class="nav-link">
                         <i class="fa fa-cloud nav-icon"></i>
@@ -54,23 +102,65 @@
                 @endif
             </ul>
         </li>
+
+        {{-- Messaging --}}
         <li class="tab nav-item menu-close">
             <a href="#" class="nav-link">
-                <i class="nav-icon fas fa-map"></i>
+                <i class="nav-icon fas fa-comments"></i>
                 <p>
-                    Drill Downs
+                    Messaging
                     <i class="right fas fa-angle-left"></i>
                 </p>
             </a>
             <ul class="nav nav-treeview">
                 <li class="nav-item">
-                    <a href="/senatorial/dashboard" class="nav-link">
-                        <i class="fas fa-layer-group nav-icon"></i>
-                        <p>District to LGAs</p>
+                    <a href="/messages" class="nav-link">
+                        <i class="fas fa-comments nav-icon"></i>
+                        <p>Internal Communication</p>
                     </a>
                 </li>
             </ul>
         </li>
+        {{-- / Messaging --}}
+
+        {{-- Locations --}}
+        <li class="tab nav-item menu-close">
+            <a href="#" class="nav-link">
+                <i class="nav-icon fas fa-globe-africa"></i>
+                <p>
+                    Locations
+                    <i class="right fas fa-angle-left"></i>
+                </p>
+            </a>
+            <ul class="nav nav-treeview">
+                <li class="nav-item">
+                    <a href="/senatorial/location/federal-constituencies" class="nav-link">
+                        <i class="fas fa-landmark nav-icon"></i>
+                        <p>Federal Constituencies</p>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/senatorial/location/localgovernments" class="nav-link">
+                        <i class="fas fa-map-pin nav-icon"></i>
+                        <p>LGA's</p>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/senatorial/location/wards" class="nav-link">
+                        <i class="fas fa-map-marked-alt nav-icon"></i>
+                        <p>Wards</p>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/senatorial/location/pollingunits" class="nav-link">
+                        <i class="fas fa-monument nav-icon"></i>
+                        <p>Polling Units</p>
+                    </a>
+                </li>
+            </ul>
+        </li>
+        {{-- / Locations --}}
+
         {{-- Profile Menu --}}
         <li class="tab nav-item menu-close">
             <a href="#" class="nav-link">

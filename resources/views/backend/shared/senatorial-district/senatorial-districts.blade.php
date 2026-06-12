@@ -5,9 +5,11 @@
                 <div class="card card-primary">
                     <div class="card-header">
                         <h3 class="card-title">All Senatorial Districts - <span class="badge badge-light">{{ number_format($districts->count(), 0) }}</span></h3>
-                        <div class="card-tools">
-                            <a href="{{ route($profileData->access_level.'.location.senatorial-district.add') }}"><button class="btn btn-default"> <i class="fa fa-plus-square"></i> Add Senatorial District</button></a>
-                        </div>
+                        @if(app(\App\Services\StructuralLocationAccessService::class)->canCreateOrDelete($profileData))
+                            <div class="card-tools">
+                                <a href="{{ route($profileData->access_level.'.location.senatorial-district.add') }}"><button class="btn btn-default"> <i class="fa fa-plus-square"></i> Add Senatorial District</button></a>
+                            </div>
+                        @endif
                     </div>
                     <div class="card-body">
                         <table id="mysenatorialdistricts" class="table table-bordered table-striped">

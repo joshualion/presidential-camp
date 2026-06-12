@@ -105,7 +105,7 @@
                                 <div class="inner">
                                   <h3>{{$excoCount}}</h3>
 
-                                  <p>Team Leaders</p>
+                                  <p>Coordinators / Admins</p>
                                 </div>
                                 <div class="icon">
                                   <i class="ion ion-person"></i>
@@ -146,6 +146,11 @@
 
           </div> <!-- /.card-body -->
 </div>
+
+
+@if(!empty($dashboardMetrics))
+@include('backend.shared.dashboard-election-stat-section', ['dashboardMetrics' => $dashboardMetrics])
+@endif
 
 <!-- Demographics -->
 <div class="row">

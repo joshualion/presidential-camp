@@ -61,6 +61,8 @@
   </li>
   {{-- / Members --}}
 
+  @include('backend.template.partials.agentMenu')
+
   {{-- Election --}}
   <li class="tab nav-item menu-close">
                       <a href="#" class="nav-link">
@@ -84,14 +86,7 @@
                             <p>Situation Room</p>
                           </a>
                         </li>
-                        @if(
-                          $profileData->hasAnyRole([
-                              'State ICT Director',
-                              'LGA ICT Director',
-                              'Ward ICT Director',
-                              'PU ICT Director',
-                              'Pu Agent'
-                          ]) || $profileData->access_level == 'superadmin' )
+                        @if(app(\App\Services\PollingUnitResultPermissionService::class)->userHasAnyApprovedAssignment($profileData))
                         <li class="nav-item">
                           <a href="/superadmin/vote/add" class="nav-link">
                           <i class="fa fa-cloud nav-icon"></i>

@@ -23,9 +23,9 @@
               </div>
           <div class="card-body">
 
-                  <div class="row">
-                            <div class="col-lg-4 col-6">
-                              <div class="small-box bg-success">
+                  <div class="row dashboard-stats-grid align-items-stretch">
+                            <div class="col-xl-3 col-md-6 col-12 d-flex mb-3">
+                              <div class="small-box bg-success h-100 w-100 d-flex flex-column">
                                 <div class="inner">
                                   <h3>{{$lgaWithUsersCount}}</h3>
                                   <p>Out of <strong>{{$lgaCount}}</strong> LGAs in {{$constituency->name}}</p>
@@ -40,12 +40,12 @@
                                 <div class="icon">
                                   <i class="ion ion-lga"></i>
                                 </div>
-                                <a href="{{route($profileData->access_level.'.members.byLga', $constituency->uuid)}}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
+                                <a href="{{route($profileData->access_level.'.members.byLga', $constituency->uuid)}}" class="small-box-footer mt-auto">More info <i class="fas fa-arrow-circle-right"></i></a>
                               </div>
                             </div>
 
-                            <div class="col-lg-4 col-6">
-                              <div class="small-box bg-info">
+                            <div class="col-xl-3 col-md-6 col-12 d-flex mb-3">
+                              <div class="small-box bg-info h-100 w-100 d-flex flex-column">
                                 <div class="inner">
                                 <h3>{{$wardWithUsersCount}}</h3>
                                   <p>Out of <strong>{{$wardCount}}</strong> Wards in {{$constituency->name}}</p>
@@ -60,12 +60,12 @@
                                 <div class="icon">
                                   <i class="ion ion-ward"></i>
                                 </div>
-                                <a href="{{route($profileData->access_level.'.members.byWard', $constituency->uuid)}}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
+                                <a href="{{route($profileData->access_level.'.members.byWard', $constituency->uuid)}}" class="small-box-footer mt-auto">More info <i class="fas fa-arrow-circle-right"></i></a>
                               </div>
                             </div>
 
-                            <div class="col-lg-4 col-6">
-                              <div class="small-box bg-danger">
+                            <div class="col-xl-3 col-md-6 col-12 d-flex mb-3">
+                              <div class="small-box bg-danger h-100 w-100 d-flex flex-column">
                                 <div class="inner">
                                 <h3>{{$puWithUsersCount}}</h3>
                                   <p>Out of <strong>{{$puCount}}</strong> PUs in {{$constituency->name}}</p>
@@ -80,41 +80,24 @@
                                 <div class="icon">
                                   <i class="ion ion-pu"></i>
                                 </div>
-                                <a href="{{route($profileData->access_level.'.members.byPu', $constituency->uuid)}}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
+                                <a href="{{route($profileData->access_level.'.members.byPu', $constituency->uuid)}}" class="small-box-footer mt-auto">More info <i class="fas fa-arrow-circle-right"></i></a>
                               </div>
                             </div>
-                  </div>
-
-                  <div class="row">
-                            <div class="col-lg-3 col-6">
-                              <div class="small-box bg-danger">
-                                <div class="inner">
-                                <h3>{{ $newMembers }}</h3>
-                                  <p>New Member(s) Today</p>
-                                  <p style="float: right;"></p>
-                                </div>
-                                <div class="icon">
-                                  <i class="ion ion-map"></i>
-                                </div>
-                                <a href="#" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
-                              </div>
-                            </div>
-
-                            <div class="col-lg-3 col-6">
-                              <div class="small-box bg-secondary">
+                            <div class="col-xl-3 col-md-6 col-12 d-flex mb-3">
+                              <div class="small-box bg-secondary h-100 w-100 d-flex flex-column">
                                 <div class="inner">
                                   <h3>{{$excoCount}}</h3>
-                                  <p>Team Leaders</p>
+                                  <p>Coordinators / Admins</p>
                                 </div>
                                 <div class="icon">
                                   <i class="ion ion-person"></i>
                                 </div>
-                                <a href="{{route($profileData->access_level.'.leaders', $constituency->uuid)}}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
+                                <a href="{{route($profileData->access_level.'.leaders', $constituency->uuid)}}" class="small-box-footer mt-auto">More info <i class="fas fa-arrow-circle-right"></i></a>
                               </div>
                             </div>
 
-                            <div class="col-lg-3 col-6">
-                              <div class="small-box bg-primary">
+                            <div class="col-xl-3 col-md-6 col-12 d-flex mb-3">
+                              <div class="small-box bg-primary h-100 w-100 d-flex flex-column">
                                 <div class="inner">
                                   <h3>{{$memberCount}}</h3>
                                   <p>Regular Members</p>
@@ -122,12 +105,12 @@
                                 <div class="icon">
                                   <i class="ion ion-person-add"></i>
                                 </div>
-                                <a href="{{route($profileData->access_level.'.regulars', $constituency->uuid)}}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
+                                <a href="{{route($profileData->access_level.'.regulars', $constituency->uuid)}}" class="small-box-footer mt-auto">More info <i class="fas fa-arrow-circle-right"></i></a>
                               </div>
                             </div>
 
-                            <div class="col-lg-3 col-6">
-                              <div class="small-box bg-success">
+                            <div class="col-xl-3 col-md-6 col-12 d-flex mb-3">
+                              <div class="small-box bg-success h-100 w-100 d-flex flex-column">
                                 <div class="inner">
                                   <h3>{{$userCount}}</h3>
                                   <p>All Members</p>
@@ -135,14 +118,11 @@
                                 <div class="icon">
                                   <i class="ion ion-person"></i>
                                 </div>
-                                <a href="{{route($profileData->access_level.'.members', $constituency->uuid)}}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
+                                <a href="{{route($profileData->access_level.'.members', $constituency->uuid)}}" class="small-box-footer mt-auto">More info <i class="fas fa-arrow-circle-right"></i></a>
                               </div>
                             </div>
-                  </div>
-
-                  <div class="row">
-                            <div class="col-lg-6 col-6">
-                              <div class="small-box bg-success">
+                            <div class="col-xl-3 col-md-6 col-12 d-flex mb-3">
+                              <div class="small-box bg-success h-100 w-100 d-flex flex-column">
                                 <div class="inner">
                                   <h3>{{ number_format($eligibleVotersCount) }} <small>of {{ number_format($userCount) }}</small></h3>
                                   <p>Eligible Voters</p>
@@ -153,12 +133,12 @@
                                 <div class="icon">
                                   <i class="fas fa-id-card"></i>
                                 </div>
-                                <span class="small-box-footer">Voter readiness</span>
+                                <a href="{{ route($profileData->access_level.'.peopleMetric', ['metric' => 'eligible-voters', 'uuid' => $constituency->uuid]) }}" class="small-box-footer mt-auto">Voter readiness <i class="fas fa-arrow-circle-right"></i></a>
                               </div>
                             </div>
 
-                            <div class="col-lg-6 col-6">
-                              <div class="small-box bg-danger">
+                            <div class="col-xl-3 col-md-6 col-12 d-flex mb-3">
+                              <div class="small-box bg-danger h-100 w-100 d-flex flex-column">
                                 <div class="inner">
                                   <h3>{{ number_format($inEligibleVotersCount) }} <small>of {{ number_format($userCount) }}</small></h3>
                                   <p>Without Voter Card</p>
@@ -169,12 +149,29 @@
                                 <div class="icon">
                                   <i class="fas fa-user-times"></i>
                                 </div>
-                                <span class="small-box-footer">Follow-up required</span>
+                                <a href="{{ route($profileData->access_level.'.peopleMetric', ['metric' => 'without-voter-card', 'uuid' => $constituency->uuid]) }}" class="small-box-footer mt-auto">Follow-up required <i class="fas fa-arrow-circle-right"></i></a>
+                              </div>
+                            </div>
+                            <div class="col-xl-3 col-md-6 col-12 d-flex mb-3">
+                              <div class="small-box bg-danger h-100 w-100 d-flex flex-column">
+                                <div class="inner">
+                                <h3>{{ $newMembers }}</h3>
+                                  <p>New Member(s) Today</p>
+                                  <p style="float: right;"></p>
+                                </div>
+                                <div class="icon">
+                                  <i class="ion ion-map"></i>
+                                </div>
+                                <a href="{{ route($profileData->access_level.'.peopleMetric', ['metric' => 'new-today', 'uuid' => $constituency->uuid]) }}" class="small-box-footer mt-auto">More info <i class="fas fa-arrow-circle-right"></i></a>
                               </div>
                             </div>
                   </div>
           </div>
 </div>
+
+@if(!empty($dashboardMetrics))
+@include('backend.shared.dashboard-election-stat-section', ['dashboardMetrics' => $dashboardMetrics])
+@endif
 
 <!-- Demographics -->
 <div class="row">

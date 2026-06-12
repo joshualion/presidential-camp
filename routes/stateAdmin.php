@@ -56,6 +56,8 @@ Route::get('/state/leaders/fetch/{uuid?}', [MembersController::class, 'allExcoMe
 //Fetch Regulars
 Route::get('/state/regulars/data/fetch/{uuid?}', [MembersController::class, 'getRegularMembersData'])->name('stateadmin.regulars.data');
 Route::get('/state/regulars/fetch/{uuid?}', [MembersController::class, 'allRegularMembers'])->name('stateadmin.regulars');
+Route::get('/state/people/{metric}/data/fetch/{uuid?}', [MembersController::class, 'getPeopleMetricMembersData'])->whereIn('metric', ['agents', 'eligible-voters', 'without-voter-card', 'new-today', 'new-this-week', 'new-this-month'])->name('stateadmin.peopleMetric.data');
+Route::get('/state/people/{metric}/fetch/{uuid?}', [MembersController::class, 'allPeopleMetricMembers'])->whereIn('metric', ['agents', 'eligible-voters', 'without-voter-card', 'new-today', 'new-this-week', 'new-this-month'])->name('stateadmin.peopleMetric');
 
 Route::get('/state/member/add', [MembersController::class, 'addMember'])->name('stateadmin.member.add')->middleware('access_level:stateadmin');
 Route::post('/state/member/store', [MembersController::class, 'storeMember'])->name('stateadmin.member.store')->middleware('access_level:stateadmin');

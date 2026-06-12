@@ -122,7 +122,7 @@ class ProfileCompletionController extends Controller
                 break;
 
             case PackageGovernanceService::SENATORIAL:
-                if (($profileData->access_level == 'senatorialadmin' && $profileData->hasRole('Senatorial District ICT Director')) || $profileData->access_level == 'superadmin') {
+                if (($profileData->access_level == 'senatorialadmin' && $profileData->hasRole('Senatorial ICT Director')) || $profileData->access_level == 'superadmin') {
                     $notification = [
                         'type' => 'success',
                         'message' => ' Please add or upload LGAs, Wards, and Polling Units for this Senatorial District.',

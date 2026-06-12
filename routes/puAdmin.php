@@ -56,6 +56,8 @@ Route::get('/pu/leaders/fetch/{uuid?}', [MembersController::class, 'allExcoMembe
 //Fetch Regulars
 Route::get('/pu/regulars/data/fetch/{uuid?}', [MembersController::class, 'getRegularMembersData'])->name('puadmin.regulars.data');
 Route::get('/pu/regulars/fetch/{uuid?}', [MembersController::class, 'allRegularMembers'])->name('puadmin.regulars');
+Route::get('/pu/people/{metric}/data/fetch/{uuid?}', [MembersController::class, 'getPeopleMetricMembersData'])->whereIn('metric', ['agents', 'eligible-voters', 'without-voter-card', 'new-today', 'new-this-week', 'new-this-month'])->name('puadmin.peopleMetric.data');
+Route::get('/pu/people/{metric}/fetch/{uuid?}', [MembersController::class, 'allPeopleMetricMembers'])->whereIn('metric', ['agents', 'eligible-voters', 'without-voter-card', 'new-today', 'new-this-week', 'new-this-month'])->name('puadmin.peopleMetric');
 
 Route::get('/pu/member/add', [MembersController::class, 'addMember'])->name('puadmin.member.add')->middleware('access_level:puadmin');
 Route::post('/pu/member/store', [MembersController::class, 'storeMember'])->name('puadmin.member.store')->middleware('access_level:puadmin');

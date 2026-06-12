@@ -25,8 +25,6 @@
                                         <th>S/N</th>
                                         <th>LGA</th>
                                         <th>Members</th>
-                                        <th>Eligible Voters</th>
-                                        <th>Ineligible Voters</th>
                                         <th>Action</th>
                                     </tr>
                                     </thead>
@@ -37,20 +35,7 @@
                                                 <td><strong>{{ $lga->name }}</strong></td>
                                                 <td>
                                                     <span class="badge bg-secondary text-white">
-                                                        {{ $lga->users->where('access_level', '!=', 'superadmin')->count() }}
-                                                    </span>
-
-                                                </td>
-                                                <td>
-                                                    <span class="badge bg-success text-white">
-                                                        {{ $lga->users->where('access_level', '!=', 'superadmin') ->where('validVoter', 'yes')->count() }}
-                                                    </span>
-
-                                                </td>
-
-                                                  <td>
-                                                    <span class="badge bg-danger text-white">
-                                                        {{ $lga->users->where('access_level', '!=', 'superadmin') ->where('validVoter', 'no')->count() }}
+                                                        {{ number_format($lga->members_count ?? 0) }}
                                                     </span>
 
                                                 </td>
@@ -69,8 +54,6 @@
                                         <th>S/N</th>
                                         <th>LGA</th>
                                         <th>Members</th>
-                                        <th>Eligible Voters</th>
-                                        <th>Ineligible Voters</th>
                                         <th>Action</th>
                                     </tr>
                                     </tfoot>

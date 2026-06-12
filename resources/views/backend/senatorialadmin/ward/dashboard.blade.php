@@ -120,7 +120,7 @@
                                 <div class="icon">
                                   <i class="ion ion-map"></i>
                                 </div>
-                                <a href="#" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
+                                <a href="{{ route($profileData->access_level.'.peopleMetric', ['metric' => 'new-today', 'uuid' => $ward->uuid]) }}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
                               </div>
                             </div>
                             <!-- ./col -->
@@ -130,7 +130,7 @@
                                 <div class="inner">
                                   <h3>{{$excoCount}}</h3>
 
-                                  <p>Team Leaders</p>
+                                  <p>Coordinators / Admins</p>
                                 </div>
                                 <div class="icon">
                                   <i class="ion ion-person"></i>
@@ -170,6 +170,11 @@
                   </div><!-- /.row -->
           </div> <!-- /.card-body -->
 </div>
+
+
+@if(!empty($dashboardMetrics))
+@include('backend.shared.dashboard-election-stat-section', ['dashboardMetrics' => $dashboardMetrics])
+@endif
 
 <!-- Demographics -->
 <div class="row">

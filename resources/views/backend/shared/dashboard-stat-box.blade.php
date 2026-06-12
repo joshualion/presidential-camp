@@ -10,7 +10,7 @@
     $context = $context ?? null;
     $footerUrl = $footerUrl ?? null;
     $footerText = $footerText ?? 'More info';
-    $columnClass = $columnClass ?? 'col-lg-3 col-6';
+    $columnClass = $columnClass ?? 'col-xl-3 col-md-6 col-12 d-flex mb-3';
     $decimalPlaces = $decimalPlaces ?? ($suffix === '%' ? 2 : 1);
     $shortLabels = [
         'Senatorial Districts' => 'Sen. Dist',
@@ -27,7 +27,7 @@
 @endphp
 
 <div class="{{ $columnClass }}" data-dashboard-stat-card data-dashboard-stat-group="{{ $statGroup }}" data-dashboard-stat-key="{{ $key }}">
-    <div class="small-box {{ $color }}">
+    <div class="small-box {{ $color }} h-100 w-100 d-flex flex-column">
         <div class="inner dashboard-stat-body">
             <h3>
                 <span data-stat-value>{{ $displayValue }}</span><span data-stat-suffix>{{ $suffix }}</span>
@@ -46,9 +46,9 @@
             <i class="{{ $icon }}"></i>
         </div>
         @if($footerUrl)
-            <a href="{{ $footerUrl }}" class="small-box-footer">{{ $footerText }} <i class="fas fa-arrow-circle-right"></i></a>
+            <a href="{{ $footerUrl }}" class="small-box-footer mt-auto">{{ $footerText }} <i class="fas fa-arrow-circle-right"></i></a>
         @else
-            <span class="small-box-footer">{{ $footerText }}</span>
+            <span class="small-box-footer mt-auto">{{ $footerText }}</span>
         @endif
     </div>
 </div>

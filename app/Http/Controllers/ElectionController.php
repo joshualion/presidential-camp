@@ -24,6 +24,7 @@ use App\Services\ElectionOperationsService;
 use App\Services\ElectionReportService;
 use App\Services\LocationScopeService;
 use App\Services\PackageGovernanceService;
+use App\Services\PollingUnitResultPermissionService;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Validation\Rule;
 class ElectionController extends Controller
@@ -39,6 +40,61 @@ class ElectionController extends Controller
      {
          $id = Auth::user()->id;
          return User::find($id);
+     }
+
+     protected function canCreateElections(User $profileData): bool
+     {
+         return $profileData->access_level === 'superadmin';
+     }
+
+     protected function isIctDirector(User $profileData): bool
+     {
+         return $profileData->hasAnyRole([
+             'National ICT Director',
+             'Regional ICT Director',
+             'State ICT Director',
+             'Senatorial ICT Director',
+             'Federal Constituency ICT Director',
+             'Federal ICT Director',
+             'LGA ICT Director',
+             'Ward ICT Director',
+             'PU ICT Director',
+         ]);
+     }
+
+     protected function isPollingUnitAgent(User $profileData): bool
+     {
+         if ($profileData->access_level === 'puadmin') {
+             return true;
+         }
+
+         return $profileData->roles->contains(function ($role) {
+             return stripos($role->name, 'agent') !== false;
+         });
+     }
+
+     protected function pollingUnitIsWithinScope(User $profileData, ?int $pollingUnitId): bool
+     {
+         if (!$pollingUnitId) {
+             return false;
+         }
+
+         if ($profileData->access_level === 'superadmin') {
+             return !empty($pollingUnitId);
+         }
+
+         $query = PollingUnit::query();
+         $this->applyPollingUnitScope($query, $profileData);
+
+         return $query->where('polling_units.id', $pollingUnitId)->exists();
+     }
+
+     protected function canUploadPollingUnitResults(User $profileData, ?int $pollingUnitId = null): bool
+     {
+         $permission = app(PollingUnitResultPermissionService::class);
+         $pollingUnitId ??= $profileData->polling_unit_id ?: $permission->firstApprovedPollingUnitId($profileData);
+
+         return $permission->userHasApprovedAssignmentForPollingUnit($profileData, $pollingUnitId);
      }
 
      private function applyVoteScope($query, $profileData)
@@ -91,9 +147,9 @@ class ElectionController extends Controller
 
 
      // Election List
-     public function allElections(){
+     public function allElections(ElectionReportService $reportService){
          $profileData = $this->getProfileData();
-         $elections = Election::with(['party', 'votes'])->get();
+         $elections = $reportService->indexRows($profileData);
 
          return view('backend.'.$profileData->access_level.'.election.elections', compact('elections',  'profileData'));
 
@@ -172,6 +228,7 @@ class ElectionController extends Controller
      // Election Add
      public function addElection(){
          $profileData = $this->getProfileData();
+         abort_unless($this->canCreateElections($profileData), 403);
          if(empty($profileData->lga_id) || empty($profileData->ward_id) || empty($profileData->polling_unit_id )){
             $notification =[
                 'type'=> 'error',
@@ -188,6 +245,7 @@ class ElectionController extends Controller
         public function storeElection(Request $request){
 
             $profileData = $this->getProfileData();
+            abort_unless($this->canCreateElections($profileData), 403);
             $request->validate([
                 'name' => 'string|required',
                 'year' => 'required',
@@ -215,6 +273,7 @@ class ElectionController extends Controller
         // Election Edit
         public function editElection($uuid){
             $profileData = $this->getProfileData();
+            abort_unless($this->canCreateElections($profileData), 403);
             $parties = PoliticalParty::all();
             $election = Election::where('uuid', $uuid)->first();
             $statuses = Election::STATUSES;
@@ -225,6 +284,7 @@ class ElectionController extends Controller
         // Election Update
         public function updateElection(Request $request, $uuid){
             $profileData = $this->getProfileData();
+            abort_unless($this->canCreateElections($profileData), 403);
             $request->validate([
                 'name' => 'string|required',
                 'year' => 'required',
@@ -253,6 +313,7 @@ class ElectionController extends Controller
         // Election Delete
         public function deleteElection($uuid){
             $profileData = $this->getProfileData();
+            abort_unless($this->canCreateElections($profileData), 403);
             $election = Election::where('uuid', $uuid)->first();
             //check if votes or incidents exist by deletion
             $vote = Vote::where('election_id', $election->id)->first();
@@ -279,18 +340,13 @@ class ElectionController extends Controller
 
         /*  manage polls/votes */
 
-        public function addVote()
+        public function addVote(Request $request)
         {
             $profileData = $this->getProfileData();
+            $permission = app(PollingUnitResultPermissionService::class);
+            $targetPollingUnitId = (int) ($request->query('polling_unit_id') ?: $profileData->polling_unit_id ?: $permission->firstApprovedPollingUnitId($profileData));
+            abort_unless($permission->userHasApprovedAssignmentForPollingUnit($profileData, $targetPollingUnitId), 403);
 
-            if(empty($profileData->lga_id) || empty($profileData->ward_id) || empty($profileData->polling_unit_id )){
-                $notification =[
-                    'type'=> 'error',
-                    'message'=> 'You need to complete you Profile before accessing election data',
-                ];
-                return redirect()->route($profileData->access_level.'.profile')->with($notification);
-            }
-        
             $election = Election::whereDate('year', now())
                 ->orWhere('status', 'ongoing')
                 ->first();
@@ -307,15 +363,27 @@ class ElectionController extends Controller
         
             $pollingUnitResult = PollingUnitResult::where([
                 'election_id' => $election->id,
-                'polling_unit_id' => $profileData->polling_unit_id,
-            ])->first();
+                'polling_unit_id' => $targetPollingUnitId,
+            ])
+                ->where(function ($query) {
+                    $query->whereNull('result_status')
+                        ->orWhereIn('result_status', PollingUnitResultPermissionService::ACTIVE_RESULT_STATUSES);
+                })
+                ->first();
+
+            if ($pollingUnitResult && !$permission->canEditPollingUnitResult($profileData, $pollingUnitResult)) {
+                return redirect()->route($profileData->access_level.'.election.votesByPu', $election->uuid)->with([
+                    'message' => 'An official result already exists for this polling unit. You may view it, but only the original submitter can edit it while it is still pending.',
+                    'alert-type' => 'info',
+                ]);
+            }
         
             $votes = Vote::where([
                 'election_id' => $election->id,
-                'polling_unit_id' => $profileData->polling_unit_id,
+                'polling_unit_id' => $targetPollingUnitId,
             ])->pluck('quantity', 'party_id');
         
-            return view('backend.' . $profileData->access_level . '.election.add-vote', compact('election', 'parties', 'profileData', 'pollingUnitResult', 'votes'));
+            return view('backend.' . $profileData->access_level . '.election.add-vote', compact('election', 'parties', 'profileData', 'pollingUnitResult', 'votes', 'targetPollingUnitId'));
         }
         
         // public function storeVote(Request $request)
@@ -388,23 +456,31 @@ class ElectionController extends Controller
         {
             // Fetch user profile data
             $profileData = $this->getProfileData();
+            $permission = app(PollingUnitResultPermissionService::class);
 
             // Validate incoming request
             $data = $request->validate([
                 'election_id' => 'required|exists:elections,id',
+                'polling_unit_id' => 'nullable|exists:polling_units,id',
                 'votes' => 'required|array',
                 'votes.*' => 'nullable|integer|min:0',
                 'result_sheet' => 'nullable|file|mimes:pdf,png,jpg,jpeg|max:2048',
             ]);
 
-            // Find or create the polling unit result record
-            $reportingKeys = $this->reportingKeysForPollingUnit($profileData->polling_unit_id);
-            $pollingUnitResult = PollingUnitResult::firstOrCreate(
-                [
-                    'election_id' => $data['election_id'],
-                    'polling_unit_id' => $profileData->polling_unit_id,
-                ],
-                [
+            $targetPollingUnitId = (int) ($data['polling_unit_id'] ?? $profileData->polling_unit_id ?? $permission->firstApprovedPollingUnitId($profileData));
+            $election = Election::findOrFail($data['election_id']);
+
+            abort_unless($permission->canSubmitPollingUnitResult($profileData, $targetPollingUnitId, $election), 403);
+
+            $reportingKeys = $this->reportingKeysForPollingUnit($targetPollingUnitId);
+            $pollingUnitResult = $permission->activeOfficialResult($election, $targetPollingUnitId);
+
+            if ($pollingUnitResult) {
+                abort_unless($permission->canEditPollingUnitResult($profileData, $pollingUnitResult), 403);
+            } else {
+                $pollingUnitResult = PollingUnitResult::create([
+                    'election_id' => $election->id,
+                    'polling_unit_id' => $targetPollingUnitId,
                     'state_id' => $reportingKeys['state_id'] ?? $profileData->state_id,
                     'senatorial_district_id' => $reportingKeys['senatorial_district_id'],
                     'federal_constituency_id' => $reportingKeys['federal_constituency_id'],
@@ -415,8 +491,9 @@ class ElectionController extends Controller
                     'review_status' => 'pending',
                     'verification_status' => 'submitted',
                     'dispute_status' => 'normal',
-                ]
-            );
+                    'result_status' => 'submitted',
+                ]);
+            }
 
             $pollingUnitResult->fill([
                 'state_id' => $reportingKeys['state_id'] ?? $profileData->state_id,
@@ -433,6 +510,7 @@ class ElectionController extends Controller
                     'review_status' => $pollingUnitResult->review_status ?: 'pending',
                     'verification_status' => $pollingUnitResult->verification_status ?: 'submitted',
                     'dispute_status' => $pollingUnitResult->dispute_status ?: 'normal',
+                    'result_status' => $pollingUnitResult->result_status ?: 'submitted',
                 ])->save();
             }
 
@@ -457,9 +535,10 @@ class ElectionController extends Controller
             foreach ($data['votes'] as $partyId => $quantity) {
                 Vote::updateOrCreate(
                     [
-                        'election_id' => $data['election_id'],
+                        'election_id' => $election->id,
                         'party_id' => $partyId,
-                        'polling_unit_id' => $profileData->polling_unit_id,
+                        'polling_unit_id' => $targetPollingUnitId,
+                        'polling_unit_result_id' => $pollingUnitResult->id,
                     ],
                     [
                         'agent_id' => $profileData->id,
@@ -484,7 +563,7 @@ class ElectionController extends Controller
             }
 
             return redirect()->back()->with([
-                'message' => $profileData->pollingUnit->name . ' votes uploaded successfully',
+                'message' => optional(PollingUnit::find($targetPollingUnitId))->name . ' votes uploaded successfully',
                 'alert-type' => 'success',
             ]);
         }
@@ -601,8 +680,10 @@ class ElectionController extends Controller
             
             $governance = app(PackageGovernanceService::class);
             $packageContext = $governance->context();
-            $canVerifyResults = $governance->canVerifyResults($profileData);
-            $canManageDisputes = $governance->canManageDisputes($profileData);
+            $permission = app(PollingUnitResultPermissionService::class);
+            $canVerifyResults = $permission->canReviewResultsWithinScope($profileData);
+            $canManageDisputes = $permission->canReviewResultsWithinScope($profileData);
+            $canUploadPollingUnitResults = $permission->userHasAnyApprovedAssignment($profileData);
             $filters = $this->reportFilters();
             $filterOptions = $reportService->filterOptions($profileData);
             $scopeLabel = $reportService->scopeLabel($profileData);
@@ -614,6 +695,7 @@ class ElectionController extends Controller
                 'packageContext',
                 'canVerifyResults',
                 'canManageDisputes',
+                'canUploadPollingUnitResults',
                 'filters',
                 'filterOptions',
                 'scopeLabel',
@@ -689,10 +771,11 @@ class ElectionController extends Controller
                         return '<span class="text-muted">No result record</span>';
                     }
 
-                    $governance = app(PackageGovernanceService::class);
+                    $permission = app(PollingUnitResultPermissionService::class);
+                    $result = PollingUnitResult::where('uuid', $row->result_uuid)->first();
                     $buttons = [];
 
-                    if ($governance->canVerifyResults($profileData) && $row->verification_status !== 'verified') {
+                    if ($permission->canVerifyPollingUnitResult($profileData, $result) && $row->verification_status !== 'verified') {
                         $buttons[] = '<form method="POST" action="'.route('election.result.verify', $row->result_uuid).'" class="d-inline">'
                             .csrf_field()
                             .'<input type="hidden" name="verification_notes" value="Verified from result report table">'
@@ -700,7 +783,7 @@ class ElectionController extends Controller
                             .'</form>';
                     }
 
-                    if ($governance->canManageDisputes($profileData)) {
+                    if ($permission->canDisputePollingUnitResult($profileData, $result)) {
                         if ($row->dispute_status === 'disputed') {
                             $buttons[] = '<form method="POST" action="'.route('election.result.dispute.clear', $row->result_uuid).'" class="d-inline">'
                                 .csrf_field()
@@ -848,13 +931,13 @@ class ElectionController extends Controller
         {
             $profileData = $this->getProfileData();
 
-            abort_unless($governance->canVerifyResults($profileData), 403);
-
             $result = $this->scopedPollingUnitResultQuery($profileData)
                 ->where('uuid', $uuid)
                 ->firstOrFail();
+            abort_unless(app(PollingUnitResultPermissionService::class)->canVerifyPollingUnitResult($profileData, $result), 403);
 
             $result->forceFill([
+                'result_status' => 'verified',
                 'verification_status' => 'verified',
                 'verified_at' => now(),
                 'verified_by' => $profileData->id,
@@ -871,13 +954,13 @@ class ElectionController extends Controller
         {
             $profileData = $this->getProfileData();
 
-            abort_unless($governance->canManageDisputes($profileData), 403);
-
             $result = $this->scopedPollingUnitResultQuery($profileData)
                 ->where('uuid', $uuid)
                 ->firstOrFail();
+            abort_unless(app(PollingUnitResultPermissionService::class)->canDisputePollingUnitResult($profileData, $result), 403);
 
             $result->forceFill([
+                'result_status' => 'disputed',
                 'dispute_status' => 'disputed',
                 'disputed_at' => now(),
                 'disputed_by' => $profileData->id,
@@ -894,13 +977,13 @@ class ElectionController extends Controller
         {
             $profileData = $this->getProfileData();
 
-            abort_unless($governance->canManageDisputes($profileData), 403);
-
             $result = $this->scopedPollingUnitResultQuery($profileData)
                 ->where('uuid', $uuid)
                 ->firstOrFail();
+            abort_unless(app(PollingUnitResultPermissionService::class)->canDisputePollingUnitResult($profileData, $result), 403);
 
             $result->forceFill([
+                'result_status' => $result->verification_status === 'verified' ? 'verified' : 'submitted',
                 'dispute_status' => 'normal',
                 'disputed_at' => null,
                 'disputed_by' => null,
@@ -930,6 +1013,9 @@ class ElectionController extends Controller
             'remarks' => 'nullable|string|max:255',
             'pictures.*' => 'nullable|image|max:2048',
         ]);
+
+        $profileData = $this->getProfileData();
+        abort_unless($this->canUploadPollingUnitResults($profileData, (int) $validated['polling_unit_id']), 403);
 
         $reportingKeys = $this->reportingKeysForPollingUnit($validated['polling_unit_id']);
 

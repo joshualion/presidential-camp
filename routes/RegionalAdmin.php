@@ -54,6 +54,8 @@ Route::get('/regional/leaders/fetch/{uuid?}', [MembersController::class, 'allExc
 //Fetch Regulars
 Route::get('/regional/regulars/data/fetch/{uuid?}', [MembersController::class, 'getRegularMembersData'])->name('regionaladmin.regulars.data');
 Route::get('/regional/regulars/fetch/{uuid?}', [MembersController::class, 'allRegularMembers'])->name('regionaladmin.regulars');
+Route::get('/regional/people/{metric}/data/fetch/{uuid?}', [MembersController::class, 'getPeopleMetricMembersData'])->whereIn('metric', ['agents', 'eligible-voters', 'without-voter-card', 'new-today', 'new-this-week', 'new-this-month'])->name('regionaladmin.peopleMetric.data');
+Route::get('/regional/people/{metric}/fetch/{uuid?}', [MembersController::class, 'allPeopleMetricMembers'])->whereIn('metric', ['agents', 'eligible-voters', 'without-voter-card', 'new-today', 'new-this-week', 'new-this-month'])->name('regionaladmin.peopleMetric');
 
 Route::get('/regional/member/add', [MembersController::class, 'addMember'])->name('regionaladmin.member.add')->middleware('access_level:regionaladmin');
 Route::post('/regional/member/store', [MembersController::class, 'storeMember'])->name('regionaladmin.member.store')->middleware('access_level:regionaladmin');
@@ -134,6 +136,12 @@ Route::get('/regional/senatorial-district/member/distribution/voter/{uuid}', [Ch
 
 // Manage Federal Constituencies
 Route::get('/regional/location/federal-constituency/dashboard/{uuid}', [RegionalAdminController::class, 'federalConstituencyDashBoard'])->name('regionaladmin.location.federal-constituency.dashboard')->middleware('access_level:regionaladmin');
+Route::get('/regional/location/senatorial-districts', [LocationController::class, 'allSenatorialDistricts'])->name('regionaladmin.location.senatorial-districts')->middleware('access_level:regionaladmin');
+Route::get('/regional/location/senatorial-district/edit/{uuid}', [LocationController::class, 'editSenatorialDistrict'])->name('regionaladmin.location.senatorial-district.edit')->middleware('access_level:regionaladmin');
+Route::post('/regional/location/senatorial-district/update/{uuid}', [LocationController::class, 'updateSenatorialDistrict'])->name('regionaladmin.location.senatorial-district.update')->middleware('access_level:regionaladmin');
+Route::get('/regional/location/federal-constituencies', [LocationController::class, 'allFederalConstituencies'])->name('regionaladmin.location.federal-constituencies')->middleware('access_level:regionaladmin');
+Route::get('/regional/location/federal-constituency/edit/{uuid}', [LocationController::class, 'editFederalConstituency'])->name('regionaladmin.location.federal-constituency.edit')->middleware('access_level:regionaladmin');
+Route::post('/regional/location/federal-constituency/update/{uuid}', [LocationController::class, 'updateFederalConstituency'])->name('regionaladmin.location.federal-constituency.update')->middleware('access_level:regionaladmin');
 Route::get('/regional/federal-constituency/member/distribution/gender/{uuid}', [ChartsController::class, 'GenderDistributionByFederalConstituency'])->name('regionaladmin.federal-constituency.member.distribution.gender')->middleware('access_level:regionaladmin');
 Route::get('/regional/federal-constituency/member/distribution/age/{uuid}', [ChartsController::class, 'AgeDistributionByFederalConstituency'])->name('regionaladmin.federal-constituency.member.distribution.age')->middleware('access_level:regionaladmin');
 Route::get('/regional/federal-constituency/member/distribution/lga/{uuid}', [ChartsController::class, 'lgaDistributionByFederalConstituency'])->name('regionaladmin.federal-constituency.member.distribution.lga')->middleware('access_level:regionaladmin');

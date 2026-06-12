@@ -20,6 +20,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Role;
 use App\Services\LocationScopeService;
+use App\Services\StructuralLocationAccessService;
 
 class AjaxController extends Controller
 {
@@ -28,6 +29,16 @@ class AjaxController extends Controller
     {
         $id = Auth::user()->id;
         return User::find($id);
+    }
+
+    private function structuralAccess(): StructuralLocationAccessService
+    {
+        return app(StructuralLocationAccessService::class);
+    }
+
+    private function canDeleteStructuralRecords(): bool
+    {
+        return $this->structuralAccess()->canCreateOrDelete($this->getProfileData());
     }
 
     public function ajaxGetStates(Request $request)
@@ -100,7 +111,9 @@ class AjaxController extends Controller
         public function  getLgaData()
         {
 
+            $profileData = $this->getProfileData();
             $lgas = LocalGovernmentArea::with(['state.region', 'senatorialDistrict', 'federalConstituency'])->orderBy('name');
+            $this->structuralAccess()->applyScope($lgas, $profileData, 'local_government_areas');
 
                 return datatables()->eloquent($lgas)
                             ->filterColumn('name', function ($query, $keyword) {
@@ -149,7 +162,18 @@ class AjaxController extends Controller
 
                     ->addColumn('action', function($lga) {
                         $profileData = $this->getProfileData();
-                        $button = '';
+                        $deleteButton = '';
+
+                        if ($this->canDeleteStructuralRecords()) {
+                            $deleteButton = '
+                                <form action="' . route($profileData->access_level.'.location.lga.delete', $lga->uuid) . '" method="POST" style="display:inline-block;" data-associated-users="false">
+                                    ' . csrf_field() . method_field('DELETE') . '
+                                    <button type="submit" class="btn btn-danger delete-btn">
+                                        <i class="fas fa-trash"></i> Delete
+                                    </button>
+                                </form>
+                            ';
+                        }
 
                         return '
                             <a href="' . route($profileData->access_level.'.location.lga.edit', $lga->uuid) . '">
@@ -157,13 +181,7 @@ class AjaxController extends Controller
                                     <i class="fas fa-pencil-alt"></i> Edit
                                 </button>
                             </a>
-                            ' . $button . '
-                            <form action="' . route($profileData->access_level.'.location.lga.delete', $lga->uuid) . '" method="POST" style="display:inline-block;" data-associated-users="false">
-                                ' . csrf_field() . method_field('DELETE') . '
-                                <button type="submit" class="btn btn-danger delete-btn">
-                                    <i class="fas fa-trash"></i> Delete
-                                </button>
-                            </form>
+                            ' . $deleteButton . '
                         ';
                     })
 
@@ -174,7 +192,9 @@ class AjaxController extends Controller
 
         public function getSenatorialDistrictData()
         {
+            $profileData = $this->getProfileData();
             $districts = SenatorialDistrict::with('state')->orderBy('name');
+            $this->structuralAccess()->applyScope($districts, $profileData, 'senatorial_districts');
 
             return datatables()->eloquent($districts)
                 ->filterColumn('name', function ($query, $keyword) {
@@ -195,18 +215,25 @@ class AjaxController extends Controller
                 ->addColumn('action', function($district) {
                     $profileData = $this->getProfileData();
 
+                    $deleteButton = '';
+                    if ($this->canDeleteStructuralRecords()) {
+                        $deleteButton = '
+                            <form action="' . route($profileData->access_level.'.location.senatorial-district.delete', $district->uuid) . '" method="POST" style="display:inline-block;" data-associated-users="false">
+                                ' . csrf_field() . method_field('DELETE') . '
+                                <button type="submit" class="btn btn-danger delete-btn">
+                                    <i class="fas fa-trash"></i> Delete
+                                </button>
+                            </form>
+                        ';
+                    }
+
                     return '
                         <a href="' . route($profileData->access_level.'.location.senatorial-district.edit', $district->uuid) . '">
                             <button class="btn btn-success">
                                 <i class="fas fa-pencil-alt"></i> Edit
                             </button>
                         </a>
-                        <form action="' . route($profileData->access_level.'.location.senatorial-district.delete', $district->uuid) . '" method="POST" style="display:inline-block;" data-associated-users="false">
-                            ' . csrf_field() . method_field('DELETE') . '
-                            <button type="submit" class="btn btn-danger delete-btn">
-                                <i class="fas fa-trash"></i> Delete
-                            </button>
-                        </form>
+                        ' . $deleteButton . '
                     ';
                 })
                 ->rawColumns(['action'])
@@ -215,7 +242,9 @@ class AjaxController extends Controller
 
         public function getFederalConstituencyData()
         {
+            $profileData = $this->getProfileData();
             $constituencies = FederalConstituency::with(['state', 'senatorialDistrict'])->orderBy('name');
+            $this->structuralAccess()->applyScope($constituencies, $profileData, 'federal_constituencies');
 
             return datatables()->eloquent($constituencies)
                 ->filterColumn('name', function ($query, $keyword) {
@@ -244,18 +273,25 @@ class AjaxController extends Controller
                 ->addColumn('action', function($constituency) {
                     $profileData = $this->getProfileData();
 
+                    $deleteButton = '';
+                    if ($this->canDeleteStructuralRecords()) {
+                        $deleteButton = '
+                            <form action="' . route($profileData->access_level.'.location.federal-constituency.delete', $constituency->uuid) . '" method="POST" style="display:inline-block;" data-associated-users="false">
+                                ' . csrf_field() . method_field('DELETE') . '
+                                <button type="submit" class="btn btn-danger delete-btn">
+                                    <i class="fas fa-trash"></i> Delete
+                                </button>
+                            </form>
+                        ';
+                    }
+
                     return '
                         <a href="' . route($profileData->access_level.'.location.federal-constituency.edit', $constituency->uuid) . '">
                             <button class="btn btn-success">
                                 <i class="fas fa-pencil-alt"></i> Edit
                             </button>
                         </a>
-                        <form action="' . route($profileData->access_level.'.location.federal-constituency.delete', $constituency->uuid) . '" method="POST" style="display:inline-block;" data-associated-users="false">
-                            ' . csrf_field() . method_field('DELETE') . '
-                            <button type="submit" class="btn btn-danger delete-btn">
-                                <i class="fas fa-trash"></i> Delete
-                            </button>
-                        </form>
+                        ' . $deleteButton . '
                     ';
                 })
                 ->rawColumns(['action'])
@@ -269,6 +305,7 @@ class AjaxController extends Controller
                 'localGovernmentArea.senatorialDistrict',
                 'localGovernmentArea.federalConstituency'
             ]);
+            $this->structuralAccess()->applyScope($wards, $this->getProfileData(), 'wards');
 
 
                 return datatables()->eloquent($wards)
@@ -322,7 +359,18 @@ class AjaxController extends Controller
 
                     ->addColumn('action', function($ward) {
                         $profileData = $this->getProfileData();
-                        $button = '';
+                        $deleteButton = '';
+
+                        if ($this->canDeleteStructuralRecords()) {
+                            $deleteButton = '
+                                <form action="' . route($profileData->access_level.'.location.ward.delete', $ward->uuid) . '" method="POST" style="display:inline-block;" data-associated-users="false">
+                                    ' . csrf_field() . method_field('DELETE') . '
+                                    <button type="submit" class="btn btn-danger delete-btn">
+                                        <i class="fas fa-trash"></i> Delete
+                                    </button>
+                                </form>
+                            ';
+                        }
 
                         return '
                             <a href="' . route($profileData->access_level.'.location.ward.edit', $ward->uuid) . '">
@@ -330,13 +378,7 @@ class AjaxController extends Controller
                                     <i class="fas fa-pencil-alt"></i> Edit
                                 </button>
                             </a>
-                            ' . $button . '
-                            <form action="' . route($profileData->access_level.'.location.ward.delete', $ward->uuid) . '" method="POST" style="display:inline-block;" data-associated-users="false">
-                                ' . csrf_field() . method_field('DELETE') . '
-                                <button type="submit" class="btn btn-danger delete-btn">
-                                    <i class="fas fa-trash"></i> Delete
-                                </button>
-                            </form>
+                            ' . $deleteButton . '
                         ';
                     })
 
@@ -356,6 +398,7 @@ class AjaxController extends Controller
                 'senatorialDistrict',
                 'federalConstituency'
             ]);
+            $this->structuralAccess()->applyScope($pus, $this->getProfileData(), 'polling_units');
             return datatables()->eloquent($pus)
                     ->filterColumn('name', function ($query, $keyword) {
                         $query->where('name', 'like', "%{$keyword}%");
@@ -418,18 +461,26 @@ class AjaxController extends Controller
                 })
                 ->addColumn('action', function($pu) {
                     $profileData = $this->getProfileData();
+                    $deleteButton = '';
+
+                    if ($this->canDeleteStructuralRecords()) {
+                        $deleteButton = '
+                            <form action="' . route($profileData->access_level . '.location.pu.delete', $pu->uuid) . '" method="POST" style="display:inline-block;" data-associated-users="false">
+                                ' . csrf_field() . method_field('DELETE') . '
+                                <button type="submit" class="btn btn-danger btn-sm delete-btn">
+                                    <i class="fas fa-trash"></i> Delete
+                                </button>
+                            </form>
+                        ';
+                    }
+
                     return '
                         <a href="' . route($profileData->access_level . '.location.pu.edit', $pu->uuid) . '">
                             <button class="btn btn-success btn-sm">
                                 <i class="fas fa-pencil-alt"></i> Edit
                             </button>
                         </a>
-                        <form action="' . route($profileData->access_level . '.location.pu.delete', $pu->uuid) . '" method="POST" style="display:inline-block;" data-associated-users="false">
-                            ' . csrf_field() . method_field('DELETE') . '
-                            <button type="submit" class="btn btn-danger btn-sm delete-btn">
-                                <i class="fas fa-trash"></i> Delete
-                            </button>
-                        </form>
+                        ' . $deleteButton . '
                     ';
                 })
                 ->rawColumns(['action'])
@@ -509,6 +560,10 @@ class AjaxController extends Controller
                    }
 
 
+                   $wards->withCount(['users as members_count' => function ($query) {
+                       $query->where('access_level', '!=', 'superadmin');
+                   }]);
+
                    return datatables()->eloquent($wards)
                    ->filterColumn('lga', function ($query, $keyword) {
                     $query->whereHas('localGovernmentArea', function ($q) use ($keyword) {
@@ -526,14 +581,8 @@ class AjaxController extends Controller
                        return optional($ward->localGovernmentArea)->name;
                    })
                    ->addColumn('members', function($ward) {
-                     return  '<span class="badge badge-secondary">'. $ward->users()->count().'</span>';
+                     return  '<span class="badge badge-secondary">'. $ward->members_count.'</span>';
                    })
-                   ->addColumn('eligible_voters', function($ward) {
-                    return '<span class="badge badge-success">'. $ward->users()->where('validVoter', 'yes')->count().'</span>';
-                  })
-                  ->addColumn('ineligible_voters', function($ward) {
-                    return '<span class="badge badge-danger">'. $ward->users()->where('validVoter', 'no')->count().'</span>';
-                  })
                    ->addColumn('action', function($ward) {
                     $profileData = $this->getProfileData();
                     $button = '';
@@ -554,7 +603,7 @@ class AjaxController extends Controller
                     ';
                    })
 
-                ->rawColumns(['members', 'eligible_voters', 'ineligible_voters', 'action']) // Ensures that HTML in the 'role' and 'action' columns is rendered properly
+                ->rawColumns(['members', 'action']) // Ensures that HTML in the 'role' and 'action' columns is rendered properly
                 ->make(true);
 
     }
@@ -622,6 +671,9 @@ class AjaxController extends Controller
             $pollingUnits = PollingUnit::query()->orderBy('name', 'ASC');
         }
 
+                   $pollingUnits->withCount(['users as members_count' => function ($query) {
+                       $query->where('access_level', '!=', 'superadmin');
+                   }]);
 
                    return datatables()->eloquent($pollingUnits)
                    ->filterColumn('ward', function ($query, $keyword) {
@@ -639,14 +691,8 @@ class AjaxController extends Controller
                     return $pollingUnits->name;
                 })
                     ->addColumn('members', function($ward) {
-                     return  '<span class="badge badge-secondary">'. $ward->users()->count().'</span>';
+                     return  '<span class="badge badge-secondary">'. $ward->members_count.'</span>';
                    })
-                   ->addColumn('eligible_voters', function($ward) {
-                    return '<span class="badge badge-success">'. $ward->users()->where('validVoter', 'yes')->count().'</span>';
-                  })
-                  ->addColumn('ineligible_voters', function($ward) {
-                    return '<span class="badge badge-danger">'. $ward->users()->where('validVoter', 'no')->count().'</span>';
-                  })
                    ->addColumn('action', function($pollingUnits) {
                     $profileData = $this->getProfileData();
                     $button = '';
@@ -667,7 +713,7 @@ class AjaxController extends Controller
                     ';
                    })
 
-                ->rawColumns(['members', 'eligible_voters', 'ineligible_voters', 'action']) // Ensures that HTML in the 'role' and 'action' columns is rendered properly
+                ->rawColumns(['members', 'action']) // Ensures that HTML in the 'role' and 'action' columns is rendered properly
                 ->make(true);
 
     }

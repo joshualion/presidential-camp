@@ -180,6 +180,8 @@ Route::get('/superadmin/leaders/fetch/{uuid?}', [MembersController::class, 'allE
 //Fetch Regulars
 Route::get('/superadmin/regulars/data/fetch/{uuid?}', [MembersController::class, 'getRegularMembersData'])->name('superadmin.regulars.data')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
 Route::get('/superadmin/regulars/fetch/{uuid?}', [MembersController::class, 'allRegularMembers'])->name('superadmin.regulars')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
+Route::get('/superadmin/people/{metric}/data/fetch/{uuid?}', [MembersController::class, 'getPeopleMetricMembersData'])->whereIn('metric', ['agents', 'eligible-voters', 'without-voter-card', 'new-today', 'new-this-week', 'new-this-month'])->name('superadmin.peopleMetric.data')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
+Route::get('/superadmin/people/{metric}/fetch/{uuid?}', [MembersController::class, 'allPeopleMetricMembers'])->whereIn('metric', ['agents', 'eligible-voters', 'without-voter-card', 'new-today', 'new-this-week', 'new-this-month'])->name('superadmin.peopleMetric')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
 
 Route::get('/superadmin/member/add', [MembersController::class, 'addMember'])->name('superadmin.member.add')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
 Route::post('/superadmin/member/store', [MembersController::class, 'storeMember'])->name('superadmin.member.store')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);

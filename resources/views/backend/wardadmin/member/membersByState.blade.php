@@ -37,7 +37,7 @@
                                                 <td><strong>{{ $state->name }}</strong></td>
                                                 <td>
                                                     <span class="badge bg-secondary text-white">
-                                                        {{ $state->users->where('access_level', '!=', 'superadmin')->count() }}
+                                                        {{ number_format($state->members_count ?? 0) }}
                                                     </span>
                                                     
                                                 </td>

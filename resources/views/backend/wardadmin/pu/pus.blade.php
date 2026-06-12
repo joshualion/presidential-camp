@@ -9,10 +9,12 @@
                 <div class="card card-primary">
                 <div class="card-header">
                     <h3 class="card-title">All Polling Units - <span class="badge badge-light">{{ $puCount }} </span></h3>
-                    <div class="card-tools">
-                        <a href="{{ route($profileData->access_level.'.location.pu.add') }}"><button class="btn btn-default"> <i class="fa fa-plus-square"></i> Add Polling Unit</button></a>
-                        <a href="{{route($profileData->access_level.'.location.pu.import')}}"><button class="btn btn-dark"> <i class="fa fa-file-excel"></i> Import Polling Units</button></a>
-                    </div>
+                    @if(app(\App\Services\StructuralLocationAccessService::class)->canCreateOrDelete($profileData))
+                        <div class="card-tools">
+                            <a href="{{ route($profileData->access_level.'.location.pu.add') }}"><button class="btn btn-default"> <i class="fa fa-plus-square"></i> Add Polling Unit</button></a>
+                            <a href="{{route($profileData->access_level.'.location.pu.import')}}"><button class="btn btn-dark"> <i class="fa fa-file-excel"></i> Import Polling Units</button></a>
+                        </div>
+                    @endif
                 </div>
                 <!-- /.card-header -->
                 <div class="card-body">
@@ -146,7 +148,6 @@ $.ajaxSetup({
 
 
 @endsection
-
 
 
 

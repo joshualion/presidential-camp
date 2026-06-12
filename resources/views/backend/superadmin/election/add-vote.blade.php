@@ -30,6 +30,7 @@
                                     <div class="col-sm-6">
                                         <input type="text" class="form-control" value="{{ \Carbon\Carbon::parse($election->year)->year }} - {{ $election->name }}" readonly>
                                         <input type="hidden" name="election_id" value="{{ $election->id }}">
+                                <input type="hidden" name="polling_unit_id" value="{{ $targetPollingUnitId ?? $profileData->polling_unit_id }}">
                                     </div>
                                 </div>
 

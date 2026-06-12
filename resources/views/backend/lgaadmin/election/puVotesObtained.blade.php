@@ -30,16 +30,7 @@
 
                     </h3>
                     <div class="card-tools">
-                        @if(
-                                $profileData->hasAnyRole([
-                                    'National ICT Director',
-                                    'Regional ICT Director',
-                                    'State ICT Director',
-                                    'LGA ICT Director',
-                                    'Ward ICT Director',
-                                    'PU ICT Director',
-                                    'Pu Agent'
-                                ]) || $profileData->access_level == 'superadmin' )
+                        @if(app(\App\Services\PollingUnitResultPermissionService::class)->userHasAnyApprovedAssignment($profileData))
                         <a href="{{ route($profileData->access_level.'.vote.add') }}"><button class="btn btn-default btn-sm"> <i class="fa fa-plus-square"></i> Add Vote Records </button></a>
                         @endif
                     </div>
@@ -173,7 +164,6 @@
 
 
 @endsection
-
 
 
 

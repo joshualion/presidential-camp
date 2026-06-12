@@ -23,6 +23,7 @@ use Illuminate\Support\Facades\View;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use App\Services\StructuralLocationAccessService;
 
 class LocationController extends Controller
 {
@@ -40,6 +41,21 @@ class LocationController extends Controller
            return User::find($id);
        }
 
+       private function structuralAccess(): StructuralLocationAccessService
+       {
+           return app(StructuralLocationAccessService::class);
+       }
+
+       private function superAdminOnly(): void
+       {
+           $this->structuralAccess()->assertCanCreateOrDelete($this->getProfileData());
+       }
+
+       private function redirectToLocation(string $suffix)
+       {
+           return redirect()->route($this->getProfileData()->access_level.'.location.'.$suffix);
+       }
+
        //system country
        private function getSystemCountryId(){
           // Retrieve the value of the default_country setting
@@ -53,27 +69,21 @@ class LocationController extends Controller
        public function allRegions()
        {
            $profileData = $this->getProfileData();
-           $regions = Region::all();
-          if($profileData->access_level == 'superadmin'){
+           $regions = $this->structuralAccess()
+               ->applyScope(Region::query(), $profileData, 'regions')
+               ->orderBy('name')
+               ->get();
 
-               return view('backend.superadmin.region.regions', compact('profileData', 'regions'));
-           }
-
-           if($profileData->access_level == 'nationaladmin'){
-           return view('backend.nationaladmin.region.regions', compact('profileData', 'regions'));
-           }
+           return view('backend.'.$profileData->access_level.'.region.regions', compact('profileData', 'regions'));
        }
 
 
        public function addRegion()
        {
            $profileData = $this->getProfileData();
-           if($profileData->access_level == 'superadmin'){
-               return view('backend.superadmin.region.add-region', compact('profileData'));
-           }
-           if($profileData->access_level == 'nationaladmin'){
-               return view('backend.nationaladmin.region.add-region', compact('profileData'));
-           }
+           $this->superAdminOnly();
+
+           return view('backend.'.$profileData->access_level.'.region.add-region', compact('profileData'));
        }
 
        public function storeRegion(Request $request)
@@ -85,42 +95,28 @@ class LocationController extends Controller
            $countryId = $this->getSystemCountryId()->id;
 
            $profileData = $this->getProfileData();
+           $this->superAdminOnly();
 
             // Prepare the region data
             $regionData = $request->except(['_token', '_method']);
             $regionData['country_id'] = $countryId; // Add country ID to the region data
             $regionData['user_id'] = $profileData->id;
 
-           if($profileData->access_level == 'superadmin'){
-                    Region::create($regionData);
-               $notification = array(
-                   'message' => 'Region added successfully',
-                   'alert-type' => 'success'
-               );
+           Region::create($regionData);
 
-               return redirect()->route('superadmin.location.regions')->with($notification);
-           }
-           if($profileData->access_level == 'nationaladmin'){
-                    Region::create($regionData);
-               $notification = array(
-                   'message' => 'Region added successfully',
-                   'alert-type' => 'success'
-               );
-
-               return redirect()->route('nationaladmin.location.regions')->with($notification);
-           }
+           return $this->redirectToLocation('regions')->with([
+               'message' => 'Region added successfully',
+               'alert-type' => 'success'
+           ]);
        }
 
        public function editRegion($uuid)
        {
            $profileData = $this->getProfileData();
-           $region = Region::where('uuid', $uuid)->first();
-           if($profileData->access_level == 'superadmin'){
-               return view('backend.superadmin.region.edit-region', compact('profileData', 'region'));
-           }
-           if($profileData->access_level == 'nationaladmin'){
-               return view('backend.nationaladmin.region.edit-region', compact('profileData', 'region'));
-           }
+           $region = Region::where('uuid', $uuid)->firstOrFail();
+           $this->structuralAccess()->assertCanUpdate($profileData, $region);
+
+           return view('backend.'.$profileData->access_level.'.region.edit-region', compact('profileData', 'region'));
        }
 
        public function updateRegion(Request $request, $uuid)
@@ -130,29 +126,19 @@ class LocationController extends Controller
            ]);
 
            $profileData = $this->getProfileData();
-           if($profileData->access_level == 'superadmin'){
-               Region::where('uuid', $uuid)->update($request->except(['_token', '_method']));
-               $notification = array(
-                   'message' => 'Region updated successfully',
-                   'alert-type' => 'success'
-               );
+           $region = Region::where('uuid', $uuid)->firstOrFail();
+           $this->structuralAccess()->assertCanUpdate($profileData, $region);
+           $region->update(['name' => $request->name]);
 
-               return redirect()->route('superadmin.location.regions')->with($notification);
-           }
-
-           if($profileData->access_level == 'nationaladmin'){
-               Region::where('uuid', $uuid)->update($request->except(['_token', '_method']));
-               $notification = array(
-                   'message' => 'Region updated successfully',
-                   'alert-type' => 'success'
-               );
-
-               return redirect()->route('nationaladmin.location.regions')->with($notification);
-           }
+           return $this->redirectToLocation('regions')->with([
+               'message' => 'Region updated successfully',
+               'alert-type' => 'success'
+           ]);
        }
 
        public function deleteRegion($uuid) {
         $profileData = $this->getProfileData();
+        $this->superAdminOnly();
         $region = Region::where('uuid', $uuid)->first(); // Retrieve the region
 
         // Check if the region has any states or users associated with it
@@ -174,14 +160,7 @@ class LocationController extends Controller
             'alert-type' => 'success'
         ];
 
-        // Redirect based on access level
-        if ($profileData->access_level == 'superadmin') {
-            return redirect()->route('superadmin.location.regions')->with($notification);
-        }
-
-        if ($profileData->access_level == 'nationaladmin') {
-            return redirect()->route('nationaladmin.location.regions')->with($notification);
-        }
+        return $this->redirectToLocation('regions')->with($notification);
     }
 
 
@@ -190,28 +169,21 @@ class LocationController extends Controller
        public function allStates(){
         $profileData = $this->getProfileData();
         //Get states in alphetical order
-        $states = State::orderBy('name')->get();
+        $states = $this->structuralAccess()
+            ->applyScope(State::query(), $profileData, 'states')
+            ->orderBy('name')
+            ->get();
 
-            if($profileData->access_level == 'superadmin'){
-                return view('backend.superadmin.state.states', compact('profileData', 'states'));
-            }
-
-            if($profileData->access_level == 'nationaladmin'){
-                return view('backend.nationaladmin.state.states', compact('profileData', 'states'));
-            }
-
+        return view('backend.'.$profileData->access_level.'.state.states', compact('profileData', 'states'));
 
        }
 
        public function addState(){
         $profileData = $this->getProfileData();
+        $this->superAdminOnly();
          $regions = Region::all();
-            if($profileData->access_level == 'superadmin'){
-                return view('backend.superadmin.state.add-state', compact('profileData' , 'regions'));
-            }
-            if($profileData->access_level == 'nationaladmin'){
-                return view('backend.nationaladmin.state.add-state', compact('profileData' , 'regions'));
-            }
+
+        return view('backend.'.$profileData->access_level.'.state.add-state', compact('profileData' , 'regions'));
        }
 
        public function storeState(Request $request){
@@ -220,40 +192,25 @@ class LocationController extends Controller
                 'region_id'=>'required',
             ]);
             $profileData = $this->getProfileData();
+            $this->superAdminOnly();
 
             $stateData = $request->except(['_token', '_method']);
             $stateData['user_id'] = $profileData->id;
-                if($profileData->access_level == 'superadmin'){
-                    State::create($stateData);
-                    $notification = array(
-                        'message' => 'State added successfully',
-                        'alert-type' => 'success'
-                    );
+            State::create($stateData);
 
-                    return redirect()->route('superadmin.location.states')->with($notification);
-                }
-
-                if($profileData->access_level == 'nationaladmin'){
-                    State::create($stateData);
-                    $notification = array(
-                        'message' => 'State added successfully',
-                        'alert-type' => 'success'
-                    );
-
-                    return redirect()->route('nationaladmin.location.states')->with($notification);
-                }
+            return $this->redirectToLocation('states')->with([
+                'message' => 'State added successfully',
+                'alert-type' => 'success'
+            ]);
        }
 
        public function editState($uuid){
         $profileData = $this->getProfileData();
-        $state = State::where('uuid', $uuid)->first();
-        $regions = Region::all();
-            if($profileData->access_level == 'superadmin'){
-                return view('backend.superadmin.state.edit-state', compact('profileData', 'state', 'regions'));
-            }
-            if($profileData->access_level == 'nationaladmin'){
-                return view('backend.nationaladmin.state.edit-state', compact('profileData', 'state', 'regions'));
-            }
+        $state = State::where('uuid', $uuid)->firstOrFail();
+        $this->structuralAccess()->assertCanUpdate($profileData, $state);
+        $regions = $profileData->access_level === 'superadmin' ? Region::all() : Region::where('id', $state->region_id)->get();
+
+        return view('backend.'.$profileData->access_level.'.state.edit-state', compact('profileData', 'state', 'regions'));
        }
 
        public function updateState(Request $request, $uuid)
@@ -264,37 +221,28 @@ class LocationController extends Controller
             ]);
 
             $profileData = $this->getProfileData();
-            $stateData = $request->except(['_token', '_method']);
+            $stateData = $profileData->access_level === 'superadmin'
+                ? $request->except(['_token', '_method'])
+                : $request->only(['name']);
             $stateData['user_id'] = $profileData->id;
 
             // Find the state by uuid first
             $state = State::where('uuid', $uuid)->firstOrFail();
 
-            if ($profileData->access_level == 'superadmin') {
-                $state->update($stateData); // Update the state directly
-                $notification = array(
-                    'message' => 'State updated successfully',
-                    'alert-type' => 'success'
-                );
+            $this->structuralAccess()->assertCanUpdate($profileData, $state);
+            $state->update($stateData);
 
-                return redirect()->route('superadmin.location.states')->with($notification);
-            }
-
-            if ($profileData->access_level == 'nationaladmin') {
-                $state->update($stateData); // Update the state directly
-                $notification = array(
-                    'message' => 'State updated successfully',
-                    'alert-type' => 'success'
-                );
-
-                return redirect()->route('nationaladmin.location.states')->with($notification);
-            }
+            return $this->redirectToLocation('states')->with([
+                'message' => 'State updated successfully',
+                'alert-type' => 'success'
+            ]);
         }
 
 
 
        public function deleteState($uuid) {
         $profileData = $this->getProfileData();
+        $this->superAdminOnly();
         $state = State::where('uuid', $uuid)->first(); // Retrieve the state
 
         // Check if the state has any users associated with it
@@ -308,24 +256,11 @@ class LocationController extends Controller
             return redirect()->back()->with($notification);
         }
 
-        // If no users are associated, proceed with deletion
-        if($profileData->access_level == 'superadmin') {
-            $state->delete();
-            $notification = [
-                'message' => 'State deleted successfully',
-                'alert-type' => 'success'
-            ];
-            return redirect()->route('superadmin.location.states')->with($notification);
-        }
-
-        if($profileData->access_level == 'nationaladmin') {
-            $state->delete();
-            $notification = [
-                'message' => 'State deleted successfully',
-                'alert-type' => 'success'
-            ];
-            return redirect()->route('nationaladmin.location.states')->with($notification);
-        }
+        $state->delete();
+        return $this->redirectToLocation('states')->with([
+            'message' => 'State deleted successfully',
+            'alert-type' => 'success'
+        ]);
     }
 
 
@@ -334,7 +269,10 @@ class LocationController extends Controller
     public function allSenatorialDistricts()
     {
         $profileData = $this->getProfileData();
-        $districts = SenatorialDistrict::with('state')->orderBy('name')->get();
+        $districts = $this->structuralAccess()
+            ->applyScope(SenatorialDistrict::with('state'), $profileData, 'senatorial_districts')
+            ->orderBy('name')
+            ->get();
 
         return view('backend.'.$profileData->access_level.'.senatorial-district.senatorial-districts', compact('profileData', 'districts'));
     }
@@ -342,6 +280,7 @@ class LocationController extends Controller
     public function addSenatorialDistrict()
     {
         $profileData = $this->getProfileData();
+        $this->superAdminOnly();
         $states = State::orderBy('name', 'ASC')->get();
 
         return view('backend.'.$profileData->access_level.'.senatorial-district.add-senatorial-district', compact('profileData', 'states'));
@@ -349,6 +288,7 @@ class LocationController extends Controller
 
     public function storeSenatorialDistrict(Request $request)
     {
+        $this->superAdminOnly();
         $request->validate([
             'name' => 'required',
             'state_id' => 'required',
@@ -373,7 +313,10 @@ class LocationController extends Controller
     {
         $profileData = $this->getProfileData();
         $district = SenatorialDistrict::where('uuid', $uuid)->firstOrFail();
-        $states = State::orderBy('name', 'ASC')->get();
+        $this->structuralAccess()->assertCanUpdate($profileData, $district);
+        $states = $profileData->access_level === 'superadmin'
+            ? State::orderBy('name', 'ASC')->get()
+            : State::where('id', $district->state_id)->get();
 
         return view('backend.'.$profileData->access_level.'.senatorial-district.edit-senatorial-district', compact('profileData', 'district', 'states'));
     }
@@ -385,13 +328,21 @@ class LocationController extends Controller
             'state_id' => 'required',
         ]);
 
-        SenatorialDistrict::where('uuid', $uuid)->update([
+        $profileData = $this->getProfileData();
+        $district = SenatorialDistrict::where('uuid', $uuid)->firstOrFail();
+        $this->structuralAccess()->assertCanUpdate($profileData, $district);
+
+        $data = [
             'name' => $request->name,
             'normalized_name' => Str::lower(trim($request->name)),
-            'state_id' => $request->state_id,
-        ]);
+        ];
 
-        $profileData = $this->getProfileData();
+        if ($profileData->access_level === 'superadmin') {
+            $data['state_id'] = $request->state_id;
+        }
+
+        $district->update($data);
+
         $notification = [
             'message' => 'Senatorial District updated successfully',
             'alert-type' => 'success'
@@ -403,6 +354,7 @@ class LocationController extends Controller
     public function deleteSenatorialDistrict($uuid)
     {
         $profileData = $this->getProfileData();
+        $this->superAdminOnly();
         $district = SenatorialDistrict::where('uuid', $uuid)->firstOrFail();
 
         if (
@@ -432,7 +384,10 @@ class LocationController extends Controller
     public function allFederalConstituencies()
     {
         $profileData = $this->getProfileData();
-        $constituencies = FederalConstituency::with(['state', 'senatorialDistrict'])->orderBy('name')->get();
+        $constituencies = $this->structuralAccess()
+            ->applyScope(FederalConstituency::with(['state', 'senatorialDistrict']), $profileData, 'federal_constituencies')
+            ->orderBy('name')
+            ->get();
 
         return view('backend.'.$profileData->access_level.'.federal-constituency.federal-constituencies', compact('profileData', 'constituencies'));
     }
@@ -440,6 +395,7 @@ class LocationController extends Controller
     public function addFederalConstituency()
     {
         $profileData = $this->getProfileData();
+        $this->superAdminOnly();
         $states = State::orderBy('name', 'ASC')->get();
         $senatorialDistricts = SenatorialDistrict::with('state')->orderBy('name', 'ASC')->get();
 
@@ -448,6 +404,7 @@ class LocationController extends Controller
 
     public function storeFederalConstituency(Request $request)
     {
+        $this->superAdminOnly();
         $request->validate([
             'name' => 'required',
             'state_id' => 'required',
@@ -474,8 +431,13 @@ class LocationController extends Controller
     {
         $profileData = $this->getProfileData();
         $constituency = FederalConstituency::where('uuid', $uuid)->firstOrFail();
-        $states = State::orderBy('name', 'ASC')->get();
-        $senatorialDistricts = SenatorialDistrict::with('state')->orderBy('name', 'ASC')->get();
+        $this->structuralAccess()->assertCanUpdate($profileData, $constituency);
+        $states = $profileData->access_level === 'superadmin'
+            ? State::orderBy('name', 'ASC')->get()
+            : State::where('id', $constituency->state_id)->get();
+        $senatorialDistricts = $profileData->access_level === 'superadmin'
+            ? SenatorialDistrict::with('state')->orderBy('name', 'ASC')->get()
+            : SenatorialDistrict::with('state')->where('state_id', $constituency->state_id)->orderBy('name', 'ASC')->get();
 
         return view('backend.'.$profileData->access_level.'.federal-constituency.edit-federal-constituency', compact('profileData', 'constituency', 'states', 'senatorialDistricts'));
     }
@@ -488,14 +450,22 @@ class LocationController extends Controller
             'senatorial_district_id' => 'nullable',
         ]);
 
-        FederalConstituency::where('uuid', $uuid)->update([
+        $profileData = $this->getProfileData();
+        $constituency = FederalConstituency::where('uuid', $uuid)->firstOrFail();
+        $this->structuralAccess()->assertCanUpdate($profileData, $constituency);
+
+        $data = [
             'name' => $request->name,
             'normalized_name' => Str::lower(trim($request->name)),
-            'state_id' => $request->state_id,
-            'senatorial_district_id' => $request->senatorial_district_id,
-        ]);
+        ];
 
-        $profileData = $this->getProfileData();
+        if ($profileData->access_level === 'superadmin') {
+            $data['state_id'] = $request->state_id;
+            $data['senatorial_district_id'] = $request->senatorial_district_id;
+        }
+
+        $constituency->update($data);
+
         $notification = [
             'message' => 'Federal Constituency updated successfully',
             'alert-type' => 'success'
@@ -507,6 +477,7 @@ class LocationController extends Controller
     public function deleteFederalConstituency($uuid)
     {
         $profileData = $this->getProfileData();
+        $this->superAdminOnly();
         $constituency = FederalConstituency::where('uuid', $uuid)->firstOrFail();
 
         if (
@@ -537,18 +508,17 @@ class LocationController extends Controller
     public function allLocalGovernments()
     {
         $profileData = $this->getProfileData();
-        $lgas = LocalGovernmentArea::all();
-        if($profileData->access_level == 'superadmin'){
-            return view('backend.superadmin.lga.lgas', compact('profileData', 'lgas'));
-        }
-        if($profileData->access_level == 'nationaladmin'){
-            return view('backend.nationaladmin.lga.lgas', compact('profileData', 'lgas'));
-        }
+        $lgas = $this->structuralAccess()
+            ->applyScope(LocalGovernmentArea::query(), $profileData, 'local_government_areas')
+            ->get();
+
+        return view('backend.'.$profileData->access_level.'.lga.lgas', compact('profileData', 'lgas'));
     }
 
     public function addLocalGovernment(){
 
         $profileData = $this->getProfileData();
+        $this->superAdminOnly();
         $states = State::orderBy('name', 'ASC')->get();
 
         return view('backend.'.$profileData->access_level.'.lga.add-lga', compact('profileData', 'states'));
@@ -565,6 +535,7 @@ class LocationController extends Controller
         ]);
 
         $profileData = $this->getProfileData(); // Get the profile data
+        $this->superAdminOnly();
 
 
             $lga = LocalGovernmentArea::create([
@@ -587,7 +558,10 @@ class LocationController extends Controller
     {
         $profileData = $this->getProfileData();
         $lga = LocalGovernmentArea::where('uuid', $uuid)->firstOrFail();
-        $states = State::orderBy('name', 'ASC')->get();
+        $this->structuralAccess()->assertCanUpdate($profileData, $lga);
+        $states = $profileData->access_level === 'superadmin'
+            ? State::orderBy('name', 'ASC')->get()
+            : State::where('id', $lga->state_id)->get();
         return view('backend.'.$profileData->access_level.'.lga.edit-lga', compact('profileData', 'lga', 'states'));
     }
 
@@ -599,9 +573,13 @@ class LocationController extends Controller
         ]);
 
         $profileData = $this->getProfileData();
-        $lgaData = $request->except(['_token', '_method']);
+        $lga = LocalGovernmentArea::where('uuid', $uuid)->firstOrFail();
+        $this->structuralAccess()->assertCanUpdate($profileData, $lga);
+        $lgaData = $profileData->access_level === 'superadmin'
+            ? $request->except(['_token', '_method'])
+            : $request->only(['name']);
         $lgaData['user_id'] = $profileData->id;
-        $lga = LocalGovernmentArea::where('uuid', $uuid)->update($lgaData);
+        $lga->update($lgaData);
         $notification = array(
             'message' => 'Local Government Area updated successfully',
             'alert-type' => 'success'
@@ -613,6 +591,7 @@ class LocationController extends Controller
 
     public function deleteLocalGovernment($uuid) {
         $profileData = $this->getProfileData();
+        $this->superAdminOnly();
         $lga = LocalGovernmentArea::where('uuid', $uuid)->first(); // Retrieve the state
 
         // Check if the lga has any users or wards associated with it
@@ -642,16 +621,19 @@ class LocationController extends Controller
     public function importLgasForm()
     {
         $profileData = $this->getProfileData();
+        $this->superAdminOnly();
         return view('backend.'.$profileData->access_level.'.lga.import-lga', compact('profileData'));
     }
  // For Export
     public function exportLgas()
     {
+        $this->superAdminOnly();
         return Excel::download(new LocalGovernmentExport, 'local-governments.xlsx');
     }
 
     public function importLgas(Request $request)
     {
+        $this->superAdminOnly();
         $request->validate([
             'file' => 'required|mimes:xlsx',
         ]);
@@ -695,7 +677,9 @@ class LocationController extends Controller
     public function allWards()
     {
         $profileData = $this->getProfileData();
-        $wardCount = Ward::count();
+        $wardCount = $this->structuralAccess()
+            ->applyScope(Ward::query(), $profileData, 'wards')
+            ->count();
 
         return view('backend.'.$profileData->access_level.'.ward.wards', compact('profileData', 'wardCount'));
 
@@ -706,6 +690,7 @@ class LocationController extends Controller
     {
 
         $profileData = $this->getProfileData();
+        $this->superAdminOnly();
         $lgas = LocalGovernmentArea::with('state')
                     ->join('states', 'local_government_areas.state_id', '=', 'states.id')
                     ->orderBy('states.name', 'ASC')
@@ -724,6 +709,7 @@ class LocationController extends Controller
         ]);
 
         $profileData = $this->getProfileData();
+        $this->superAdminOnly();
 
         $ward = Ward::create([
             'name' => $request->name,
@@ -744,10 +730,12 @@ class LocationController extends Controller
     {
         $profileData = $this->getProfileData();
         $ward = Ward::where('uuid', $uuid)->firstOrFail();
+        $this->structuralAccess()->assertCanUpdate($profileData, $ward);
         $lgas = LocalGovernmentArea::with('state')
                     ->join('states', 'local_government_areas.state_id', '=', 'states.id')
                     ->orderBy('states.name', 'ASC')
                     ->orderBy('local_government_areas.name', 'ASC')
+                    ->when($profileData->access_level !== 'superadmin', fn ($query) => $this->structuralAccess()->applyScope($query, $profileData, 'local_government_areas'))
                     ->get(['local_government_areas.*']);
         return view('backend.'.$profileData->access_level.'.ward.edit-ward', compact('profileData', 'ward', 'lgas'));
     }
@@ -761,9 +749,13 @@ class LocationController extends Controller
         ]);
 
         $profileData = $this->getProfileData();
-        $wardData = $request->except(['_token', '_method']);
+        $ward = Ward::where('uuid', $uuid)->firstOrFail();
+        $this->structuralAccess()->assertCanUpdate($profileData, $ward);
+        $wardData = $profileData->access_level === 'superadmin'
+            ? $request->except(['_token', '_method'])
+            : $request->only(['name']);
         $wardData['user_id'] = $profileData->id;
-        $ward = Ward::where('uuid', $uuid)->update($wardData);
+        $ward->update($wardData);
         $notification = array(
             'message' => 'Ward updated successfully',
             'alert-type' => 'success'
@@ -774,6 +766,7 @@ class LocationController extends Controller
 
     public function deleteWard($uuid) {
         $profileData = $this->getProfileData();
+        $this->superAdminOnly();
         $ward = Ward::where('uuid', $uuid)->first(); // Retrieve the state
 
         // Check if the lga has any users or wards associated with it
@@ -797,16 +790,19 @@ class LocationController extends Controller
     public function importWardsForm()
     {
         $profileData = $this->getProfileData();
+        $this->superAdminOnly();
         return view('backend.'.$profileData->access_level.'.ward.import-ward', compact('profileData'));
     }
      // For Export
     public function exportWards()
     {
+        $this->superAdminOnly();
         return Excel::download(new WardExport, 'wards.xlsx');
     }
 
     public function importWards(Request $request)
 {
+    $this->superAdminOnly();
     $request->validate([
         'file' => 'required|mimes:xlsx',
     ]);
@@ -849,7 +845,9 @@ class LocationController extends Controller
     public function allPollingUnits()
     {
         $profileData = $this->getProfileData();
-        $puCount = PollingUnit::count();
+        $puCount = $this->structuralAccess()
+            ->applyScope(PollingUnit::query(), $profileData, 'polling_units')
+            ->count();
         return view('backend.'.$profileData->access_level.'.pu.pus', compact('profileData', 'puCount'));
     }
 
@@ -858,6 +856,7 @@ class LocationController extends Controller
     {
 
         $profileData = $this->getProfileData();
+        $this->superAdminOnly();
 
         $lgas = LocalGovernmentArea::with('state')
                     ->join('states', 'local_government_areas.state_id', '=', 'states.id')
@@ -884,6 +883,7 @@ class LocationController extends Controller
         ]);
 
         $profileData = $this->getProfileData();
+        $this->superAdminOnly();
         $pu = PollingUnit::create([
             'name' => $request->name,
             'ward_id' => $request->ward_id,
@@ -904,17 +904,20 @@ class LocationController extends Controller
     {
         $profileData = $this->getProfileData();
         $pu = PollingUnit::where('uuid', $uuid)->firstOrFail();
+        $this->structuralAccess()->assertCanUpdate($profileData, $pu);
 
             $lgas = LocalGovernmentArea::with('state')
             ->join('states', 'local_government_areas.state_id', '=', 'states.id')
             ->orderBy('states.name', 'ASC')
             ->orderBy('local_government_areas.name', 'ASC')
+            ->when($profileData->access_level !== 'superadmin', fn ($query) => $this->structuralAccess()->applyScope($query, $profileData, 'local_government_areas'))
             ->get(['local_government_areas.*']);
 
             $wards = Ward::with('localGovernmentArea') // Ensures the relationship is loaded
             ->join('local_government_areas', 'wards.lga_id', '=', 'local_government_areas.id')
             ->orderBy('local_government_areas.name', 'ASC')
             ->orderBy('wards.name', 'ASC')
+            ->when($profileData->access_level !== 'superadmin', fn ($query) => $this->structuralAccess()->applyScope($query, $profileData, 'wards'))
             ->get(['wards.*', 'local_government_areas.name as lga_name']);
             return view('backend.'.$profileData->access_level.'.pu.edit-pu', compact('profileData', 'pu', 'wards', 'lgas'));
             }
@@ -928,9 +931,13 @@ class LocationController extends Controller
         ]);
 
         $profileData = $this->getProfileData();
-        $puData = $request->except(['lga_id', '_token', '_method']);
+        $pu = PollingUnit::where('uuid', $uuid)->firstOrFail();
+        $this->structuralAccess()->assertCanUpdate($profileData, $pu);
+        $puData = $profileData->access_level === 'superadmin'
+            ? $request->except(['lga_id', '_token', '_method'])
+            : $request->only(['name']);
         $puData['user_id'] = $profileData->id;
-        $pu = PollingUnit::where('uuid', $uuid)->update($puData);
+        $pu->update($puData);
         $notification = array(
             'message' => 'Polling Unit updated successfully',
             'alert-type' => 'success'
@@ -941,6 +948,7 @@ class LocationController extends Controller
 
     public function deletePollingUnit($uuid) {
         $profileData = $this->getProfileData();
+        $this->superAdminOnly();
         $pu = PollingUnit::where('uuid', $uuid)->first(); // Retrieve the Pu
 
         // Check if the PU has any users  associated with it
@@ -965,6 +973,7 @@ class LocationController extends Controller
     public function importPollingUnitsForm()
     {
         $profileData = $this->getProfileData();
+        $this->superAdminOnly();
         return view('backend.'.$profileData->access_level.'.pu.import-polling-unit', compact('profileData'));
     }
 
@@ -972,12 +981,14 @@ class LocationController extends Controller
      // For Export
     public function exportPollingUnits()
     {
+        $this->superAdminOnly();
         return Excel::download(new PollingUnitExport, 'polling_units.xlsx');
     }
 
     // For Import
     public function importPollingUnits(Request $request)
     {
+        $this->superAdminOnly();
         $request->validate([
             'file' => 'required|mimes:xlsx',
         ]);

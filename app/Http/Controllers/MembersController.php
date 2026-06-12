@@ -8,6 +8,7 @@ use App\Models\Country;
 use App\Models\FederalConstituency;
 use App\Models\LocalGovernmentArea;
 use App\Models\PollingUnit;
+use App\Models\PollingUnitAgentAssignment;
 use App\Models\Region;
 use App\Models\Religion;
 use App\Models\SenatorialDistrict;
@@ -17,7 +18,10 @@ use App\Models\Ward;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\View;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Carbon;
 use App\Models\User;
+use App\Services\LocationScopeService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Spatie\Permission\Models\Role;
@@ -38,6 +42,263 @@ class MembersController extends Controller
      {
          $id = Auth::user()->id;
          return User::find($id);
+     }
+
+     protected function canDeleteUsers(User $profileData): bool
+     {
+         return $profileData->access_level === 'superadmin';
+     }
+
+     protected function accessLevelRank(?string $accessLevel): ?int
+     {
+         return [
+             'superadmin' => 1,
+             'nationaladmin' => 2,
+             'regionaladmin' => 3,
+             'regionadmin' => 3,
+             'stateadmin' => 4,
+             'senatorialadmin' => 5,
+             'federaladmin' => 5,
+             'lgaadmin' => 6,
+             'wardadmin' => 7,
+             'puadmin' => 8,
+             'pollingunitadmin' => 8,
+             'user' => 9,
+         ][$accessLevel] ?? null;
+     }
+
+     protected function accessLevelLabels(): array
+     {
+         return [
+             'superadmin' => 'Super Admin Access',
+             'nationaladmin' => 'National Admin Access',
+             'regionaladmin' => 'Regional Admin Access',
+             'stateadmin' => 'State Admin Access',
+             'senatorialadmin' => 'Senatorial District Admin Access',
+             'federaladmin' => 'Federal Constituency Admin Access',
+             'lgaadmin' => 'LGA Admin Access',
+             'wardadmin' => 'Ward Admin Access',
+             'puadmin' => 'Polling Unit Admin Access',
+             'user' => 'Member Access',
+         ];
+     }
+
+     protected function assignableAccessLevels(User $profileData): array
+     {
+         $profileRank = $this->accessLevelRank($profileData->access_level);
+
+         if ($profileRank === null) {
+             return ['user' => $this->accessLevelLabels()['user']];
+         }
+
+         return collect($this->accessLevelLabels())
+             ->filter(fn (string $label, string $accessLevel) => $this->accessLevelRank($accessLevel) >= $profileRank)
+             ->all();
+     }
+
+     protected function assignableRoles(User $profileData, ?User $member = null)
+     {
+         $allowedGroups = array_keys($this->assignableAccessLevels($profileData));
+
+         if ($member?->access_level && !in_array($member->access_level, $allowedGroups, true)) {
+             $allowedGroups[] = $member->access_level;
+         }
+
+         $groupOrder = array_flip(array_keys($this->accessLevelLabels()));
+
+         return Role::query()
+             ->whereIn('group_name', $allowedGroups)
+             ->orderBy('id')
+             ->get()
+             ->sortBy(fn (Role $role) => (($groupOrder[$role->group_name] ?? 99) * 1000) + $role->id)
+             ->values();
+     }
+
+     protected function canAssignRole(User $profileData, Role $role, ?string $accessLevel = null): bool
+     {
+         if (!array_key_exists($role->group_name, $this->assignableAccessLevels($profileData))) {
+             return false;
+         }
+
+         return !$accessLevel || $role->group_name === $accessLevel;
+     }
+
+     protected function canAccessMember(User $profileData, ?User $member): bool
+     {
+         if (!$member) {
+             return false;
+         }
+
+         $userAccessLevel = $this->accessLevelRank($profileData->access_level);
+         $memberAccessLevel = $this->accessLevelRank($member->access_level);
+
+         if ($userAccessLevel === null || $memberAccessLevel === null) {
+             return false;
+         }
+
+         if ($userAccessLevel > $memberAccessLevel) {
+             return false;
+         }
+
+         return $this->memberIsWithinScope($profileData, $member);
+     }
+
+     protected function canEditMember(User $profileData, ?User $member): bool
+     {
+         if (!$this->canAccessMember($profileData, $member)) {
+             return false;
+         }
+
+         return $profileData->access_level === 'superadmin'
+             || $profileData->hasAnyRole([
+                 'National ICT Director',
+                 'Regional ICT Director',
+                 'State ICT Director',
+                'Senatorial ICT Director',
+                'Federal Constituency ICT Director',
+                'Federal ICT Director',
+                 'LGA ICT Director',
+                 'Ward ICT Director',
+                 'PU ICT Director',
+             ]);
+     }
+
+     protected function memberIsWithinScope(User $profileData, User $member): bool
+     {
+         if ($profileData->access_level === 'superadmin') {
+             return true;
+         }
+
+         $query = User::query()->whereKey($member->id);
+         app(LocationScopeService::class)->applyScope($query, $profileData, 'users', 'users');
+
+         return $query->exists();
+     }
+
+     private function invalidMemberAccessNotification(): array
+     {
+         return [
+             'message' => 'An invalid access level was detected. Please contact the administrator.',
+             'alert-type' => 'error',
+         ];
+     }
+
+     private function unauthorizedMemberAccessNotification(string $action = 'view or edit'): array
+     {
+         return [
+             'message' => "You do not have permission to {$action} this profile.",
+             'alert-type' => 'warning',
+         ];
+     }
+
+     private function memberDeleteButton(User $member): string
+     {
+         $profileData = $this->getProfileData();
+
+         if (!$this->canDeleteUsers($profileData)) {
+             return '';
+         }
+
+         return '
+             <form action="' . route($profileData->access_level.'.member.delete', $member->uuid) . '" method="POST" style="display:inline-block;" data-associated-users="false">
+                 ' . csrf_field() . method_field('DELETE') . '
+                 <button type="submit" class="btn btn-danger btn-sm delete-btn">
+                     <i class="fas fa-trash"></i> Delete
+                 </button>
+             </form>
+         ';
+     }
+
+     protected function boundaryValidationRules(): array
+     {
+         return [
+             'senatorial_district_id' => 'nullable|exists:senatorial_districts,id',
+             'federal_constituency_id' => 'nullable|exists:federal_constituencies,id',
+         ];
+     }
+
+     protected function resolveBoundaryAssignments(Request $request, string $accessLevel)
+     {
+         $senatorialDistrictId = $request->senatorial_district_id;
+         $federalConstituencyId = $request->federal_constituency_id;
+
+         if ($request->filled('polling_unit_id') || $request->filled('pu_id')) {
+             $pollingUnitId = $request->polling_unit_id ?: $request->pu_id;
+             $pollingUnit = PollingUnit::find($pollingUnitId);
+
+             if ($pollingUnit) {
+                 $senatorialDistrictId = $senatorialDistrictId ?: $pollingUnit->senatorial_district_id;
+                 $federalConstituencyId = $federalConstituencyId ?: $pollingUnit->federal_constituency_id;
+             }
+         }
+
+         if ($federalConstituencyId && !$senatorialDistrictId) {
+             $federalConstituency = FederalConstituency::find($federalConstituencyId);
+             $senatorialDistrictId = $federalConstituency?->senatorial_district_id;
+         }
+
+         $stateId = $request->state_id;
+
+         if (in_array($accessLevel, ['senatorialadmin', 'federaladmin'], true) && !$stateId) {
+             return redirect()->back()
+                 ->withInput()
+                 ->withErrors(['state_id' => 'Please select the state this admin is allowed to manage within.']);
+         }
+
+         if ($accessLevel === 'senatorialadmin' && !$senatorialDistrictId) {
+             return redirect()->back()
+                 ->withInput()
+                 ->withErrors(['senatorial_district_id' => 'Please select the senatorial district this admin is allowed to manage.']);
+         }
+
+         if ($accessLevel === 'federaladmin' && !$federalConstituencyId) {
+             return redirect()->back()
+                 ->withInput()
+                 ->withErrors(['federal_constituency_id' => 'Please select the federal constituency this admin is allowed to manage.']);
+         }
+
+         if ($senatorialDistrictId) {
+             $senatorialDistrict = SenatorialDistrict::find($senatorialDistrictId);
+
+             if (!$senatorialDistrict) {
+                 return redirect()->back()
+                     ->withInput()
+                     ->withErrors(['senatorial_district_id' => 'The selected senatorial district is invalid.']);
+             }
+
+             if ($stateId && $senatorialDistrict->state_id && (string) $senatorialDistrict->state_id !== (string) $stateId) {
+                 return redirect()->back()
+                     ->withInput()
+                     ->withErrors(['senatorial_district_id' => 'The selected senatorial district does not belong to the selected state.']);
+             }
+         }
+
+         if ($federalConstituencyId) {
+             $federalConstituency = FederalConstituency::find($federalConstituencyId);
+
+             if (!$federalConstituency) {
+                 return redirect()->back()
+                     ->withInput()
+                     ->withErrors(['federal_constituency_id' => 'The selected federal constituency is invalid.']);
+             }
+
+             if ($stateId && $federalConstituency->state_id && (string) $federalConstituency->state_id !== (string) $stateId) {
+                 return redirect()->back()
+                     ->withInput()
+                     ->withErrors(['federal_constituency_id' => 'The selected federal constituency does not belong to the selected state.']);
+             }
+
+             if ($senatorialDistrictId && $federalConstituency->senatorial_district_id && (string) $federalConstituency->senatorial_district_id !== (string) $senatorialDistrictId) {
+                 return redirect()->back()
+                     ->withInput()
+                     ->withErrors(['federal_constituency_id' => 'The selected federal constituency does not belong to the selected senatorial district.']);
+             }
+         }
+
+         return [
+             'senatorial_district_id' => $senatorialDistrictId,
+             'federal_constituency_id' => $federalConstituencyId,
+         ];
      }
 
 
@@ -63,18 +324,18 @@ class MembersController extends Controller
          $region = Region::where('country_id', $country_id)->get();
          }
 
+         $region->loadCount(['users as members_count' => function ($query) {
+             $query->where('access_level', '!=', 'superadmin');
+         }]);
 
          return($region);
      }
 
 
 
-    private function filterMemberByAccessLevel()
-    {
-        $profileData = $this->getProfileData();
-
-        // Define access level hierarchy
-        $accessLevels = [
+     private function accessLevelHierarchy(): array
+     {
+         return [
             'superadmin',
             'nationaladmin',
             'regionaladmin',
@@ -86,37 +347,65 @@ class MembersController extends Controller
             'puadmin',
             'user',
         ];
+     }
 
-        // Determine the current access level index
-        $currentLevelIndex = array_search($profileData->access_level, $accessLevels);
+    protected function scopedMembersQuery(?User $profileData = null, bool $includeSuperadmin = false): Builder
+    {
+        $profileData ??= $this->getProfileData();
+        $accessLevels = $this->accessLevelHierarchy();
+        $currentLevelIndex = array_search($profileData->access_level, $accessLevels, true);
+
         if ($currentLevelIndex === false) {
             throw new \Exception('Invalid access level: ' . $profileData->access_level);
         }
 
-        // Include all access levels below the current one
         $includedLevels = array_slice($accessLevels, $currentLevelIndex);
-
-        // Start building the query
-        $membersQuery = User::query()->whereIn('access_level', $includedLevels);
-
-        // Apply geographical constraints based on the current user's access level
-        if ($profileData->access_level === 'regionaladmin') {
-            $membersQuery->where('region_id', $profileData->region_id);
-        } elseif ($profileData->access_level === 'stateadmin') {
-            $membersQuery->where('state_id', $profileData->state_id);
-        } elseif ($profileData->access_level === 'senatorialadmin') {
-            $membersQuery->where('senatorial_district_id', $profileData->senatorial_district_id);
-        } elseif ($profileData->access_level === 'federaladmin') {
-            $membersQuery->where('federal_constituency_id', $profileData->federal_constituency_id);
-        } elseif ($profileData->access_level === 'lgaadmin') {
-            $membersQuery->where('lga_id', $profileData->lga_id);
-        } elseif ($profileData->access_level === 'wardadmin') {
-            $membersQuery->where('ward_id', $profileData->ward_id);
-        } elseif (in_array($profileData->access_level, ['puadmin', 'pollingunitadmin'], true)) {
-            $membersQuery->where('polling_unit_id', $profileData->polling_unit_id);
+        if (!$includeSuperadmin) {
+            $includedLevels = array_values(array_diff($includedLevels, ['superadmin']));
         }
 
+        $membersQuery = User::query()->whereIn('access_level', $includedLevels);
+        app(LocationScopeService::class)->applyScope($membersQuery, $profileData, 'users', 'users');
+        $this->enforceParentScopeConsistency($membersQuery, $profileData);
+
         return $membersQuery;
+    }
+
+    private function enforceParentScopeConsistency(Builder $query, User $profileData): void
+    {
+        if ($profileData->access_level === 'senatorialadmin') {
+            $district = $profileData->senatorialDistrict;
+
+            if ($district?->state_id) {
+                $query->where(function (Builder $stateQuery) use ($district) {
+                    $stateQuery->whereNull('users.state_id')
+                        ->orWhere('users.state_id', $district->state_id);
+                });
+            }
+        }
+
+        if ($profileData->access_level === 'federaladmin') {
+            $constituency = $profileData->federalConstituency;
+
+            if ($constituency?->state_id) {
+                $query->where(function (Builder $stateQuery) use ($constituency) {
+                    $stateQuery->whereNull('users.state_id')
+                        ->orWhere('users.state_id', $constituency->state_id);
+                });
+            }
+
+            if ($constituency?->senatorial_district_id) {
+                $query->where(function (Builder $districtQuery) use ($constituency) {
+                    $districtQuery->whereNull('users.senatorial_district_id')
+                        ->orWhere('users.senatorial_district_id', $constituency->senatorial_district_id);
+                });
+            }
+        }
+    }
+
+    private function filterMemberByAccessLevel()
+    {
+        return $this->scopedMembersQuery();
     }
 
 
@@ -212,6 +501,9 @@ class MembersController extends Controller
                     'National ICT Director',
                     'Regional ICT Director',
                     'State ICT Director',
+                    'Senatorial ICT Director',
+                    'Federal Constituency ICT Director',
+                    'Federal ICT Director',
                     'LGA ICT Director',
                     'Ward ICT Director',
                     'PU ICT Director'
@@ -219,15 +511,10 @@ class MembersController extends Controller
                 $actionButtons .= '
                     <a href="' . route($profileData->access_level . '.member.edit', $member->uuid) . '">
                         <button class="btn btn-info btn-sm"><i class="fas fa-pencil-alt"></i> Edit</button>
-                    </a>
-                    <form action="' . route($profileData->access_level . '.member.delete', $member->uuid) . '" method="POST" style="display:inline-block;">
-                        ' . csrf_field() . method_field('DELETE') . '
-                        <button type="submit" class="btn btn-danger btn-sm delete-btn">
-                            <i class="fas fa-trash"></i> Delete
-                        </button>
-                    </form>';
+                    </a>';
             }
 
+            $actionButtons .= $this->memberDeleteButton($member);
             return $actionButtons;
         })
         ->rawColumns(['role', 'action'])
@@ -276,61 +563,10 @@ class MembersController extends Controller
 
      public function getExcoMembersData($uuid = null)
      {
-
-        $members = collect();
-
-        if ($uuid) {
-            if ($pu = PollingUnit::where('uuid', $uuid)->first()) {
-                // Fetch members directly by Polling Unit ID
-                $members = User::query()->where('access_level', '!=', 'superadmin')
-				->where('access_level', '!=', 'user')
-                ->where('polling_unit_id', $pu->id);
-
-            } elseif ($ward = Ward::where('uuid', $uuid)->first()) {
-                // Fetch members directly by Ward ID
-                $members = User::query()->where('access_level', '!=', 'superadmin')
-                ->where('access_level', '!=', 'user')
-                ->where('ward_id', $ward->id);
-
-            } elseif ($lga = LocalGovernmentArea::where('uuid', $uuid)->first()) {
-                // Fetch members directly by LGA ID
-                $members = User::query()->where('access_level', '!=', 'superadmin')
-                ->where('access_level', '!=', 'user')
-                ->where('lga_id', $lga->id);
-
-            } elseif ($federalConstituency = FederalConstituency::where('uuid', $uuid)->first()) {
-                $members = User::query()->where('access_level', '!=', 'superadmin')
-                ->where('access_level', '!=', 'user')
-                ->where('federal_constituency_id', $federalConstituency->id);
-
-            } elseif ($senatorialDistrict = SenatorialDistrict::where('uuid', $uuid)->first()) {
-                $members = User::query()->where('access_level', '!=', 'superadmin')
-                ->where('access_level', '!=', 'user')
-                ->where('senatorial_district_id', $senatorialDistrict->id);
-
-            } elseif ($state = State::where('uuid', $uuid)->first()) {
-                // Fetch members directly by State ID
-                $members = User::query()->where('access_level', '!=', 'superadmin')
-                ->where('access_level', '!=', 'user')
-                ->where('state_id', $state->id);
-
-            } elseif ($region = Region::where('uuid', $uuid)->first()) {
-                // Fetch members directly by Region ID
-                $members = User::query()->where('access_level', '!=', 'superadmin')
-                ->where('access_level', '!=', 'user')
-                ->where('region_id', $region->id);
-
-            } elseif ($country = Country::where('uuid', $uuid)->first()) {
-                // Fetch members directly by Country ID
-                $members = User::query()->where('access_level', '!=', 'superadmin')
-                ->where('access_level', '!=', 'user')
-                ->where('country_id', $country->id);
-            }
-        } else {
-            // If no UUID is provided, fetch all members excluding superadmins
-            $members = User::query()->where('access_level', '!=', 'user')
-            ->where('access_level', '!=', 'superadmin');
-        }
+        $members = $this->scopedMembersQuery()
+            ->where('access_level', '!=', 'user')
+            ->where('access_level', '!=', 'puadmin');
+        $this->applyLocationScopeFromUuid($members, $uuid);
 
 
          return datatables()->eloquent($members)
@@ -393,6 +629,9 @@ class MembersController extends Controller
                          'National ICT Director',
                          'Regional ICT Director',
                          'State ICT Director',
+                         'Senatorial ICT Director',
+                         'Federal Constituency ICT Director',
+                         'Federal ICT Director',
                          'LGA ICT Director',
                          'Ward ICT Director',
                          'PU ICT Director'
@@ -404,16 +643,11 @@ class MembersController extends Controller
                                  <i class="fas fa-pencil-alt"></i> Edit
                              </button>
                          </a>
-                         <form action="' . route($profileData->access_level.'.member.delete', $member->uuid) . '" method="POST" style="display:inline-block;" data-associated-users="false">
-                             ' . csrf_field() . method_field('DELETE') . '
-                             <button type="submit" class="btn btn-danger btn-sm delete-btn">
-                                 <i class="fas fa-trash"></i> Delete
-                             </button>
-                         </form>
                      ';
                  }
 
-                 return $actionButtons;
+                 $actionButtons .= $this->memberDeleteButton($member);
+            return $actionButtons;
              })
              ->rawColumns(['role', 'action']) // Ensures that HTML in the 'role' and 'action' columns is rendered properly
              ->make(true);
@@ -461,61 +695,8 @@ class MembersController extends Controller
 
      public function getRegularMembersData($uuid = null)
      {
-
-        $members = collect();
-
-        if ($uuid) {
-            if ($pu = PollingUnit::where('uuid', $uuid)->first()) {
-                // Fetch members directly by Polling Unit ID
-                $members = User::query()->where('access_level', '!=', 'superadmin')
-				->where('access_level', '=',  'user')
-                ->where('polling_unit_id', $pu->id);
-
-            } elseif ($ward = Ward::where('uuid', $uuid)->first()) {
-                // Fetch members directly by Ward ID
-                $members = User::query()->where('access_level', '!=', 'superadmin')
-                ->where('access_level',  'user')
-                ->where('ward_id', $ward->id);
-
-            } elseif ($lga = LocalGovernmentArea::where('uuid', $uuid)->first()) {
-                // Fetch members directly by LGA ID
-                $members = User::query()->where('access_level', '!=', 'superadmin')
-                ->where('access_level',  'user')
-                ->where('lga_id', $lga->id);
-
-            } elseif ($federalConstituency = FederalConstituency::where('uuid', $uuid)->first()) {
-                $members = User::query()->where('access_level', '!=', 'superadmin')
-                ->where('access_level',  'user')
-                ->where('federal_constituency_id', $federalConstituency->id);
-
-            } elseif ($senatorialDistrict = SenatorialDistrict::where('uuid', $uuid)->first()) {
-                $members = User::query()->where('access_level', '!=', 'superadmin')
-                ->where('access_level',  'user')
-                ->where('senatorial_district_id', $senatorialDistrict->id);
-
-            } elseif ($state = State::where('uuid', $uuid)->first()) {
-                // Fetch members directly by State ID
-                $members = User::query()->where('access_level', '!=', 'superadmin')
-                ->where('access_level',  'user')
-                ->where('state_id', $state->id);
-
-            } elseif ($region = Region::where('uuid', $uuid)->first()) {
-                // Fetch members directly by Region ID
-                $members = User::query()->where('access_level', '!=', 'superadmin')
-                ->where('access_level',  'user')
-                ->where('region_id', $region->id);
-
-            } elseif ($country = Country::where('uuid', $uuid)->first()) {
-                // Fetch members directly by Country ID
-                $members = User::query()->where('access_level', '!=', 'superadmin')
-                ->where('access_level',  'user')
-                ->where('country_id', $country->id);
-            }
-        } else {
-            // If no UUID is provided, fetch all members excluding superadmins
-            $members = User::query()->where('access_level', '=',  'user')
-            ->where('access_level', '!=', 'superadmin');
-        }
+        $members = $this->scopedMembersQuery()->where('access_level', 'user');
+        $this->applyLocationScopeFromUuid($members, $uuid);
 
 
          return datatables()->eloquent($members)
@@ -578,6 +759,9 @@ class MembersController extends Controller
                          'National ICT Director',
                          'Regional ICT Director',
                          'State ICT Director',
+                         'Senatorial ICT Director',
+                         'Federal Constituency ICT Director',
+                         'Federal ICT Director',
                          'LGA ICT Director',
                          'Ward ICT Director',
                          'PU ICT Director'
@@ -589,19 +773,222 @@ class MembersController extends Controller
                                  <i class="fas fa-pencil-alt"></i> Edit
                              </button>
                          </a>
-                         <form action="' . route($profileData->access_level.'.member.delete', $member->uuid) . '" method="POST" style="display:inline-block;" data-associated-users="false">
-                             ' . csrf_field() . method_field('DELETE') . '
-                             <button type="submit" class="btn btn-danger btn-sm delete-btn">
-                                 <i class="fas fa-trash"></i> Delete
-                             </button>
-                         </form>
                      ';
                  }
 
-                 return $actionButtons;
+                 $actionButtons .= $this->memberDeleteButton($member);
+            return $actionButtons;
              })
              ->rawColumns(['role', 'action']) // Ensures that HTML in the 'role' and 'action' columns is rendered properly
              ->make(true);
+     }
+
+     public function allPeopleMetricMembers(string $metric, $uuid = null)
+     {
+         abort_unless(array_key_exists($metric, $this->peopleMetricLabels()), 404);
+
+         $profileData = $this->getProfileData();
+         $PuLgaStateRegionCountryUUID = $uuid ?? $this->defaultPeopleMetricScopeUuid($profileData);
+
+         $region = $state = $lga = $ward = $pu = null;
+
+         if ($PuLgaStateRegionCountryUUID) {
+             if ($pu = PollingUnit::where('uuid', $PuLgaStateRegionCountryUUID)->first()) {
+                 // UUID belongs to a Polling Unit
+             } elseif ($ward = Ward::where('uuid', $PuLgaStateRegionCountryUUID)->first()) {
+                 // UUID belongs to a Ward
+             } elseif ($lga = LocalGovernmentArea::where('uuid', $PuLgaStateRegionCountryUUID)->first()) {
+                 // UUID belongs to an LGA
+             } elseif ($state = State::where('uuid', $PuLgaStateRegionCountryUUID)->first()) {
+                 // UUID belongs to a State
+             } elseif ($region = Region::where('uuid', $PuLgaStateRegionCountryUUID)->first()) {
+                 // UUID belongs to a Region
+             }
+         }
+
+         $roles = Role::all();
+         $metricTitle = $this->peopleMetricLabels()[$metric];
+
+         return view('backend.shared.member.people-metric-members', compact(
+             'profileData',
+             'roles',
+             'region',
+             'state',
+             'lga',
+             'ward',
+             'pu',
+             'PuLgaStateRegionCountryUUID',
+             'metric',
+             'metricTitle'
+         ));
+     }
+
+     public function getPeopleMetricMembersData(string $metric, $uuid = null)
+     {
+         abort_unless(array_key_exists($metric, $this->peopleMetricLabels()), 404);
+
+         $profileData = $this->getProfileData();
+         $members = $this->peopleMetricQuery($metric);
+         $this->applyProfileScope($members, $profileData);
+         $this->applyLocationScopeFromUuid($members, $uuid);
+
+         return datatables()->eloquent($members)
+             ->filterColumn('name', function ($query, $keyword) {
+                 $query->where('firstname', 'like', "%{$keyword}%")
+                     ->orWhere('lastname', 'like', "%{$keyword}%");
+             })
+             ->addIndexColumn()
+             ->addColumn('name', function ($member) {
+                 return $member->firstname . ' ' . $member->lastname;
+             })
+             ->addColumn('access_level', function ($member) {
+                 return $member->access_level;
+             })
+             ->addColumn('role', function ($member) {
+                 return $member->roles->map(function ($role) {
+                     return '<span class="badge badge-pill bg-secondary">' . $role->name . '</span>';
+                 })->implode(' ');
+             })
+             ->addColumn('Voter_status', function ($member) {
+                 return ucfirst($member->validVoter);
+             })
+             ->addColumn('action', function ($member) {
+                 return $this->memberActionButtons($member);
+             })
+             ->rawColumns(['role', 'action'])
+             ->make(true);
+     }
+
+     private function peopleMetricLabels(): array
+     {
+         return [
+             'agents' => 'Polling Unit Agents',
+             'eligible-voters' => 'Eligible Voters',
+             'without-voter-card' => 'Without Voter Card',
+             'new-today' => 'New Today',
+             'new-this-week' => 'New This Week',
+             'new-this-month' => 'New This Month',
+         ];
+     }
+
+     private function peopleMetricQuery(string $metric): Builder
+     {
+         $query = User::query()->where('access_level', '!=', 'superadmin');
+
+         return match ($metric) {
+             'agents' => $query->whereHas('pollingUnitAgentAssignments', function (Builder $assignmentQuery) {
+                 $assignmentQuery->approved();
+             }),
+             'eligible-voters' => $query->whereIn('validVoter', ['yes', 'Yes', 'YES']),
+             'without-voter-card' => $query->where(function (Builder $query) {
+                 $query->whereNull('validVoter')
+                     ->orWhereNotIn('validVoter', ['yes', 'Yes', 'YES']);
+             }),
+             'new-today' => $query->where('created_at', '>=', Carbon::now()->subDay()),
+             'new-this-week' => $query->where('created_at', '>=', Carbon::now()->subWeek()),
+             'new-this-month' => $query->where('created_at', '>=', Carbon::now()->subMonth()),
+         };
+     }
+
+     private function applyLocationScopeFromUuid(Builder $query, ?string $uuid): void
+     {
+         if (!$uuid) {
+             return;
+         }
+
+         if ($pu = PollingUnit::where('uuid', $uuid)->first()) {
+             $query->where('polling_unit_id', $pu->id);
+         } elseif ($ward = Ward::where('uuid', $uuid)->first()) {
+             $query->where('ward_id', $ward->id);
+         } elseif ($lga = LocalGovernmentArea::where('uuid', $uuid)->first()) {
+             $query->where('lga_id', $lga->id);
+         } elseif ($federalConstituency = FederalConstituency::where('uuid', $uuid)->first()) {
+             $query->where('federal_constituency_id', $federalConstituency->id);
+         } elseif ($senatorialDistrict = SenatorialDistrict::where('uuid', $uuid)->first()) {
+             $query->where('senatorial_district_id', $senatorialDistrict->id);
+         } elseif ($state = State::where('uuid', $uuid)->first()) {
+             $query->where('state_id', $state->id);
+         } elseif ($region = Region::where('uuid', $uuid)->first()) {
+             $query->where('region_id', $region->id);
+         } elseif ($country = Country::where('uuid', $uuid)->first()) {
+             $query->where('country_id', $country->id);
+         }
+     }
+
+     private function defaultPeopleMetricScopeUuid(User $profileData): ?string
+     {
+         return match ($profileData->access_level) {
+             'regionaladmin' => optional($profileData->region)->uuid,
+             'stateadmin' => optional($profileData->state)->uuid,
+             'senatorialadmin' => optional($profileData->senatorialDistrict)->uuid,
+             'federaladmin' => optional($profileData->federalConstituency)->uuid,
+             'lgaadmin' => optional($profileData->lga)->uuid,
+             'wardadmin' => optional($profileData->ward)->uuid,
+             'puadmin' => optional($profileData->pollingUnit)->uuid,
+             default => $this->defaultCountryUuid(),
+         };
+     }
+
+     private function defaultCountryUuid(): ?string
+     {
+         $Setting = SystemSetting::find(1);
+         $countryName = $Setting?->system_country;
+
+         return $countryName ? optional(Country::where('name', $countryName)->first())->uuid : null;
+     }
+
+     private function applyProfileScope(Builder $query, User $profileData): void
+     {
+         app(LocationScopeService::class)->applyScope($query, $profileData, 'users', 'users');
+         $this->enforceParentScopeConsistency($query, $profileData);
+     }
+
+     private function memberActionButtons(User $member): string
+     {
+         $profileData = $this->getProfileData();
+
+         if (!$this->canAccessMember($profileData, $member)) {
+             return '';
+         }
+
+         if ($member->status == 'active') {
+             $button = '
+                 <a href="' . route($profileData->access_level.'.member.suspend', $member->uuid) . '">
+                     <button class="btn btn-warning btn-sm">
+                         <i class="fas fa-pause"></i> Suspend
+                     </button>
+                 </a>
+             ';
+         } else {
+             $button = '
+                 <a href="' . route($profileData->access_level.'.member.suspend', $member->uuid) . '">
+                     <button class="btn btn-success btn-sm">
+                         <i class="fas fa-play"></i> Activate
+                     </button>
+                 </a>
+             ';
+         }
+
+         $actionButtons = '
+             <a href="' . route($profileData->access_level.'.member.view', $member->uuid) . '">
+                 <button class="btn btn-primary btn-sm">
+                     <i class="fas fa-eye"></i> Show
+                 </button>
+             </a>
+             ' . $button;
+
+         if ($this->canEditMember($profileData, $member)) {
+             $actionButtons .= '
+                 <a href="' . route($profileData->access_level.'.member.edit', $member->uuid) . '">
+                     <button class="btn btn-info btn-sm">
+                         <i class="fas fa-pencil-alt"></i> Edit
+                     </button>
+                 </a>
+             ';
+         }
+
+         $actionButtons .= $this->memberDeleteButton($member);
+            return $actionButtons;
      }
 
      public function addMember()
@@ -614,20 +1001,14 @@ class MembersController extends Controller
          $lgas =   LocalGovernmentArea::all();
          $wards = Ward::all();
          $pus = PollingUnit::all();
+         $senatorialDistricts = SenatorialDistrict::orderBy('name')->get();
+         $federalConstituencies = FederalConstituency::orderBy('name')->get();
 
 
-                // Fetch all roles
-            $allRoles = Role::all();
-
-            // Filter roles based on active user's access level
-            $roles = $allRoles->filter(function ($role) use ($profileData) {
-                // Include roles that match the active user's access_level
-                // OR roles that can be assigned to members (like 'user')
-                return $role->group_name === $profileData->access_level || $role->group_name === 'user';
-            });
+            $roles = $this->assignableRoles($profileData);
 
 
-         return view('backend.'.$profileData->access_level.'.member.add', compact( 'profileData', 'pageTitle', 'roles', 'countries', 'regions', 'states', 'lgas', 'wards'));
+         return view('backend.'.$profileData->access_level.'.member.add', compact( 'profileData', 'pageTitle', 'roles', 'countries', 'regions', 'states', 'lgas', 'wards', 'senatorialDistricts', 'federalConstituencies'));
      }
 
      public function storeMember(Request $request)
@@ -640,7 +1021,7 @@ class MembersController extends Controller
              'email' => 'required|email|unique:users,email',
              'password' => 'required|confirmed|min:6',
              'access_level' => 'required',
-         ]);
+         ] + $this->boundaryValidationRules());
 
           // 👇 determine if this new user should be forced into credentials update
     $requiresUpdate = false;
@@ -655,6 +1036,23 @@ class MembersController extends Controller
              $access_level = $request->access_level;
          }
 
+         $requestedAccessRank = $this->accessLevelRank($access_level);
+         $profileAccessRank = $this->accessLevelRank($profileData->access_level);
+
+         if ($requestedAccessRank === null || $profileAccessRank === null) {
+             return redirect()->back()->with($this->invalidMemberAccessNotification());
+         }
+
+         if ($profileAccessRank > $requestedAccessRank) {
+             return redirect()->back()->with($this->unauthorizedMemberAccessNotification('assign this access level to'));
+         }
+
+         $boundaryAssignments = $this->resolveBoundaryAssignments($request, $access_level);
+
+         if (!is_array($boundaryAssignments)) {
+             return $boundaryAssignments;
+         }
+
          $user = User::create([
              'uuid' => Str::uuid()->toString(),
              'username' => $request->username,
@@ -666,6 +1064,8 @@ class MembersController extends Controller
              'country_id' => $request->country_id,
              'region_id' => $request->region_id,
              'state_id' => $request->state_id,
+             'senatorial_district_id' => $boundaryAssignments['senatorial_district_id'],
+             'federal_constituency_id' => $boundaryAssignments['federal_constituency_id'],
              'lga_id' => $request->lga_id,
              'ward_id' => $request->ward_id,
              'polling_unit_id'=> $request->pu_id,
@@ -680,7 +1080,7 @@ class MembersController extends Controller
          // Find the role by its ID
          $role = Role::findById($roleId);
 
-             if ($role) {
+             if ($role && $this->canAssignRole($profileData, $role, $access_level)) {
                  // Sync the role to the member using its name
                  $user->syncRoles([$role->name]);
              } else {
@@ -693,8 +1093,7 @@ class MembersController extends Controller
                  return redirect()->back()->withErrors($notification);
              }
              } else {
-                 // No role selected, assign default role 'Member' (role ID = 40)
-                 $defaultRole = Role::findById(40); // Find the role by its ID (40)
+                 $defaultRole = Role::where('name', 'Member')->where('group_name', 'user')->first();
 
                  if ($defaultRole) {
                      $user->syncRoles([$defaultRole->name]);
@@ -712,19 +1111,6 @@ class MembersController extends Controller
      {
 
          $pageTitle = 'Edit Member';
-        //$member = User::with('roles')->where('uuid', $uuid)->first(); // Fetch member with roles
-
-         // Access level hierarchy
-            $accessLevels = [
-                'superadmin' => 1,
-                'nationaladmin' => 2,
-                'regionaladmin' => 3,
-                'stateadmin' => 4,
-                'lgaadmin' => 5,
-                'wardadmin' => 6,
-                'puadmin' => 7,
-                'user' => 8,
-            ];
 
         // Fetch the logged-in user's profile data
         $profileData = $this->getProfileData();
@@ -732,26 +1118,12 @@ class MembersController extends Controller
         // Fetch the member's data with roles
         $member = User::with('roles')->where('uuid', $uuid)->first();
 
-        // Get the numeric values for both access levels
-        $userAccessLevel = $accessLevels[$profileData->access_level] ?? null; // Logged-in user
-        $memberAccessLevel = $accessLevels[$member->access_level] ?? null; // Target member
-
-        // Check if either access level is undefined
-        if($userAccessLevel === null || $memberAccessLevel === null) {
-            $notification = [
-                "message" => "An invalid access level was detected. Please contact the administrator.",
-                "type" => "error", // This can be 'error', 'success', 'info', or 'warning'
-            ];
-            return redirect()->back()->with($notification);
+        if (!$member || $this->accessLevelRank($profileData->access_level) === null || $this->accessLevelRank($member->access_level) === null) {
+            return redirect()->back()->with($this->invalidMemberAccessNotification());
         }
 
-        // Compare access levels
-        if ($userAccessLevel > $memberAccessLevel) {
-            $notification = [
-                "message" => "You do not have permission to view or edit a profile with higher privileges than yours.",
-                "type" => "warning", // Indicates a permissions issue
-            ];
-            return redirect()->back()->with($notification);
+        if (!$this->canEditMember($profileData, $member)) {
+            return redirect()->back()->with($this->unauthorizedMemberAccessNotification('edit'));
         }
          // $roles = Role::all();  // Assuming a member can have multiple roles
          $countries = Country::all();
@@ -760,25 +1132,19 @@ class MembersController extends Controller
          $lgas = LocalGovernmentArea::all();
          $wards = Ward::all();
          $pollingUnits = PollingUnit::all();
+         $senatorialDistricts = SenatorialDistrict::orderBy('name')->get();
+         $federalConstituencies = FederalConstituency::orderBy('name')->get();
          $religions = Religion::all();
          $ageGrades = AgeGrade::all();
 
 
-         // Fetch all roles
-            $allRoles = Role::all();
-
-           // Filter roles based on the active user's access level
-        $roles = $allRoles->filter(function ($role) use ($profileData, $member) {
-            // Include roles matching the active user's access level
-            // OR roles already assigned to the member
-            return  $member->roles->contains('id', $role->id);
-        });
+        $roles = $this->assignableRoles($profileData, $member);
 
 
 
          return view('backend.'.$profileData->access_level.'.member.member', compact(
              'profileData', 'pageTitle', 'member', 'roles', 'countries',
-             'regions', 'states', 'lgas', 'wards', 'pollingUnits', 'religions', 'ageGrades'
+             'regions', 'states', 'lgas', 'wards', 'pollingUnits', 'senatorialDistricts', 'federalConstituencies', 'religions', 'ageGrades'
          ));
      }
 
@@ -789,6 +1155,14 @@ class MembersController extends Controller
          $profileData = $this->getProfileData();
          // Find the member by ID and update
          $member = User::findOrFail($request->id);
+
+         if ($this->accessLevelRank($profileData->access_level) === null || $this->accessLevelRank($member->access_level) === null) {
+             return redirect()->back()->with($this->invalidMemberAccessNotification());
+         }
+
+         if (!$this->canEditMember($profileData, $member)) {
+             return redirect()->back()->with($this->unauthorizedMemberAccessNotification('edit'));
+         }
 
          // Validation rules
          $validatedData = $request->validate([
@@ -811,9 +1185,25 @@ class MembersController extends Controller
              'occupation' => 'nullable|string|max:255',
              'qualification' => 'nullable|string|max:255',
              'photo' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
-         ]);
+         ] + $this->boundaryValidationRules());
 
+         $requestedAccessLevel = $request->access_level ?: $member->access_level;
+         $requestedAccessRank = $this->accessLevelRank($requestedAccessLevel);
+         $profileAccessRank = $this->accessLevelRank($profileData->access_level);
 
+         if ($requestedAccessRank === null || $profileAccessRank === null) {
+             return redirect()->back()->with($this->invalidMemberAccessNotification());
+         }
+
+         if ($profileAccessRank > $requestedAccessRank) {
+             return redirect()->back()->with($this->unauthorizedMemberAccessNotification('assign this access level to'));
+         }
+
+         $boundaryAssignments = $this->resolveBoundaryAssignments($request, $requestedAccessLevel);
+
+         if (!is_array($boundaryAssignments)) {
+             return $boundaryAssignments;
+         }
 
 
          $member->update([
@@ -827,10 +1217,12 @@ class MembersController extends Controller
              'gender' => $request->gender,
              'region_id' => $request->region_id,
              'state_id' => $request->state_id,
+             'senatorial_district_id' => $boundaryAssignments['senatorial_district_id'],
+             'federal_constituency_id' => $boundaryAssignments['federal_constituency_id'],
              'lga_id' => $request->lga_id,
              'ward_id' => $request->ward_id,
              'polling_unit_id' => $request->polling_unit_id,
-             'access_level' =>  $request->access_level,
+             'access_level' => $requestedAccessLevel,
              'religion_id' => $request->religion_id,
              'address' => $request->address,
              'occupation' => $request->occupation,
@@ -852,7 +1244,7 @@ class MembersController extends Controller
          // Find the role by its ID
          $role = Role::findById($roleId);
 
-             if ($role) {
+             if ($role && $this->canAssignRole($profileData, $role, $requestedAccessLevel)) {
                  // Sync the role to the member using its name
                  $member->syncRoles([$role->name]);
              } else {
@@ -865,8 +1257,7 @@ class MembersController extends Controller
                  return redirect()->back()->with($notification);
              }
              } else {
-                 // No role selected, assign default role 'Member' (role ID = 40)
-                 $defaultRole = Role::findById(40); // Find the role by its ID (40)
+                 $defaultRole = Role::where('name', 'Member')->where('group_name', 'user')->first();
 
                  if ($defaultRole) {
                      $member->syncRoles([$defaultRole->name]);
@@ -888,44 +1279,13 @@ class MembersController extends Controller
          $pageTitle = 'Team Member';
          $member = User::where('uuid', $uuid)->first();
 
-          // Access level hierarchy
-          $accessLevels = [
-            'superadmin' => 1,
-            'nationaladmin' => 2,
-            'regionaladmin' => 3,
-            'stateadmin' => 4,
-            'lgaadmin' => 5,
-            'wardadmin' => 6,
-            'puadmin' => 7,
-            'user' => 8,
-        ];
+         if (!$member || $this->accessLevelRank($profileData->access_level) === null || $this->accessLevelRank($member->access_level) === null) {
+             return redirect()->back()->with($this->invalidMemberAccessNotification());
+         }
 
-
-    // Get the numeric values for both access levels
-    $userAccessLevel = $accessLevels[$profileData->access_level] ?? null; // Logged-in user
-    $memberAccessLevel = $accessLevels[$member->access_level] ?? null; // Target member
-
-    // Check if either access level is undefined
-    if ($userAccessLevel === null || $memberAccessLevel === null) {
-        $notification = [
-            "message" => "An invalid access level was detected. Please contact the administrator.",
-            "type" => "error", // This can be 'error', 'success', 'info', or 'warning'
-        ];
-        return redirect()->back()->with($notification);
-    }
-
-    // Compare access levels
-    if ($userAccessLevel > $memberAccessLevel) {
-        $notification = [
-            "message" => "You do not have permission to view or edit a profile with higher privileges than yours.",
-            "type" => "error", // Indicates a permissions issue
-        ];
-        return redirect()->back()->with($notification);
-    }
-
-
-
-
+         if (!$this->canAccessMember($profileData, $member)) {
+             return redirect()->back()->with($this->unauthorizedMemberAccessNotification('view'));
+         }
 
 
          $roles = Role::all();  // Assuming a member can have multiple roles
@@ -949,41 +1309,13 @@ class MembersController extends Controller
          $profileData = $this->getProfileData();
          $member = User::where('uuid', $uuid)->first();
 
+         if (!$member || $this->accessLevelRank($profileData->access_level) === null || $this->accessLevelRank($member->access_level) === null) {
+             return redirect()->back()->with($this->invalidMemberAccessNotification());
+         }
 
-         // Access level hierarchy
-         $accessLevels = [
-            'superadmin' => 1,
-            'nationaladmin' => 2,
-            'regionaladmin' => 3,
-            'stateadmin' => 4,
-            'lgaadmin' => 5,
-            'wardadmin' => 6,
-            'puadmin' => 7,
-            'user' => 8,
-        ];
-
-
-    // Get the numeric values for both access levels
-    $userAccessLevel = $accessLevels[$profileData->access_level] ?? null; // Logged-in user
-    $memberAccessLevel = $accessLevels[$member->access_level] ?? null; // Target member
-
-    // Check if either access level is undefined
-    if ($userAccessLevel === null || $memberAccessLevel === null) {
-        $notification = [
-            "message" => "An invalid access level was detected. Please contact the administrator.",
-            "type" => "error", // This can be 'error', 'success', 'info', or 'warning'
-        ];
-        return redirect()->back()->with($notification);
-    }
-
-    // Compare access levels
-    if ($userAccessLevel > $memberAccessLevel) {
-        $notification = [
-            "message" => "You do not have permission to suspend or delete a profile with higher privileges than yours.",
-            "type" => "error", // Indicates a permissions issue
-        ];
-        return redirect()->back()->with($notification);
-    }
+         if (!$this->canAccessMember($profileData, $member)) {
+             return redirect()->back()->with($this->unauthorizedMemberAccessNotification('suspend'));
+         }
 
          //check status and suspend or activated accordingly
          if($member->status == 'inactive'){
@@ -1014,46 +1346,9 @@ class MembersController extends Controller
      {
 
         $profileData = $this->getProfileData();
+        abort_unless($this->canDeleteUsers($profileData), 403);
          // Find the member by uuid
          $member = User::where('uuid', $uuid)->first();
-
-
-
-         // Access level hierarchy
-         $accessLevels = [
-            'superadmin' => 1,
-            'nationaladmin' => 2,
-            'regionaladmin' => 3,
-            'stateadmin' => 4,
-            'lgaadmin' => 5,
-            'wardadmin' => 6,
-            'puadmin' => 7,
-        ];
-
-
-    // Get the numeric values for both access levels
-    $userAccessLevel = $accessLevels[$profileData->access_level] ?? null; // Logged-in user
-    $memberAccessLevel = $accessLevels[$member->access_level] ?? null; // Target member
-
-    // Check if either access level is undefined
-    if ($userAccessLevel === null || $memberAccessLevel === null) {
-        $notification = [
-            "message" => "An invalid access level was detected. Please contact the administrator.",
-            "type" => "error", // This can be 'error', 'success', 'info', or 'warning'
-        ];
-        return redirect()->back()->with($notification);
-    }
-
-    // Compare access levels
-    if ($userAccessLevel > $memberAccessLevel) {
-        $notification = [
-            "message" => "You do not have permission to suspend or delete a profile with higher privileges than yours.",
-            "type" => "error", // Indicates a permissions issue
-        ];
-        return redirect()->back()->with($notification);
-    }
-
-
 
          // Check if the member exists
          if (!$member) {
@@ -1067,6 +1362,11 @@ class MembersController extends Controller
              return redirect()->back()->with($notification);
          }
 
+
+
+         if ($this->accessLevelRank($profileData->access_level) === null || $this->accessLevelRank($member->access_level) === null) {
+             return redirect()->back()->with($this->invalidMemberAccessNotification());
+         }
          // Attempt to delete the member
          try {
              $member->delete();
@@ -1107,8 +1407,9 @@ class MembersController extends Controller
             // Find region by UUID or return a 404 error if not found
             $region = Region::where('uuid', $uuid)->firstOrFail();
 
-            // Retrieve members belonging to the region
-            $members = User::where('region_id', $region->id)->get();
+            $members = $this->scopedMembersQuery($profileData)
+                ->where('region_id', $region->id)
+                ->get();
 
             return view('backend.' . $profileData->access_level . '.member.viewMembersByRegion', compact('region', 'members', 'profileData'));
     }
@@ -1120,7 +1421,7 @@ class MembersController extends Controller
 
             $region = Region::where('uuid', $uuid)->first();
 
-            $members = User::query()->where('access_level', '!=', 'superadmin')
+            $members = $this->scopedMembersQuery()
                             ->where('region_id', $region->id);
 
                             return datatables()->eloquent($members)
@@ -1190,16 +1491,11 @@ class MembersController extends Controller
                                     <i class="fas fa-pencil-alt"></i> Edit
                                 </button>
                             </a>
-                            <form action="' . route($profileData->access_level.'.member.delete', $member->uuid) . '" method="POST" style="display:inline-block;" data-associated-users="false">
-                                ' . csrf_field() . method_field('DELETE') . '
-                                <button type="submit" class="btn btn-danger btn-sm delete-btn">
-                                    <i class="fas fa-trash"></i> Delete
-                                </button>
-                            </form>
                         ';
                     }
 
-                    return $actionButtons;
+                    $actionButtons .= $this->memberDeleteButton($member);
+            return $actionButtons;
                 })
                 ->rawColumns(['role', 'action']) // Ensures that HTML in the 'role' and 'action' columns is rendered properly
                 ->make(true);
@@ -1242,6 +1538,10 @@ class MembersController extends Controller
             $states = State::orderBy('name', 'asc')->get();
         }
 
+        $states->loadCount(['users as members_count' => function ($query) {
+            $query->where('access_level', '!=', 'superadmin');
+        }]);
+
         return view('backend.'.$profileData->access_level.'.member.membersByState', compact('states', 'profileData'));
     }
 
@@ -1253,8 +1553,9 @@ class MembersController extends Controller
         // Find state by UUID or return a 404 error if not found
         $state = State::where('uuid', $uuid)->firstOrFail();
 
-        // Retrieve members belonging to the region
-        $members = User::where('state_id', $state->id)->get();
+        $members = $this->scopedMembersQuery($profileData)
+            ->where('state_id', $state->id)
+            ->get();
 
         return view('backend.' . $profileData->access_level . '.member.viewMembersByState', compact('state', 'members', 'profileData'));
     }
@@ -1263,7 +1564,7 @@ class MembersController extends Controller
     {
 
         $state = State::where('uuid', $uuid)->first();
-        $members = User::query()->where('access_level', '!=', 'superadmin')
+        $members = $this->scopedMembersQuery()
                         ->where('state_id', $state->id);
 
           return datatables()->eloquent($members)
@@ -1336,16 +1637,11 @@ class MembersController extends Controller
                                 <i class="fas fa-pencil-alt"></i> Edit
                             </button>
                         </a>
-                        <form action="' . route($profileData->access_level.'.member.delete', $member->uuid) . '" method="POST" style="display:inline-block;" data-associated-users="false">
-                            ' . csrf_field() . method_field('DELETE') . '
-                            <button type="submit" class="btn btn-danger btn-sm delete-btn">
-                                <i class="fas fa-trash"></i> Delete
-                            </button>
-                        </form>
                     ';
                 }
 
-                return $actionButtons;
+                $actionButtons .= $this->memberDeleteButton($member);
+            return $actionButtons;
             })
             ->rawColumns(['role', 'action']) // Ensures that HTML in the 'role' and 'action' columns is rendered properly
             ->make(true);
@@ -1415,6 +1711,10 @@ class MembersController extends Controller
             $lgas = LocalGovernmentArea::orderBy('name', 'asc')->get();
         }
 
+        $lgas->loadCount(['users as members_count' => function ($query) {
+            $query->where('access_level', '!=', 'superadmin');
+        }]);
+
         return view('backend.' . $profileData->access_level . '.member.membersByLga', compact('lgas', 'profileData'));
     }
 
@@ -1425,8 +1725,9 @@ class MembersController extends Controller
         // Find state by UUID or return a 404 error if not found
         $lga = LocalGovernmentArea::where('uuid', $uuid)->firstOrFail();
 
-        // Retrieve members belonging to the region
-        $members = User::where('lga_id', $lga->id)->get();
+        $members = $this->scopedMembersQuery($profileData)
+            ->where('lga_id', $lga->id)
+            ->get();
 
         return view('backend.' . $profileData->access_level . '.member.viewMembersByLga', compact('lga', 'members', 'profileData'));
     }
@@ -1436,7 +1737,7 @@ class MembersController extends Controller
 
         $lga = LocalGovernmentArea::where('uuid', $uuid)->first();
 
-        $members = User::query()->where('access_level', '!=', 'superadmin')
+        $members = $this->scopedMembersQuery()
                         ->where('lga_id', $lga->id);
 
                         return datatables()->eloquent($members)
@@ -1510,16 +1811,11 @@ class MembersController extends Controller
                                 <i class="fas fa-pencil-alt"></i> Edit
                             </button>
                         </a>
-                        <form action="' . route($profileData->access_level.'.member.delete', $member->uuid) . '" method="POST" style="display:inline-block;" data-associated-users="false">
-                            ' . csrf_field() . method_field('DELETE') . '
-                            <button type="submit" class="btn btn-danger btn-sm delete-btn">
-                                <i class="fas fa-trash"></i> Delete
-                            </button>
-                        </form>
                     ';
                 }
 
-                return $actionButtons;
+                $actionButtons .= $this->memberDeleteButton($member);
+            return $actionButtons;
             })
             ->rawColumns(['role', 'action']) // Ensures that HTML in the 'role' and 'action' columns is rendered properly
             ->make(true);
@@ -1529,7 +1825,11 @@ class MembersController extends Controller
     public function membersBySenatorialDistricts($uuid = null)
     {
         $profileData = $this->getProfileData();
-        $districts = SenatorialDistrict::with(['state', 'users'])->orderBy('name', 'asc');
+        $districts = SenatorialDistrict::with('state')
+            ->withCount(['users as members_count' => function ($query) {
+                $query->where('access_level', '!=', 'superadmin');
+            }])
+            ->orderBy('name', 'asc');
 
         if ($uuid) {
             if ($state = State::where('uuid', $uuid)->first()) {
@@ -1561,7 +1861,11 @@ class MembersController extends Controller
     public function membersByFederalConstituencies($uuid = null)
     {
         $profileData = $this->getProfileData();
-        $constituencies = FederalConstituency::with(['state', 'senatorialDistrict', 'users'])->orderBy('name', 'asc');
+        $constituencies = FederalConstituency::with(['state', 'senatorialDistrict'])
+            ->withCount(['users as members_count' => function ($query) {
+                $query->where('access_level', '!=', 'superadmin');
+            }])
+            ->orderBy('name', 'asc');
 
         if ($uuid) {
             if ($senatorialDistrict = SenatorialDistrict::where('uuid', $uuid)->first()) {
@@ -1617,8 +1921,9 @@ class MembersController extends Controller
         // Find state by UUID or return a 404 error if not found
         $ward = Ward::where('uuid', $uuid)->firstOrFail();
 
-        // Retrieve members belonging to the region
-        $members = User::where('ward_id', $ward->id)->get();
+        $members = $this->scopedMembersQuery($profileData)
+            ->where('ward_id', $ward->id)
+            ->get();
 
         return view('backend.' . $profileData->access_level . '.member.viewMembersByWard', compact('ward', 'members', 'profileData'));
 
@@ -1631,7 +1936,7 @@ class MembersController extends Controller
 
         $ward = Ward::where('uuid', $uuid)->first();
 
-        $members = User::query()->where('access_level', '!=', 'superadmin')
+        $members = $this->scopedMembersQuery()
                         ->where('ward_id', $ward->id);
 
                         return datatables()->eloquent($members)
@@ -1705,16 +2010,11 @@ class MembersController extends Controller
                                 <i class="fas fa-pencil-alt"></i> Edit
                             </button>
                         </a>
-                        <form action="' . route($profileData->access_level.'.member.delete', $member->uuid) . '" method="POST" style="display:inline-block;" data-associated-users="false">
-                            ' . csrf_field() . method_field('DELETE') . '
-                            <button type="submit" class="btn btn-danger btn-sm delete-btn">
-                                <i class="fas fa-trash"></i> Delete
-                            </button>
-                        </form>
                     ';
                 }
 
-                return $actionButtons;
+                $actionButtons .= $this->memberDeleteButton($member);
+            return $actionButtons;
             })
             ->rawColumns(['role', 'action']) // Ensures that HTML in the 'role' and 'action' columns is rendered properly
             ->make(true);
@@ -1747,8 +2047,9 @@ class MembersController extends Controller
         // Find state by UUID or return a 404 error if not found
         $pu = PollingUnit::where('uuid', $uuid)->firstOrFail();
 
-        // Retrieve members belonging to the region
-        $members = User::where('polling_unit_id', $pu->id)->get();
+        $members = $this->scopedMembersQuery($profileData)
+            ->where('polling_unit_id', $pu->id)
+            ->get();
 
         return view('backend.' . $profileData->access_level . '.member.viewMembersByPu', compact('pu', 'members', 'profileData'));
 
@@ -1761,7 +2062,7 @@ class MembersController extends Controller
 
         $pu = PollingUnit::where('uuid', $uuid)->first();
 
-        $members = User::query()->where('access_level', '!=', 'superadmin')
+        $members = $this->scopedMembersQuery()
                         ->where('polling_unit_id', $pu->id);
 
                         return datatables()->eloquent($members)
@@ -1836,16 +2137,11 @@ class MembersController extends Controller
                                 <i class="fas fa-pencil-alt"></i> Edit
                             </button>
                         </a>
-                        <form action="' . route($profileData->access_level.'.member.delete', $member->uuid) . '" method="POST" style="display:inline-block;" data-associated-users="false">
-                            ' . csrf_field() . method_field('DELETE') . '
-                            <button type="submit" class="btn btn-danger btn-sm delete-btn">
-                                <i class="fas fa-trash"></i> Delete
-                            </button>
-                        </form>
                     ';
                 }
 
-                return $actionButtons;
+                $actionButtons .= $this->memberDeleteButton($member);
+            return $actionButtons;
             })
             ->rawColumns(['role', 'action']) // Ensures that HTML in the 'role' and 'action' columns is rendered properly
             ->make(true);
@@ -1876,8 +2172,10 @@ class MembersController extends Controller
         // Find state by UUID or return a 404 error if not found
         $pu = PollingUnit::where('uuid', $uuid)->firstOrFail();
 
-        // Retrieve members belonging to the region
-        $members = User::where('polling_unit_id', $pu->id)->where('validVoter', 'yes')->get();
+        $members = $this->scopedMembersQuery($profileData)
+            ->where('polling_unit_id', $pu->id)
+            ->where('validVoter', 'yes')
+            ->get();
 
         return view('backend.' . $profileData->access_level . '.member.viewMembersByPu', compact('pu', 'members', 'profileData'));
 	}
@@ -1890,8 +2188,10 @@ class MembersController extends Controller
         // Find state by UUID or return a 404 error if not found
         $pu = PollingUnit::where('uuid', $uuid)->firstOrFail();
 
-        // Retrieve members belonging to the region
-        $members = User::where('polling_unit_id', $pu->id)->where('validVoter', 'no')->get();
+        $members = $this->scopedMembersQuery($profileData)
+            ->where('polling_unit_id', $pu->id)
+            ->where('validVoter', 'no')
+            ->get();
 
         return view('backend.' . $profileData->access_level . '.member.viewMembersByPu', compact('pu', 'members', 'profileData'));
 	 }
@@ -1900,8 +2200,7 @@ class MembersController extends Controller
     {
         $pu = PollingUnit::where('uuid', $uuid)->firstOrFail();
 
-        $members = User::query()
-            ->where('access_level', '!=', 'superadmin')
+        $members = $this->scopedMembersQuery()
             ->where('polling_unit_id', $pu->id)
             ->where('validVoter', 'yes'); // ✅ filter eligibility
 
@@ -1919,8 +2218,7 @@ class MembersController extends Controller
                 )->implode(' ');
             })
             ->addColumn('action', function ($member) {
-                $profileData = $this->getProfileData();
-                return view('backend.partials.member_actions', compact('member', 'profileData'))->render();
+                return $this->memberActionButtons($member);
             })
             ->rawColumns(['role', 'action'])
             ->make(true);
@@ -1967,3 +2265,4 @@ class MembersController extends Controller
     }
 
 }
+

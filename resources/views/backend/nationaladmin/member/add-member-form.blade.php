@@ -125,6 +125,10 @@
                     @if(auth()->user()->access_level == 'superadmin' || auth()->user()->access_level == 'nationaladmin' || auth()->user()->access_level == 'regionaladmin' || auth()->user()->access_level == 'stateadmin' )
                     <option value="stateadmin">State Admin Access</option>
                      @endif
+                     @if(auth()->user()->access_level == 'superadmin' || auth()->user()->access_level == 'nationaladmin' || auth()->user()->access_level == 'regionaladmin' || auth()->user()->access_level == 'stateadmin')
+                    <option value="senatorialadmin">Senatorial District Admin Access</option>
+                    <option value="federaladmin">Federal Constituency Admin Access</option>
+                    @endif
                      @if(auth()->user()->access_level == 'superadmin' || auth()->user()->access_level == 'nationaladmin' || auth()->user()->access_level == 'regionaladmin' || auth()->user()->access_level == 'stateadmin' || auth()->user()->access_level == 'lgaadmin')
                      <option value="lgaadmin">LGA Admin Access</option>
                      @endif
@@ -208,6 +212,8 @@
 
 
 
+    @include('backend.shared.member.boundary-fields')
+
     <div class="form-group row">
         <label for="lga-dropdown" class="col-sm-2 col-form-label">Voting LGA</label>
         <div class="col-sm-10">
@@ -256,3 +262,4 @@
 
             </div>
             <!-- /.col -->
+

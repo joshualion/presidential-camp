@@ -21,6 +21,7 @@ use Illuminate\Support\Facades\View;
 use Illuminate\Support\Str;
 use App\Models\User;
 use App\Services\LocationDashboardMetricsService;
+use App\Services\StateDashboardDetailMetricsService;
 use Illuminate\Http\Request;
 use Spatie\Permission\Models\Role;
 
@@ -525,7 +526,8 @@ class SuperAdminController extends Controller
 
                 $excoCount = User::where('senatorial_district_id', $district->id)
                     ->where('access_level', '!=', 'user')
-                    ->where('access_level', '!=', 'superadmin')->count();
+                    ->where('access_level', '!=', 'superadmin')
+            ->where('access_level', '!=', 'puadmin')->count();
 
                 $memberCount = User::where('senatorial_district_id', $district->id)
                     ->where('access_level', '!=', 'superadmin')
@@ -538,6 +540,9 @@ class SuperAdminController extends Controller
                     ->where('access_level', '!=', 'superadmin')
                     ->where('created_at', '>=', Carbon::now()->subDays(1))
                     ->count();
+
+                $dashboardMetrics = app(LocationDashboardMetricsService::class)->forSenatorialDistrict($district, $profileData);
+
 
                 return view('backend.shared.senatorial-district.dashboard',
                     compact(
@@ -553,7 +558,8 @@ class SuperAdminController extends Controller
                         'excoCount',
                         'memberCount',
                         'userCount',
-                        'newMembers'
+                        'newMembers',
+                        'dashboardMetrics'
                     ));
             }
 
@@ -587,7 +593,8 @@ class SuperAdminController extends Controller
 
                 $excoCount = User::where('federal_constituency_id', $constituency->id)
                     ->where('access_level', '!=', 'user')
-                    ->where('access_level', '!=', 'superadmin')->count();
+                    ->where('access_level', '!=', 'superadmin')
+            ->where('access_level', '!=', 'puadmin')->count();
 
                 $memberCount = User::where('federal_constituency_id', $constituency->id)
                     ->where('access_level', '!=', 'superadmin')
@@ -600,6 +607,9 @@ class SuperAdminController extends Controller
                     ->where('access_level', '!=', 'superadmin')
                     ->where('created_at', '>=', Carbon::now()->subDays(1))
                     ->count();
+
+                $dashboardMetrics = app(LocationDashboardMetricsService::class)->forFederalConstituency($constituency, $profileData);
+
 
                 return view('backend.shared.federal-constituency.dashboard',
                     compact(
@@ -615,7 +625,8 @@ class SuperAdminController extends Controller
                         'excoCount',
                         'memberCount',
                         'userCount',
-                        'newMembers'
+                        'newMembers',
+                        'dashboardMetrics'
                     ));
             }
 
@@ -671,7 +682,8 @@ class SuperAdminController extends Controller
                      ->count();
                      $excoCount = User::where('state_id', $state->id)
                      ->where('access_level', '!=', 'user')
-                     ->where('access_level', '!=', 'superadmin')->count();
+                     ->where('access_level', '!=', 'superadmin')
+            ->where('access_level', '!=', 'puadmin')->count();
 
                      $memberCount = User ::where('state_id', $state->id)
                      ->where('access_level', '!=', 'superadmin')
@@ -688,6 +700,7 @@ class SuperAdminController extends Controller
                      $EligibleVotersCount = User ::where('state_id', $state->id)
                         ->where('access_level', '!=', 'superadmin')
                         ->where('validvoter', 'yes')->count();
+                     $stateDashboardMetrics = app(StateDashboardDetailMetricsService::class)->forState($state, $profileData);
 
 
 
@@ -696,6 +709,7 @@ class SuperAdminController extends Controller
                                 'profileData',
                                 'pageTitle',
                                 'state',
+                                'stateDashboardMetrics',
                                 'senatorialDistrictCount',
                                 'senatorialDistrictsWithUsersCount',
                                 'federalConstituencyCount',
@@ -750,7 +764,8 @@ class SuperAdminController extends Controller
                      ->count();
                      $excoCount = User::where('lga_id', $lga->id)
                      ->where('access_level', '!=', 'user')
-                     ->where('access_level', '!=', 'superadmin')->count();
+                     ->where('access_level', '!=', 'superadmin')
+            ->where('access_level', '!=', 'puadmin')->count();
 
                      $memberCount = User ::where('lga_id', $lga->id)
                      ->where('access_level', '!=', 'superadmin')
@@ -766,6 +781,8 @@ class SuperAdminController extends Controller
 
 
 
+                    $dashboardMetrics = app(LocationDashboardMetricsService::class)->forLocalGovernmentArea($lga, $profileData);
+
                     return view('backend.'.$profileData->access_level.'.lga.dashboard',
                             compact(
                                 'profileData',
@@ -779,7 +796,7 @@ class SuperAdminController extends Controller
                                 'memberCount',
                                 'userCount',
                                 'newMembers'
-                            ));
+                    ));
 
 
             }
@@ -814,7 +831,8 @@ class SuperAdminController extends Controller
 
                      $excoCount = User::where('ward_id', $ward->id)
                      ->where('access_level', '!=', 'user')
-                     ->where('access_level', '!=', 'superadmin')->count();
+                     ->where('access_level', '!=', 'superadmin')
+            ->where('access_level', '!=', 'puadmin')->count();
 
                      $memberCount = User ::where('ward_id', $ward->id)
                      ->where('access_level', '!=', 'superadmin')
@@ -838,6 +856,8 @@ class SuperAdminController extends Controller
 
 
 
+                    $dashboardMetrics = app(LocationDashboardMetricsService::class)->forWard($ward, $profileData);
+
                     return view('backend.'.$profileData->access_level.'.ward.dashboard',
                             compact(
                                 'profileData',
@@ -851,7 +871,7 @@ class SuperAdminController extends Controller
                                 'inEligibleVotersCount',
                                 'userCount',
                                 'newMembers'
-                            ));
+                    ));
 
 
             }
@@ -874,7 +894,8 @@ class SuperAdminController extends Controller
 
                      $excoCount = User::where('polling_unit_id', $pu->id)
                      ->where('access_level', '!=', 'user')
-                     ->where('access_level', '!=', 'superadmin')->count();
+                     ->where('access_level', '!=', 'superadmin')
+            ->where('access_level', '!=', 'puadmin')->count();
 
                      $memberCount = User ::where('polling_unit_id', $pu->id)
                      ->where('access_level', '!=', 'superadmin')
@@ -899,6 +920,8 @@ class SuperAdminController extends Controller
 
 
 
+                    $dashboardMetrics = app(LocationDashboardMetricsService::class)->forPollingUnit($pu, $profileData);
+
                     return view('backend.'.$profileData->access_level.'.pu.dashboard',
                             compact(
                                 'profileData',
@@ -910,7 +933,7 @@ class SuperAdminController extends Controller
                                 'inEligibleVotersCount',
                                 'userCount',
                                 'newMembers'
-                            ));
+                    ));
 
 
             }

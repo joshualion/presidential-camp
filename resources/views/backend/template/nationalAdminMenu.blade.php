@@ -62,7 +62,7 @@
 
                           <li class="nav-item">
                             <a href="/national/members/bypu/" class="nav-link">
-                            <i class="fas fa-user nav-icon"></i>
+                              <i class="fas fa-user nav-icon"></i>
                               <p>Members By PU</p>
                             </a>
                           </li>
@@ -71,7 +71,9 @@
             </li>
             {{-- / Members --}}
 
-            {{-- Election --}}
+            @include('backend.template.partials.agentMenu')
+
+               {{-- Election --}}
             <li class="tab nav-item menu-close">
                                 <a href="#" class="nav-link">
                                   <i class="nav-icon fas fa-award"></i>
@@ -94,16 +96,7 @@
                                       <p>Situation Room</p>
                                     </a>
                                   </li>
-                                  @if(
-                                    $profileData->hasAnyRole([
-                                        'National ICT Director',
-                                        'Regional ICT Director',
-                                        'State ICT Director',
-                                        'LGA ICT Director',
-                                        'Ward ICT Director',
-                                        'PU ICT Director',
-                                        'Pu Agent'
-                                    ]) || $profileData->access_level == 'superadmin' )
+                                  @if(app(\App\Services\PollingUnitResultPermissionService::class)->userHasAnyApprovedAssignment($profileData))
                                   <li class="nav-item">
                                     <a href="/national/vote/add" class="nav-link">
                                     <i class="fa fa-cloud nav-icon"></i>

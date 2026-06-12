@@ -34,6 +34,11 @@ class PollingUnitResult extends Model
         'disputed_at',
         'disputed_by',
         'dispute_reason',
+        'result_status',
+        'voided_by',
+        'voided_at',
+        'void_reason',
+        'replaced_by_result_id',
     ];
 
     protected $casts = [
@@ -52,6 +57,9 @@ class PollingUnitResult extends Model
         'verified_by' => 'integer',
         'disputed_at' => 'datetime',
         'disputed_by' => 'integer',
+        'voided_at' => 'datetime',
+        'voided_by' => 'integer',
+        'replaced_by_result_id' => 'integer',
     ];
 
     public function votes()
@@ -112,6 +120,16 @@ class PollingUnitResult extends Model
     public function disputedBy()
     {
         return $this->belongsTo(User::class, 'disputed_by');
+    }
+
+    public function voidedBy()
+    {
+        return $this->belongsTo(User::class, 'voided_by');
+    }
+
+    public function replacedByResult()
+    {
+        return $this->belongsTo(self::class, 'replaced_by_result_id');
     }
 
     //Auto generate UUID when creating a new religion

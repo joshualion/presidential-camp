@@ -48,7 +48,7 @@ $ward = \App\Models\Ward::find(Auth::user()->ward_id);
 
                           <li class="nav-item">
                             <a href="/ward/members/bypu/{{$ward->uuid}}" class="nav-link">
-                            <i class="fas fa-user nav-icon"></i>
+                              <i class="fas fa-user nav-icon"></i>
                               <p>Members By PU</p>
                             </a>
                           </li>
@@ -57,6 +57,8 @@ $ward = \App\Models\Ward::find(Auth::user()->ward_id);
             </li>
             {{-- / Members --}}
             @endif
+
+            @include('backend.template.partials.agentMenu')
 
                    {{-- Election --}}
         <li class="tab nav-item menu-close">
@@ -81,16 +83,7 @@ $ward = \App\Models\Ward::find(Auth::user()->ward_id);
                 <p>Situation Room</p>
               </a>
             </li>
-            @if(
-              $profileData->hasAnyRole([
-                  'National ICT Director',
-                  'lga ICT Director',
-                  'lga ICT Director',
-                  'LGA ICT Director',
-                  'Ward ICT Director',
-                  'PU ICT Director',
-                  'Pu Agent'
-              ]) || $profileData->access_level == 'superadmin' )
+            @if(app(\App\Services\PollingUnitResultPermissionService::class)->userHasAnyApprovedAssignment($profileData))
             <li class="nav-item">
               <a href="/ward/vote/add" class="nav-link">
               <i class="fa fa-cloud nav-icon"></i>
@@ -223,6 +216,29 @@ $ward = \App\Models\Ward::find(Auth::user()->ward_id);
             {{-- / Messaging --}}
 
 
+
+
+
+            {{-- Locations --}}
+            <li class="tab nav-item menu-close">
+                        <a href="#" class="nav-link">
+                          <i class="nav-icon fas fa-globe-africa"></i>
+                          <p>
+                            Locations
+                            <i class="right fas fa-angle-left"></i>
+                          </p>
+                        </a>
+                        <ul class="nav nav-treeview">
+                          <li class="nav-item">
+                            <a href="/ward/location/pollingunits" class="nav-link">
+                            <i class="fas fa-monument nav-icon"></i>
+                              <p>Polling Units</p>
+                            </a>
+                          </li>
+                        </ul>
+
+            </li>
+            {{-- / Locations --}}
 
 
 

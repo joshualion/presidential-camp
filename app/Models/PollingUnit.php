@@ -30,6 +30,16 @@ class PollingUnit extends Model
         return $this->hasMany(User::class);
     }
 
+    public function agentAssignments()
+    {
+        return $this->hasMany(PollingUnitAgentAssignment::class);
+    }
+
+    public function approvedAgentAssignments()
+    {
+        return $this->hasMany(PollingUnitAgentAssignment::class)->approved();
+    }
+
     public function votes(){
         return $this->hasMany(Vote::class);
     }

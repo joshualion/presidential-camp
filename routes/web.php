@@ -8,6 +8,7 @@ use App\Http\Controllers\MembersController;
 use App\Http\Controllers\ElectionController;
 use App\Http\Controllers\CredentialUpdateController;
 use App\Http\Controllers\ProfileCompletionController;
+use App\Http\Controllers\PollingUnitAgentController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\NotificationController;
 
@@ -30,13 +31,13 @@ Route::post('/get-federal-constituencies-by-senatorial-district', [AjaxControlle
 
 Route::get('/get-roles-by-access-level/{accessLevel}', [AjaxController::class, 'getRolesByAccessLevel'])->name('ajaxGetRolesByAccessLevel');
 
-Route::get('/lga/data', [AjaxController::class, 'getLgaData'])->name('lgas.data');
-Route::get('/senatorial-district/data', [AjaxController::class, 'getSenatorialDistrictData'])->name('senatorial-districts.data');
-Route::get('/federal-constituency/data', [AjaxController::class, 'getFederalConstituencyData'])->name('federal-constituencies.data');
+Route::get('/lga/data', [AjaxController::class, 'getLgaData'])->name('lgas.data')->middleware(['auth']);
+Route::get('/senatorial-district/data', [AjaxController::class, 'getSenatorialDistrictData'])->name('senatorial-districts.data')->middleware(['auth']);
+Route::get('/federal-constituency/data', [AjaxController::class, 'getFederalConstituencyData'])->name('federal-constituencies.data')->middleware(['auth']);
 
-Route::get('/ward/data', [AjaxController::class, 'getWardData'])->name('wards.data');
+Route::get('/ward/data', [AjaxController::class, 'getWardData'])->name('wards.data')->middleware(['auth']);
 
-Route::get('/pu/data', [AjaxController::class, 'getPUData'])->name('pus.data');
+Route::get('/pu/data', [AjaxController::class, 'getPUData'])->name('pus.data')->middleware(['auth']);
 
 Route::get('/election/{uuid}/chart-data', [ElectionController::class, 'getElectionResultChartData'])
     ->name('election.chart.data');
@@ -190,13 +191,50 @@ Route::middleware(['auth','check_onboarding', 'kuyak_eyen_ino', 'eyen_ino_no_way
     Route::post('/update-profile-photo', [HomeController::class, 'updateProfilePhoto'])->name('update.profile.photo');
     Route::post('/update-cover-photo', [HomeController::class, 'updateCoverPhoto'])->name('update.cover.photo');
 
-
-
 });
 
-
-
-
+foreach ([
+    'superadmin' => 'superadmin',
+    'nationaladmin' => 'national',
+    'regionaladmin' => 'regional',
+    'stateadmin' => 'state',
+    'senatorialadmin' => 'senatorial',
+    'federaladmin' => 'federal',
+    'lgaadmin' => 'lga',
+    'wardadmin' => 'ward',
+    'puadmin' => 'pu',
+    'user' => '',
+] as $accessLevel => $prefix) {
+    Route::middleware(['auth', 'access_level:'.$accessLevel])
+        ->prefix(trim($prefix.'/agents', '/'))
+        ->name($accessLevel.'.agents.')
+        ->group(function () {
+            Route::get('/', [PollingUnitAgentController::class, 'index'])->name('index');
+            Route::get('/request', [PollingUnitAgentController::class, 'createRequest'])->name('request');
+            Route::post('/request', [PollingUnitAgentController::class, 'storeRequest'])->name('request.store');
+            Route::get('/status', [PollingUnitAgentController::class, 'myStatus'])->name('status');
+            Route::get('/nominate', [PollingUnitAgentController::class, 'createNomination'])->name('nominate');
+            Route::post('/nominate', [PollingUnitAgentController::class, 'storeNomination'])->name('nominate.store');
+            Route::get('/direct-assign', [PollingUnitAgentController::class, 'directAssignForm'])->name('direct-assign');
+            Route::post('/direct-assign', [PollingUnitAgentController::class, 'directAssignStore'])->name('direct-assign.store');
+            Route::get('/locations/user/{user}', [PollingUnitAgentController::class, 'userLocation'])->name('locations.user');
+            Route::get('/locations/states', [PollingUnitAgentController::class, 'locationStates'])->name('locations.states');
+            Route::get('/locations/lgas', [PollingUnitAgentController::class, 'locationLgas'])->name('locations.lgas');
+            Route::get('/locations/wards', [PollingUnitAgentController::class, 'locationWards'])->name('locations.wards');
+            Route::get('/locations/polling-units', [PollingUnitAgentController::class, 'locationPollingUnits'])->name('locations.polling-units');
+            Route::get('/{uuid}', [PollingUnitAgentController::class, 'show'])->name('show');
+            Route::post('/{uuid}/identity', [PollingUnitAgentController::class, 'updateIdentity'])->name('identity.store');
+            Route::post('/{uuid}/identity/verify', [PollingUnitAgentController::class, 'verifyIdentity'])->name('identity.verify');
+            Route::post('/{uuid}/identity/reject', [PollingUnitAgentController::class, 'rejectIdentity'])->name('identity.reject');
+            Route::post('/{uuid}/approve', [PollingUnitAgentController::class, 'approve'])->name('approve');
+            Route::post('/{uuid}/approve-directly', [PollingUnitAgentController::class, 'approveDirectly'])->name('approve-directly');
+            Route::post('/{uuid}/reject', [PollingUnitAgentController::class, 'reject'])->name('reject');
+            Route::post('/{uuid}/suspend', [PollingUnitAgentController::class, 'suspend'])->name('suspend');
+            Route::post('/{uuid}/revoke', [PollingUnitAgentController::class, 'revoke'])->name('revoke');
+            Route::post('/{uuid}/reactivate', [PollingUnitAgentController::class, 'reactivate'])->name('reactivate');
+            Route::get('/{uuid}/document/{type}', [PollingUnitAgentController::class, 'document'])->name('document');
+        });
+}
 
 //Require Super Admin Routes file
 require __DIR__.'/superAdmin.php';

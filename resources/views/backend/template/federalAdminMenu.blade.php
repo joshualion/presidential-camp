@@ -7,6 +7,47 @@
                 <p>Dashboard</p>
             </a>
         </li>
+        {{-- Members --}}
+        <li class="tab nav-item menu-close">
+            <a href="#" class="nav-link">
+                <i class="nav-icon fas fa-users"></i>
+                <p>
+                    Members
+                    <i class="right fas fa-angle-left"></i>
+                </p>
+            </a>
+            <ul class="nav nav-treeview">
+                <li class="nav-item">
+                    <a href="/federal/members/fetch/{{ $profileData->federalConstituency?->uuid ?? '' }}" class="nav-link">
+                        <i class="fas fa-user nav-icon"></i>
+                        <p>All Members</p>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/federal/members/bylga/{{ $profileData->federalConstituency?->uuid ?? '' }}" class="nav-link">
+                        <i class="fas fa-user nav-icon"></i>
+                        <p>Members by LGA</p>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/federal/members/byward/{{ $profileData->federalConstituency?->uuid ?? '' }}" class="nav-link">
+                        <i class="fas fa-user nav-icon"></i>
+                        <p>Members By Wards</p>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/federal/members/bypu/{{ $profileData->federalConstituency?->uuid ?? '' }}" class="nav-link">
+                        <i class="fas fa-user nav-icon"></i>
+                        <p>Members By PU</p>
+                    </a>
+                </li>
+
+            </ul>
+        </li>
+        {{-- / Members --}}
+
+        @include('backend.template.partials.agentMenu')
+
         <li class="tab nav-item menu-close">
             <a href="#" class="nav-link">
                 <i class="nav-icon fas fa-award"></i>
@@ -28,17 +69,7 @@
                         <p>Situation Room</p>
                     </a>
                 </li>
-                @if(
-                    $profileData->hasAnyRole([
-                        'National ICT Director',
-                        'Regional ICT Director',
-                        'State ICT Director',
-                        'Federal ICT Director',
-                        'LGA ICT Director',
-                        'Ward ICT Director',
-                        'PU ICT Director',
-                        'Pu Agent'
-                    ]) || $profileData->access_level == 'superadmin' )
+                @if(app(\App\Services\PollingUnitResultPermissionService::class)->userHasAnyApprovedAssignment($profileData))
                 <li class="nav-item">
                     <a href="/federal/vote/add" class="nav-link">
                         <i class="fa fa-cloud nav-icon"></i>
@@ -54,19 +85,52 @@
                 @endif
             </ul>
         </li>
+
+        {{-- Messaging --}}
         <li class="tab nav-item menu-close">
             <a href="#" class="nav-link">
-                <i class="nav-icon fas fa-map"></i>
+                <i class="nav-icon fas fa-comments"></i>
                 <p>
-                    Drill Downs
+                    Messaging
                     <i class="right fas fa-angle-left"></i>
                 </p>
             </a>
             <ul class="nav nav-treeview">
                 <li class="nav-item">
-                    <a href="/federal/dashboard" class="nav-link">
-                        <i class="fas fa-layer-group nav-icon"></i>
-                        <p>Constituency to LGAs</p>
+                    <a href="/messages" class="nav-link">
+                        <i class="fas fa-comments nav-icon"></i>
+                        <p>Internal Communication</p>
+                    </a>
+                </li>
+            </ul>
+        </li>
+        {{-- / Messaging --}}
+
+        <li class="tab nav-item menu-close">
+            <a href="#" class="nav-link">
+                <i class="nav-icon fas fa-globe-africa"></i>
+                <p>
+                    Locations
+                    <i class="right fas fa-angle-left"></i>
+                </p>
+            </a>
+            <ul class="nav nav-treeview">
+                <li class="nav-item">
+                    <a href="/federal/location/localgovernments" class="nav-link">
+                        <i class="fas fa-map-pin nav-icon"></i>
+                        <p>LGA's</p>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/federal/location/wards" class="nav-link">
+                        <i class="fas fa-map-marked-alt nav-icon"></i>
+                        <p>Wards</p>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/federal/location/pollingunits" class="nav-link">
+                        <i class="fas fa-monument nav-icon"></i>
+                        <p>Polling Units</p>
                     </a>
                 </li>
             </ul>

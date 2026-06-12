@@ -1,0 +1,131 @@
+@extends('backend.template.backend-master')
+@section('content')
+
+<section class="content">
+    <div class="container-fluid">
+        <div class="row">
+        <div class="col-12">
+            <div class="card card-primary">
+            <div class="card-header">
+                <h3 class="card-title">
+                    {{ $metricTitle }}
+                    @if(isset($region) || isset($state) || isset($lga) || isset($ward) || isset($pu))
+                        in
+                        @if(isset($region))
+                            {{ $region->name }} Region
+                        @elseif(isset($state))
+                            {{ $state->name }} State
+                        @elseif(isset($lga))
+                            {{ $lga->name }} LGA
+                        @elseif(isset($ward))
+                            {{ $ward->name }} Ward
+                        @elseif(isset($pu))
+                            {{ $pu->name }} Polling Unit
+                        @endif
+                    @endif
+                </h3>
+                <div class="card-tools">
+                    <a href="{{ route($profileData->access_level.'.member.add') }}"><button class="btn btn-default"> <i class="fa fa-plus-square"></i> Add New Member</button></a>
+                </div>
+            </div>
+            <div class="card-body">
+                <table id="myMembers" class="table table-bordered table-striped">
+                    <thead>
+                    <tr>
+                        <th>S/N</th>
+                        <th>Name</th>
+                        <th>Access</th>
+                        <th>Role</th>
+                        <th>Eligible Voter</th>
+                        <th>Action</th>
+                    </tr>
+                    </thead>
+                    <tfoot>
+                    <tr>
+                        <th>S/N</th>
+                        <th>Name</th>
+                        <th>Access</th>
+                        <th>Role</th>
+                        <th>Eligible Voter</th>
+                        <th>Action</th>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+            </div>
+        </div>
+        </div>
+    </div>
+</section>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        document.body.addEventListener('click', function (event) {
+            if (event.target.classList.contains('delete-btn')) {
+                event.preventDefault();
+
+                const button = event.target;
+                const form = button.closest('form');
+                const hasAssociatedUsers = form.getAttribute('data-associated-users') === 'true';
+
+                if (hasAssociatedUsers) {
+                    Swal.fire({
+                        title: 'Cannot Delete Member',
+                        text: 'This member cannot be deleted because it has associated users.',
+                        icon: 'warning',
+                        confirmButtonColor: '#3085d6',
+                        confirmButtonText: 'OK'
+                    });
+                } else {
+                    Swal.fire({
+                        title: 'Confirm Delete',
+                        text: 'Are you sure you want to delete this member?',
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#d33',
+                        cancelButtonColor: '#3085d6',
+                        confirmButtonText: 'Yes, delete it!'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            form.submit();
+                        }
+                    });
+                }
+            }
+        });
+    });
+</script>
+
+<script src="{{asset('assets/plugins/jquery/jquery.min.js')}}"></script>
+<script>
+ $(document).ready(function() {
+    $('#myMembers').DataTable({
+        "processing": true,
+        "serverSide": true,
+        "searching": true,
+        "ajax": "{{ route($profileData->access_level.'.peopleMetric.data', ['metric' => $metric, 'uuid' => $PuLgaStateRegionCountryUUID]) }}",
+        "pageLength": 25,
+        "lengthMenu": [ [10, 25, 50, 100], [10, 25, 50, 100] ],
+        "columns": [
+            {
+                "data": null,
+                "render": function (data, type, row, meta) {
+                    return meta.row + meta.settings._iDisplayStart + 1;
+                },
+                "orderable": false
+            },
+            { "data": "name", "searchable": true },
+            { "data": "access_level" },
+            { "data": "role" },
+            { "data": "Voter_status", "searchable": true },
+            { "data": "action", "orderable": false, "searchable": false }
+        ],
+        "responsive": true,
+        "autoWidth": false,
+    });
+
+    $('#myMembers_filter input').attr('placeholder', 'firstname or lastname');
+});
+</script>
+
+@endsection

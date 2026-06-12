@@ -56,6 +56,8 @@ Route::get('/lga/leaders/fetch/{uuid?}', [MembersController::class, 'allExcoMemb
 //Fetch Regulars
 Route::get('/lga/regulars/data/fetch/{uuid?}', [MembersController::class, 'getRegularMembersData'])->name('lgaadmin.regulars.data');
 Route::get('/lga/regulars/fetch/{uuid?}', [MembersController::class, 'allRegularMembers'])->name('lgaadmin.regulars');
+Route::get('/lga/people/{metric}/data/fetch/{uuid?}', [MembersController::class, 'getPeopleMetricMembersData'])->whereIn('metric', ['agents', 'eligible-voters', 'without-voter-card', 'new-today', 'new-this-week', 'new-this-month'])->name('lgaadmin.peopleMetric.data');
+Route::get('/lga/people/{metric}/fetch/{uuid?}', [MembersController::class, 'allPeopleMetricMembers'])->whereIn('metric', ['agents', 'eligible-voters', 'without-voter-card', 'new-today', 'new-this-week', 'new-this-month'])->name('lgaadmin.peopleMetric');
 
 Route::get('/lga/member/add', [MembersController::class, 'addMember'])->name('lgaadmin.member.add')->middleware('access_level:lgaadmin');
 Route::post('/lga/member/store', [MembersController::class, 'storeMember'])->name('lgaadmin.member.store')->middleware('access_level:lgaadmin');

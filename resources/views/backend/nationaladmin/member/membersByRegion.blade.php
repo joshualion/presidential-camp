@@ -23,8 +23,6 @@
                                         <th>S/N</th>
                                         <th>Region</th>
                                         <th>Members</th>
-                                        <th>Eligible Voters</th>
-                                        <th>Ineligible Voters</th>
                                         <th>Action</th>
                                     </tr>
                                     </thead>
@@ -35,17 +33,7 @@
                                                 <td>{{ $region->name }}</td>
                                                 <td>
                                                     <span class="badge bg-secondary text-white">
-                                                        {{ $region->users->where('access_level', '!=', 'superadmin')->count() }}
-                                                    </span>
-                                                </td>
-                                                <td>
-                                                    <span class="badge bg-success text-white">
-                                                        {{ $region->users->where('access_level', '!=', 'superadmin')->where('validVoter', 'yes')->count() }}
-                                                    </span>
-                                                </td>
-                                                <td>
-                                                    <span class="badge bg-danger text-white">
-                                                        {{ $region->users->where('access_level', '!=', 'superadmin')->where('validVoter', 'no')->count() }}
+                                                        {{ number_format($region->members_count ?? 0) }}
                                                     </span>
                                                 </td>
                                                 <td>
@@ -63,8 +51,6 @@
                                         <th>S/N</th>
                                         <th>Region</th>
                                         <th>Members</th>
-                                        <th>Eligible Voters</th>
-                                        <th>Ineligible Voters</th>
                                         <th>Action</th>
                                     </tr>
                                     </tfoot>

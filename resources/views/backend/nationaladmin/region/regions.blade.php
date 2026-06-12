@@ -9,9 +9,11 @@
                 <div class="card card-primary">
                 <div class="card-header">
                     <h3 class="card-title">All Regions</h3>
-                    <div class="card-tools">
-                        <a href="{{ route('nationaladmin.location.region.add') }}"><button class="btn btn-default"> <i class="fa fa-plus-square"></i> Add Region</button></a>
-                    </div>
+                    @if(app(\App\Services\StructuralLocationAccessService::class)->canCreateOrDelete($profileData))
+                        <div class="card-tools">
+                            <a href="{{ route($profileData->access_level.'.location.region.add') }}"><button class="btn btn-default"> <i class="fa fa-plus-square"></i> Add Region</button></a>
+                        </div>
+                    @endif
                 </div>
                 <!-- /.card-header -->
                 <div class="card-body">
@@ -36,12 +38,14 @@
                         <td>{{ $region->description}}</td>
                         
                         <td>
-                        <a href="{{ route('nationaladmin.location.region.edit',  ($region->uuid))}}" ><button class="btn btn-success btn-sm"><i class="fas fa-pencil-alt"></i> Edit</button></a>
-                        <form action="{{ route('nationaladmin.location.region.delete',  ($region->uuid)) }}" method="POST" style="display: inline-block;">
-                            @csrf
-                            @method('DELETE')
-                            <button type="submit" class="btn btn-danger btn-sm delete-btn"><i class="fas fa-trash"></i> Delete</button>
-                        </form>
+                        <a href="{{ route($profileData->access_level.'.location.region.edit',  ($region->uuid))}}" ><button class="btn btn-success btn-sm"><i class="fas fa-pencil-alt"></i> Edit</button></a>
+                        @if(app(\App\Services\StructuralLocationAccessService::class)->canCreateOrDelete($profileData))
+                            <form action="{{ route($profileData->access_level.'.location.region.delete',  ($region->uuid)) }}" method="POST" style="display: inline-block;">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="btn btn-danger btn-sm delete-btn"><i class="fas fa-trash"></i> Delete</button>
+                            </form>
+                        @endif
                         </td>
 
                     </tr>
@@ -135,7 +139,6 @@ $(document).ready(function() {
 
 
 @endsection
-
 
 
 

@@ -1,7 +1,37 @@
 @extends('backend.template.backend-master')
 @section('content')
 
+<div class="card card-primary">
+    <div class="card-header">
+        <h3 class="card-title">{{$state->name}} Statistics</h3>
+        <div class="card-tools">
+            <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                <i class="fas fa-minus"></i>
+            </button>
+            <button type="button" class="btn btn-tool" data-card-widget="remove">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    </div>
+    <div class="card-body">
+        @include('backend.shared.dashboard-stat-grid', [
+            'dashboardMetrics' => $stateDashboardMetrics,
+            'groups' => ['coverage'],
+        ])
+        @include('backend.shared.dashboard-stat-grid', [
+            'dashboardMetrics' => $stateDashboardMetrics,
+            'groups' => ['people'],
+        ])
+        @include('backend.shared.dashboard-stat-grid', [
+            'dashboardMetrics' => $stateDashboardMetrics,
+            'groups' => ['membership_activity'],
+        ])
+    </div>
+</div>
 
+@include('backend.shared.dashboard-election-stat-section', ['dashboardMetrics' => $stateDashboardMetrics])
+
+@if(false)
 <div class="card card-primary">
               <div class="card-header">
                     <h3 class="card-title">{{$state->name}} Statistics</h3>
@@ -194,7 +224,7 @@
                                 <div class="icon">
                                   <i class="ion ion-map"></i>
                                 </div>
-                                <a href="#" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
+                                <a href="{{ route($profileData->access_level.'.peopleMetric', ['metric' => 'new-today', 'uuid' => $state->uuid]) }}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
                               </div>
                             </div>
                             <!-- ./col -->
@@ -204,7 +234,7 @@
                                 <div class="inner">
                                   <h3>{{$excoCount}}</h3>
 
-                                  <p>Team Leaders</p>
+                                  <p>Coordinators / Admins</p>
                                 </div>
                                 <div class="icon">
                                   <i class="ion ion-person"></i>
@@ -244,6 +274,7 @@
                   </div><!-- /.row -->
           </div> <!-- /.card-body -->
 </div>
+@endif
 
 <!-- Demographics -->
 <div class="row">

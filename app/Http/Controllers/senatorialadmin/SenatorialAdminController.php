@@ -35,6 +35,7 @@ class SenatorialAdminController extends Controller
             $geography = $dashboardMetrics['geography'];
             $coverage = $dashboardMetrics['coverage'];
             $people = $dashboardMetrics['people'];
+            $activity = $dashboardMetrics['membership_activity'];
             $lgaCount = $geography['lgas'];
             $lgaWithUsersCount = $coverage['lgas_with_users'];
             $wardCount = $geography['wards'];
@@ -42,9 +43,14 @@ class SenatorialAdminController extends Controller
             $puCount = $geography['polling_units'];
             $puWithUsersCount = $coverage['polling_units_with_users'];
             $excoCount = $people['executives'];
+            $agentCount = $people['agents'];
             $memberCount = $people['members'];
             $userCount = $people['users'];
-            $newMembers = $people['new_members'];
+            $eligibleVotersCount = $people['eligible_voters'];
+            $inEligibleVotersCount = $people['ineligible_voters'];
+            $newMembers = $activity['new_today'];
+            $newMembersThisWeek = $activity['new_this_week'];
+            $newMembersThisMonth = $activity['new_this_month'];
 
             return view('backend.shared.senatorial-district.dashboard',
                 compact(
@@ -58,9 +64,15 @@ class SenatorialAdminController extends Controller
                     'puCount',
                     'puWithUsersCount',
                     'excoCount',
+                    'agentCount',
                     'memberCount',
                     'userCount',
-                    'newMembers'
+                    'eligibleVotersCount',
+                    'inEligibleVotersCount',
+                    'newMembersThisWeek',
+                    'newMembersThisMonth',
+                    'newMembers',
+                    'dashboardMetrics'
                 ));
         }
 
@@ -111,12 +123,14 @@ class SenatorialAdminController extends Controller
         $wards = Ward::where('lga_id', $lga->id)->pluck('id');
         $puCount = PollingUnit::whereIn('ward_id', $wards)->count();
         $puWithUsersCount = PollingUnit::whereIn('ward_id', $wards)->whereHas('users')->count();
-        $excoCount = User::where('lga_id', $lga->id)->where('access_level', '!=', 'user')->where('access_level', '!=', 'superadmin')->count();
+        $excoCount = User::where('lga_id', $lga->id)->where('access_level', '!=', 'user')->where('access_level', '!=', 'superadmin')->where('access_level', '!=', 'puadmin')->count();
         $memberCount = User::where('lga_id', $lga->id)->where('access_level', '!=', 'superadmin')->where('access_level', 'user')->count();
         $userCount = User::where('lga_id', $lga->id)->where('access_level', '!=', 'superadmin')->count();
         $newMembers = User::where('lga_id', $lga->id)->where('access_level', '!=', 'superadmin')->where('created_at', '>=', Carbon::now()->subDays(1))->count();
 
-        return view('backend.'.$profileData->access_level.'.lga.dashboard',
+        $dashboardMetrics = app(LocationDashboardMetricsService::class)->forLocalGovernmentArea($lga, $profileData);
+
+                    return view('backend.'.$profileData->access_level.'.lga.dashboard',
             compact('profileData', 'pageTitle', 'lga', 'wardCount', 'wardWithUsersCount', 'puCount', 'puWithUsersCount', 'excoCount', 'memberCount', 'userCount', 'newMembers'));
     }
 
@@ -132,14 +146,16 @@ class SenatorialAdminController extends Controller
 
         $puCount = PollingUnit::where('ward_id', $ward->id)->count();
         $puWithUsersCount = PollingUnit::where('ward_id', $ward->id)->whereHas('users')->count();
-        $excoCount = User::where('ward_id', $ward->id)->where('access_level', '!=', 'user')->where('access_level', '!=', 'superadmin')->count();
+        $excoCount = User::where('ward_id', $ward->id)->where('access_level', '!=', 'user')->where('access_level', '!=', 'superadmin')->where('access_level', '!=', 'puadmin')->count();
         $memberCount = User::where('ward_id', $ward->id)->where('access_level', '!=', 'superadmin')->where('access_level', 'user')->count();
         $eligibleVotersCount = User::where('ward_id', $ward->id)->where('access_level', '!=', 'superadmin')->where('validvoter', 'yes')->count();
         $inEligibleVotersCount = User::where('ward_id', $ward->id)->where('access_level', '!=', 'superadmin')->where('validvoter', 'No')->count();
         $userCount = User::where('ward_id', $ward->id)->where('access_level', '!=', 'superadmin')->count();
         $newMembers = User::where('ward_id', $ward->id)->where('access_level', '!=', 'superadmin')->where('created_at', '>=', Carbon::now()->subDays(1))->count();
 
-        return view('backend.'.$profileData->access_level.'.ward.dashboard',
+        $dashboardMetrics = app(LocationDashboardMetricsService::class)->forWard($ward, $profileData);
+
+                    return view('backend.'.$profileData->access_level.'.ward.dashboard',
             compact('profileData', 'pageTitle', 'ward', 'puCount', 'puWithUsersCount', 'excoCount', 'memberCount', 'eligibleVotersCount', 'inEligibleVotersCount', 'userCount', 'newMembers'));
     }
 
@@ -153,14 +169,16 @@ class SenatorialAdminController extends Controller
             return redirect()->back()->with(['message' => 'Polling Unit not found', 'alert-type' => 'error']);
         }
 
-        $excoCount = User::where('polling_unit_id', $pu->id)->where('access_level', '!=', 'user')->where('access_level', '!=', 'superadmin')->count();
+        $excoCount = User::where('polling_unit_id', $pu->id)->where('access_level', '!=', 'user')->where('access_level', '!=', 'superadmin')->where('access_level', '!=', 'puadmin')->count();
         $memberCount = User::where('polling_unit_id', $pu->id)->where('access_level', '!=', 'superadmin')->where('access_level', 'user')->count();
         $eligibleVotersCount = User::where('polling_unit_id', $pu->id)->where('access_level', '!=', 'superadmin')->where('validvoter', 'yes')->count();
         $inEligibleVotersCount = User::where('polling_unit_id', $pu->id)->where('access_level', '!=', 'superadmin')->where('validvoter', 'No')->count();
         $userCount = User::where('polling_unit_id', $pu->id)->where('access_level', '!=', 'superadmin')->count();
         $newMembers = User::where('polling_unit_id', $pu->id)->where('access_level', '!=', 'superadmin')->where('created_at', '>=', Carbon::now()->subDays(1))->count();
 
-        return view('backend.'.$profileData->access_level.'.pu.dashboard',
+        $dashboardMetrics = app(LocationDashboardMetricsService::class)->forPollingUnit($pu, $profileData);
+
+                    return view('backend.'.$profileData->access_level.'.pu.dashboard',
             compact('profileData', 'pageTitle', 'pu', 'excoCount', 'memberCount', 'eligibleVotersCount', 'inEligibleVotersCount', 'userCount', 'newMembers'));
     }
 

@@ -5,9 +5,11 @@
                 <div class="card card-primary">
                     <div class="card-header">
                         <h3 class="card-title">All Federal Constituencies - <span class="badge badge-light">{{ number_format($constituencies->count(), 0) }}</span></h3>
-                        <div class="card-tools">
-                            <a href="{{ route($profileData->access_level.'.location.federal-constituency.add') }}"><button class="btn btn-default"> <i class="fa fa-plus-square"></i> Add Federal Constituency</button></a>
-                        </div>
+                        @if(app(\App\Services\StructuralLocationAccessService::class)->canCreateOrDelete($profileData))
+                            <div class="card-tools">
+                                <a href="{{ route($profileData->access_level.'.location.federal-constituency.add') }}"><button class="btn btn-default"> <i class="fa fa-plus-square"></i> Add Federal Constituency</button></a>
+                            </div>
+                        @endif
                     </div>
                     <div class="card-body">
                         <table id="myfederalconstituencies" class="table table-bordered table-striped">

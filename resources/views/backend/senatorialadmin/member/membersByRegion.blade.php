@@ -33,7 +33,7 @@
                                                 <td>{{ $region->name }}</td>
                                                 <td>
                                                     <span class="badge bg-secondary text-white">
-                                                        {{ $region->users->where('access_level', '!=', 'superadmin')->count() }}
+                                                        {{ number_format($region->members_count ?? 0) }}
                                                     </span>
                                                     
                                                 </td>

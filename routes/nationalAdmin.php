@@ -171,6 +171,8 @@ Route::get('/national/leaders/fetch/{uuid?}', [MembersController::class, 'allExc
 //Fetch Regulars
 Route::get('/national/regulars/data/fetch/{uuid?}', [MembersController::class, 'getRegularMembersData'])->name('nationaladmin.regulars.data');
 Route::get('/national/regulars/fetch/{uuid?}', [MembersController::class, 'allRegularMembers'])->name('nationaladmin.regulars');
+Route::get('/national/people/{metric}/data/fetch/{uuid?}', [MembersController::class, 'getPeopleMetricMembersData'])->whereIn('metric', ['agents', 'eligible-voters', 'without-voter-card', 'new-today', 'new-this-week', 'new-this-month'])->name('nationaladmin.peopleMetric.data');
+Route::get('/national/people/{metric}/fetch/{uuid?}', [MembersController::class, 'allPeopleMetricMembers'])->whereIn('metric', ['agents', 'eligible-voters', 'without-voter-card', 'new-today', 'new-this-week', 'new-this-month'])->name('nationaladmin.peopleMetric');
 
 Route::get('/national/member/add', [MembersController::class, 'addMember'])->name('nationaladmin.member.add')->middleware('access_level:nationaladmin');
 Route::post('/national/member/store', [MembersController::class, 'storeMember'])->name('nationaladmin.member.store')->middleware('access_level:nationaladmin');

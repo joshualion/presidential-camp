@@ -7,6 +7,17 @@
         ->whereIn('validVoter', ['yes', 'Yes', 'YES'])
         ->count();
     $inEligibleVotersCount = $inEligibleVotersCount ?? max(0, $userCount - $eligibleVotersCount);
+    $agentCount = $agentCount ?? \App\Models\PollingUnitAgentAssignment::approved()
+        ->whereHas('pollingUnit', fn ($query) => $query->where('senatorial_district_id', $district->id))
+        ->count();
+    $newMembersThisWeek = $newMembersThisWeek ?? \App\Models\User::where('senatorial_district_id', $district->id)
+        ->where('access_level', '!=', 'superadmin')
+        ->where('created_at', '>=', \Carbon\Carbon::now()->subWeek())
+        ->count();
+    $newMembersThisMonth = $newMembersThisMonth ?? \App\Models\User::where('senatorial_district_id', $district->id)
+        ->where('access_level', '!=', 'superadmin')
+        ->where('created_at', '>=', \Carbon\Carbon::now()->subMonth())
+        ->count();
 @endphp
 
 <div class="card card-primary">
@@ -24,7 +35,7 @@
           <div class="card-body">
 
                   <div class="row">
-                            <div class="col-lg-4 col-6">
+                            <div class="col-lg-3 col-md-6 col-12">
                               <div class="small-box bg-success">
                                 <div class="inner">
                                   <h3>{{$lgaWithUsersCount}}</h3>
@@ -44,7 +55,7 @@
                               </div>
                             </div>
 
-                            <div class="col-lg-4 col-6">
+                            <div class="col-lg-3 col-md-6 col-12">
                               <div class="small-box bg-info">
                                 <div class="inner">
                                 <h3>{{$wardWithUsersCount}}</h3>
@@ -64,7 +75,7 @@
                               </div>
                             </div>
 
-                            <div class="col-lg-4 col-6">
+                            <div class="col-lg-3 col-md-6 col-12">
                               <div class="small-box bg-danger">
                                 <div class="inner">
                                 <h3>{{$puWithUsersCount}}</h3>
@@ -83,28 +94,27 @@
                                 <a href="{{route($profileData->access_level.'.members.byPu', $district->uuid)}}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
                               </div>
                             </div>
+
+                            <div class="col-lg-3 col-md-6 col-12">
+                              <div class="small-box bg-warning">
+                                <div class="inner">
+                                  <h3>{{ number_format($agentCount) }}</h3>
+                                  <p>Polling Unit Agents</p>
+                                </div>
+                                <div class="icon">
+                                  <i class="fas fa-user-shield"></i>
+                                </div>
+                                <a href="{{ route($profileData->access_level.'.peopleMetric', ['metric' => 'agents', 'uuid' => $district->uuid]) }}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
+                              </div>
+                            </div>
                   </div>
 
                   <div class="row">
-                            <div class="col-lg-3 col-6">
-                              <div class="small-box bg-danger">
-                                <div class="inner">
-                                <h3>{{ $newMembers }}</h3>
-                                  <p>New Member(s) Today</p>
-                                  <p style="float: right;"></p>
-                                </div>
-                                <div class="icon">
-                                  <i class="ion ion-map"></i>
-                                </div>
-                                <a href="#" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
-                              </div>
-                            </div>
-
-                            <div class="col-lg-3 col-6">
+                            <div class="col-lg-3 col-md-6 col-12">
                               <div class="small-box bg-secondary">
                                 <div class="inner">
                                   <h3>{{$excoCount}}</h3>
-                                  <p>Team Leaders</p>
+                                  <p>Coordinators / Admins</p>
                                 </div>
                                 <div class="icon">
                                   <i class="ion ion-person"></i>
@@ -113,7 +123,7 @@
                               </div>
                             </div>
 
-                            <div class="col-lg-3 col-6">
+                            <div class="col-lg-3 col-md-6 col-12">
                               <div class="small-box bg-primary">
                                 <div class="inner">
                                   <h3>{{$memberCount}}</h3>
@@ -126,7 +136,7 @@
                               </div>
                             </div>
 
-                            <div class="col-lg-3 col-6">
+                            <div class="col-lg-3 col-md-6 col-12">
                               <div class="small-box bg-success">
                                 <div class="inner">
                                   <h3>{{$userCount}}</h3>
@@ -138,10 +148,8 @@
                                 <a href="{{route($profileData->access_level.'.members', $district->uuid)}}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
                               </div>
                             </div>
-                  </div>
 
-                  <div class="row">
-                            <div class="col-lg-6 col-6">
+                            <div class="col-lg-3 col-md-6 col-12">
                               <div class="small-box bg-success">
                                 <div class="inner">
                                   <h3>{{ number_format($eligibleVotersCount) }} <small>of {{ number_format($userCount) }}</small></h3>
@@ -153,11 +161,13 @@
                                 <div class="icon">
                                   <i class="fas fa-id-card"></i>
                                 </div>
-                                <span class="small-box-footer">Voter readiness</span>
+                                <a href="{{ route($profileData->access_level.'.peopleMetric', ['metric' => 'eligible-voters', 'uuid' => $district->uuid]) }}" class="small-box-footer">Voter readiness <i class="fas fa-arrow-circle-right"></i></a>
                               </div>
                             </div>
+                  </div>
 
-                            <div class="col-lg-6 col-6">
+                  <div class="row">
+                            <div class="col-lg-3 col-md-6 col-12">
                               <div class="small-box bg-danger">
                                 <div class="inner">
                                   <h3>{{ number_format($inEligibleVotersCount) }} <small>of {{ number_format($userCount) }}</small></h3>
@@ -169,12 +179,58 @@
                                 <div class="icon">
                                   <i class="fas fa-user-times"></i>
                                 </div>
-                                <span class="small-box-footer">Follow-up required</span>
+                                <a href="{{ route($profileData->access_level.'.peopleMetric', ['metric' => 'without-voter-card', 'uuid' => $district->uuid]) }}" class="small-box-footer">Follow-up required <i class="fas fa-arrow-circle-right"></i></a>
+                              </div>
+                            </div>
+
+                            <div class="col-lg-3 col-md-6 col-12">
+                              <div class="small-box bg-danger">
+                                <div class="inner">
+                                <h3>{{ number_format($newMembers) }}</h3>
+                                  <p>New Member(s) Today</p>
+                                  <p style="float: right;"></p>
+                                </div>
+                                <div class="icon">
+                                  <i class="ion ion-map"></i>
+                                </div>
+                                <a href="{{ route($profileData->access_level.'.peopleMetric', ['metric' => 'new-today', 'uuid' => $district->uuid]) }}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
+                              </div>
+                            </div>
+
+                            <div class="col-lg-3 col-md-6 col-12">
+                              <div class="small-box bg-info">
+                                <div class="inner">
+                                <h3>{{ number_format($newMembersThisWeek) }}</h3>
+                                  <p>New This Week</p>
+                                  <p style="float: right;"></p>
+                                </div>
+                                <div class="icon">
+                                  <i class="fas fa-calendar-week"></i>
+                                </div>
+                                <a href="{{ route($profileData->access_level.'.peopleMetric', ['metric' => 'new-this-week', 'uuid' => $district->uuid]) }}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
+                              </div>
+                            </div>
+
+                            <div class="col-lg-3 col-md-6 col-12">
+                              <div class="small-box bg-success">
+                                <div class="inner">
+                                <h3>{{ number_format($newMembersThisMonth) }}</h3>
+                                  <p>New This Month</p>
+                                  <p style="float: right;"></p>
+                                </div>
+                                <div class="icon">
+                                  <i class="fas fa-calendar-alt"></i>
+                                </div>
+                                <a href="{{ route($profileData->access_level.'.peopleMetric', ['metric' => 'new-this-month', 'uuid' => $district->uuid]) }}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
                               </div>
                             </div>
                   </div>
           </div>
 </div>
+
+@if(!empty($dashboardMetrics))
+@include('backend.shared.dashboard-election-stat-section', ['dashboardMetrics' => $dashboardMetrics])
+@endif
 
 <!-- Demographics -->
 <div class="row">

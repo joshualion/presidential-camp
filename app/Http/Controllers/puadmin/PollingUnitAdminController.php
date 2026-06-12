@@ -93,6 +93,7 @@ class PollingUnitAdminController extends Controller
         $excoCount = User::where('polling_unit_id', $pu->id)
             ->where('access_level', '!=', 'user')
             ->where('access_level', '!=', 'superadmin')
+            ->where('access_level', '!=', 'puadmin')
             ->count();
 
         $memberCount = User::where('polling_unit_id', $pu->id)

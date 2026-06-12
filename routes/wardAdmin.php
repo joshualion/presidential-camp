@@ -54,6 +54,8 @@ Route::get('/ward/leaders/fetch/{uuid?}', [MembersController::class, 'allExcoMem
 //Fetch Regulars
 Route::get('/ward/regulars/data/fetch/{uuid?}', [MembersController::class, 'getRegularMembersData'])->name('wardadmin.regulars.data');
 Route::get('/ward/regulars/fetch/{uuid?}', [MembersController::class, 'allRegularMembers'])->name('wardadmin.regulars');
+Route::get('/ward/people/{metric}/data/fetch/{uuid?}', [MembersController::class, 'getPeopleMetricMembersData'])->whereIn('metric', ['agents', 'eligible-voters', 'without-voter-card', 'new-today', 'new-this-week', 'new-this-month'])->name('wardadmin.peopleMetric.data');
+Route::get('/ward/people/{metric}/fetch/{uuid?}', [MembersController::class, 'allPeopleMetricMembers'])->whereIn('metric', ['agents', 'eligible-voters', 'without-voter-card', 'new-today', 'new-this-week', 'new-this-month'])->name('wardadmin.peopleMetric');
 
 Route::get('/ward/member/add', [MembersController::class, 'addMember'])->name('wardadmin.member.add')->middleware('access_level:wardadmin');
 Route::post('/ward/member/store', [MembersController::class, 'storeMember'])->name('wardadmin.member.store')->middleware('access_level:wardadmin');

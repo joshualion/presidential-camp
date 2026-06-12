@@ -211,6 +211,29 @@ class ElectionReportService
         return Election::query()->orderByDesc('year')->orderByDesc('id')->first();
     }
 
+    public function indexRows(User $user): Collection
+    {
+        return Election::query()
+            ->with('party')
+            ->orderByDesc('year')
+            ->orderByDesc('id')
+            ->get()
+            ->map(function (Election $election) use ($user) {
+                $voteQuery = DB::table('votes')
+                    ->where('election_id', $election->id);
+                $this->scopeService->applyScope($voteQuery, $user, 'votes', 'votes');
+
+                $targetVoteQuery = clone $voteQuery;
+
+                $election->scoped_votes_received = (int) $targetVoteQuery
+                    ->where('party_id', $election->party_id)
+                    ->sum('quantity');
+                $election->scoped_total_votes = (int) $voteQuery->sum('quantity');
+
+                return $election;
+            });
+    }
+
     public function scopeSnapshot(User $user, Election $election, array $filters = []): array
     {
         $resultStats = $this->resultStats($user, $election, $filters);

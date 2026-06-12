@@ -244,6 +244,8 @@
                     </div>
                 </div>
 
+                @include('backend.shared.member.boundary-fields')
+
                 <!-- Voting LGA -->
                 <div class="form-group row">
                     <label for="lga-dropdown" class="col-sm-2 col-form-label">Voting LGA</label>
@@ -294,7 +296,7 @@
 <div class="form-group row">
     <label for="access_level" class="col-sm-2 col-form-label">Access Level</label>
     <div class="col-sm-10">
-        <select class="form-control @error('access_level') is-invalid @enderror" name="access_level" id="access_level" @if(!empty($member->access_level)) readonly @endif required>
+        <select class="form-control @error('access_level') is-invalid @enderror" name="access_level" id="access_level" required>
             <option value="" disabled selected>Select Access Level</option>
                 @if(auth()->user()->access_level == 'superadmin' || auth()->user()->access_level == 'nationaladmin')
                     <option value="nationaladmin" {{ ($member->access_level == 'nationaladmin') ? 'selected' : '' }}>National Admin Access</option>
@@ -306,6 +308,11 @@
 
                 @if(auth()->user()->access_level == 'superadmin' || auth()->user()->access_level == 'nationaladmin' || auth()->user()->access_level == 'regionaladmin' || auth()->user()->access_level == 'stateadmin')
                     <option value="stateadmin" {{ ($member->access_level == 'stateadmin') ? 'selected' : '' }}>State Admin Access</option>
+                @endif
+
+                @if(auth()->user()->access_level == 'superadmin' || auth()->user()->access_level == 'nationaladmin' || auth()->user()->access_level == 'regionaladmin' || auth()->user()->access_level == 'stateadmin')
+                    <option value="senatorialadmin" {{ ($member->access_level == 'senatorialadmin') ? 'selected' : '' }}>Senatorial District Admin Access</option>
+                    <option value="federaladmin" {{ ($member->access_level == 'federaladmin') ? 'selected' : '' }}>Federal Constituency Admin Access</option>
                 @endif
 
                 @if(auth()->user()->access_level == 'superadmin' || auth()->user()->access_level == 'nationaladmin' || auth()->user()->access_level == 'regionaladmin' || auth()->user()->access_level == 'stateadmin' || auth()->user()->access_level == 'lgaadmin')
@@ -333,7 +340,7 @@
     </div>
 </div>
 
-@if(($profileData->hasRole('National ICT Director')) || ($profileData->hasRole('Regional ICT Director')) || ($profileData->hasAnyRole('State ICT Director')) || ($profileData->hasAnyRole('LGA ICT Director')) || ($profileData->hasAnyRole('Ward ICT Director')) || ($profileData->hasAnyRole('PU ICT Director')) || ( $profileData->access_level == 'superadmin'))
+@if(($profileData->hasRole('National ICT Director')) || ($profileData->hasRole('Regional ICT Director')) || ($profileData->hasAnyRole('State ICT Director')) || ($profileData->hasAnyRole('Senatorial ICT Director')) || ($profileData->hasAnyRole('Federal Constituency ICT Director')) || ($profileData->hasAnyRole('Federal ICT Director')) || ($profileData->hasAnyRole('LGA ICT Director')) || ($profileData->hasAnyRole('Ward ICT Director')) || ($profileData->hasAnyRole('PU ICT Director')) || ( $profileData->access_level == 'superadmin'))
 
 
 <!-- Role -->
@@ -472,6 +479,7 @@
 
 <!-- jQuery -->
 <script src="{{asset('assets/plugins/jquery/jquery.min.js')}}"></script>
+@include('backend.shared.member.boundary-dropdown-scripts')
 <!-- Handle Ajax request to states, lgas, wards and PU dropdown select -->
 <script>
     $(document).ready(function() {
@@ -653,3 +661,5 @@
 
 
 @endsection
+
+

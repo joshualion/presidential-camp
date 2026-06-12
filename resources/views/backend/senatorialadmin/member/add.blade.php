@@ -46,6 +46,7 @@
 
 <!-- jQuery -->
 <script src="{{asset('assets/plugins/jquery/jquery.min.js')}}"></script>
+@include('backend.shared.member.boundary-dropdown-scripts')
 <!-- Handle Ajax request to states, lgas, wards and PU dropdown select -->
 <script>
     $(document).ready(function() {

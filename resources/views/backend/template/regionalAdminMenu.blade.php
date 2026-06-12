@@ -66,7 +66,7 @@ $region = \App\Models\Region::find(Auth::user()->region_id);
 
                           <li class="nav-item">
                             <a href="/regional/members/bypu/{{$region->uuid}}" class="nav-link">
-                            <i class="fas fa-user nav-icon"></i>
+                              <i class="fas fa-user nav-icon"></i>
                               <p>Members By PU</p>
                             </a>
                           </li>
@@ -74,6 +74,8 @@ $region = \App\Models\Region::find(Auth::user()->region_id);
                         </ul>
             </li>
             {{-- / Members --}}
+
+            @include('backend.template.partials.agentMenu')
 
                    {{-- Election --}}
         <li class="tab nav-item menu-close">
@@ -98,16 +100,7 @@ $region = \App\Models\Region::find(Auth::user()->region_id);
                 <p>Situation Room</p>
               </a>
             </li>
-            @if(
-              $profileData->hasAnyRole([
-                  'National ICT Director',
-                  'Regional ICT Director',
-                  'State ICT Director',
-                  'LGA ICT Director',
-                  'Ward ICT Director',
-                  'PU ICT Director',
-                  'Pu Agent'
-              ]) || $profileData->access_level == 'superadmin' )
+            @if(app(\App\Services\PollingUnitResultPermissionService::class)->userHasAnyApprovedAssignment($profileData))
             <li class="nav-item">
               <a href="/regional/vote/add" class="nav-link">
               <i class="fa fa-cloud nav-icon"></i>
@@ -279,6 +272,64 @@ $region = \App\Models\Region::find(Auth::user()->region_id);
             {{-- / Messaging --}}
 
 
+
+
+
+            {{-- Locations --}}
+            <li class="tab nav-item menu-close">
+                        <a href="#" class="nav-link">
+                          <i class="nav-icon fas fa-globe-africa"></i>
+                          <p>
+                            Locations
+                            <i class="right fas fa-angle-left"></i>
+                          </p>
+                        </a>
+                        <ul class="nav nav-treeview">
+                          <li class="nav-item">
+                            <a href="/regional/location/states" class="nav-link">
+                            <i class="fas fa-map-marker-alt nav-icon"></i>
+                              <p>States</p>
+                            </a>
+                          </li>
+
+                          <li class="nav-item">
+                            <a href="/regional/location/senatorial-districts" class="nav-link">
+                            <i class="fas fa-map nav-icon"></i>
+                              <p>Senatorial Districts</p>
+                            </a>
+                          </li>
+
+                          <li class="nav-item">
+                            <a href="/regional/location/federal-constituencies" class="nav-link">
+                            <i class="fas fa-landmark nav-icon"></i>
+                              <p>Federal Constituencies</p>
+                            </a>
+                          </li>
+
+                          <li class="nav-item">
+                            <a href="/regional/location/localgovernments" class="nav-link">
+                            <i class="fas fa-map-pin nav-icon"></i>
+                              <p>LGA's</p>
+                            </a>
+                          </li>
+
+                          <li class="nav-item">
+                            <a href="/regional/location/wards" class="nav-link">
+                            <i class="fas fa-map-marked-alt nav-icon"></i>
+                              <p>Wards</p>
+                            </a>
+                          </li>
+
+                          <li class="nav-item">
+                            <a href="/regional/location/pollingunits" class="nav-link">
+                            <i class="fas fa-monument nav-icon"></i>
+                              <p>Polling Units</p>
+                            </a>
+                          </li>
+                        </ul>
+
+            </li>
+            {{-- / Locations --}}
 
 
 

@@ -6,6 +6,7 @@ use App\Events\MessageSent;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\User;
+use App\Services\LocationScopeService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -140,7 +141,11 @@ class MessageController extends Controller
             $targets = $this->allowedTargetLevels($sender->access_level);
             $users = User::query()
                 ->select(['id', 'firstname', 'lastname', 'username', 'photo', 'access_level'])
-                ->whereIn('access_level', $targets)
+                ->whereIn('access_level', $targets);
+
+            app(LocationScopeService::class)->applyScope($users, $sender, 'users', 'users');
+
+            $users = $users
                 ->when($query, function ($q) use ($query) {
                     $like = "%{$query}%";
                     $q->where(function ($sub) use ($like) {
@@ -282,7 +287,7 @@ class MessageController extends Controller
             ->first();
 
         $allowed = $this->allowedTargetLevels($sender->access_level);
-        if (in_array($recipient->access_level, $allowed, true)) {
+        if (in_array($recipient->access_level, $allowed, true) && $this->recipientIsInsideSenderScope($sender, $recipient)) {
             return [true, $existing];
         }
         // Allow existing conversation if already created
@@ -294,24 +299,28 @@ class MessageController extends Controller
 
     protected function allowedTargetLevels(?string $level): array
     {
-        // ordered from lowest to highest
-        $chain = [
-            'user',
-            'puadmin',
-            'wardadmin',
-            'lgaadmin',
-            'stateadmin',
-            'regionaladmin',
-            'nationaladmin',
-            'superadmin',
-        ];
+        return match ($level) {
+            'superadmin', 'nationaladmin' => ['nationaladmin', 'regionaladmin', 'stateadmin', 'senatorialadmin', 'federaladmin', 'lgaadmin', 'wardadmin', 'puadmin', 'user'],
+            'regionaladmin' => ['regionaladmin', 'stateadmin', 'senatorialadmin', 'federaladmin', 'lgaadmin', 'wardadmin', 'puadmin', 'user'],
+            'stateadmin' => ['stateadmin', 'senatorialadmin', 'federaladmin', 'lgaadmin', 'wardadmin', 'puadmin', 'user'],
+            'senatorialadmin' => ['senatorialadmin', 'federaladmin', 'lgaadmin', 'wardadmin', 'puadmin', 'user'],
+            'federaladmin' => ['federaladmin', 'lgaadmin', 'wardadmin', 'puadmin', 'user'],
+            'lgaadmin' => ['lgaadmin', 'wardadmin', 'puadmin', 'user'],
+            'wardadmin' => ['wardadmin', 'puadmin', 'user'],
+            'puadmin' => ['puadmin', 'user'],
+            default => [$level],
+        };
+    }
 
-        $idx = array_search($level, $chain, true);
-        if ($idx === false) {
-            return [$level];
+    protected function recipientIsInsideSenderScope(User $sender, User $recipient): bool
+    {
+        if (in_array($sender->access_level, ['superadmin', 'nationaladmin'], true)) {
+            return true;
         }
 
-        // include same level and everyone below (lower index)
-        return array_slice($chain, 0, $idx + 1);
+        $query = User::query()->whereKey($recipient->getKey());
+        app(LocationScopeService::class)->applyScope($query, $sender, 'users', 'users');
+
+        return $query->exists();
     }
 }

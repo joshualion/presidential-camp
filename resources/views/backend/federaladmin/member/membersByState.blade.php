@@ -24,8 +24,6 @@
                                         <th>Region</th>
                                         <th>State</th>
                                         <th>Members</th>
-                                        <th>Eligible Voters</th>
-                                        <th>Ineligible Voters</th>
                                         <th>Action</th>
                                     </tr>
                                     </thead>
@@ -37,17 +35,7 @@
                                                 <td><strong>{{ $state->name }}</strong></td>
                                                 <td>
                                                     <span class="badge bg-secondary text-white">
-                                                        {{ $state->users->where('access_level', '!=', 'superadmin')->count() }}
-                                                    </span>
-                                                </td>
-                                                <td>
-                                                    <span class="badge bg-success text-white">
-                                                        {{ $state->users->where('access_level', '!=', 'superadmin')->where('validVoter', 'yes')->count() }}
-                                                    </span>
-                                                </td>
-                                                <td>
-                                                    <span class="badge bg-danger text-white">
-                                                        {{ $state->users->where('access_level', '!=', 'superadmin')->where('validVoter', 'no')->count() }}
+                                                        {{ number_format($state->members_count ?? 0) }}
                                                     </span>
                                                 </td>
                                                 <td>
@@ -66,8 +54,6 @@
                                         <th>Region</th>
                                         <th>state</th>
                                         <th>Members</th>
-                                        <th>Eligible Voters</th>
-                                        <th>Ineligible Voters</th>
                                         <th>Action</th>
                                     </tr>
                                     </tfoot>

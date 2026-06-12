@@ -23,8 +23,6 @@
                                         <th>S/N</th>
                                         <th>Ward</th>
                                         <th>Members</th>
-                                        <th>Eligible Voters</th>
-                                        <th>Ineligible Voters</th>
                                         <th>Action</th>
                                     </tr>
                                     </thead>
@@ -40,8 +38,6 @@
                                         <th>S/N</th>
                                         <th>Ward</th>
                                         <th>Members</th>
-                                        <th>Eligible Voters</th>
-                                        <th>Ineligible Voters</th>
                                         <th>Action</th>
                                     </tr>
                                     </tfoot>
@@ -86,8 +82,6 @@
 
                { "data": "ward", "searchable": true },
                { "data": "members", "searchable": false },
-                { "data": "eligible_voters", "searchable": false },
-                { "data": "ineligible_voters", "searchable": false },
                { "data": "action", "orderable": false, "searchable": false }
            ],
            "responsive": true,

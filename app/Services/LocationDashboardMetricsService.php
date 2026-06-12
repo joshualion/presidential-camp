@@ -8,6 +8,7 @@ use App\Models\FederalConstituency;
 use App\Models\LocalGovernmentArea;
 use App\Models\PictureEvidence;
 use App\Models\PollingUnit;
+use App\Models\PollingUnitAgentAssignment;
 use App\Models\PollingUnitResult;
 use App\Models\Region;
 use App\Models\SenatorialDistrict;
@@ -52,6 +53,87 @@ class LocationDashboardMetricsService
         $metrics['active_election'] = $metrics['election']['active_election'] ?? null;
 
         return $metrics;
+    }
+
+    public function forSenatorialDistrict(SenatorialDistrict $district, ?User $viewer = null): array
+    {
+        $scopeUser = $this->scopeProxyUser($viewer, 'senatorialadmin', [
+            'state_id' => $district->state_id,
+            'senatorial_district_id' => $district->id,
+        ]);
+        $scopeUser->setRelation('senatorialDistrict', $district);
+
+        return $this->forUser($scopeUser);
+    }
+
+    public function forFederalConstituency(FederalConstituency $constituency, ?User $viewer = null): array
+    {
+        $scopeUser = $this->scopeProxyUser($viewer, 'federaladmin', [
+            'state_id' => $constituency->state_id,
+            'senatorial_district_id' => $constituency->senatorial_district_id,
+            'federal_constituency_id' => $constituency->id,
+        ]);
+        $scopeUser->setRelation('federalConstituency', $constituency);
+
+        return $this->forUser($scopeUser);
+    }
+
+    public function forLocalGovernmentArea(LocalGovernmentArea $lga, ?User $viewer = null): array
+    {
+        $scopeUser = $this->scopeProxyUser($viewer, 'lgaadmin', [
+            'state_id' => $lga->state_id,
+            'senatorial_district_id' => $lga->senatorial_district_id,
+            'federal_constituency_id' => $lga->federal_constituency_id,
+            'lga_id' => $lga->id,
+        ]);
+        $scopeUser->setRelation('lga', $lga);
+
+        return $this->forUser($scopeUser);
+    }
+
+    public function forWard(Ward $ward, ?User $viewer = null): array
+    {
+        $ward->loadMissing('localGovernmentArea');
+
+        $scopeUser = $this->scopeProxyUser($viewer, 'wardadmin', [
+            'state_id' => $ward->localGovernmentArea?->state_id,
+            'senatorial_district_id' => $ward->localGovernmentArea?->senatorial_district_id,
+            'federal_constituency_id' => $ward->localGovernmentArea?->federal_constituency_id,
+            'lga_id' => $ward->lga_id,
+            'ward_id' => $ward->id,
+        ]);
+        $scopeUser->setRelation('ward', $ward);
+
+        return $this->forUser($scopeUser);
+    }
+
+    public function forPollingUnit(PollingUnit $pollingUnit, ?User $viewer = null): array
+    {
+        $pollingUnit->loadMissing('ward.localGovernmentArea');
+
+        $scopeUser = $this->scopeProxyUser($viewer, 'puadmin', [
+            'state_id' => $pollingUnit->ward?->localGovernmentArea?->state_id,
+            'senatorial_district_id' => $pollingUnit->senatorial_district_id,
+            'federal_constituency_id' => $pollingUnit->federal_constituency_id,
+            'lga_id' => $pollingUnit->ward?->lga_id,
+            'ward_id' => $pollingUnit->ward_id,
+            'polling_unit_id' => $pollingUnit->id,
+        ]);
+        $scopeUser->setRelation('pollingUnit', $pollingUnit);
+
+        return $this->forUser($scopeUser);
+    }
+
+    private function scopeProxyUser(?User $viewer, string $accessLevel, array $attributes): User
+    {
+        $scopeUser = $viewer ? $viewer->replicate() : new User();
+        $scopeUser->access_level = $accessLevel;
+
+        foreach ($attributes as $key => $value) {
+            $scopeUser->{$key} = $value;
+        }
+
+        return $scopeUser;
     }
 
     public function statCardPayloadForUser(?User $user): array
@@ -115,6 +197,10 @@ class LocationDashboardMetricsService
 
         $executivesQuery = User::query()
             ->where('access_level', '!=', 'superadmin')
+            ->where('access_level', '!=', 'puadmin')
+            ->whereDoesntHave('roles', function (Builder $roleQuery) {
+                $roleQuery->where('name', 'like', '%agent%');
+            })
             ->where(function (Builder $query) {
                 $query->where('access_level', '!=', 'user')
                     ->orWhereHas('roles', function (Builder $roleQuery) {
@@ -122,13 +208,6 @@ class LocationDashboardMetricsService
                     });
             });
         $this->scopeService->applyScope($executivesQuery, $user, 'users', 'users');
-
-        $agentsQuery = User::query()
-            ->where(function (Builder $query) {
-                $query->where('access_level', 'puadmin')
-                    ->orWhereHas('roles', fn (Builder $roleQuery) => $roleQuery->where('name', 'like', '%agent%'));
-            });
-        $this->scopeService->applyScope($agentsQuery, $user, 'users', 'users');
 
         $newMembersQuery = User::query()
             ->where('access_level', '!=', 'superadmin')
@@ -145,7 +224,7 @@ class LocationDashboardMetricsService
         return [
             'users' => $usersCount,
             'members' => (int) $membersQuery->count(),
-            'agents' => (int) $agentsQuery->count(),
+            'agents' => $this->approvedAgentAssignmentCount($user),
             'coordinators' => $executivesCount,
             'executives' => $executivesCount,
             'new_members' => (int) $newMembersQuery->count(),
@@ -266,27 +345,27 @@ class LocationDashboardMetricsService
         return [
             'coverage' => $this->coverageCards($user, $scopeType, $geography, $coverage),
             'people' => array_filter([
-                $this->metricCard('Eligible Voters', $people['eligible_voters'] ?? 0, 'bg-success', 'fas fa-id-card', 'Voter readiness', null, $people['users'] ?? 0),
-                $this->metricCard('Members', $people['members'] ?? 0, 'bg-primary', 'fas fa-user', 'People metric', $this->safeRoute($user?->access_level.'.regulars', $this->scopeRouteParameter($user))),
-                $this->metricCard('Without Voter Card', $people['ineligible_voters'] ?? 0, 'bg-danger', 'fas fa-user-times', 'Follow-up required', null, $people['users'] ?? 0),
-                $this->metricCard('Agents', $people['agents'] ?? 0, 'bg-warning', 'fas fa-user-shield', 'People metric'),
-                $this->metricCard('Executives', $people['executives'] ?? 0, 'bg-dark', 'fas fa-id-badge', 'People metric', $this->safeRoute($user?->access_level.'.leaders', $this->scopeRouteParameter($user))),
+                $this->metricCard('Regular Members', $people['members'] ?? 0, 'bg-primary', 'fas fa-user', 'People metric', $this->safeRoute($user?->access_level.'.regulars', $this->scopeRouteParameter($user))),
+                $this->metricCard('Polling Unit Agents', $people['agents'] ?? 0, 'bg-warning', 'fas fa-user-shield', 'People metric', $this->peopleMetricUrl($user, 'agents')),
+                $this->metricCard('Coordinators / Admins', $people['executives'] ?? 0, 'bg-dark', 'fas fa-id-badge', 'People metric', $this->safeRoute($user?->access_level.'.leaders', $this->scopeRouteParameter($user))),
+                $this->metricCard('Eligible Voters', $people['eligible_voters'] ?? 0, 'bg-success', 'fas fa-id-card', 'Voter readiness', $this->peopleMetricUrl($user, 'eligible-voters'), $people['users'] ?? 0),
+                $this->metricCard('Without Voter Card', $people['ineligible_voters'] ?? 0, 'bg-danger', 'fas fa-user-times', 'Follow-up required', $this->peopleMetricUrl($user, 'without-voter-card'), $people['users'] ?? 0),
             ]),
             'election_operations' => [
                 $this->metricCard('Elections', $election['elections'] ?? 0, 'bg-primary', 'fas fa-award', 'Election metric', $this->safeRoute($user?->access_level.'.elections')),
-                $this->metricCard('Total Votes', $election['votes'] ?? 0, 'bg-success', 'fas fa-poll', 'Election metric'),
+                $this->metricCard('Total Votes', $election['votes'] ?? 0, 'bg-success', 'fas fa-poll', 'View vote intelligence', $this->electionResultUrl($user, $election)),
                 $this->metricCard('Results Submitted', $election['polling_unit_results'] ?? 0, 'bg-info', 'fas fa-file-alt', 'View submitted results', $this->resultReportUrl($user, $election, ['verification_status' => 'submitted'])),
                 $this->metricCard('Verified Results', $election['verified_results'] ?? 0, 'bg-success', 'fas fa-check-circle', 'View verified results', $this->resultReportUrl($user, $election, ['verification_status' => 'verified'])),
                 $this->metricCard('Disputed Results', $election['disputed_results'] ?? 0, 'bg-danger', 'fas fa-flag', 'View disputed results', $this->resultReportUrl($user, $election, ['dispute_status' => 'disputed'])),
-                $this->metricCard('Results Pending', $election['results_pending'] ?? 0, 'bg-warning', 'fas fa-hourglass-half', 'Election metric'),
-                $this->metricCard('Incidents Reported', $election['election_incidents'] ?? 0, 'bg-danger', 'fas fa-exclamation-triangle', 'Election metric'),
-                $this->metricCard('Pictures Uploaded', $election['pictures_uploaded'] ?? 0, 'bg-secondary', 'fas fa-image', 'Election metric'),
-                $this->metricCard('Videos Uploaded', $election['videos_uploaded'] ?? 0, 'bg-dark', 'fas fa-video', 'Election metric'),
+                $this->metricCard('Results Pending', $election['results_pending'] ?? 0, 'bg-warning', 'fas fa-hourglass-half', 'Open situation room', $this->electionOperationsUrl($user, ['focus' => 'pending-results'])),
+                $this->metricCard('Incidents Reported', $election['election_incidents'] ?? 0, 'bg-danger', 'fas fa-exclamation-triangle', 'Open incident reports', $this->electionOperationsUrl($user, ['focus' => 'incidents'])),
+                $this->metricCard('Pictures Uploaded', $election['pictures_uploaded'] ?? 0, 'bg-secondary', 'fas fa-image', 'Open evidence reports', $this->electionOperationsUrl($user, ['focus' => 'pictures'])),
+                $this->metricCard('Videos Uploaded', $election['videos_uploaded'] ?? 0, 'bg-dark', 'fas fa-video', 'Open evidence reports', $this->electionOperationsUrl($user, ['focus' => 'videos'])),
             ],
             'membership_activity' => [
-                $this->metricCard('New Today', $activity['new_today'] ?? 0, 'bg-danger', 'fas fa-user-plus', 'Membership activity'),
-                $this->metricCard('New This Week', $activity['new_this_week'] ?? 0, 'bg-info', 'fas fa-calendar-week', 'Membership activity'),
-                $this->metricCard('New This Month', $activity['new_this_month'] ?? 0, 'bg-success', 'fas fa-calendar-alt', 'Membership activity'),
+                $this->metricCard('New Today', $activity['new_today'] ?? 0, 'bg-danger', 'fas fa-user-plus', 'Membership activity', $this->peopleMetricUrl($user, 'new-today')),
+                $this->metricCard('New This Week', $activity['new_this_week'] ?? 0, 'bg-info', 'fas fa-calendar-week', 'Membership activity', $this->peopleMetricUrl($user, 'new-this-week')),
+                $this->metricCard('New This Month', $activity['new_this_month'] ?? 0, 'bg-success', 'fas fa-calendar-alt', 'Membership activity', $this->peopleMetricUrl($user, 'new-this-month')),
             ],
         ];
     }
@@ -473,6 +552,15 @@ class LocationDashboardMetricsService
         return (int) $this->scopedPollingUnits($user)->count('polling_units.id');
     }
 
+    private function approvedAgentAssignmentCount(?User $user): int
+    {
+        return (int) PollingUnitAgentAssignment::approved()
+            ->whereHas('pollingUnit', function (Builder $query) use ($user) {
+                $this->scopeService->applyScope($query, $user, 'polling_units', 'polling_units');
+            })
+            ->count();
+    }
+
     private function scopedPollingUnits(?User $user): Builder
     {
         $query = PollingUnit::query();
@@ -655,7 +743,7 @@ class LocationDashboardMetricsService
         $label = strtoupper($this->scopeLabel($user));
 
         return match ($this->scopeService->getScopeType($user)) {
-            LocationScopeService::NATIONAL => 'NIGERIA STATISTICS',
+            LocationScopeService::NATIONAL => 'Nationwide Statistics',
             LocationScopeService::FEDERAL => "{$label} FEDERAL CONSTITUENCY",
             default => "{$label} STATISTICS",
         };
@@ -686,6 +774,45 @@ class LocationDashboardMetricsService
         $url = route($routeName, $uuid);
 
         return $query ? $url.'?'.http_build_query($query) : $url;
+    }
+
+    private function electionResultUrl(?User $user, array $election): ?string
+    {
+        $uuid = $election['active_election']['uuid'] ?? null;
+        $routeName = $user?->access_level.'.election.results';
+
+        if (!$uuid || !Route::has($routeName)) {
+            return $this->resultReportUrl($user, $election);
+        }
+
+        return route($routeName, $uuid);
+    }
+
+    private function electionOperationsUrl(?User $user, array $query = []): ?string
+    {
+        $routeName = $user?->access_level.'.election.operations';
+
+        if (!Route::has($routeName)) {
+            return null;
+        }
+
+        $url = route($routeName);
+
+        return $query ? $url.'?'.http_build_query($query) : $url;
+    }
+
+    private function peopleMetricUrl(?User $user, string $metric): ?string
+    {
+        $routeName = $user?->access_level.'.peopleMetric';
+
+        if (!Route::has($routeName)) {
+            return null;
+        }
+
+        return route($routeName, array_filter([
+            'metric' => $metric,
+            'uuid' => $this->scopeRouteParameter($user),
+        ]));
     }
 
     private function scopeRouteParameter(?User $user): ?string

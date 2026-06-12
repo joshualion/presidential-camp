@@ -134,17 +134,7 @@
                                 <span class="badge badge-danger">Dispute Authority</span>
                             @endif
                             <span class="badge badge-info">{{ $packageContext['label'] ?? 'Campaign Package' }}</span>
-                            @if(
-                                $profileData->hasAnyRole([
-                                    'National ICT Director',
-                                    'Regional ICT Director',
-                                    'State ICT Director',
-                                    'LGA ICT Director',
-                                    'Ward ICT Director',
-                                    'PU ICT Director',
-                                    'Pu Agent'
-                                ]) || $profileData->access_level == 'superadmin'
-                            )
+                            @if($canUploadPollingUnitResults)
                                 <a href="{{ route($profileData->access_level.'.vote.add') }}" class="btn btn-default btn-sm">
                                     <i class="fa fa-plus-square"></i> Add Vote Records
                                 </a>

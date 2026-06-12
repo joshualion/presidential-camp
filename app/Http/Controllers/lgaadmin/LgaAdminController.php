@@ -99,6 +99,7 @@ class LgaAdminController extends Controller
     $excoCount = User::where('lga_id', $lga->id)
         ->where('access_level', '!=', 'user')
         ->where('access_level', '!=', 'superadmin')
+            ->where('access_level', '!=', 'puadmin')
         ->count();
 
     $memberCount = User::where('lga_id', $lga->id)
@@ -340,7 +341,8 @@ class LgaAdminController extends Controller
              ->count();
              $excoCount = User::where('state_id', $state->id)
              ->where('access_level', '!=', 'user')
-             ->where('access_level', '!=', 'superadmin')->count();
+             ->where('access_level', '!=', 'superadmin')
+            ->where('access_level', '!=', 'puadmin')->count();
 
              $memberCount = User ::where('state_id', $state->id)
              ->where('access_level', '!=', 'superadmin')
@@ -409,7 +411,8 @@ class LgaAdminController extends Controller
              ->count();
              $excoCount = User::where('lga_id', $lga->id)
              ->where('access_level', '!=', 'user')
-             ->where('access_level', '!=', 'superadmin')->count();
+             ->where('access_level', '!=', 'superadmin')
+            ->where('access_level', '!=', 'puadmin')->count();
 
              $memberCount = User ::where('lga_id', $lga->id)
              ->where('access_level', '!=', 'superadmin')
@@ -473,7 +476,8 @@ class LgaAdminController extends Controller
 
              $excoCount = User::where('ward_id', $ward->id)
              ->where('access_level', '!=', 'user')
-             ->where('access_level', '!=', 'superadmin')->count();
+             ->where('access_level', '!=', 'superadmin')
+            ->where('access_level', '!=', 'puadmin')->count();
 
              $memberCount = User ::where('ward_id', $ward->id)
              ->where('access_level', '!=', 'superadmin')
@@ -533,7 +537,8 @@ class LgaAdminController extends Controller
 
              $excoCount = User::where('polling_unit_id', $pu->id)
              ->where('access_level', '!=', 'user')
-             ->where('access_level', '!=', 'superadmin')->count();
+             ->where('access_level', '!=', 'superadmin')
+            ->where('access_level', '!=', 'puadmin')->count();
 
              $memberCount = User ::where('polling_unit_id', $pu->id)
              ->where('access_level', '!=', 'superadmin')

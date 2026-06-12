@@ -39,6 +39,8 @@ Route::middleware(['auth', 'check_onboarding'])->group(function () {
     Route::get('/federal/leaders/fetch/{uuid?}', [MembersController::class, 'allExcoMembers'])->name('federaladmin.leaders');
     Route::get('/federal/regulars/data/fetch/{uuid?}', [MembersController::class, 'getRegularMembersData'])->name('federaladmin.regulars.data');
     Route::get('/federal/regulars/fetch/{uuid?}', [MembersController::class, 'allRegularMembers'])->name('federaladmin.regulars');
+    Route::get('/federal/people/{metric}/data/fetch/{uuid?}', [MembersController::class, 'getPeopleMetricMembersData'])->whereIn('metric', ['agents', 'eligible-voters', 'without-voter-card', 'new-today', 'new-this-week', 'new-this-month'])->name('federaladmin.peopleMetric.data');
+    Route::get('/federal/people/{metric}/fetch/{uuid?}', [MembersController::class, 'allPeopleMetricMembers'])->whereIn('metric', ['agents', 'eligible-voters', 'without-voter-card', 'new-today', 'new-this-week', 'new-this-month'])->name('federaladmin.peopleMetric');
     Route::get('/federal/member/add', [MembersController::class, 'addMember'])->name('federaladmin.member.add')->middleware('access_level:federaladmin');
     Route::post('/federal/member/store', [MembersController::class, 'storeMember'])->name('federaladmin.member.store')->middleware('access_level:federaladmin');
     Route::get('/federal/member/edit/{uuid}', [MembersController::class, 'editMember'])->name('federaladmin.member.edit')->middleware('access_level:federaladmin');
@@ -59,14 +61,23 @@ Route::middleware(['auth', 'check_onboarding'])->group(function () {
     Route::get('/federal/pu/members/data/{uuid}', [MembersController::class, 'getPuMembersData'])->name('federaladmin.pu.members.data');
 
     Route::get('/federal/location/localgovernment/dashboard/{uuid}', [FederalAdminController::class, 'localGovernmentDashBoard'])->name('federaladmin.location.lga.dashboard')->middleware('access_level:federaladmin');
+    Route::get('/federal/location/localgovernments', [\App\Http\Controllers\LocationController::class, 'allLocalGovernments'])->name('federaladmin.location.lgas')->middleware('access_level:federaladmin');
+    Route::get('/federal/location/localgovernment/edit/{uuid}', [\App\Http\Controllers\LocationController::class, 'editLocalGovernment'])->name('federaladmin.location.lga.edit')->middleware('access_level:federaladmin');
+    Route::post('/federal/location/localgovernment/update/{uuid}', [\App\Http\Controllers\LocationController::class, 'updateLocalGovernment'])->name('federaladmin.location.lga.update')->middleware('access_level:federaladmin');
     Route::get('/federal/lga/member/distribution/gender/{uuid}', [ChartsController::class, 'GenderDistributionByLga'])->name('federaladmin.lga.member.distribution.gender')->middleware('access_level:federaladmin');
     Route::get('/federal/lga/member/distribution/age/{uuid}', [ChartsController::class, 'AgeDistributionByLga'])->name('federaladmin.lga.member.distribution.age')->middleware('access_level:federaladmin');
     Route::get('/federal/lga/member/distribution/ward/{uuid}', [ChartsController::class, 'wardDistributionByLga'])->name('federaladmin.lga.member.distribution.ward')->middleware('access_level:federaladmin');
     Route::get('/federal/lga/member/distribution/voter{uuid}', [ChartsController::class, 'VoterDistributionByLga'])->name('federaladmin.lga.member.distribution.voter')->middleware('access_level:federaladmin');
     Route::get('/federal/location/ward/dashboard/{uuid}', [FederalAdminController::class, 'wardDashBoard'])->name('federaladmin.location.ward.dashboard')->middleware('access_level:federaladmin');
+    Route::get('/federal/location/wards', [\App\Http\Controllers\LocationController::class, 'allWards'])->name('federaladmin.location.wards')->middleware('access_level:federaladmin');
+    Route::get('/federal/location/ward/edit/{uuid}', [\App\Http\Controllers\LocationController::class, 'editWard'])->name('federaladmin.location.ward.edit')->middleware('access_level:federaladmin');
+    Route::post('/federal/location/ward/update/{uuid}', [\App\Http\Controllers\LocationController::class, 'updateWard'])->name('federaladmin.location.ward.update')->middleware('access_level:federaladmin');
     Route::get('/federal/ward/member/distribution/gender/{uuid}', [ChartsController::class, 'GenderDistributionByWard'])->name('federaladmin.ward.member.distribution.gender')->middleware('access_level:federaladmin');
     Route::get('/federal/ward/member/distribution/voter{uuid}', [ChartsController::class, 'VoterDistributionByWard'])->name('federaladmin.ward.member.distribution.voter')->middleware('access_level:federaladmin');
     Route::get('/federal/location/pollingunit/dashboard/{uuid}', [FederalAdminController::class, 'PuDashBoard'])->name('federaladmin.location.pu.dashboard')->middleware('access_level:federaladmin');
+    Route::get('/federal/location/pollingunits', [\App\Http\Controllers\LocationController::class, 'allPollingUnits'])->name('federaladmin.location.pus')->middleware('access_level:federaladmin');
+    Route::get('/federal/location/pollingunit/edit/{uuid}', [\App\Http\Controllers\LocationController::class, 'editPollingUnit'])->name('federaladmin.location.pu.edit')->middleware('access_level:federaladmin');
+    Route::post('/federal/location/pollingunit/update/{uuid}', [\App\Http\Controllers\LocationController::class, 'updatePollingUnit'])->name('federaladmin.location.pu.update')->middleware('access_level:federaladmin');
     Route::get('/federal/pollingunit/member/distribution/gender/{uuid}', [ChartsController::class, 'GenderDistributionByPu'])->name('federaladmin.pu.member.distribution.gender')->middleware('access_level:federaladmin');
     Route::get('/federal/pollingunit/member/distribution/voter{uuid}', [ChartsController::class, 'VoterDistributionByPu'])->name('federaladmin.pu.member.distribution.voter')->middleware('access_level:federaladmin');
     Route::get('/federal/federal-constituency/member/distribution/gender/{uuid}', [ChartsController::class, 'GenderDistributionByFederalConstituency'])->name('federaladmin.federal-constituency.member.distribution.gender')->middleware('access_level:federaladmin');

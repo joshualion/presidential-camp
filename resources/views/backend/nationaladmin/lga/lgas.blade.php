@@ -9,10 +9,12 @@
                 <div class="card card-primary">
                 <div class="card-header">
                     <h3 class="card-title">All Local Government Areas - <span class="badge badge-light">{{number_format($lgas->count(),0)}}</span></h3>
-                    <div class="card-tools">
-                        <a href="{{ route('nationaladmin.location.lga.add') }}"><button class="btn btn-default"> <i class="fa fa-plus-square"></i> Add local Government Area</button></a>
-                        <a href="{{route($profileData->access_level.'.location.lga.import')}}"><button class="btn btn-dark"> <i class="fa fa-file-excel"></i> Import LGAs</button></a>
-                    </div>
+                    @if(app(\App\Services\StructuralLocationAccessService::class)->canCreateOrDelete($profileData))
+                        <div class="card-tools">
+                            <a href="{{ route('nationaladmin.location.lga.add') }}"><button class="btn btn-default"> <i class="fa fa-plus-square"></i> Add local Government Area</button></a>
+                            <a href="{{route($profileData->access_level.'.location.lga.import')}}"><button class="btn btn-dark"> <i class="fa fa-file-excel"></i> Import LGAs</button></a>
+                        </div>
+                    @endif
                 </div>
                 <!-- /.card-header -->
                 <div class="card-body">
@@ -132,7 +134,6 @@
 
 
 @endsection
-
 
 
 

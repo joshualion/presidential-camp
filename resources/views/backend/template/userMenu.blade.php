@@ -44,13 +44,11 @@ $pu = \App\Models\PollingUnit::find($profileData->polling_unit_id);
                             </a>
                           </li>
 
-
-
-
-
                         </ul>
             </li>
             {{-- / Member voting Bloc --}}
+
+            @include('backend.template.partials.agentMenu')
 
                    {{-- Election --}}
         <li class="tab nav-item menu-close">

@@ -39,7 +39,7 @@
                                                 <td><strong>{{ $lga->name }}</strong></td>
                                                 <td>
                                                     <span class="badge bg-secondary text-white">
-                                                        {{ $lga->users->where('access_level', '!=', 'superadmin')->count() }}
+                                                        {{ number_format($lga->members_count ?? 0) }}
                                                     </span>
 
                                                 </td>
