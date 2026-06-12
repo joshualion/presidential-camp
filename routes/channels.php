@@ -20,6 +20,10 @@ Broadcast::channel('messages.user.{id}', function ($user, $id) {
     return (int) $user->id === (int) $id;
 });
 
+Broadcast::channel('campaign.notifications.{id}', function ($user, $id) {
+    return (int) $user->id === (int) $id;
+});
+
 Broadcast::channel('activity-{scope}-{id}', function ($user, $scope, $id) {
     if (!$user) {
         return false;

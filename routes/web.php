@@ -11,6 +11,7 @@ use App\Http\Controllers\ProfileCompletionController;
 use App\Http\Controllers\PollingUnitAgentController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\CampaignNotificationController;
 
 
 
@@ -41,6 +42,15 @@ Route::get('/pu/data', [AjaxController::class, 'getPUData'])->name('pus.data')->
 
 Route::get('/election/{uuid}/chart-data', [ElectionController::class, 'getElectionResultChartData'])
     ->name('election.chart.data');
+
+Route::middleware(['auth'])->group(function () {
+    Route::get('/notifications', [CampaignNotificationController::class, 'index'])->name('campaign.notifications.index');
+    Route::get('/notifications/unread-count', [CampaignNotificationController::class, 'unreadCount'])->name('campaign.notifications.unread');
+    Route::post('/notifications/{notification}/read', [CampaignNotificationController::class, 'markRead'])->name('campaign.notifications.read');
+    Route::post('/notifications/read-all', [CampaignNotificationController::class, 'readAll'])->name('campaign.notifications.readAll');
+    Route::post('/notifications/{notification}/dismiss', [CampaignNotificationController::class, 'dismiss'])->name('campaign.notifications.dismiss');
+    Route::post('/notifications/clear-read', [CampaignNotificationController::class, 'clearRead'])->name('campaign.notifications.clearRead');
+});
 
 
 
@@ -160,7 +170,7 @@ Route::middleware(['auth','check_onboarding', 'kuyak_eyen_ino', 'eyen_ino_no_way
     Route::get('/search', [SearchController::class, 'index'])->name('search.index');
 
     // Notifications
-    Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount'])->name('notifications.unread');
+    Route::get('/community/notifications/unread-count', [NotificationController::class, 'unreadCount'])->name('notifications.unread');
     Route::get('/notifications/feed', [NotificationController::class, 'feed'])->name('notifications.feed');
     Route::post('/notifications/mark-read', [NotificationController::class, 'markRead'])->name('notifications.markRead');
     Route::post('/notifications/mark-all-read', [NotificationController::class, 'markAllRead'])->name('notifications.markAllRead');
