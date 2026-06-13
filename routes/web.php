@@ -255,7 +255,7 @@ Route::middleware([ 'kuyak_eyen_ino', 'eyen_ino_no_way'])->group(function () {
 require __DIR__.'/nationalAdmin.php';
 
 //Require Regional Admin Routes file
-require __DIR__.'/regionalAdmin.php';
+require __DIR__.'/RegionalAdmin.php';
 
 //Require State Admin Routes file
 require __DIR__.'/stateAdmin.php';
