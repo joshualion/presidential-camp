@@ -1,0 +1,361 @@
+state_code,state_name,senatorial_district_name,name
+1,Abia,Abia Central,Isiala Ngwa North/Isiala Ngwa South
+1,Abia,Abia Central,Umuahia North/Umuahia South/Ikwuano
+1,Abia,Abia North,Arochukwu/Ohafia
+1,Abia,Abia North,Bende
+1,Abia,Abia North,Isuikwuato/Umu-Nneochi
+1,Abia,Abia South,Aba North/Aba South
+1,Abia,Abia South,Obingwa/Ugwunagbo/Osisioma
+1,Abia,Abia South,Ukwa East/Ukwa West
+2,Adamawa,Adamawa North,Madagali/Michika
+2,Adamawa,Adamawa North,Maiha/Mubi North/Mubi South
+2,Adamawa,Adamawa South,Demsa/Numan/Lamurde
+2,Adamawa,Adamawa South,Guyuk/Shelleng
+2,Adamawa,Adamawa South,Mayo Belwa/Ganye/Jada/Toungo
+2,Adamawa,Ademawa Central,Furore/Song
+2,Adamawa,Ademawa Central,Gombi/Hong
+2,Adamawa,Ademawa Central,Yola North/Yola South/Girei
+3,Akwa Ibom,Akwa Ibom North East,Etinan/Nsit Ibom/Nsit Ubium
+3,Akwa Ibom,Akwa Ibom North East,Itu/Ibiono Ibom
+3,Akwa Ibom,Akwa Ibom North East,Uyo/Uruan/Nsit Atai/Ibesikpo Asutan
+3,Akwa Ibom,Akwa Ibom North West,Abak/Etim Ekpo/Ika
+3,Akwa Ibom,Akwa Ibom North West,Ikono/Ini
+3,Akwa Ibom,Akwa Ibom North West,Ikot Ekpene/Essien Udim/Obot Akara F
+3,Akwa Ibom,Akwa Ibom North West,Ukanafun/Oruk Anam
+3,Akwa Ibom,Akwa Ibom South,Eket/Onna/Esit Eket/Ibeno
+3,Akwa Ibom,Akwa Ibom South,Ikot Abasi/Mkpat Enin/Eastern Obolo
+3,Akwa Ibom,Akwa Ibom South,Oron/Mbo/Okobo/Udung Uko/Urue Offong/Oruko
+4,Anambra,Anambra Central,Awka North/Awka South
+4,Anambra,Anambra Central,Idemili North/Idemili South
+4,Anambra,Anambra Central,Njikoka/Dunukofia/Anaocha
+4,Anambra,Anambra North,Anambra East/Anambra West
+4,Anambra,Anambra North,Ogbaru
+4,Anambra,Anambra North,Onitsha North/Onitsha South
+4,Anambra,Anambra North,Oyi/Ayamelum
+4,Anambra,Anambra South,Aguata
+4,Anambra,Anambra South,Ihiala
+4,Anambra,Anambra South,Nnewi North/Nnewi South/Ekwusigo
+4,Anambra,Anambra South,Orumba North/Orumba South
+5,Bauchi,Bauchi Central,Darazo/Gunjuwa
+5,Bauchi,Bauchi Central,Misau/Dambam
+5,Bauchi,Bauchi Central,Ningi/Warji
+5,Bauchi,Bauchi North,Gamawa
+5,Bauchi,Bauchi North,Jama'are/Itas-Gadau
+5,Bauchi,Bauchi North,Katagum
+5,Bauchi,Bauchi North,Shira/Giade
+5,Bauchi,Bauchi North,Zaki
+5,Bauchi,Bauchi South,Alkaleri/Kirfi
+5,Bauchi,Bauchi South,Bauchi
+5,Bauchi,Bauchi South,Bogoro/Dass/Tafawa Balewa
+5,Bauchi,Bauchi South,Toro
+6,Bayelsa,Bayelsa Central,Southern Ijaw
+6,Bayelsa,Bayelsa Central,Yenagoa/Kolokuna/Opokuma
+6,Bayelsa,Bayelsa East,Brass/Nembe
+6,Bayelsa,Bayelsa East,Ogbia
+6,Bayelsa,Bayelsa West,Sagbama/Ekeremor
+7,Benue,Benue North East,Katsina-Ala/Ukum/Logo
+7,Benue,Benue North East,Konshisha/Vandeikya
+7,Benue,Benue North East,Kwande/Ushongo
+7,Benue,Benue North West,Buruku
+7,Benue,Benue North West,Gboko/Tarka
+7,Benue,Benue North West,Guma/Makurdi
+7,Benue,Benue North West,Gwer East/Gwer West
+7,Benue,Benue South,Ado/Obadigbo/Okpokwu
+7,Benue,Benue South,Apa/Agatu
+7,Benue,Benue South,Oju/Obi
+7,Benue,Benue South,Otukpo/Ohimini
+8,Borno,Borno Central,Bama/Ngala/Kala-Balge
+8,Borno,Borno Central,Dikwa/Mafa/Konduga
+8,Borno,Borno Central,Jere
+8,Borno,Borno Central,Maiduguri (Metropolitan)
+8,Borno,Borno North,Kaga/Gubio/Magumeri
+8,Borno,Borno North,Kukawa/Mobbar/Abadam/Guzamali
+8,Borno,Borno North,Monguno/Nganzai/Marte
+8,Borno,Borno South,Askira-Uba/Hawul
+8,Borno,Borno South,Biu/Kwaya-Kusar/Shani/Bayo
+8,Borno,Borno South,Damboa/Gwoza/Chibok
+9,Cross River,Cross River Central,Boki/Ikom
+9,Cross River,Cross River Central,Obubra/Etung
+9,Cross River,Cross River Central,Yakurr/Abi
+9,Cross River,Cross River North,Obanliku/Obudu/Bekwarra
+9,Cross River,Cross River North,Ogoja/Yala
+9,Cross River,Cross River South,Akamkpa/Biase
+9,Cross River,Cross River South,Calabar Municipality/Odukpani
+9,Cross River,Cross River South,Calabar South/Akpabuyo/Bakassi
+10,Delta,Delta Central,Ethiope East/Ethiope West
+10,Delta,Delta Central,Okpe/Sapele/Uvwie
+10,Delta,Delta Central,"Ughelli North, Ughelli South/Udu"
+10,Delta,Delta North,Aniocha North/Aniocha South/Oshimili North & South
+10,Delta,Delta North,Ika North East/Ika South
+10,Delta,Delta North,Ndokwa East/Ndokwa West/Ukwuani
+10,Delta,Delta South,Bomadi/Patani
+10,Delta,Delta South,Burutu
+10,Delta,Delta South,Isoko North/Isoko South
+10,Delta,Delta South,Warri North/Warri South/Warri South West
+11,Ebonyi,Ebonyi Central,Ezza North/Ishielu
+11,Ebonyi,Ebonyi Central,Ezza South/Ikwo
+11,Ebonyi,Ebonyi North,Abakaliki/Izzi
+11,Ebonyi,Ebonyi North,Ebonyi/Ohaukwu
+11,Ebonyi,Ebonyi South,Afikpo North/Afikpo South
+11,Ebonyi,Ebonyi South,Ivo-Ohaozara/Onicha
+12,Edo,Edo Central,Esan Central/Esan West/Igueben
+12,Edo,Edo Central,Esan North East/Esan South East
+12,Edo,Edo North,Akoko-Edo
+12,Edo,Edo North,Etsako East/Etsako West/Etsako Central
+12,Edo,Edo North,Owan East/Owan West
+12,Edo,Edo South,Egor/Ikpoba-Okha
+12,Edo,Edo South,Oredo
+12,Edo,Edo South,Orhionmwon/Uhunmwonde
+12,Edo,Edo South,Ovia North East/Ovia South West
+13,Ekiti,Ekiti Central,Ado Ekiti/Irepodun/Ifelodun
+13,Ekiti,Ekiti Central,Ijero/Ekiti West/Efon
+13,Ekiti,Ekiti North,"Ido/Osi, Moba/Ilejeme"
+13,Ekiti,Ekiti North,Ikole/Oye
+13,Ekiti,Ekiti South,Ekiti South West/Ikere/Orun/Ise
+13,Ekiti,Ekiti South,Emure/Gbonyin/Ekiti East
+14,Enugu,Enugu East,Enugu East/Isi Uzo
+14,Enugu,Enugu East,Enugu North/Enugu South
+14,Enugu,Enugu East,Nkanu East/Nkanu West
+14,Enugu,Enugu North,Igbo-Etiti/Uzo-Uwani
+14,Enugu,Enugu North,Igbo-Eze North/Udenu
+14,Enugu,Enugu North,Nsukka/Igbo-Eze South
+14,Enugu,Enugu West,Aninri/Awgu/Oji River
+14,Enugu,Enugu West,Ezeagu/Udi
+15,Gombe,Gombe Central,Akko
+15,Gombe,Gombe Central,Yamaltu/Deba
+15,Gombe,Gombe North,Dukku/Nafada
+15,Gombe,Gombe North,Gombe/Kwami/Funakaye
+15,Gombe,Gombe South,Balanga/Billiri
+15,Gombe,Gombe South,Kaltungo/Shongom
+16,Imo,Imo East,Aboh Mbaise/Ngor Okpala
+16,Imo,Imo East,Ahiazu Mbaise/Ezinhitte
+16,Imo,Imo East,Ikeduru/Mbaitoli
+16,Imo,Imo East,Owerri Municipal/Owerri North/Owerri West
+16,Imo,Imo North,Ehime Mbano/Ihite-Uboma/Obowo
+16,Imo,Imo North,Isiala Mbano/Okigwe/Onuimo
+16,Imo,Imo West,Ideato North/Ideato South
+16,Imo,Imo West,Isu/Njaba/Nkwerre/Nwangele
+16,Imo,Imo West,Oguta/Ohaji-Egbema/Oru West
+16,Imo,Imo West,Oru East/Orsu/Orlu
+17,Jigawa,Jigawa North-East,Birniwa Guri/Kirikasamma
+17,Jigawa,Jigawa North-East,Hadejia/Kafin Hausa/Auyo
+17,Jigawa,Jigawa North-East,Mallam Madori/Kaugama
+17,Jigawa,Jigawa North-West,Babura/Garki
+17,Jigawa,Jigawa North-West,Gumel/Maigatari/Sule Tankarkar/Gagarawa
+17,Jigawa,Jigawa North-West,Kazaure/Roni/Gwiwa/Yankwashi
+17,Jigawa,Jigawa North-West,Ringim/Taura
+17,Jigawa,Jigawa South-West,Birnin Kudu/Buji
+17,Jigawa,Jigawa South-West,Dutse/Kiyawa
+17,Jigawa,Jigawa South-West,Gwaram
+17,Jigawa,Jigawa South-West,Jahun/Miga
+18,Kaduna,Kaduna Central,Birnin Gwari/Giwa
+18,Kaduna,Kaduna Central,Chikun/Kajuru
+18,Kaduna,Kaduna Central,Igabi
+18,Kaduna,Kaduna Central,Kaduna North
+18,Kaduna,Kaduna Central,Kaduna South
+18,Kaduna,Kaduna North,Ikara/Kubau
+18,Kaduna,Kaduna North,Lere
+18,Kaduna,Kaduna North,Makarfi/Kudan
+18,Kaduna,Kaduna North,Sabon Gari
+18,Kaduna,Kaduna North,Soba
+18,Kaduna,Kaduna North,Zaria
+18,Kaduna,Kaduna South,Jema'a/Sanga
+18,Kaduna,Kaduna South,Kachia/Kagarko
+18,Kaduna,Kaduna South,Kaura
+18,Kaduna,Kaduna South,Kauru
+18,Kaduna,Kaduna South,Zangon Kataf/Jaba
+19,Kano,Kano Central,Dala
+19,Kano,Kano Central,Dawakin Kudu/Warawa
+19,Kano,Kano Central,Fagge
+19,Kano,Kano Central,Gwale
+19,Kano,Kano Central,Kumbotso
+19,Kano,Kano Central,Kura/Madobi/Garun Mallam
+19,Kano,Kano Central,Minjibir/Ungogo
+19,Kano,Kano Central,Municipal
+19,Kano,Kano Central,Nassarawa
+19,Kano,Kano Central,Tarauni
+19,Kano,Kano North,Bichi
+19,Kano,Kano North,Dambatta/Makoda
+19,Kano,Kano North,Dawakin Tofa/Tofa/Rimin Gado
+19,Kano,Kano North,Gezawa/Gabasawa
+19,Kano,Kano North,Gwarzo/Ikabo
+19,Kano,Kano North,Shanono/Bagwai
+19,Kano,Kano North,Tsanyawa/Kunchi
+19,Kano,Kano South,Albasu/Gaya/Ajingi
+19,Kano,Kano South,Bebeji/Kiru
+19,Kano,Kano South,Doguwa/Tudun Wada
+19,Kano,Kano South,Karaye/Rogo
+19,Kano,Kano South,Rano/Bunkure/Kibiya
+19,Kano,Kano South,Sumaila/Takai
+19,Kano,Kano South,Wudil/Garko
+20,Katsina,Katsina Central,Batagarawa/Charanchi/Rimi
+20,Katsina,Katsina Central,Batsari/Safana/Danmusa
+20,Katsina,Katsina Central,Dutsin-Ma/Kurfi
+20,Katsina,Katsina Central,Jibia/Kaita
+20,Katsina,Katsina Central,Katsina
+20,Katsina,Katsina North,Bindawa/Mani
+20,Katsina,Katsina North,Daura/Sandamu/Mai'adua
+20,Katsina,Katsina North,Ingawa/Kankia/Kusada
+20,Katsina,Katsina North,Mashi/Dutsi
+20,Katsina,Katsina North,Zango/Baure
+20,Katsina,Katsina South,Bakori/Danja
+20,Katsina,Katsina South,Faskari/Kankara/Sabuwa
+20,Katsina,Katsina South,Funtua/Dandume
+20,Katsina,Katsina South,Malumfashi/Kafur
+20,Katsina,Katsina South,Matazu/Musawa
+21,Kebbi,Kebbi Central,Aleiro/Gwandu/Jega
+21,Kebbi,Kebbi Central,Bunza/Birnin Kebbi/Kalgo
+21,Kebbi,Kebbi Central,Koko-Besse/Maiyama
+21,Kebbi,Kebbi North,Arewa/Dandi
+21,Kebbi,Kebbi North,Argungu/Augie
+21,Kebbi,Kebbi North,Bagudo/Suru
+21,Kebbi,Kebbi South,Fakai/Sakaba/Wasagu/Danko/Zuru
+21,Kebbi,Kebbi South,Ngaski/Shanga/Yauri
+22,Kogi,Kogi Central,Adavi/Okehi
+22,Kogi,Kogi Central,Ajaokuta
+22,Kogi,Kogi Central,Okene/Ogori-Magogo
+22,Kogi,Kogi East,Ankpa/Omala/Olamaboro
+22,Kogi,Kogi East,Bassa/Dekina
+22,Kogi,Kogi East,Idah/Igalamela Odolu/Ibaji/Ofu
+22,Kogi,Kogi West,Ijumu/Kabba-Bunu
+22,Kogi,Kogi West,Kogi (Lokoja)/Kogi (K.k.)
+22,Kogi,Kogi West,Yagba East/Yagba West/Mopamuro
+23,Kwara,Kwara Central,Ilorin East/Ilorin South
+23,Kwara,Kwara Central,Ilorin West/Asa
+23,Kwara,Kwara North,Baruten/Kaiama
+23,Kwara,Kwara North,Edu/Moro/Pategi
+23,Kwara,Kwara South,Ekiti/Isin/Irepodun/Oke-Ero
+23,Kwara,Kwara South,Ifelodun/Offa/Oyun
+24,Lagos,Lagos Central,Apapa
+24,Lagos,Lagos Central,Eti-Osa
+24,Lagos,Lagos Central,Lagos Island I
+24,Lagos,Lagos Central,Lagos Island Ii
+24,Lagos,Lagos Central,Lagos Mainland
+24,Lagos,Lagos Central,Surulere I
+24,Lagos,Lagos Central,Surulere Ii
+24,Lagos,Lagos East,Epe
+24,Lagos,Lagos East,Ibeju Lekki
+24,Lagos,Lagos East,Ikorodu
+24,Lagos,Lagos East,Kosofe
+24,Lagos,Lagos East,Shomolu
+24,Lagos,Lagos West,Agege
+24,Lagos,Lagos West,Ajeromi/Ifelodun
+24,Lagos,Lagos West,Alimosho
+24,Lagos,Lagos West,Amuwo-Odofin
+24,Lagos,Lagos West,Badagry
+24,Lagos,Lagos West,Ifako/Ijaiye
+24,Lagos,Lagos West,Ikeja
+24,Lagos,Lagos West,Mushin I
+24,Lagos,Lagos West,Mushin Ii
+24,Lagos,Lagos West,Ojo
+24,Lagos,Lagos West,Oshodi/Isolo I
+24,Lagos,Lagos West,Oshodi/Isolo Ii
+25,Nasarawa,Nassarawa North,Akwanga/Nassarawa-Eggon/Wamba
+25,Nasarawa,Nassarawa South,Awe/Doma/Keana
+25,Nasarawa,Nassarawa South,Lafia/Obi
+25,Nasarawa,Nassarawa West,Keffi/Karu/Kokona
+25,Nasarawa,Nassarawa West,Nassarawa/Toto
+26,Niger,Niger East,Booso/Paikoro
+26,Niger,Niger East,Chanchaga
+26,Niger,Niger East,Gurara/Suleja/Tapa
+26,Niger,Niger East,Shiroro/Rafi/Munya
+26,Niger,Niger North,Agwara/Borgu
+26,Niger,Niger North,Kontagora/Wushishi/Mariga/Mashegu
+26,Niger,Niger North,Magama/Rijau
+26,Niger,Niger South,Agaie/Lapai
+26,Niger,Niger South,Bida/Gbako/Katcha
+26,Niger,Niger South,Lavun/Mokwa/Edati
+27,Ogun,Ogun Central,Abeokuta South
+27,Ogun,Ogun Central,Ifo/Ewekoro
+27,Ogun,Ogun Central,Owode/Odeda
+27,Ogun,Ogun East,Ijebu North/Ijebu East/Ogun Waterside
+27,Ogun,Ogun East,Ijebu Ode/Odogbolu/Ijebu North East
+27,Ogun,Ogun East,Ikenne/Shagamu/Remo North
+27,Ogun,Ogun West,Ado-Odo/Ota
+27,Ogun,Ogun West,Egbado North/Imeko-Afon
+27,Ogun,Ogun West,Egbado South/Ipokia
+28,Ondo,Ondo Central,Akure North/Akure South
+28,Ondo,Ondo Central,Idanre/Ifedore
+28,Ondo,Ondo Central,Ondo East/Ondo West
+28,Ondo,Ondo North,Akoko North East/Akoko North West
+28,Ondo,Ondo North,Akoko South East/Akoko South West
+28,Ondo,Ondo North,Owo/Ose
+28,Ondo,Ondo South,Eseodo/Ilaje
+28,Ondo,Ondo South,Ileoluji/Okeigbo/Odigbo
+28,Ondo,Ondo South,Okitipupa/Irele
+29,Osun,Osun Central,Boluwaduro/Ifedayo/Ila
+29,Osun,Osun Central,Irepodun/Olorunda/Osogbo/Orolu
+29,Osun,Osun Central,Odo-Otin/Ifelodun/Boripe
+29,Osun,Osun East,Atakunmosa East/Atakunmosa West/Ilesha East/Ilesha West
+29,Osun,Osun East,Ife Central/Ife North/Ife South/Ife East
+29,Osun,Osun East,Obokun/Oriade
+29,Osun,Osun West,Ayedaade/Irewole/Isokan
+29,Osun,Osun West,Ayedire/Iwo/Ola-Oluwa
+29,Osun,Osun West,Ede North/Ede South/Egbedore/Ejigbo
+30,Oyo,Oyo Central,Afijio/Oyo East/Oyo West/Atiba
+30,Oyo,Oyo Central,Akinyele/Lagelu
+30,Oyo,Oyo Central,Egbeda/Ona-Ara
+30,Oyo,Oyo Central,Ogo-Oluwa/Surulere
+30,Oyo,Oyo Central,Oluyole
+30,Oyo,Oyo North,Irepo/Orelope/Olorunsogo
+30,Oyo,Oyo North,Iseyin/Itesiwaju/Kajola/Iwajowa
+30,Oyo,Oyo North,Ogbomoso North/Ogbomoso South/Orire
+30,Oyo,Oyo North,Saki East/Saki West/Atisbo
+30,Oyo,Oyo South,Ibadan North
+30,Oyo,Oyo South,Ibadan North East/Ibadan South East
+30,Oyo,Oyo South,Ibadan South West/Ibadan North West
+30,Oyo,Oyo South,Ibarapa Central/Ibarapa North
+30,Oyo,Oyo South,Ibarapa East/Ido
+31,Plateau,Plateau Central,Bokkos/Mangu
+31,Plateau,Plateau Central,Kanke/Pankshin/Kanam
+31,Plateau,Plateau North,Barkin Ladi/Riyom
+31,Plateau,Plateau North,Jos North/Bassa
+31,Plateau,Plateau North,Jos South/Jos East
+31,Plateau,Plateau South,Langtang North/Langtang South
+31,Plateau,Plateau South,Mikang/Qua Anpan/Shedam
+31,Plateau,Plateau South,Wase
+32,Rivers,Rivers East,Etche/Omuma
+32,Rivers,Rivers East,Ikwerre/Umohua
+32,Rivers,Rivers East,Obio Akpor
+32,Rivers,Rivers East,Okrika/Ogu-Bolo
+32,Rivers,Rivers East,Port Harcourt I
+32,Rivers,Rivers East,Port Harcourt Ii
+32,Rivers,Rivers South East,Eleme/Tai/Oyigbo
+32,Rivers,Rivers South East,Khana/Gokana
+32,Rivers,Rivers South East,Opobo/Nkoro/Andoni
+32,Rivers,Rivers West,Abua-Odual/Ahaoda East
+32,Rivers,Rivers West,Ahoada West/Ogba Egbema
+32,Rivers,Rivers West,Akuku-Toru/Asari-Toru
+32,Rivers,Rivers West,Degema/Bonny
+33,Sokoto,Sokoto East,Goronyo/Gada
+33,Sokoto,Sokoto East,Illela/Gwadabawa
+33,Sokoto,Sokoto East,Isa/Sabon Birni
+33,Sokoto,Sokoto East,Wurno/Rabah
+33,Sokoto,Sokoto North,Binji/Silame
+33,Sokoto,Sokoto North,Kware/Wamakko
+33,Sokoto,Sokoto North,Sokoto North/Sokoto South
+33,Sokoto,Sokoto North,Tangaza/Gudu
+33,Sokoto,Sokoto South,Dange-Shuni/Bodinga/Tureta
+33,Sokoto,Sokoto South,Kebbe/Tambuwal
+33,Sokoto,Sokoto South,Yabo/Shagari
+34,Taraba,Taraba Central,Bali/Gassol
+34,Taraba,Taraba Central,Sardauna/Kurmi/Gashaka
+34,Taraba,Taraba North,Jalingo/Yorro/Zing
+34,Taraba,Taraba North,Karim Lamido/Lau/Ardo-Kola
+34,Taraba,Taraba South,Ibi/Wukari
+34,Taraba,Taraba South,Takum/Donga/Ussa
+35,Yobe,Yobe East,Bursari/Geidam/Yunusari
+35,Yobe,Yobe East,Damaturu/Gujba/Gulani/Tarmuwa
+35,Yobe,Yobe North,Bade/Jakusko
+35,Yobe,Yobe North,Machina/Nguru/Yusufari/Karasuwa
+35,Yobe,Yobe South,Fika/Fune
+35,Yobe,Yobe South,Nangere/Potiskum
+36,Zamfara,Zamfara Central,Bungudu/Maru
+36,Zamfara,Zamfara Central,Gusau/Tsafe
+36,Zamfara,Zamfara North,Kaura-Namoda/Birnin Magaji
+36,Zamfara,Zamfara North,Shinkafi/Zurmi
+36,Zamfara,Zamfara West,Anka/Talata Mafara
+36,Zamfara,Zamfara West,Bakura/Maradun
+36,Zamfara,Zamfara West,Gummi/Bukkuyum
+37,FCT,FCT,Abaji/Gwagwalada/Kwali/Kuje
+37,FCT,FCT,Municipal/Bwari

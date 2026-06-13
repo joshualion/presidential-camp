@@ -1,0 +1,110 @@
+state_code,state_name,name
+1,Abia,Abia Central
+1,Abia,Abia North
+1,Abia,Abia South
+2,Adamawa,Adamawa Central
+2,Adamawa,Adamawa North
+2,Adamawa,Adamawa South
+3,Akwa Ibom,Akwa Ibom North East
+3,Akwa Ibom,Akwa Ibom North West
+3,Akwa Ibom,Akwa Ibom South
+4,Anambra,Anambra Central
+4,Anambra,Anambra North
+4,Anambra,Anambra South
+5,Bauchi,Bauchi Central
+5,Bauchi,Bauchi North
+5,Bauchi,Bauchi South
+6,Bayelsa,Bayelsa Central
+6,Bayelsa,Bayelsa East
+6,Bayelsa,Bayelsa West
+7,Benue,Benue North East
+7,Benue,Benue North West
+7,Benue,Benue South
+8,Borno,Borno Central
+8,Borno,Borno North
+8,Borno,Borno South
+9,Cross River,Cross River Central
+9,Cross River,Cross River North
+9,Cross River,Cross River South
+10,Delta,Delta Central
+10,Delta,Delta North
+10,Delta,Delta South
+11,Ebonyi,Ebonyi Central
+11,Ebonyi,Ebonyi North
+11,Ebonyi,Ebonyi South
+12,Edo,Edo Central
+12,Edo,Edo North
+12,Edo,Edo South
+13,Ekiti,Ekiti Central
+13,Ekiti,Ekiti North
+13,Ekiti,Ekiti South
+14,Enugu,Enugu East
+14,Enugu,Enugu North
+14,Enugu,Enugu West
+15,Gombe,Gombe Central
+15,Gombe,Gombe North
+15,Gombe,Gombe South
+16,Imo,Imo East
+16,Imo,Imo North
+16,Imo,Imo West
+17,Jigawa,Jigawa North-East
+17,Jigawa,Jigawa North-West
+17,Jigawa,Jigawa South-West
+18,Kaduna,Kaduna Central
+18,Kaduna,Kaduna North
+18,Kaduna,Kaduna South
+19,Kano,Kano Central
+19,Kano,Kano North
+19,Kano,Kano South
+20,Katsina,Katsina Central
+20,Katsina,Katsina North
+20,Katsina,Katsina South
+21,Kebbi,Kebbi Central
+21,Kebbi,Kebbi North
+21,Kebbi,Kebbi South
+22,Kogi,Kogi Central
+22,Kogi,Kogi East
+22,Kogi,Kogi West
+23,Kwara,Kwara Central
+23,Kwara,Kwara North
+23,Kwara,Kwara South
+24,Lagos,Lagos Central
+24,Lagos,Lagos East
+24,Lagos,Lagos West
+25,Nasarawa,Nasarawa North
+25,Nasarawa,Nasarawa South
+25,Nasarawa,Nasarawa West
+26,Niger,Niger East
+26,Niger,Niger North
+26,Niger,Niger South
+27,Ogun,Ogun Central
+27,Ogun,Ogun East
+27,Ogun,Ogun West
+28,Ondo,Ondo Central
+28,Ondo,Ondo North
+28,Ondo,Ondo South
+29,Osun,Osun Central
+29,Osun,Osun East
+29,Osun,Osun West
+30,Oyo,Oyo Central
+30,Oyo,Oyo North
+30,Oyo,Oyo South
+31,Plateau,Plateau Central
+31,Plateau,Plateau North
+31,Plateau,Plateau South
+32,Rivers,Rivers East
+32,Rivers,Rivers South East
+32,Rivers,Rivers West
+33,Sokoto,Sokoto East
+33,Sokoto,Sokoto North
+33,Sokoto,Sokoto South
+34,Taraba,Taraba Central
+34,Taraba,Taraba North
+34,Taraba,Taraba South
+35,Yobe,Yobe East
+35,Yobe,Yobe North
+35,Yobe,Yobe South
+36,Zamfara,Zamfara Central
+36,Zamfara,Zamfara North
+36,Zamfara,Zamfara West
+37,FCT,FCT
