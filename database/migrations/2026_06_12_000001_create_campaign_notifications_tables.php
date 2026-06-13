@@ -15,7 +15,8 @@ return new class extends Migration
             $table->string('title');
             $table->text('message');
             $table->foreignId('actor_id')->nullable()->constrained('users')->nullOnDelete();
-            $table->nullableMorphs('subject');
+            $table->string('subject_type', 120)->nullable();
+            $table->unsignedBigInteger('subject_id')->nullable();
             $table->string('action_url')->nullable();
             $table->string('severity', 20)->default('info')->index();
             $table->foreignId('region_id')->nullable()->constrained('regions')->nullOnDelete();

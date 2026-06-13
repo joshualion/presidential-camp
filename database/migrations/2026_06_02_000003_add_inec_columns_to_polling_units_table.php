@@ -10,11 +10,11 @@ return new class extends Migration
     {
         Schema::table('polling_units', function (Blueprint $table) {
             if (! Schema::hasColumn('polling_units', 'inec_pu_code')) {
-                $table->string('inec_pu_code')->nullable()->index()->after('ward_id');
+                $table->string('inec_pu_code', 50)->nullable()->index()->after('ward_id');
             }
 
             if (! Schema::hasColumn('polling_units', 'inec_full_code')) {
-                $table->string('inec_full_code')->nullable()->unique()->after('inec_pu_code');
+                $table->string('inec_full_code', 100)->nullable()->unique()->after('inec_pu_code');
             }
 
             if (! Schema::hasColumn('polling_units', 'senatorial_district_id')) {

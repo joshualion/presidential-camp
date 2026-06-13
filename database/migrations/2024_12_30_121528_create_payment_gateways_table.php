@@ -10,7 +10,7 @@ class CreatePaymentGatewaysTable extends Migration
     {
         Schema::create('payment_gateways', function (Blueprint $table) {
             $table->id();
-            $table->string('name')->unique(); // Name of the payment gateway (e.g., "Stripe", "PayPal")   $table->boolean('is_active')->default(true); // Whether the gateway is active or not
+            $table->string('name', 191)->unique(); // Name of the payment gateway (e.g., "Stripe", "PayPal")   $table->boolean('is_active')->default(true); // Whether the gateway is active or not
                         
             // Flutterwave API keys
             $table->string('flutterwave_live_api_key')->nullable(); // Flutterwave live API key

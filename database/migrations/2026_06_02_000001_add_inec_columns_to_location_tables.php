@@ -10,19 +10,19 @@ return new class extends Migration
     {
         Schema::table('states', function (Blueprint $table) {
             if (! Schema::hasColumn('states', 'inec_state_code')) {
-                $table->string('inec_state_code')->nullable()->index()->after('name');
+                $table->string('inec_state_code', 50)->nullable()->index()->after('name');
             }
         });
 
         Schema::table('local_government_areas', function (Blueprint $table) {
             if (! Schema::hasColumn('local_government_areas', 'inec_lga_code')) {
-                $table->string('inec_lga_code')->nullable()->index()->after('name');
+                $table->string('inec_lga_code', 50)->nullable()->index()->after('name');
             }
         });
 
         Schema::table('wards', function (Blueprint $table) {
             if (! Schema::hasColumn('wards', 'inec_ward_code')) {
-                $table->string('inec_ward_code')->nullable()->index()->after('name');
+                $table->string('inec_ward_code', 50)->nullable()->index()->after('name');
             }
         });
     }

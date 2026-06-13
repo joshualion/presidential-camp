@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->text('description')->nullable();
-            $table->string('slug')->unique();
+            $table->string('slug', 191)->unique();
         
             // Relationships
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade'); // Who created it

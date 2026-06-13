@@ -27,8 +27,8 @@ return new class extends Migration
         Schema::create($tableNames['permissions'], function (Blueprint $table) {
             //$table->engine('InnoDB');
             $table->bigIncrements('id'); // permission id
-            $table->string('name');       // For MyISAM use string('name', 225); // (or 166 for InnoDB with Redundant/Compact row format)
-            $table->string('guard_name'); // For MyISAM use string('guard_name', 25);
+            $table->string('name', 100);
+            $table->string('guard_name', 100);
             $table->enum('group_name',  ['superadmin', 'nationaladmin', 'regionaladmin', 'stateadmin', 'lgaadmin', 'wardadmin', 'puadmin','user'])->default('user');
             $table->timestamps();
 
@@ -42,8 +42,8 @@ return new class extends Migration
                 $table->unsignedBigInteger($columnNames['team_foreign_key'])->nullable();
                 $table->index($columnNames['team_foreign_key'], 'roles_team_foreign_key_index');
             }
-            $table->string('name');       // For MyISAM use string('name', 225); // (or 166 for InnoDB with Redundant/Compact row format)
-            $table->string('guard_name'); // For MyISAM use string('guard_name', 25);
+            $table->string('name', 100);
+            $table->string('guard_name', 100);
             $table->enum('group_name',  ['superadmin', 'nationaladmin', 'regionaladmin', 'stateadmin', 'lgaadmin', 'wardadmin', 'puadmin','user'])->default('user');
             $table->timestamps();
             if ($teams || config('permission.testing')) {
@@ -56,7 +56,7 @@ return new class extends Migration
         Schema::create($tableNames['model_has_permissions'], function (Blueprint $table) use ($tableNames, $columnNames, $pivotPermission, $teams) {
             $table->unsignedBigInteger($pivotPermission);
 
-            $table->string('model_type');
+            $table->string('model_type', 191);
             $table->unsignedBigInteger($columnNames['model_morph_key']);
             $table->index([$columnNames['model_morph_key'], 'model_type'], 'model_has_permissions_model_id_model_type_index');
 
@@ -80,7 +80,7 @@ return new class extends Migration
         Schema::create($tableNames['model_has_roles'], function (Blueprint $table) use ($tableNames, $columnNames, $pivotRole, $teams) {
             $table->unsignedBigInteger($pivotRole);
 
-            $table->string('model_type');
+            $table->string('model_type', 191);
             $table->unsignedBigInteger($columnNames['model_morph_key']);
             $table->index([$columnNames['model_morph_key'], 'model_type'], 'model_has_roles_model_id_model_type_index');
 

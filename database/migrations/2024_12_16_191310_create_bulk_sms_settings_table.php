@@ -17,7 +17,7 @@ return new class extends Migration
             $table->string('smsgateway_provider');
             $table->string('smsgateway_endpoint');
             $table->string('sender_id')->nullable();
-            $table->string('sms_api_key')->unique();
+            $table->string('sms_api_key', 191)->unique();
             $table->timestamps();
 
             $table->foreign('user_id')->references('id')->on('users');
