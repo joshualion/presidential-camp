@@ -144,6 +144,7 @@
                         </div>
                         </div>
                         </div>
+                        @unless($profileData->access_level === 'nationaladmin')
                         <!-- Voting Region -->
                         <div class="form-group row">
                         <label for="region_id" class="col-sm-2 col-form-label">Voting Region</label>
@@ -220,6 +221,7 @@
                         </select>
                         </div>
                         </div>
+                        @endunless
 
 
 

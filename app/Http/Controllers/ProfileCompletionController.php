@@ -13,7 +13,6 @@ use App\Models\State;
 use App\Models\SupportGroup;
 use App\Models\SystemSetting;
 use App\Models\Ward;
-use App\Services\PackageGovernanceService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
@@ -67,7 +66,6 @@ class ProfileCompletionController extends Controller
     $SystemSetting = SystemSetting::find(1);
     $profileData = $this->getProfileData();
     $pageTitle = 'Complete Your Profile';
-    $package = app(PackageGovernanceService::class)->normalize($SystemSetting?->package);
 
     // Fetch additional data required for the profile form
     $countries = Country::all();
@@ -78,90 +76,6 @@ class ProfileCompletionController extends Controller
     $pollingUnits = PollingUnit::all();
     $religions = Religion::all();
     $ageGrades = AgeGrade::all();
-
-    // Check for incomplete setup and handle roles and access levels
-    if ($lgas->isEmpty() || $wards->isEmpty() || $pollingUnits->isEmpty()) {
-        $redirectRoute = null;
-        $notification = null;
-
-        switch ($package) {
-            case PackageGovernanceService::PRESIDENTIAL:
-                if (($profileData->access_level == 'nationaladmin' && $profileData->hasRole('National ICT Director')) || $profileData->access_level == 'superadmin') {
-                    $notification = [
-                        'type' => 'success',
-                        'message' => ' Please add or upload LGAs, Wards, and Polling Units.',
-                    ];
-                    $redirectRoute = $profileData->access_level.'.location.lgas';
-                } else {
-                    $notification = 'The system is not completely set up. Please contact the Administrator.';
-                }
-                break;
-
-            case PackageGovernanceService::GOVERNORSHIP:
-                if (($profileData->access_level == 'stateadmin' && $profileData->hasRole('State ICT Director')) || $profileData->access_level == 'superadmin') {
-                    $notification = [
-                        'type' => 'success',
-                        'message' => ' Please add or upload LGAs, Wards & Polling Units.',
-                    ];
-                    $redirectRoute = $profileData->access_level.'.location.lgas';
-                } else {
-                    $notification = 'The system is not completely set up. Please contact the State ICT Director.';
-                }
-                break;
-
-            case PackageGovernanceService::CHAIRMANSHIP:
-                if (($profileData->access_level == 'lgaadmin' && $profileData->hasRole('LGA ICT Director')) || $profileData->access_level == 'superadmin') {
-                    $notification = [
-                        'type' => 'success',
-                        'message' => ' Please add or upload Wards and Polling Units.',
-                    ];
-                    $redirectRoute = $profileData->access_level.'.location.wards';
-                } else {
-                    $notification = 'The system is not completely set up. Please contact the LGA ICT Director.';
-                }
-                break;
-
-            case PackageGovernanceService::SENATORIAL:
-                if (($profileData->access_level == 'senatorialadmin' && $profileData->hasRole('Senatorial ICT Director')) || $profileData->access_level == 'superadmin') {
-                    $notification = [
-                        'type' => 'success',
-                        'message' => ' Please add or upload LGAs, Wards, and Polling Units for this Senatorial District.',
-                    ];
-                    $redirectRoute = $profileData->access_level == 'superadmin'
-                        ? 'superadmin.location.lgas'
-                        : 'senatorialadmin.dashboard';
-                } else {
-                    $notification = 'The system is not completely set up. Please contact the Senatorial District ICT Director.';
-                }
-                break;
-
-            case PackageGovernanceService::FEDERAL:
-                if (($profileData->access_level == 'federaladmin' && $profileData->hasRole('Federal Constituency ICT Director')) || $profileData->access_level == 'superadmin') {
-                    $notification = [
-                        'type' => 'success',
-                        'message' => ' Please add or upload LGAs, Wards, and Polling Units for this Federal Constituency.',
-                    ];
-                    $redirectRoute = $profileData->access_level == 'superadmin'
-                        ? 'superadmin.location.lgas'
-                        : 'federaladmin.dashboard';
-                } else {
-                    $notification = 'The system is not completely set up. Please contact the Federal Constituency ICT Director.';
-                }
-                break;
-
-            default:
-                $notification = 'Invalid system package. Please contact the Administrator.';
-                break;
-        }
-
-        // If ICT Director, redirect to the appropriate setup page
-        if ($redirectRoute) {
-            return redirect()->route($redirectRoute)->with($notification);
-        }
-
-        // Otherwise, show an incomplete setup message
-        return view('backend.'.$profileData->access_level.'.incomplete-setup', compact('notification', 'pageTitle', 'profileData'));
-    }
 
     // Render the profile completion form
     return view('backend.' . $profileData->access_level . '.complete-profile', compact(
@@ -185,7 +99,9 @@ class ProfileCompletionController extends Controller
         $accountRule = $requireBank ? 'required|string|size:10' : 'nullable|string|size:10';
 
          // Validation rules
-         $validatedData = $request->validate([
+        $locationRules = $this->profileLocationRules($profileData->access_level);
+
+         $validatedData = $request->validate(array_merge([
             'firstname' => 'required|string|max:255',
             'lastname' => 'required|string|max:255',
             'email' => 'required|email|max:255',
@@ -194,11 +110,6 @@ class ProfileCompletionController extends Controller
             'vin' => 'nullable|string|max:255',
             'age_grade_id' => 'required|exists:age_grades,id',
             'gender' => 'required|in:male,female',
-            'region_id' => 'required|exists:regions,id',
-            'state_id' => 'required|exists:states,id',
-            'lga_id' => 'required|exists:local_government_areas,id',
-            'ward_id' => 'required|exists:wards,id',
-            'polling_unit_id' => 'required|exists:polling_units,id',
             'religion_id' => 'required|exists:religions,id',
             'bank' => $bankRule,
             'bank_account_number' => $accountRule,
@@ -206,7 +117,7 @@ class ProfileCompletionController extends Controller
             'occupation' => 'nullable|string|max:255',
             'qualification' => 'nullable|string|max:255',
             'photo' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
-        ]);
+        ], $locationRules));
 
         $profileData->update([
             'firstname' => $validatedData['firstname'],
@@ -214,20 +125,20 @@ class ProfileCompletionController extends Controller
             'email' => $validatedData['email'],
             'phone' => $validatedData['phone'],
             'validVoter' => $validatedData['validvoter'],
-            'vin' => $validatedData['vin'],
+            'vin' => $validatedData['vin'] ?? null,
             'age_grade_id' => $validatedData['age_grade_id'],
             'gender' => $validatedData['gender'],
-            'region_id' => $validatedData['region_id'],
-            'state_id' => $validatedData['state_id'],
-            'lga_id' => $validatedData['lga_id'],
-            'ward_id' => $validatedData['ward_id'],
-            'polling_unit_id' => $validatedData['polling_unit_id'],
+            'region_id' => $validatedData['region_id'] ?? $profileData->region_id,
+            'state_id' => $validatedData['state_id'] ?? $profileData->state_id,
+            'lga_id' => $validatedData['lga_id'] ?? $profileData->lga_id,
+            'ward_id' => $validatedData['ward_id'] ?? $profileData->ward_id,
+            'polling_unit_id' => $validatedData['polling_unit_id'] ?? $profileData->polling_unit_id,
             'religion_id' => $validatedData['religion_id'],
             'bank' => $validatedData['bank'] ?? null,
             'bank_account_number' => $validatedData['bank_account_number'] ?? null,
-            'address' => $validatedData['address'],
-            'occupation' => $validatedData['occupation'],
-            'qualification' => $validatedData['qualification'],
+            'address' => $validatedData['address'] ?? null,
+            'occupation' => $validatedData['occupation'] ?? null,
+            'qualification' => $validatedData['qualification'] ?? null,
         ]);
 
         if ($request->hasFile('photo')) {
@@ -250,6 +161,68 @@ class ProfileCompletionController extends Controller
 
 
         return redirect()->route( $profileData->access_level.'.dashboard')->with($notification);
+    }
+
+    private function profileLocationRules(string $accessLevel): array
+    {
+        return match ($accessLevel) {
+            'superadmin', 'nationaladmin' => [
+                'region_id' => 'nullable|exists:regions,id',
+                'state_id' => 'nullable|exists:states,id',
+                'lga_id' => 'nullable|exists:local_government_areas,id',
+                'ward_id' => 'nullable|exists:wards,id',
+                'polling_unit_id' => 'nullable|exists:polling_units,id',
+            ],
+            'regionaladmin' => [
+                'region_id' => 'required|exists:regions,id',
+                'state_id' => 'nullable|exists:states,id',
+                'lga_id' => 'nullable|exists:local_government_areas,id',
+                'ward_id' => 'nullable|exists:wards,id',
+                'polling_unit_id' => 'nullable|exists:polling_units,id',
+            ],
+            'stateadmin' => [
+                'region_id' => 'nullable|exists:regions,id',
+                'state_id' => 'required|exists:states,id',
+                'lga_id' => 'nullable|exists:local_government_areas,id',
+                'ward_id' => 'nullable|exists:wards,id',
+                'polling_unit_id' => 'nullable|exists:polling_units,id',
+            ],
+            'senatorialadmin' => [
+                'region_id' => 'nullable|exists:regions,id',
+                'state_id' => 'nullable|exists:states,id',
+                'lga_id' => 'nullable|exists:local_government_areas,id',
+                'ward_id' => 'nullable|exists:wards,id',
+                'polling_unit_id' => 'nullable|exists:polling_units,id',
+            ],
+            'federaladmin' => [
+                'region_id' => 'nullable|exists:regions,id',
+                'state_id' => 'nullable|exists:states,id',
+                'lga_id' => 'nullable|exists:local_government_areas,id',
+                'ward_id' => 'nullable|exists:wards,id',
+                'polling_unit_id' => 'nullable|exists:polling_units,id',
+            ],
+            'lgaadmin' => [
+                'region_id' => 'nullable|exists:regions,id',
+                'state_id' => 'nullable|exists:states,id',
+                'lga_id' => 'required|exists:local_government_areas,id',
+                'ward_id' => 'nullable|exists:wards,id',
+                'polling_unit_id' => 'nullable|exists:polling_units,id',
+            ],
+            'wardadmin' => [
+                'region_id' => 'nullable|exists:regions,id',
+                'state_id' => 'nullable|exists:states,id',
+                'lga_id' => 'nullable|exists:local_government_areas,id',
+                'ward_id' => 'required|exists:wards,id',
+                'polling_unit_id' => 'nullable|exists:polling_units,id',
+            ],
+            default => [
+                'region_id' => 'nullable|exists:regions,id',
+                'state_id' => 'nullable|exists:states,id',
+                'lga_id' => 'nullable|exists:local_government_areas,id',
+                'ward_id' => 'nullable|exists:wards,id',
+                'polling_unit_id' => 'required|exists:polling_units,id',
+            ],
+        };
     }
 
      // Show the form for selecting support groups

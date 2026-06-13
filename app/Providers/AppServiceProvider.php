@@ -18,6 +18,7 @@ use App\Models\SMTPSetting;
 use App\Models\SystemSetting;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 use League\Flysystem\FilesystemAdapter;
 class AppServiceProvider extends ServiceProvider
 {
@@ -35,6 +36,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        if ($this->app->environment('production')) {
+            URL::forceScheme('https');
+        }
+
         User::observe(DashboardStatSnapshotObserver::class);
         Vote::observe(DashboardStatSnapshotObserver::class);
         PollingUnitResult::observe(DashboardStatSnapshotObserver::class);
@@ -49,7 +54,7 @@ class AppServiceProvider extends ServiceProvider
         VideoEvidence::observe(CampaignNotificationObserver::class);
         PollingUnitAgentAssignment::observe(CampaignNotificationObserver::class);
 
-        if(Schema::hasTable('s_m_t_p_settings')){
+        if(Schema::hasTable('s_m_t_p_settings') && Schema::hasTable('system_settings')){
             $smtpSettings = SMTPSetting::first();
             $SystemSetting = SystemSetting::first();
 

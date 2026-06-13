@@ -115,6 +115,10 @@ return new class extends Migration
 
     private function backfillReportingKeys(): void
     {
+        if (DB::getDriverName() === 'sqlite') {
+            return;
+        }
+
         DB::statement("
             UPDATE polling_unit_results pur
             INNER JOIN polling_units pu ON pu.id = pur.polling_unit_id
@@ -200,6 +204,10 @@ return new class extends Migration
 
     private function addForeignIfMissing(Blueprint $table, string $tableName, string $foreignName, string $column, string $referenceTable): void
     {
+        if (DB::getDriverName() === 'sqlite') {
+            return;
+        }
+
         if (!$this->foreignKeyExists($tableName, $foreignName)) {
             $table->foreign($column, $foreignName)->references('id')->on($referenceTable)->nullOnDelete();
         }
@@ -228,11 +236,20 @@ return new class extends Migration
 
     private function indexExists(string $tableName, string $indexName): bool
     {
+        if (DB::getDriverName() === 'sqlite') {
+            return collect(DB::select("PRAGMA index_list('{$tableName}')"))
+                ->contains(fn ($index) => ($index->name ?? null) === $indexName);
+        }
+
         return !empty(DB::select('SHOW INDEX FROM `' . $tableName . '` WHERE Key_name = ?', [$indexName]));
     }
 
     private function indexExistsOnColumns(string $tableName, array $columns): bool
     {
+        if (DB::getDriverName() === 'sqlite') {
+            return false;
+        }
+
         $indexes = DB::select('SHOW INDEX FROM `' . $tableName . '`');
         $indexedColumns = [];
 
@@ -253,6 +270,10 @@ return new class extends Migration
 
     private function foreignKeyExists(string $tableName, string $foreignName): bool
     {
+        if (DB::getDriverName() === 'sqlite') {
+            return false;
+        }
+
         return !empty(DB::select(
             'SELECT CONSTRAINT_NAME FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = ? AND TABLE_NAME = ? AND CONSTRAINT_TYPE = ? AND CONSTRAINT_NAME = ?',
             [DB::getDatabaseName(), $tableName, 'FOREIGN KEY', $foreignName]

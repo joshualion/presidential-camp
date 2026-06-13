@@ -4,7 +4,7 @@ import vue from '@vitejs/plugin-vue';
 
 export default defineConfig({
     define: {
-        __VUE_PROD_DEVTOOLS__: true,
+        __VUE_PROD_DEVTOOLS__: false,
     },
     plugins: [
         laravel({

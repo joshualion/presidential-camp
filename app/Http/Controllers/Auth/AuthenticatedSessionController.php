@@ -32,7 +32,7 @@ class AuthenticatedSessionController extends Controller
         $setting = SystemSetting::find(1);
 
         $url ='';
-        if($setting->frontend_community == 1){
+        if($setting?->frontend_community == 1 && Auth::user()->access_level === 'user'){
             $url = '/community/feed';
         }elseif(Auth::user()->access_level === 'superadmin') {
             $url = '/superadmin/dashboard';
@@ -74,7 +74,7 @@ class AuthenticatedSessionController extends Controller
         ];
 
 
-        return redirect()->intended($url)->with($notification);
+        return redirect($url)->with($notification);
 
     }
 

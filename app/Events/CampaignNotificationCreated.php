@@ -6,10 +6,10 @@ use App\Models\CampaignNotificationRecipient;
 use App\Services\Notifications\CampaignNotificationService;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Queue\SerializesModels;
 
-class CampaignNotificationCreated implements ShouldBroadcast
+class CampaignNotificationCreated implements ShouldBroadcastNow
 {
     use InteractsWithSockets, SerializesModels;
 

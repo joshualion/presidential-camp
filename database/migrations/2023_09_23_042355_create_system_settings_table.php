@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('system_settings', function (Blueprint $table) {
             $table->id();
-            $table->enum('package',['state','lga','ward','pu'])->default('state');
+            $table->enum('package', ['presidential', 'governorship', 'senatorial', 'federal_constituency', 'chairmanship', 'state', 'lga', 'ward', 'pu'])->default('presidential');
             $table->string('domain', 255)->nullable();
             $table->string('api_token', 64)->nullable();
             $table->string('logo')->nullable();

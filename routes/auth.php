@@ -10,11 +10,12 @@ use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Schema;
 use App\Models\SystemSetting;
 
 Route::middleware('guest')->group(function () {
 
-    $SystemSetting = SystemSetting::first();
+    $SystemSetting = Schema::hasTable('system_settings') ? SystemSetting::first() : null;
 
     if($SystemSetting && $SystemSetting->frontend_registration == 1){
         Route::get('register', [RegisteredUserController::class, 'create'])

@@ -13,6 +13,8 @@ use App\Models\User;
 use App\Models\VideoEvidence;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class CampaignNotificationService
 {
@@ -69,7 +71,7 @@ class CampaignNotificationService
                 ->where('notification_id', $notification->id)
                 ->with('notification')
                 ->get()
-                ->each(fn (CampaignNotificationRecipient $recipient) => event(new CampaignNotificationCreated($recipient)));
+                ->each(fn (CampaignNotificationRecipient $recipient) => $this->broadcastRecipient($recipient));
 
             return $notification;
         });
@@ -82,6 +84,20 @@ class CampaignNotificationService
             ->active()
             ->unread()
             ->count();
+    }
+
+    private function broadcastRecipient(CampaignNotificationRecipient $recipient): void
+    {
+        try {
+            event(new CampaignNotificationCreated($recipient));
+        } catch (Throwable $exception) {
+            Log::warning('Campaign notification broadcast failed.', [
+                'notification_id' => $recipient->notification_id,
+                'recipient_id' => $recipient->id,
+                'user_id' => $recipient->user_id,
+                'error' => $exception->getMessage(),
+            ]);
+        }
     }
 
     private function messageFor(string $type, ?Model $subject, array $payload): array
