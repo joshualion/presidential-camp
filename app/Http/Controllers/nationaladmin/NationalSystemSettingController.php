@@ -104,6 +104,8 @@ class NationalSystemSettingController extends Controller
                             $favicon = $SystemSetting->favicon;
                         }
 
+                                    $communityAvailable = app(\App\Services\CommunityRealtimeService::class)->moduleAvailable();
+
                                     SystemSetting::findOrFail($site_id)->update([
                                         'package' => $request->package,
                                         'system_country' => $request->system_country,
@@ -112,7 +114,7 @@ class NationalSystemSettingController extends Controller
                                         'light_theme_color' => $request->light_theme_color,
                                         'dark_theme_color' => $request->dark_theme_color,
                                         'system_email' => $request->system_email,
-                                        'frontend_community' => $request->frontend_community,
+                                        'frontend_community' => $communityAvailable ? $request->frontend_community : 0,
                                         'frontend_registration' => $request->frontend_registration,
                                         'system_currency' => $request->system_currency,
                                         'exchange_rate' => $request->exchange_rate,

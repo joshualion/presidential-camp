@@ -12,7 +12,9 @@ use App\Http\Controllers\PollingUnitAgentController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\CampaignNotificationController;
+use App\Http\Controllers\AdminLicenseController;
 
+require __DIR__.'/install.php';
 
 
 
@@ -51,6 +53,10 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/notifications/{notification}/dismiss', [CampaignNotificationController::class, 'dismiss'])->name('campaign.notifications.dismiss');
     Route::post('/notifications/clear-read', [CampaignNotificationController::class, 'clearRead'])->name('campaign.notifications.clearRead');
 });
+
+Route::get('/admin/license', [AdminLicenseController::class, 'show'])
+    ->name('admin.license.show')
+    ->middleware(['auth', 'access_level:superadmin,nationaladmin']);
 
 
 
@@ -140,7 +146,7 @@ Route::get('/emergency/exit', function () {
 })->name('emergency.exit');
 
 //Front Pages
-Route::middleware(['auth','check_onboarding', 'kuyak_eyen_ino', 'eyen_ino_no_way'])->group(function () {
+Route::middleware(['auth','check_onboarding', 'kuyak_eyen_ino', 'eyen_ino_no_way', 'community.enabled'])->group(function () {
     // comunity pages
     Route::get('/community/feed', [HomeController::class,'index'])->name('timeline');
     Route::get('/community/profile', [HomeController::class,'profileTimeline'])->name('profile.timeline');
@@ -150,7 +156,6 @@ Route::middleware(['auth','check_onboarding', 'kuyak_eyen_ino', 'eyen_ino_no_way
     Route::get('/community/profile/posts', [HomeController::class, 'fetchAuthUserPosts'])->name('user.posts.fetch');
     Route::get('/community/{username}/profile/timeline', [HomeController::class, 'ViewUserPosts'])->name('view.user.posts');
     Route::get('/community/{username}/profile/posts', [HomeController::class, 'viewUserProfilePost'])->name('view.user.posts.feed');
-    Route::get('/messages', [HomeController::class, 'messagesPage'])->name('messages.page');
 
     //Manage Posts
     Route::get('/posts/{post}/edit', [HomeController::class, 'editPost'])->name('posts.edit'); // Show edit form
@@ -160,10 +165,10 @@ Route::middleware(['auth','check_onboarding', 'kuyak_eyen_ino', 'eyen_ino_no_way
     Route::get('/posts/{post}/likers', [HomeController::class, 'postLikers'])->name('posts.likers');
 
     //Manage Post comments
-    Route::post('/posts/{post}/comments', [CommentController::class, 'store']); // Create a comment
-    Route::get('/posts/{post}/comments', [CommentController::class, 'index']); // Fetch comments for a post
-    Route::put('/comments/{comment}', [CommentController::class, 'update']); // Update a comment
-    Route::delete('/comments/{comment}', [CommentController::class, 'destroy']); // Delete a comment
+    Route::post('/posts/{post}/comments', [CommentController::class, 'store'])->name('comments.store'); // Create a comment
+    Route::get('/posts/{post}/comments', [CommentController::class, 'index'])->name('comments.index'); // Fetch comments for a post
+    Route::put('/comments/{comment}', [CommentController::class, 'update'])->name('comments.update'); // Update a comment
+    Route::delete('/comments/{comment}', [CommentController::class, 'destroy'])->name('comments.destroy'); // Delete a comment
 
     // Search (suggest + full results)
     Route::get('/search/suggest', [SearchController::class, 'suggest'])->name('search.suggest');
@@ -186,21 +191,23 @@ Route::middleware(['auth','check_onboarding', 'kuyak_eyen_ino', 'eyen_ino_no_way
     Route::post('/community/users/{user}/follow', [HomeController::class, 'followUser'])->name('users.follow');
     Route::delete('/community/users/{user}/follow', [HomeController::class, 'unfollowUser'])->name('users.unfollow');
 
-    // Messaging
-    Route::get('/messages/conversations', [\App\Http\Controllers\MessageController::class, 'conversations']);
-    Route::get('/messages/conversations/{conversation}/messages', [\App\Http\Controllers\MessageController::class, 'messages']);
-    Route::post('/messages/start', [\App\Http\Controllers\MessageController::class, 'startConversation']);
-    Route::post('/messages/ensure', [\App\Http\Controllers\MessageController::class, 'ensureConversation']);
-    Route::post('/messages/conversations/{conversation}/messages', [\App\Http\Controllers\MessageController::class, 'sendMessage']);
-    Route::post('/messages/conversations/{conversation}/typing', [\App\Http\Controllers\MessageController::class, 'typing']);
-    Route::post('/messages/conversations/{conversation}/read', [\App\Http\Controllers\MessageController::class, 'markRead']);
-    Route::get('/messages/recipients', [\App\Http\Controllers\MessageController::class, 'recipients']);
-    Route::get('/messages/unread-count', [\App\Http\Controllers\MessageController::class, 'unreadCount']);
-
     //Update frontend cover and profile images
     Route::post('/update-profile-photo', [HomeController::class, 'updateProfilePhoto'])->name('update.profile.photo');
     Route::post('/update-cover-photo', [HomeController::class, 'updateCoverPhoto'])->name('update.cover.photo');
 
+});
+
+Route::middleware(['auth','check_onboarding', 'kuyak_eyen_ino', 'eyen_ino_no_way'])->group(function () {
+    Route::get('/messages', [HomeController::class, 'messagesPage'])->name('messages.page');
+    Route::get('/messages/conversations', [\App\Http\Controllers\MessageController::class, 'conversations'])->name('messages.conversations');
+    Route::get('/messages/conversations/{conversation}/messages', [\App\Http\Controllers\MessageController::class, 'messages'])->name('messages.conversation.messages');
+    Route::post('/messages/start', [\App\Http\Controllers\MessageController::class, 'startConversation'])->name('messages.start');
+    Route::post('/messages/ensure', [\App\Http\Controllers\MessageController::class, 'ensureConversation'])->name('messages.ensure');
+    Route::post('/messages/conversations/{conversation}/messages', [\App\Http\Controllers\MessageController::class, 'sendMessage'])->name('messages.conversation.send');
+    Route::post('/messages/conversations/{conversation}/typing', [\App\Http\Controllers\MessageController::class, 'typing'])->name('messages.conversation.typing');
+    Route::post('/messages/conversations/{conversation}/read', [\App\Http\Controllers\MessageController::class, 'markRead'])->name('messages.conversation.read');
+    Route::get('/messages/recipients', [\App\Http\Controllers\MessageController::class, 'recipients'])->name('messages.recipients');
+    Route::get('/messages/unread-count', [\App\Http\Controllers\MessageController::class, 'unreadCount'])->name('messages.unread-count');
 });
 
 foreach ([

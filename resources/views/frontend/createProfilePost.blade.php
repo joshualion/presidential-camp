@@ -31,6 +31,7 @@
         'pu' => 'PU: ' . (optional($profileData->pollingUnit)->name ?? '') . ' Audience',
     ];
     $defaultAudienceLabel = $audienceLabels[$defaultAudience] ?? 'Everyone';
+    $communityMediaPolicy = app(\App\Services\CommunityModerationService::class)->mediaPolicy();
 @endphp
 
 <!-- New Post Section -->
@@ -49,10 +50,10 @@
     
         <!-- Toolbar -->
         <div class="d-flex justify-content-between px-3 py-2 border-top mt-1 mb-0 ">
-            <button class="btn btn-light btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#postModal" data-type="video">
+            <button class="btn btn-light btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#postModal" data-type="video" @disabled(!$communityMediaPolicy['videos_enabled'])>
                 <i class="fas fa-video text-danger me-2"></i>Video
             </button>
-            <button class="btn btn-light btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#postModal" data-type="photo">
+            <button class="btn btn-light btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#postModal" data-type="photo" @disabled(!$communityMediaPolicy['images_enabled'])>
                 <i class="fas fa-camera text-primary me-2"></i>Photo
             </button>
             <button class="btn btn-light btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#postModal" data-type="text">
@@ -90,7 +91,12 @@
             <div class="modal-body">
                 <div id="postValidation" class="alert alert-danger d-none small" role="alert"></div>
                 <div class="alert alert-info py-2 small mb-3" role="status">
-                    Keep it concise: up to 750 characters. Images up to 1MB, videos up to 20MB.
+                    Keep it concise: up to 750 characters. Images up to {{ $communityMediaPolicy['image_max_mb'] }}MB.
+                    @if($communityMediaPolicy['videos_enabled'])
+                        Videos up to {{ $communityMediaPolicy['video_max_mb'] }}MB.
+                    @else
+                        Video uploads are currently disabled.
+                    @endif
                 </div>
                 <div class="d-flex mb-3">
                     <!-- Profile Picture -->
@@ -140,10 +146,10 @@
             <div class="modal-footer">
                  <!-- Toolbar -->
                  <div class="d-flex justify-content-between px-3 py-2 border-top mt-1 mb-0 ">
-                    <button class="btn btn-light btn-sm" type="button" data-type="video">
+                    <button class="btn btn-light btn-sm" type="button" data-type="video" @disabled(!$communityMediaPolicy['videos_enabled'])>
                         <i class="fas fa-video text-danger me-2"></i>Video
                     </button>
-                    <button class="btn btn-light btn-sm" type="button" data-type="photo">
+                    <button class="btn btn-light btn-sm" type="button" data-type="photo" @disabled(!$communityMediaPolicy['images_enabled'])>
                         <i class="fas fa-camera text-primary me-2"></i>Photo
                     </button>
                     <button class="btn btn-light btn-sm" type="button" data-type="text">

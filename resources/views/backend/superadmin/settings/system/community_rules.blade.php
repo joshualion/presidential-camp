@@ -39,12 +39,23 @@
 </div>
 
 <div class="form-group row">
-    <label for="community_attachment_max_mb" class="col-sm-4 col-form-label">Attachment Size (MB)</label>
+    <label for="community_image_max_mb" class="col-sm-4 col-form-label">Image Max Size (MB)</label>
     <div class="col-sm-8">
-        <input type="number" class="form-control" id="community_attachment_max_mb" name="community_attachment_max_mb"
-               min="1" max="200"
-               value="{{ old('community_attachment_max_mb', $SystemSetting->community_attachment_max_mb ?? 10) }}">
-        <small class="text-muted">Max upload size per media (images/videos) in MB.</small>
+        <input type="number" class="form-control" id="community_image_max_mb" name="community_image_max_mb"
+               min="1" max="10"
+               value="{{ old('community_image_max_mb', $SystemSetting->community_image_max_mb ?? $SystemSetting->community_attachment_max_mb ?? 5) }}">
+        <input type="hidden" name="community_attachment_max_mb" value="{{ old('community_image_max_mb', $SystemSetting->community_image_max_mb ?? $SystemSetting->community_attachment_max_mb ?? 5) }}">
+        <small class="text-muted">Self-hosted-safe image uploads are capped at 10MB. Recommended default is 5MB.</small>
+    </div>
+</div>
+
+<div class="form-group row">
+    <label for="community_video_max_mb" class="col-sm-4 col-form-label">Video Max Size (MB)</label>
+    <div class="col-sm-8">
+        <input type="number" class="form-control" id="community_video_max_mb" name="community_video_max_mb"
+               min="1" max="20"
+               value="{{ old('community_video_max_mb', $SystemSetting->community_video_max_mb ?? 20) }}">
+        <small class="text-muted">Video upload is disabled by default. Keep videos off on shared hosting unless upload limits and storage are configured.</small>
     </div>
 </div>
 
@@ -60,9 +71,12 @@
         <div class="form-check">
             <input type="hidden" name="community_allow_videos" value="0">
             <input class="form-check-input" type="checkbox" id="community_allow_videos" name="community_allow_videos" value="1"
-                   {{ old('community_allow_videos', $SystemSetting->community_allow_videos ?? 1) ? 'checked' : '' }}>
+                   {{ old('community_allow_videos', $SystemSetting->community_allow_videos ?? 0) ? 'checked' : '' }}>
             <label class="form-check-label" for="community_allow_videos">Videos</label>
         </div>
+    </div>
+    <div class="offset-sm-4 col-sm-8">
+        <small class="text-muted">Allowed images: JPG, JPEG, PNG, WEBP. Allowed videos when enabled: MP4, WEBM, MOV.</small>
     </div>
 </div>
 

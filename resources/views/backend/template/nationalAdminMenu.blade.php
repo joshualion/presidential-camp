@@ -3,7 +3,7 @@
       <ul class="nav nav-pills nav-sidebar flex-column sidebar-nav" data-widget="treeview" role="menu" data-accordion="false">
 
             <li class="tab nav-item menu-close">
-                        <a href="/national/dashboard" class="nav-link">
+                        <a href="{{ url('national/dashboard') }}" class="nav-link">
                           <i class="nav-icon fas fa-home"></i>
                           <p>
                             Dashboard
@@ -26,42 +26,42 @@
                         <ul class="nav nav-treeview">
 
                           <li class="nav-item">
-                            <a href="/national/members/fetch/" class="nav-link">
+                            <a href="{{ url('national/members/fetch') }}" class="nav-link">
                               <i class="fas fa-user nav-icon"></i>
                               <p>All Members</p>
                             </a>
                           </li>
 
                           <li class="nav-item">
-                            <a href="/national/members/region" class="nav-link">
+                            <a href="{{ url('national/members/region') }}" class="nav-link">
                               <i class="fas fa-tachometer-alt nav-icon"></i>
                               <p>Members By Region</p>
                             </a>
                           </li>
 
                           <li class="nav-item">
-                            <a href="/national/members/bystate" class="nav-link">
+                            <a href="{{ url('national/members/bystate') }}" class="nav-link">
                             <i class="fas fa-user nav-icon"></i>
                               <p>members by States</p>
                             </a>
                           </li>
 
                           <li class="nav-item">
-                            <a href="/national/members/bylga" class="nav-link">
+                            <a href="{{ url('national/members/bylga') }}" class="nav-link">
                             <i class="fas fa-user nav-icon"></i>
                               <p>Members by LGA</p>
                             </a>
                           </li>
 
                           <li class="nav-item">
-                            <a href="/national/members/byward/" class="nav-link">
+                            <a href="{{ url('national/members/byward') }}" class="nav-link">
                             <i class="fas fa-user nav-icon"></i>
                               <p>Members By Wards</p>
                             </a>
                           </li>
 
                           <li class="nav-item">
-                            <a href="/national/members/bypu/" class="nav-link">
+                            <a href="{{ url('national/members/bypu') }}" class="nav-link">
                               <i class="fas fa-user nav-icon"></i>
                               <p>Members By PU</p>
                             </a>
@@ -85,27 +85,27 @@
                                 <ul class="nav nav-treeview">
 
                                   <li class="nav-item">
-                                    <a href="/national/elections" class="nav-link">
+                                    <a href="{{ url('national/elections') }}" class="nav-link">
                                       <i class="fas fa-award nav-icon"></i>
                                       <p>Manage Elections</p>
                                     </a>
                                   </li>
                                   <li class="nav-item">
-                                    <a href="/national/election/operations-center" class="nav-link">
+                                    <a href="{{ url('national/election/operations-center') }}" class="nav-link">
                                       <i class="fas fa-broadcast-tower nav-icon"></i>
                                       <p>Situation Room</p>
                                     </a>
                                   </li>
                                   @if(app(\App\Services\PollingUnitResultPermissionService::class)->userHasAnyApprovedAssignment($profileData))
                                   <li class="nav-item">
-                                    <a href="/national/vote/add" class="nav-link">
+                                    <a href="{{ url('national/vote/add') }}" class="nav-link">
                                     <i class="fa fa-cloud nav-icon"></i>
                                       <p>Upload Polls Result</p>
                                     </a>
                                   </li>
 
                                   <li class="nav-item">
-                                    <a href="/national/incident/add" class="nav-link">
+                                    <a href="{{ url('national/incident/add') }}" class="nav-link">
                                     <i class="fa fa-book nav-icon"></i>
                                       <p>Report  Incidents</p>
                                     </a>
@@ -127,21 +127,21 @@
                         <ul class="nav nav-treeview">
 
                         <li class="nav-item">
-                            <a href="/national/dashboard" class="nav-link">
+                            <a href="{{ url('national/dashboard') }}" class="nav-link">
                               <i class="fas fa-award nav-icon"></i>
                               <p>Elections</p>
                             </a>
                           </li>
 
                           <li class="nav-item">
-                            <a href="/national/dashboard" class="nav-link">
+                            <a href="{{ url('national/dashboard') }}" class="nav-link">
                               <i class="fas fa-vote-yea nav-icon"></i>
                               <p>Members</p>
                             </a>
                           </li>
 
                           <li class="nav-item">
-                            <a href="/national/state/dashboard" class="nav-link">
+                            <a href="{{ url('national/state/dashboard') }}" class="nav-link">
                             <i class="fa fa-thumbs-up nav-icon"></i>
                               <p>Finances</p>
                             </a>
@@ -162,7 +162,7 @@
                 <ul class="nav nav-treeview">
 
                 <li class="nav-item">
-                    <a href="/national/dashboard" class="nav-link">
+                    <a href="{{ url('national/dashboard') }}" class="nav-link">
                       <i class="fas fa-hand-holding-usd nav-icon"></i>
                       <p>Dues & Donations</p>
                     </a>
@@ -171,21 +171,21 @@
 
 
                   <li class="nav-item">
-                    <a href="/national/dashboard" class="nav-link">
+                    <a href="{{ url('national/dashboard') }}" class="nav-link">
                       <i class="fas fa-credit-card nav-icon"></i>
                       <p>Expenses</p>
                     </a>
                   </li>
 
                   {{-- <li class="nav-item">
-                    <a href="/national/dashboard" class="nav-link">
+                    <a href="{{ url('national/dashboard') }}" class="nav-link">
                       <i class="fas fa-shopping-cart nav-icon"></i>
                       <p>Sales Records</p>
                     </a>
                   </li> --}}
 
                   <li class="nav-item">
-                    <a href="/national/state/dashboard" class="nav-link">
+                    <a href="{{ url('national/state/dashboard') }}" class="nav-link">
                     <i class="fas fa-dollar-sign nav-icon"></i>
                       <p>Funding Request</p>
                     </a>
@@ -208,14 +208,14 @@
                 <ul class="nav nav-treeview">
 
                 <li class="nav-item">
-                    <a href="/national/events" class="nav-link">
+                    <a href="{{ url('national/events') }}" class="nav-link">
                       <i class="fas fa-award nav-icon"></i>
                       <p>All Events</p>
                     </a>
                   </li>
 
                   <li class="nav-item">
-                    <a href="/national/event/add" class="nav-link">
+                    <a href="{{ url('national/event/add') }}" class="nav-link">
                       <i class="fas fa-plus nav-icon"></i>
                       <p>Add Event</p>
                     </a>
@@ -239,13 +239,13 @@
                         <ul class="nav nav-treeview">
 
                           <li class="nav-item">
-                            <a href="/national/bulksms/send" class="nav-link">
+                            <a href="{{ url('national/bulksms/send') }}" class="nav-link">
                               <i class="fas fa-sms	 nav-icon"></i>
                               <p>Send SMS</p>
                             </a>
                           </li>
                           <li class="nav-item">
-                            <a href="/messages" class="nav-link">
+                            <a href="{{ url('messages') }}" class="nav-link">
                               <i class="fas fa-comments nav-icon"></i>
                               <p>Internal Communication</p>
                             </a>
@@ -286,27 +286,27 @@
                 </a>
                 <ul class="nav nav-treeview" style="display: none;">
                     <li class="nav-item">
-                      <a href="/admin/products" class="nav-link">
+                      <a href="{{ url('admin/products') }}" class="nav-link">
                       <i class="fas fa-gem nav-icon"></i>
                         <p>Products </p>
                       </a>
                     </li>
                     <li class="nav-item">
-                      <a href="/admin/product/categories" class="nav-link">
+                      <a href="{{ url('admin/product/categories') }}" class="nav-link">
                       <i class="fas fa-shopping-basket nav-icon"></i>
                         <p>Categories </p>
                       </a>
                     </li>
 
                     <li class="nav-item">
-                      <a href="/admin/product/add" class="nav-link">
+                      <a href="{{ url('admin/product/add') }}" class="nav-link">
                       <i class="fas fa-upload nav-icon"></i>
                         <p> Upload Product </p>
                       </a>
                     </li>
 
                     <li class="nav-item">
-                      <a href="/admin/product/category/add" class="nav-link">
+                      <a href="{{ url('admin/product/category/add') }}" class="nav-link">
                       <i class="fas fa-plus  nav-icon"></i>
                         <p> Add Category </p>
                       </a>
@@ -327,45 +327,45 @@
                         <ul class="nav nav-treeview">
 
                           <li class="nav-item">
-                            <a href="/national/location/regions" class="nav-link">
+                            <a href="{{ url('national/location/regions') }}" class="nav-link">
                               <i class="	fas fa-map-marker	 nav-icon"></i>
                               <p>Regions</p>
                             </a>
                           </li>
 
                           <li class="nav-item">
-                            <a href="/national/location/states/" class="nav-link">
+                            <a href="{{ url('national/location/states') }}" class="nav-link">
                             <i class="fas fa-map-marker-alt nav-icon"></i>
                               <p>States</p>
                             </a>
                           </li>
                           <li class="nav-item">
-                            <a href="/national/location/senatorial-districts" class="nav-link">
+                            <a href="{{ url('national/location/senatorial-districts') }}" class="nav-link">
                             <i class="fas fa-map nav-icon"></i>
                               <p>Senatorial Districts</p>
                             </a>
                           </li>
                           <li class="nav-item">
-                            <a href="/national/location/federal-constituencies" class="nav-link">
+                            <a href="{{ url('national/location/federal-constituencies') }}" class="nav-link">
                             <i class="fas fa-landmark nav-icon"></i>
                               <p>Federal Constituencies</p>
                             </a>
                           </li>
                           <li class="nav-item">
-                            <a href="/national/location/localgovernments" class="nav-link">
+                            <a href="{{ url('national/location/localgovernments') }}" class="nav-link">
                             <i class="fas fa-map-pin nav-icon"></i>
                               <p>LGA's</p>
                             </a>
                           </li>
 
                           <li class="nav-item">
-                            <a href="/national/location/wards" class="nav-link">
+                            <a href="{{ url('national/location/wards') }}" class="nav-link">
                             <i class="fas fa-map-marked-alt nav-icon"></i>
                               <p> Wards</p>
                             </a>
                           </li>
                           <li class="nav-item">
-                            <a href="/national/location/pollingunits" class="nav-link">
+                            <a href="{{ url('national/location/pollingunits') }}" class="nav-link">
                             <i class="fas fa-monument nav-icon"></i>
                               <p> Polling Units</p>
                             </a>
@@ -388,14 +388,14 @@
                     @if($profileData->access_level == 'superadmin')
 
                           <li class="nav-item">
-                            <a href="/national/system/settings" class="nav-link">
+                            <a href="{{ url('national/system/settings') }}" class="nav-link">
                               <i class="fas fa-tools	 nav-icon"></i>
                               <p>General Settings</p>
                             </a>
                           </li>
 
                           <li class="nav-item">
-                            <a href="/national/settings/smtp" class="nav-link">
+                            <a href="{{ url('national/settings/smtp') }}" class="nav-link">
                             <i class="fas fa-award nav-icon"></i>
                               <p> SMTP Settings</p>
                             </a>
@@ -403,7 +403,7 @@
 
                           {{-- Payment Settings temporarily disabled pending finance model review.
                           <li class="nav-item">
-                            <a href="/national/settings/paymentgateway" class="nav-link">
+                            <a href="{{ url('national/settings/paymentgateway') }}" class="nav-link">
                             <i class="fas fa-credit-card nav-icon"></i>
                               <p> Payment Settings</p>
                             </a>
@@ -411,7 +411,7 @@
                           --}}
 
                           <li class="nav-item">
-                            <a href="/national/setting/volunteer/group" class="nav-link">
+                            <a href="{{ url('national/setting/volunteer/group') }}" class="nav-link">
                             <i class="fas fa-handshake nav-icon"></i>
                               <p> Volunteer Group Settings</p>
                             </a>
@@ -420,29 +420,31 @@
 
 
                           <li class="nav-item">
-                            <a href="/national/election/setting/politicalparty" class="nav-link">
+                            <a href="{{ url('national/election/setting/politicalparty') }}" class="nav-link">
                               <i class="fas fa-vote-yea nav-icon"></i>
                               <p>Political Parties</p>
                             </a>
                           </li>
 
 
+                          @if(app(\App\Services\CommunityRealtimeService::class)->moduleAvailable())
                           <li class="nav-item">
-                            <a href="/national/community/forum" class="nav-link">
+                            <a href="{{ url('national/community/forum') }}" class="nav-link">
                             <i class="fas fa-comments nav-icon"></i>
                               <p> Community Settings</p>
                             </a>
                           </li>
+                          @endif
 
                           <li class="nav-item">
-                            <a href="/national/setting/agegrade" class="nav-link">
+                            <a href="{{ url('national/setting/agegrade') }}" class="nav-link">
                             <i class="fas fa-user-graduate nav-icon"></i>
                               <p> Age Grade Settings</p>
                             </a>
                           </li>
 
                           <li class="nav-item">
-                            <a href="/national/setting/religion" class="nav-link">
+                            <a href="{{ url('national/setting/religion') }}" class="nav-link">
                             <i class="fas fa-praying-hands nav-icon"></i>
                               <p> Religion Settings</p>
                             </a>
@@ -451,7 +453,7 @@
                     @endif
 
                           <li class="nav-item">
-                            <a href="/national/bulksms/setting" class="nav-link">
+                            <a href="{{ url('national/bulksms/setting') }}" class="nav-link">
                             <i class="fas fa-sms nav-icon"></i>
                               <p>SMS Settings</p>
                             </a>
@@ -473,27 +475,27 @@
                 <ul class="nav nav-treeview">
 
                 <li class="nav-item">
-                    <a href="/national/settings/rolespermission" class="nav-link">
+                    <a href="{{ url('national/settings/rolespermission') }}" class="nav-link">
                       <i class="fas fa-ban nav-icon"></i>
                       <p>Roles Permissions</p>
                     </a>
                 </li>
 
                 <li class="nav-item">
-                    <a href="/national/settings/add/roles/permission" class="nav-link">
+                    <a href="{{ url('national/settings/add/roles/permission') }}" class="nav-link">
                       <i class="fas fa-plus-square	 nav-icon"></i>
                       <p>Add Roles Permission</p>
                     </a>
                 </li>
 
                 <li class="nav-item">
-                    <a href="/national/settings/permissions" class="nav-link">
+                    <a href="{{ url('national/settings/permissions') }}" class="nav-link">
                       <i class="fas fa-door-open	 nav-icon"></i>
                       <p>Manage Permissions</p>
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="/national/settings/roles" class="nav-link">
+                    <a href="{{ url('national/settings/roles') }}" class="nav-link">
                       <i class="fas fa-crown	 nav-icon"></i>
                       <p>Manage Roles</p>
                     </a>
@@ -516,7 +518,7 @@
                         <ul class="nav nav-treeview">
 
                           <li class="nav-item">
-                            <a href="/national/profile" class="nav-link">
+                            <a href="{{ url('national/profile') }}" class="nav-link">
                               <i class="fas fa-file nav-icon"></i>
                               <p> Manage Profile</p>
                             </a>
@@ -525,7 +527,7 @@
 
 
                           <li class="nav-item">
-                            <a href="/national/change/password" class="nav-link">
+                            <a href="{{ url('national/change/password') }}" class="nav-link">
                             <i class="fas fa-lock nav-icon"></i>
                               <p>Change Password</p>
                             </a>
@@ -539,7 +541,7 @@
 
             {{-- Logout --}}
             <li class="nav-item">
-                            <a href="/national/logout" class="nav-link">
+                            <a href="{{ url('national/logout') }}" class="nav-link">
                             <i class="fas fa-power-off nav-icon"></i>
                               <p>Logout</p>
                             </a>

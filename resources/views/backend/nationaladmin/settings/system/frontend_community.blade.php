@@ -1,3 +1,17 @@
+@php
+    $communityRealtime = app(\App\Services\CommunityRealtimeService::class);
+    $communityAvailable = $communityRealtime->moduleAvailable();
+@endphp
+
+<div class="alert {{ $communityAvailable ? 'alert-info' : 'alert-warning' }} py-2">
+    <strong>Community Forum:</strong>
+    {{ $communityRealtime->statusMessage() }}
+    <div class="small mt-1">
+        Current update mode: <strong>{{ $communityRealtime->modeLabel() }}</strong>.
+        Community Forum is disabled by default for self-hosted releases; enable it only when members should access the social/community frontend.
+    </div>
+</div>
+
 <div class="form-group row">
     <label for="frontend_community" class="col-sm-3 col-form-label">Community Forum</label>
     <div class="col-sm-9">
@@ -10,12 +24,16 @@
                    id="frontend_community"
                    name="frontend_community"
                    value="1"
-                   {{ $SystemSetting->frontend_community == 1 ? 'checked' : '' }}>
+                   {{ $communityAvailable ? '' : 'disabled' }}
+                   {{ $communityAvailable && $SystemSetting->frontend_community == 1 ? 'checked' : '' }}>
 
             <label class="custom-control-label" for="frontend_community" id="frontend_community_label">
-                {{ $SystemSetting->frontend_community == 1 ? 'Enabled' : 'Disabled' }}
+                {{ $communityAvailable ? ($SystemSetting->frontend_community == 1 ? 'Enabled' : 'Disabled') : 'Unavailable' }}
             </label>
         </div>
+        @unless($communityAvailable)
+            <small class="text-muted">Community Forum is not enabled for this license, so this toggle is locked off.</small>
+        @endunless
     </div>
     @error('frontend_community')
         <div class="alert alert-danger">{{ $message }}</div>
@@ -101,11 +119,11 @@
         var frontendCommunityLabel = document.getElementById('frontend_community_label');
 
         // Update label based on the initial state
-        frontendCommunityLabel.textContent = frontendCommunityInput.checked ? 'Enabled' : 'Disabled';
+        frontendCommunityLabel.textContent = frontendCommunityInput.disabled ? 'Unavailable' : (frontendCommunityInput.checked ? 'Enabled' : 'Disabled');
 
         // Add event listener to update the label when toggled
         frontendCommunityInput.addEventListener('change', function() {
-            frontendCommunityLabel.textContent = frontendCommunityInput.checked ? 'Enabled' : 'Disabled';
+            frontendCommunityLabel.textContent = frontendCommunityInput.disabled ? 'Unavailable' : (frontendCommunityInput.checked ? 'Enabled' : 'Disabled');
         });
     });
 </script>

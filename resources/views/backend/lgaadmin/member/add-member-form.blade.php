@@ -112,34 +112,9 @@
             <div class="col-sm-9">
             <div class=" input-group mb-3">
                 <select class="form-control  @error('access_level') is-invalid @enderror" name="access_level" id="access_level">
-                    <option value="" disabled selected>Select Access Level</option>
-                    @if(auth()->user()->access_level == 'superadmin')
-                    <option value="superadmin">Super Admin Access</option>
-                    @endif
-                    @if(auth()->user()->access_level == 'superadmin' || auth()->user()->access_level == 'nationaladmin' )
-                    <option value="nationaladmin">National Admin Access</option>
-                    @endif
-                    @if(auth()->user()->access_level == 'superadmin' || auth()->user()->access_level == 'nationaladmin' || auth()->user()->access_level == 'regionaladmin'  )
-                    <option value="regionaladmin">Regional Admin Access</option>
-                    @endif
-                    @if(auth()->user()->access_level == 'superadmin' || auth()->user()->access_level == 'nationaladmin' || auth()->user()->access_level == 'regionaladmin' || auth()->user()->access_level == 'stateadmin' )
-                    <option value="stateadmin">State Admin Access</option>
-                     @endif
-                     @if(auth()->user()->access_level == 'superadmin' || auth()->user()->access_level == 'nationaladmin' || auth()->user()->access_level == 'regionaladmin' || auth()->user()->access_level == 'stateadmin')
-                    <option value="senatorialadmin">Senatorial District Admin Access</option>
-                    <option value="federaladmin">Federal Constituency Admin Access</option>
-                    @endif
-                     @if(auth()->user()->access_level == 'superadmin' || auth()->user()->access_level == 'nationaladmin' || auth()->user()->access_level == 'regionaladmin' || auth()->user()->access_level == 'stateadmin' || auth()->user()->access_level == 'lgaadmin')
-                     <option value="lgaadmin">LGA Admin Access</option>
-                     @endif
-                     @if(auth()->user()->access_level == 'superadmin' || auth()->user()->access_level == 'nationaladmin' || auth()->user()->access_level == 'regionaladmin' || auth()->user()->access_level == 'stateadmin' || auth()->user()->access_level == 'lgaadmin' || auth()->user()->access_level == 'wardadmin')
-                    <option value="wardadmin">Ward Admin Access</option>
-                    @endif
-                    @if(auth()->user()->access_level == 'superadmin' || auth()->user()->access_level == 'nationaladmin' || auth()->user()->access_level == 'regionaladmin' || auth()->user()->access_level == 'stateadmin' || auth()->user()->access_level == 'lgaadmin' || auth()->user()->access_level == 'wardadmin' || auth()->user()->access_level == 'puadmin')
-                    <option value="puadmin">Polling Unit Admin Access</option>
-                    @endif
-                    <option value="user">Member Access</option>
-                </select>
+            <option value="" disabled {{ old('access_level', $selectedAccessLevel ?? null) ? '' : 'selected' }}>Select Access Level</option>
+            @include('backend.shared.member.access-level-options', ['selectedAccessLevel' => $selectedAccessLevel ?? ($member->access_level ?? null)])
+        </select>
                 <div class="input-group-append">
                     <div class="input-group-text">
                       <span class="fas fa-key text-primary"></span>
@@ -172,6 +147,8 @@
                     </div>
             </div>
           </div>
+
+          @include('backend.shared.member.gender-field')
 
         <div class="form-group row">
             <input type="hidden" name="country_id" value="{{$profileData->country_id}}" >

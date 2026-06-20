@@ -2,7 +2,7 @@
 @section('content')
 <div class="card card-primary">
               <div class="card-header">
-                    <h3 class="card-title">{{ $dashboardMetrics['scope']['title'] ?? 'Dashboard Statistics' }}</h3>
+                    <h3 class="card-title">{{ $dashboardMetrics['scope']['title'] ?? $packageUi->statisticsTitle() }}</h3>
                     <div class="card-tools">
                     <button type="button" class="btn btn-tool" data-card-widget="collapse">
                         <i class="fas fa-minus"></i>
@@ -29,7 +29,7 @@
         <!-- PIE CHART -->
             <div class="card card-primary">
               <div class="card-header">
-                <h3 class="card-title">MEMBER DISTRIBUTION BY GENDER</h3>
+                <h3 class="card-title">{{ $packageUi->chartTitle('gender') }}</h3>
 
                 <div class="card-tools">
                   <button type="button" class="btn btn-tool" data-card-widget="collapse">
@@ -53,7 +53,7 @@
       <!-- BAR CHART -->
       <div class="card card-primary ">
               <div class="card-header">
-                <h3 class="card-title">MEMBER DISTRIBUTION BY AGE BRACKET</h3>
+                <h3 class="card-title">{{ $packageUi->chartTitle('age') }}</h3>
 
                 <div class="card-tools">
                   <button type="button" class="btn btn-tool" data-card-widget="collapse">
@@ -76,12 +76,13 @@
 <!-- End Member MEMBER Distribution by Gender and Age Brcaket -->
 
 <!-- Member MEMBER Distribution by Region -->
+@if($packageUi->supportsChart('region') || $packageUi->supportsChart('geography'))
 <div class="row">
     <div class="col-md-12">
     <!-- PIE CHART -->
         <div class="card card-primary">
           <div class="card-header">
-            <h3 class="card-title"> MEMBER DISTRIBUTION BY GEOPOLITICAL REGIONS</h3>
+            <h3 class="card-title">{{ $packageUi->geographyDistributionTitle() }}</h3>
 
             <div class="card-tools">
               <button type="button" class="btn btn-tool" data-card-widget="collapse">
@@ -105,6 +106,20 @@
 
   </div><!-- /.col Right -->
 </div>
+@else
+<div class="row">
+    <div class="col-md-12">
+        <div class="card card-primary">
+          <div class="card-header">
+            <h3 class="card-title">{{ $packageUi->geographyDistributionTitle() }}</h3>
+          </div>
+          <div class="card-body">
+            <p class="mb-0 text-muted">{{ $packageUi->emptyStateMessage('package-aware geography chart data') }}</p>
+          </div>
+        </div>
+    </div>
+</div>
+@endif
 
 
 
@@ -114,7 +129,7 @@
                 <!-- PIE CHART -->
             <div class="card card-primary">
                 <div class="card-header">
-                    <h3 class="card-title">MEMBER DISTRIBUTION BY VOTE ELIGIBILITY</h3>
+                    <h3 class="card-title">{{ $packageUi->chartTitle('voter') }}</h3>
 
                     <div class="card-tools">
                     <button type="button" class="btn btn-tool" data-card-widget="collapse">
@@ -137,7 +152,7 @@
       <!-- BAR CHART -->
       <div class="card card-primary">
         <div class="card-header">
-          <h3 class="card-title">MEMBER DISTRIBUTION BY RELIGION</h3>
+          <h3 class="card-title">{{ $packageUi->chartTitle('religion') }}</h3>
 
           <div class="card-tools">
             <button type="button" class="btn btn-tool" data-card-widget="collapse">
@@ -161,13 +176,14 @@
 <!-- End Member MEMBER Distribution by Support and Eligibility -->
 
 <!-- Member MEMBER Distribution by  States -->
+@if($packageUi->supportsChart('state'))
 <div class="row">
 
     <div class="col-md-12">
     <!-- DONUT CHART -->
       <div class="card card-primary ">
           <div class="card-header">
-          <h3 class="card-title">MEMBER DISTRIBUTION BY STATES</h3>
+          <h3 class="card-title">{{ $packageUi->chartTitle('state') }}</h3>
 
           <div class="card-tools">
               <button type="button" class="btn btn-tool" data-card-widget="collapse">
@@ -186,6 +202,7 @@
       </div>  <!-- /.card -->
     </div><!-- /.col Right -->
 </div>
+@endif
 
 
 
@@ -196,10 +213,52 @@
 <!-- AdminLTE ChartJS -->
 <script src="{{asset('assets/plugins/chart.js/Chart.min.js')}}"></script>
 
+<script>
+    function campaignChartIsEmpty(data) {
+        if (!data || data.empty === true) {
+            return true;
+        }
+
+        var dataset = data.datasets && data.datasets[0] ? data.datasets[0].data || [] : [];
+        return dataset.length === 0 || dataset.reduce(function(total, value) {
+            return total + Number(value || 0);
+        }, 0) === 0;
+    }
+
+    function campaignRenderChartEmptyState(canvas, data) {
+        var wrapper = canvas.parentElement;
+        var existing = wrapper.querySelector('.campaign-chart-empty-state');
+
+        if (existing) {
+            existing.remove();
+        }
+
+        if (!campaignChartIsEmpty(data)) {
+            canvas.style.display = 'block';
+            return false;
+        }
+
+        canvas.style.display = 'none';
+        var empty = document.createElement('div');
+        empty.className = 'campaign-chart-empty-state text-muted text-center py-5';
+        empty.textContent = (data && data.message) ? data.message : 'No data available yet.';
+        wrapper.appendChild(empty);
+        return true;
+    }
+
+    function campaignDatasetTotal(data) {
+        var dataset = data.datasets && data.datasets[0] ? data.datasets[0].data || [] : [];
+        return dataset.reduce(function(total, value) {
+            return total + Number(value || 0);
+        }, 0);
+    }
+</script>
+
 <!-- MEMBER Distribution By Gender -->
 <script>
     // Get the canvas element and create a pie chart
-    var pieChartCanvas = document.getElementById('pieChart').getContext('2d');
+    var pieChartElement = document.getElementById('pieChart');
+    var pieChartCanvas = pieChartElement.getContext('2d');
     var pieChart;
 
     function updatePieChart() {
@@ -209,6 +268,9 @@
             success: function(data) {
                 if (pieChart) {
                     pieChart.destroy();
+                }
+                if (campaignRenderChartEmptyState(pieChartElement, data)) {
+                    return;
                 }
                 pieChart = new Chart(pieChartCanvas, {
                     type: 'pie',
@@ -229,8 +291,8 @@
                                     if (data.labels.length && data.datasets.length) {
                                         return data.labels.map(function(label, index) {
                                             var value = data.datasets[0].data[index];
-                                            var total = data.datasets[0].data.reduce((a, b) => a + b, 0);
-                                            var percentage = ((value / total) * 100).toFixed(2);
+                                            var total = campaignDatasetTotal(data);
+                                            var percentage = total > 0 ? ((value / total) * 100).toFixed(2) : '0.00';
                                             return {
                                                 text: label + ' (' + percentage + '%)',
                                                 fillStyle: data.datasets[0].backgroundColor[index],
@@ -256,8 +318,8 @@
                                 label: function(tooltipItem, data) {
                                     var label = data.labels[tooltipItem.index];
                                     var value = data.datasets[0].data[tooltipItem.index];
-                                    var total = data.datasets[0].data.reduce((a, b) => a + b, 0);
-                                    var percentage = ((value / total) * 100).toFixed(2);
+                                    var total = campaignDatasetTotal(data);
+                                    var percentage = total > 0 ? ((value / total) * 100).toFixed(2) : '0.00';
                                     return label + ': ' + value + ' (' + percentage + '%)';
                                 }
                             }
@@ -279,7 +341,8 @@
 
 <!-- MEMBER Distribution By Age Grade -->
 <script>
-    var barChartCanvas = document.getElementById('barChart').getContext('2d');
+    var barChartElement = document.getElementById('barChart');
+    var barChartCanvas = barChartElement.getContext('2d');
     var barChart;
 
     function updateBarChart() {
@@ -289,6 +352,9 @@
             success: function(data) {
                 if (barChart) {
                     barChart.destroy();
+                }
+                if (campaignRenderChartEmptyState(barChartElement, data)) {
+                    return;
                 }
                 barChart = new Chart(barChartCanvas, {
                     type: 'bar',
@@ -354,17 +420,22 @@
 
 <!-- Regional Distribution of member -->
 
+@if($packageUi->supportsChart('region') || $packageUi->supportsChart('geography'))
 <script>
-    var donutChartCanvas = document.getElementById('donutChart').getContext('2d');
+    var donutChartElement = document.getElementById('donutChart');
+    var donutChartCanvas = donutChartElement.getContext('2d');
     var donutChart;
 
     function updateDonutChart() {
         $.ajax({
-            url: "{{ route('nationaladmin.member.distribution.region') }}",
+            url: "{{ $packageUi->supportsChart('region') ? route('nationaladmin.member.distribution.region') : route('nationaladmin.member.distribution.state') }}",
             method: 'GET',
             success: function(data) {
                 if (donutChart) {
                     donutChart.destroy();
+                }
+                if (campaignRenderChartEmptyState(donutChartElement, data)) {
+                    return;
                 }
                 donutChart = new Chart(donutChartCanvas, {
                     type: 'doughnut', // Use 'doughnut' for a donut chart
@@ -385,10 +456,12 @@
     // Call the function to initialize the donut chart
     updateDonutChart();
 </script>
+@endif
 
 <!-- Distribution of Members by Religion -->
 <script>
-    var religionBarChartCanvas = document.getElementById('religionBarChart').getContext('2d');
+    var religionBarChartElement = document.getElementById('religionBarChart');
+    var religionBarChartCanvas = religionBarChartElement.getContext('2d');
     var religionBarChart;
 
     function updateReligionBarChart() {
@@ -398,6 +471,9 @@
             success: function(data) {
                 if (religionBarChart) {
                     religionBarChart.destroy();
+                }
+                if (campaignRenderChartEmptyState(religionBarChartElement, data)) {
+                    return;
                 }
                 religionBarChart = new Chart(religionBarChartCanvas, {
                     type: 'bar', // Change the chart type to 'bar'
@@ -439,7 +515,8 @@
 
 <!-- Voter Eligibility -->
 <script>
-    var validVoterPieChartCanvas = document.getElementById('validVoterPieChart').getContext('2d');
+    var validVoterPieChartElement = document.getElementById('validVoterPieChart');
+    var validVoterPieChartCanvas = validVoterPieChartElement.getContext('2d');
     var validVoterPieChart;
 
     function updateValidVoterPieChart() {
@@ -449,6 +526,9 @@
             success: function(data) {
                 if (validVoterPieChart) {
                     validVoterPieChart.destroy();
+                }
+                if (campaignRenderChartEmptyState(validVoterPieChartElement, data)) {
+                    return;
                 }
                 validVoterPieChart = new Chart(validVoterPieChartCanvas, {
                     type: 'pie', // Use 'pie' for a pie chart
@@ -472,8 +552,10 @@
 
 
 <!-- State Distribution -->
+@if($packageUi->supportsChart('state'))
 <script>
-    var stateDonutChartCanvas = document.getElementById('stateDonutChart').getContext('2d');
+    var stateDonutChartElement = document.getElementById('stateDonutChart');
+    var stateDonutChartCanvas = stateDonutChartElement.getContext('2d');
     var stateDonutChart;
 
     function updateStateDonutChart() {
@@ -484,10 +566,13 @@
                 if (stateDonutChart) {
                     stateDonutChart.destroy();
                 }
+                if (campaignRenderChartEmptyState(stateDonutChartElement, data)) {
+                    return;
+                }
                 // Calculate total count to calculate percentages
-                var totalCount = data.datasets[0].data.reduce((a, b) => a + b, 0);
+                var totalCount = campaignDatasetTotal(data);
                 // Calculate and update the labels with percentages
-                data.labels = data.labels.map((label, index) => `${label} (${((data.datasets[0].data[index] / totalCount) * 100).toFixed(2)}%)`);
+                data.labels = data.labels.map((label, index) => `${label} (${totalCount > 0 ? ((data.datasets[0].data[index] / totalCount) * 100).toFixed(2) : '0.00'}%)`);
                 stateDonutChart = new Chart(stateDonutChartCanvas, {
                     type: 'doughnut', // Use 'doughnut' for a donut chart
                     data: data,
@@ -508,6 +593,7 @@
     // Call the function to initialize the donut chart
     updateStateDonutChart();
 </script>
+@endif
 
 
 

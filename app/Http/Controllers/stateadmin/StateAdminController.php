@@ -302,15 +302,23 @@ class StateAdminController extends Controller
 
 
 
+    public function RegionDashBoard($uuid)
+    {
+        app(\App\Services\DashboardDrilldownService::class)->region($uuid);
+
+        abort(404);
+    }
+
     public function StateDashBoard($uuid)
     {
         $pageTitle = 'State Dashboard';
         $profileData  = $this->getProfileData();
-        $state = State::where('uuid', $uuid)->first();
+        $state = app(\App\Services\DashboardDrilldownService::class)->state($uuid);
 
         if(!$state){
             return redirect()->back()->with('error', 'State not found');
         }
+        app(\App\Services\LicensedScopeQueryService::class)->abortIfStateNotAllowed($state->id);
 
         $senatorialDistrictCount = SenatorialDistrict::where('state_id', $state->id)->count();
         $senatorialDistrictsWithUsersCount = SenatorialDistrict::where('state_id', $state->id)
@@ -401,11 +409,12 @@ class StateAdminController extends Controller
     {
         $pageTitle = 'Senatorial District Dashboard';
         $profileData = $this->getProfileData();
-        $district = SenatorialDistrict::with('state')->where('uuid', $uuid)->first();
+        $district = app(\App\Services\DashboardDrilldownService::class)->senatorialDistrict($uuid);
 
         if(!$district){
             return redirect()->back()->with('error', 'Senatorial District not found');
         }
+        app(\App\Services\LicensedScopeQueryService::class)->abortIfSenatorialDistrictNotAllowed($district->id);
 
         $lgaCount = LocalGovernmentArea::where('senatorial_district_id', $district->id)->count();
         $lgaWithUsersCount = LocalGovernmentArea::where('senatorial_district_id', $district->id)->whereHas('users')->count();
@@ -467,11 +476,12 @@ class StateAdminController extends Controller
     {
         $pageTitle = 'Federal Constituency Dashboard';
         $profileData = $this->getProfileData();
-        $constituency = FederalConstituency::with('state')->where('uuid', $uuid)->first();
+        $constituency = app(\App\Services\DashboardDrilldownService::class)->federalConstituency($uuid);
 
         if(!$constituency){
             return redirect()->back()->with('error', 'Federal Constituency not found');
         }
+        app(\App\Services\LicensedScopeQueryService::class)->abortIfFederalConstituencyNotAllowed($constituency->id);
 
         $lgaCount = LocalGovernmentArea::where('federal_constituency_id', $constituency->id)->count();
         $lgaWithUsersCount = LocalGovernmentArea::where('federal_constituency_id', $constituency->id)->whereHas('users')->count();
@@ -534,11 +544,12 @@ class StateAdminController extends Controller
     {
         $pageTitle = 'Local Government Dashboard';
         $profileData  = $this->getProfileData();
-        $lga = LocalGovernmentArea::where('uuid', $uuid)->first();
+        $lga = app(\App\Services\DashboardDrilldownService::class)->lga($uuid);
 
         if(!$lga){
             return redirect()->back()->with('error', 'LGA not found');
         }
+        app(\App\Services\LicensedScopeQueryService::class)->abortIfLgaNotAllowed($lga->id);
 
 
 
@@ -605,7 +616,7 @@ class StateAdminController extends Controller
     {
         $pageTitle = 'Ward Dashboard';
         $profileData  = $this->getProfileData();
-        $ward = Ward::where('uuid', $uuid)->first();
+        $ward = app(\App\Services\DashboardDrilldownService::class)->ward($uuid);
 
         if(!$ward){
             $notification = [
@@ -615,6 +626,7 @@ class StateAdminController extends Controller
 
             return redirect()->back()->with($notification);
         }
+        app(\App\Services\LicensedScopeQueryService::class)->abortIfWardNotAllowed($ward->id);
 
 
 
@@ -679,7 +691,7 @@ class StateAdminController extends Controller
     {
         $pageTitle = 'Polling Unit Dashboard';
         $profileData  = $this->getProfileData();
-        $pu = PollingUnit::where('uuid', $uuid)->first();
+        $pu = app(\App\Services\DashboardDrilldownService::class)->pollingUnit($uuid);
 
                 if(!$pu){
                     $notification = [
@@ -689,6 +701,7 @@ class StateAdminController extends Controller
 
                     return redirect()->back()->with($notification);
                 }
+        app(\App\Services\LicensedScopeQueryService::class)->abortIfPollingUnitNotAllowed($pu->id);
 
              $excoCount = User::where('polling_unit_id', $pu->id)
              ->where('access_level', '!=', 'user')

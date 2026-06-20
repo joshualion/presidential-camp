@@ -142,7 +142,7 @@
         let accessLevel = this.value;
 
         // Make an AJAX request to get roles based on access_level
-        fetch(`/get-roles-by-access-level/${accessLevel}`)
+        fetch("{{ url('get-roles-by-access-level') }}/" + encodeURIComponent(accessLevel))
             .then(response => response.json())
             .then(data => {
                 let rolesDropdown = document.getElementById('roles');

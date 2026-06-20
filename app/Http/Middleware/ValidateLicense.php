@@ -2,6 +2,9 @@
 
 namespace App\Http\Middleware;
 
+use App\Services\DeploymentModeService;
+use App\Services\InstallationStateService;
+use App\Services\LocalLicenseService;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -10,16 +13,45 @@ use Symfony\Component\HttpFoundation\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use App\Support\SafeDatabase;
 
 class ValidateLicense
 {
+    public function __construct(
+        private DeploymentModeService $deploymentMode,
+        private InstallationStateService $installationState,
+        private LocalLicenseService $localLicenseService,
+    ) {
+    }
+
     /**
      * Handle an incoming request.
      */
     public function handle(Request $request, Closure $next): Response
     {
+        if ($this->localLicenseService->isLocallyActivated()) {
+            return $next($request);
+        }
+
+        if ($this->deploymentMode->isSelfHosted() && $this->installationState->installed()) {
+            if (Auth::check() && Auth::user()->access_level === 'superadmin') {
+                return redirect()
+                    ->route('admin.license.show')
+                    ->withErrors(['license' => 'No active local license was found. Please contact support or rerun the installer/reset procedure.']);
+            }
+
+            Auth::logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+            abort(403, 'No active local license was found. Please contact support.');
+        }
+
         // Allow localhost during development
         if (in_array($request->getHost(), ['localhost', '127.0.0.1'])) {
+            return $next($request);
+        }
+
+        if (!SafeDatabase::hasTable('system_settings')) {
             return $next($request);
         }
 

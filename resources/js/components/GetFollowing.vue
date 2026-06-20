@@ -9,6 +9,9 @@
 </template>
 
 <script>
+import axios from 'axios';
+import { cmRoute } from '../utils/campaignManager';
+
 export default {
   data() {
     return {      
@@ -21,9 +24,9 @@ export default {
   },
   methods: {
     fetchFollowing(page = 1) {
-        axios.get('/user/following?page=' + page)
+        axios.get(`${cmRoute('followingIds')}?page=${page}`)
         .then(response => {
-            this.following = response.data.following;
+            this.following = response.data.following || { data: response.data.ids || [], links: [] };
         });
     },
     showFollowing() {

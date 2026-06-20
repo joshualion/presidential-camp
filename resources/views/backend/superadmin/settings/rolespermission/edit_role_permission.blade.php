@@ -16,16 +16,17 @@
               <div class="card-header">
                 <h3 class="card-title">Edit Roles Permission</h3>
                 <div class="card-tools">
-                <a href="{{ route('nationaladmin.settings.roles') }}"><button class="btn btn-default"> <i class="fas fa-eye"></i> Manage Roles</button></a>
+                <a href="{{ route($profileData->access_level.'.settings.roles') }}"><button class="btn btn-default"> <i class="fas fa-eye"></i> Manage Roles</button></a>
 
-                <a href="{{ route('nationaladmin.settings.permissions') }}"><button class="btn btn-default"> <i class="fas fa-eye"></i> Manage Permissions</button></a>
+                <a href="{{ route($profileData->access_level.'.settings.permissions') }}"><button class="btn btn-default"> <i class="fas fa-eye"></i> Manage Permissions</button></a>
                 </div>
               </div>
               <!-- /.card-header -->
               <div class="card-body">
+              @include('backend.shared.rbac.package-notice')
 
               <!-- form start -->
-              <form class="form" action="{{route('nationaladmin.settings.role.permission.update', $role->id)}}" method="POST">
+              <form class="form" action="{{route($profileData->access_level.'.settings.role.permission.update', $role->id)}}" method="POST">
                 @csrf
 
 

@@ -10,14 +10,17 @@ use App\Models\User;
 use App\Models\VideoEvidence;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
+use Throwable;
 
 class DashboardStatSnapshotService
 {
     public function __construct(
         private LocationDashboardMetricsService $metricsService,
         private LocationScopeService $scopeService,
-        private PackageVisibilityService $packageVisibilityService
+        private PackageVisibilityService $packageVisibilityService,
+        private PackageScopeService $packageScopeService
     ) {
     }
 
@@ -59,19 +62,23 @@ class DashboardStatSnapshotService
         ];
 
         if ($this->snapshotsTableExists()) {
-            DashboardStatSnapshot::query()->updateOrCreate(
-                [
-                    'package' => $identity['package'],
-                    'access_level' => $identity['access_level'],
-                    'scope_key' => $identity['scope_key'],
-                ],
-                [
-                    'scope_type' => $identity['scope_type'],
-                    'scope_id' => $identity['scope_id'],
-                    'payload' => $payload,
-                    'refreshed_at' => now(),
-                ]
-            );
+            try {
+                DashboardStatSnapshot::query()->updateOrCreate(
+                    [
+                        'package' => $identity['package'],
+                        'access_level' => $identity['access_level'],
+                        'scope_key' => $identity['scope_key'],
+                    ],
+                    [
+                        'scope_type' => $identity['scope_type'],
+                        'scope_id' => $identity['scope_id'],
+                        'payload' => $payload,
+                        'refreshed_at' => now(),
+                    ]
+                );
+            } catch (Throwable $e) {
+                $this->reportNonCriticalFailure('refresh', $e);
+            }
         }
 
         return $payload;
@@ -93,11 +100,15 @@ class DashboardStatSnapshotService
         $identity = $this->identity($accessLevel, $scopeType, $scopeId);
         $debounceKey = 'dashboard-stat-refresh:' . $identity['package'] . ':' . $identity['access_level'] . ':' . $identity['scope_key'];
 
-        if (!Cache::add($debounceKey, true, now()->addSeconds(10))) {
-            return;
-        }
+        try {
+            if (!Cache::add($debounceKey, true, now()->addSeconds(10))) {
+                return;
+            }
 
-        RefreshDashboardStatSnapshotJob::dispatch($accessLevel, $scopeType, $scopeId)->delay(now()->addSeconds(2));
+            RefreshDashboardStatSnapshotJob::dispatch($accessLevel, $scopeType, $scopeId)->delay(now()->addSeconds(2));
+        } catch (Throwable $e) {
+            $this->reportNonCriticalFailure('queue', $e);
+        }
     }
 
     public function queueAffectedRefreshes(Model $model): void
@@ -131,13 +142,39 @@ class DashboardStatSnapshotService
 
     private function identity(string $accessLevel, string $scopeType, ?int $scopeId = null): array
     {
+        $licenseScopeKey = $this->licenseScopeKey();
+
         return [
             'package' => $this->packageVisibilityService->package(),
             'access_level' => $accessLevel,
             'scope_type' => $scopeType,
             'scope_id' => $scopeId,
-            'scope_key' => $scopeType . ':' . ($scopeId ?: 'all'),
+            'scope_key' => ($licenseScopeKey ? $licenseScopeKey.':' : '').$scopeType . ':' . ($scopeId ?: 'all'),
         ];
+    }
+
+    private function licenseScopeKey(): ?string
+    {
+        try {
+            if (!$this->packageScopeService->isSelfHosted() || !$this->packageScopeService->hasLocalLicense()) {
+                return null;
+            }
+
+            $scope = $this->packageScopeService->current();
+
+            return implode(':', array_filter([
+                'license',
+                $scope->deployment_mode,
+                $scope->package_type,
+                $scope->scope_type,
+                $scope->state_id,
+                $scope->senatorial_district_id,
+                $scope->federal_constituency_id,
+                $scope->lga_id,
+            ], fn ($value) => $value !== null && $value !== ''));
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     private function resolveUserContext(string $accessLevel, string $scopeType, ?int $scopeId = null): ?User
@@ -210,5 +247,13 @@ class DashboardStatSnapshotService
     private function snapshotsTableExists(): bool
     {
         return Schema::hasTable('dashboard_stat_snapshots');
+    }
+
+    private function reportNonCriticalFailure(string $stage, Throwable $e): void
+    {
+        Log::warning('Dashboard stat snapshot '.$stage.' skipped.', [
+            'exception' => $e::class,
+            'message' => $e->getMessage(),
+        ]);
     }
 }

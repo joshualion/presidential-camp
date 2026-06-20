@@ -20,6 +20,10 @@ use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use League\Flysystem\FilesystemAdapter;
+use App\Services\DeploymentModeService;
+use App\Services\InstallationStateService;
+use App\Services\CampaignPackageUiService;
+use App\Support\SafeDatabase;
 class AppServiceProvider extends ServiceProvider
 {
     /**
@@ -27,7 +31,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $deployment = new DeploymentModeService();
+        $installation = new InstallationStateService();
+
+        if ($deployment->isSelfHosted() && !$installation->installed()) {
+            Config::set('session.driver', 'file');
+        }
 
     }
 
@@ -39,6 +48,19 @@ class AppServiceProvider extends ServiceProvider
         if ($this->app->environment('production')) {
             URL::forceScheme('https');
         }
+
+        View::composer([
+            'backend.*.dashboard',
+            'backend.shared.dashboard-election-stat-section',
+            'backend.shared.dashboard-stat-grid',
+            'backend.shared.dashboard-stat-box',
+            'backend.shared.dashboard-metrics-cards',
+        ], function ($view) {
+            $ui = app(CampaignPackageUiService::class);
+
+            $view->with('packageUi', $ui);
+            $view->with('packageLabels', $ui->labels());
+        });
 
         User::observe(DashboardStatSnapshotObserver::class);
         Vote::observe(DashboardStatSnapshotObserver::class);
@@ -54,7 +76,7 @@ class AppServiceProvider extends ServiceProvider
         VideoEvidence::observe(CampaignNotificationObserver::class);
         PollingUnitAgentAssignment::observe(CampaignNotificationObserver::class);
 
-        if(Schema::hasTable('s_m_t_p_settings') && Schema::hasTable('system_settings')){
+        if(SafeDatabase::hasTable('s_m_t_p_settings') && SafeDatabase::hasTable('system_settings')){
             $smtpSettings = SMTPSetting::first();
             $SystemSetting = SystemSetting::first();
 

@@ -45,7 +45,7 @@
             <div
               v-for="msg in messages"
               :key="msg.id"
-              :class="msg.sender_id === profileData.id ? 'bubble from-me' : 'bubble from-them'"
+              :class="isOwnMessage(msg) ? 'bubble from-me' : 'bubble from-them'"
             >
               <div class="mb-1">{{ msg.body }}</div>
               <small class="text-muted">{{ formatDate(msg.created_at) }}</small>
@@ -71,6 +71,7 @@
 <script>
 import axios from 'axios';
 import dayjs from 'dayjs';
+import { cmIntervals, cmMedia, cmRealtime, cmRoute } from '../utils/campaignManager';
 
 export default {
   props: {
@@ -81,6 +82,10 @@ export default {
     themeColor: {
       type: String,
       default: '#008751',
+    },
+    routes: {
+      type: Object,
+      default: () => ({}),
     },
   },
   data() {
@@ -115,6 +120,31 @@ export default {
     window.removeEventListener('open-messenger', this.handleOpen);
   },
   methods: {
+    routeUrl(name, params = {}) {
+      const fallbackMap = {
+        conversations: 'messagesConversations',
+        conversationMessages: 'messagesConversationMessages',
+        conversationSend: 'messagesConversationSend',
+        conversationTyping: 'messagesConversationTyping',
+        conversationRead: 'messagesConversationRead',
+        recipients: 'messagesRecipients',
+        start: 'messagesStart',
+        ensure: 'messagesEnsure',
+      };
+      if (name === 'noImage') return this.routes?.noImage || cmMedia('noImage');
+      if (name === 'memberImageBase') return this.routes?.memberImageBase || cmMedia('memberImages');
+      let url = this.routes?.[name] || cmRoute(fallbackMap[name] || name, params);
+      Object.entries(params).forEach(([key, value]) => {
+        url = url.replace(`__${key.toUpperCase()}__`, encodeURIComponent(value));
+      });
+      return url;
+    },
+    isOwnMessage(message) {
+      return String(message?.sender_id) === String(this.profileData?.id);
+    },
+    otherParticipant(conv) {
+      return (conv.participants || []).find((p) => String(p.id) !== String(this.profileData.id)) || null;
+    },
     setOpen(state) {
       this.open = state;
       localStorage.setItem('messenger_widget_open', state ? '1' : '0');
@@ -153,14 +183,14 @@ export default {
       if (!userId) return;
       await this.fetchConversations(true);
       const existing = this.conversations.find((c) =>
-        (c.participants || []).some((p) => p.id === userId)
+        (c.participants || []).some((p) => String(p.id) === String(userId))
       );
       if (existing) {
         this.selectConversation(existing);
         return;
       }
       try {
-        const response = await axios.post('/messages/ensure', { recipient_id: userId });
+        const response = await axios.post(this.routeUrl('ensure'), { recipient_id: userId });
         const conv = response.data?.conversation || response.data;
         if (conv) {
           this.upsertConversation(conv);
@@ -171,6 +201,7 @@ export default {
       }
     },
     monitorConnection() {
+      if (!cmRealtime().realtimeAvailable) return;
       if (!window.Echo || !window.Echo.connector) return;
       const conn = window.Echo.connector?.pusher?.connection || window.Echo.connector?.connection;
       if (conn?.bind) {
@@ -188,12 +219,13 @@ export default {
       if (this.pollInterval) return;
       this.pollInterval = setInterval(() => {
         if (this.connectionReady) return;
+        if (document.visibilityState === 'hidden') return;
         if (this.activeConversation) {
           this.fetchMessages(this.activeConversation.id, false);
         } else {
           this.fetchConversations();
         }
-      }, 1000);
+      }, this.activeConversation ? cmIntervals().message_thread : cmIntervals().conversation_list);
     },
     stopPollingFallback() {
       if (this.pollInterval) {
@@ -202,6 +234,7 @@ export default {
       }
     },
     subscribeTyping() {
+      if (!cmRealtime().realtimeAvailable) return;
       if (!window.Echo || !this.profileData?.id) return;
       window.Echo.private(`messages.user.${this.profileData.id}`)
         .listen('MessageTyping', (payload) => {
@@ -214,6 +247,7 @@ export default {
         });
     },
     subscribeMessages() {
+      if (!cmRealtime().realtimeAvailable) return;
       if (!window.Echo || !this.profileData?.id) return;
       window.Echo.private(`messages.user.${this.profileData.id}`)
         .listen('MessageSent', (payload) => {
@@ -239,7 +273,7 @@ export default {
     },
     async fetchConversations(skipSelect = false) {
       try {
-        const response = await axios.get('/messages/conversations');
+        const response = await axios.get(this.routeUrl('conversations'));
         this.conversations = response.data?.data || response.data || [];
         if (!skipSelect && !this.activeConversation && this.conversations.length) {
           this.selectConversation(this.conversations[0]);
@@ -256,7 +290,7 @@ export default {
     },
     async fetchMessages(conversationId, scroll = false) {
       try {
-        const response = await axios.get(`/messages/conversations/${conversationId}/messages`);
+        const response = await axios.get(this.routeUrl('conversationMessages', { conversation: conversationId }));
         const data = response.data?.data || response.data || [];
         this.messages = [...data].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
         if (scroll) this.scrollToBottom();
@@ -270,7 +304,7 @@ export default {
       this.newMessage = '';
       try {
         const response = await axios.post(
-          `/messages/conversations/${this.activeConversation.id}/messages`,
+          this.routeUrl('conversationSend', { conversation: this.activeConversation.id }),
           { message: body },
         );
         const msg = response.data?.message || response.data;
@@ -285,11 +319,11 @@ export default {
     },
     notifyTyping() {
       if (!this.activeConversation) return;
-      axios.post(`/messages/conversations/${this.activeConversation.id}/typing`).catch(() => {});
+      axios.post(this.routeUrl('conversationTyping', { conversation: this.activeConversation.id })).catch(() => {});
     },
     async markRead(conversationId) {
       try {
-        await axios.post(`/messages/conversations/${conversationId}/read`);
+        await axios.post(this.routeUrl('conversationRead', { conversation: conversationId }));
         // refresh conversation unread counts
         this.fetchConversations();
       } catch (e) {
@@ -297,12 +331,12 @@ export default {
       }
     },
     conversationName(conv) {
-      const other = (conv.participants || []).find((p) => p.id !== this.profileData.id) || conv.participants?.[0];
+      const other = this.otherParticipant(conv) || conv.participants?.[0];
       return other ? `${other.firstname ?? ''} ${other.lastname ?? other.username ?? ''}`.trim() : 'Conversation';
     },
     firstParticipantPhoto(conv) {
-      const other = (conv.participants || []).find((p) => p.id !== this.profileData.id) || conv.participants?.[0];
-      return other?.photo ? `/uploads/member_images/${other.photo}` : null;
+      const other = this.otherParticipant(conv) || conv.participants?.[0];
+      return other?.photo ? `${this.routeUrl('memberImageBase')}/${other.photo}` : null;
     },
     latestMessagePreview(conv) {
       const msg = conv.messages?.[0] || conv.messages?.data?.[0];

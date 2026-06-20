@@ -6,13 +6,18 @@ use App\Events\MessageSent;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\User;
-use App\Services\LocationScopeService;
+use App\Services\ScopedMessagingRecipientService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class MessageController extends Controller
 {
+    public function __construct(private ScopedMessagingRecipientService $recipientService)
+    {
+    }
+
     public function conversations(Request $request)
     {
         $userId = Auth::id();
@@ -83,7 +88,7 @@ class MessageController extends Controller
             'body' => $request->message,
         ]);
 
-        broadcast(new MessageSent($message, [$sender->id, $recipient->id]))->toOthers();
+        $this->broadcastMessage($message, [$sender->id, $recipient->id]);
 
         return response()->json([
             'conversation' => $conversation->load('participants'),
@@ -97,87 +102,8 @@ class MessageController extends Controller
         if (!$sender) {
             return response()->json([]);
         }
-        $query = trim($request->input('q', ''));
-        $groups = [];
 
-        if ($sender->access_level === 'puadmin') {
-            // Ward administrators in same ward
-            $wardAdmins = User::query()
-                ->select(['id', 'firstname', 'lastname', 'username', 'photo', 'access_level'])
-                ->where('access_level', 'wardadmin')
-                ->where('ward_id', $sender->ward_id)
-                ->when($query, function ($q) use ($query) {
-                    $like = "%{$query}%";
-                    $q->where(function ($sub) use ($like) {
-                        $sub->where('firstname', 'like', $like)
-                            ->orWhere('lastname', 'like', $like)
-                            ->orWhere('username', 'like', $like)
-                            ->orWhereRaw("CONCAT(firstname, ' ', lastname) LIKE ?", [$like]);
-                    });
-                })
-                ->get()
-                ->map(fn ($u) => $this->mapRecipient($u));
-
-            // PU members/admins in same PU
-            $puMembers = User::query()
-                ->select(['id', 'firstname', 'lastname', 'username', 'photo', 'access_level'])
-                ->where('polling_unit_id', $sender->polling_unit_id)
-                ->whereIn('access_level', ['puadmin', 'user'])
-                ->when($query, function ($q) use ($query) {
-                    $like = "%{$query}%";
-                    $q->where(function ($sub) use ($like) {
-                        $sub->where('firstname', 'like', $like)
-                            ->orWhere('lastname', 'like', $like)
-                            ->orWhere('username', 'like', $like)
-                            ->orWhereRaw("CONCAT(firstname, ' ', lastname) LIKE ?", [$like]);
-                    });
-                })
-                ->get()
-                ->map(fn ($u) => $this->mapRecipient($u));
-
-            $groups[] = ['label' => 'Ward Administrators', 'options' => $wardAdmins];
-            $groups[] = ['label' => 'PU Members', 'options' => $puMembers];
-        } else {
-            $targets = $this->allowedTargetLevels($sender->access_level);
-            $users = User::query()
-                ->select(['id', 'firstname', 'lastname', 'username', 'photo', 'access_level'])
-                ->whereIn('access_level', $targets);
-
-            app(LocationScopeService::class)->applyScope($users, $sender, 'users', 'users');
-
-            $users = $users
-                ->when($query, function ($q) use ($query) {
-                    $like = "%{$query}%";
-                    $q->where(function ($sub) use ($like) {
-                        $sub->where('firstname', 'like', $like)
-                            ->orWhere('lastname', 'like', $like)
-                            ->orWhere('username', 'like', $like)
-                            ->orWhereRaw("CONCAT(firstname, ' ', lastname) LIKE ?", [$like]);
-                    });
-                })
-                ->get();
-
-            $byLevel = $users->groupBy('access_level');
-            foreach ($byLevel as $level => $collection) {
-                $groups[] = [
-                    'label' => ucfirst($level),
-                    'options' => $collection->map(fn ($u) => $this->mapRecipient($u))->values(),
-                ];
-            }
-        }
-
-        return response()->json(['data' => $groups]);
-    }
-
-    protected function mapRecipient(User $u): array
-    {
-        return [
-            'id' => $u->id,
-            'name' => trim(($u->firstname ?? '') . ' ' . ($u->lastname ?? '')) ?: ($u->username ?? 'User'),
-            'username' => $u->username,
-            'photo' => $u->photo ? url('uploads/member_images/' . $u->photo) : url('uploads/no_image.jpg'),
-            'access_level' => $u->access_level,
-        ];
+        return response()->json(['data' => $this->recipientService->groupsFor($sender, $request->input('q'))]);
     }
 
     /**
@@ -218,6 +144,9 @@ class MessageController extends Controller
         if (!$conversation->participants()->where('user_id', $sender->id)->exists()) {
             return response()->json(['message' => 'Forbidden'], 403);
         }
+        if (!$this->conversationAllowedForSender($conversation, $sender)) {
+            return response()->json(['message' => 'Conversation is outside your messaging scope.'], 403);
+        }
 
         $message = $conversation->messages()->create([
             'sender_id' => $sender->id,
@@ -225,7 +154,7 @@ class MessageController extends Controller
         ]);
 
         $participantIds = $conversation->participants()->pluck('users.id')->toArray();
-        broadcast(new MessageSent($message, $participantIds))->toOthers();
+        $this->broadcastMessage($message, $participantIds);
 
         return response()->json(['message' => $message->load('sender')]);
     }
@@ -251,7 +180,16 @@ class MessageController extends Controller
             return response()->json(['message' => 'Forbidden'], 403);
         }
         $participantIds = $conversation->participants()->pluck('users.id')->toArray();
-        broadcast(new \App\Events\MessageTyping($conversation, $sender->id, $participantIds))->toOthers();
+        try {
+            broadcast(new \App\Events\MessageTyping($conversation, $sender->id, $participantIds))->toOthers();
+        } catch (\Throwable $exception) {
+            Log::warning('Message typing broadcast failed; polling fallback will continue.', [
+                'conversation_id' => $conversation->id,
+                'sender_id' => $sender->id,
+                'error' => $exception->getMessage(),
+            ]);
+        }
+
         return response()->json(['status' => 'ok']);
     }
 
@@ -286,41 +224,31 @@ class MessageController extends Controller
             ->whereHas('participants', fn ($q) => $q->where('user_id', $recipient->id))
             ->first();
 
-        $allowed = $this->allowedTargetLevels($sender->access_level);
-        if (in_array($recipient->access_level, $allowed, true) && $this->recipientIsInsideSenderScope($sender, $recipient)) {
+        if ($this->recipientService->canMessage($sender, $recipient)) {
             return [true, $existing];
         }
-        // Allow existing conversation if already created
-        if ($existing) {
-            return [true, $existing];
-        }
+
         return [false, null];
     }
 
-    protected function allowedTargetLevels(?string $level): array
+    private function conversationAllowedForSender(Conversation $conversation, User $sender): bool
     {
-        return match ($level) {
-            'superadmin', 'nationaladmin' => ['nationaladmin', 'regionaladmin', 'stateadmin', 'senatorialadmin', 'federaladmin', 'lgaadmin', 'wardadmin', 'puadmin', 'user'],
-            'regionaladmin' => ['regionaladmin', 'stateadmin', 'senatorialadmin', 'federaladmin', 'lgaadmin', 'wardadmin', 'puadmin', 'user'],
-            'stateadmin' => ['stateadmin', 'senatorialadmin', 'federaladmin', 'lgaadmin', 'wardadmin', 'puadmin', 'user'],
-            'senatorialadmin' => ['senatorialadmin', 'federaladmin', 'lgaadmin', 'wardadmin', 'puadmin', 'user'],
-            'federaladmin' => ['federaladmin', 'lgaadmin', 'wardadmin', 'puadmin', 'user'],
-            'lgaadmin' => ['lgaadmin', 'wardadmin', 'puadmin', 'user'],
-            'wardadmin' => ['wardadmin', 'puadmin', 'user'],
-            'puadmin' => ['puadmin', 'user'],
-            default => [$level],
-        };
+        return $conversation->participants()
+            ->where('users.id', '!=', $sender->id)
+            ->get()
+            ->every(fn (User $participant) => $this->recipientService->canMessage($sender, $participant));
     }
 
-    protected function recipientIsInsideSenderScope(User $sender, User $recipient): bool
+    private function broadcastMessage(Message $message, array $participantIds): void
     {
-        if (in_array($sender->access_level, ['superadmin', 'nationaladmin'], true)) {
-            return true;
+        try {
+            broadcast(new MessageSent($message, $participantIds))->toOthers();
+        } catch (\Throwable $exception) {
+            Log::warning('Message broadcast failed; polling fallback will continue.', [
+                'message_id' => $message->id,
+                'conversation_id' => $message->conversation_id,
+                'error' => $exception->getMessage(),
+            ]);
         }
-
-        $query = User::query()->whereKey($recipient->getKey());
-        app(LocationScopeService::class)->applyScope($query, $sender, 'users', 'users');
-
-        return $query->exists();
     }
 }

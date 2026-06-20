@@ -71,7 +71,9 @@ class SystemSettingController extends Controller
                 'community_comment_max_length' => 'nullable|integer|min:50|max:3000',
                 'community_daily_post_limit' => 'nullable|integer|min:1|max:500',
                 'community_daily_comment_limit' => 'nullable|integer|min:1|max:2000',
-                'community_attachment_max_mb' => 'nullable|integer|min:1|max:200',
+                'community_attachment_max_mb' => 'nullable|integer|min:1|max:20',
+                'community_image_max_mb' => 'nullable|integer|min:1|max:10',
+                'community_video_max_mb' => 'nullable|integer|min:1|max:20',
                 'community_allow_images' => 'nullable|boolean',
                 'community_allow_videos' => 'nullable|boolean',
                 'community_guidelines' => 'nullable|string',
@@ -125,6 +127,8 @@ class SystemSettingController extends Controller
                             $favicon = $SystemSetting->favicon;
                         }
 
+                                    $communityAvailable = app(\App\Services\CommunityRealtimeService::class)->moduleAvailable();
+
                                     SystemSetting::findOrFail($site_id)->update([
                                         'package' => $systemPackage,
                                         'system_country' => $request->system_country,
@@ -133,7 +137,7 @@ class SystemSettingController extends Controller
                                         'light_theme_color' => $request->light_theme_color,
                                         'dark_theme_color' => $request->dark_theme_color,
                                         'system_email' => $request->system_email,
-                                        'frontend_community' => $request->frontend_community,
+                                        'frontend_community' => $communityAvailable ? $request->frontend_community : 0,
                                         'frontend_registration' => $request->frontend_registration,
                                         'system_currency' => $request->system_currency,
                                         'exchange_rate' => $request->exchange_rate,
@@ -167,6 +171,8 @@ class SystemSettingController extends Controller
                                         'community_daily_post_limit' => $request->community_daily_post_limit,
                                         'community_daily_comment_limit' => $request->community_daily_comment_limit,
                                         'community_attachment_max_mb' => $request->community_attachment_max_mb,
+                                        'community_image_max_mb' => $request->community_image_max_mb ?: $request->community_attachment_max_mb,
+                                        'community_video_max_mb' => $request->community_video_max_mb,
                                         'community_allow_images' => $request->community_allow_images ? 1 : 0,
                                         'community_allow_videos' => $request->community_allow_videos ? 1 : 0,
                                         'community_guidelines' => $request->community_guidelines,
@@ -290,14 +296,24 @@ class SystemSettingController extends Controller
      
         public function showActivationForm()
             {
+                if ($redirect = $this->redirectForLocalLicenseFlow()) {
+                    return $redirect;
+                }
+
                 $profileData = $this->getProfileData();
-                return view('backend.' . $profileData->access_level . '.settings.activation.form', compact('profileData'));
+                $pageTitle = 'Activate License';
+
+                return view('backend.' . $profileData->access_level . '.settings.activation.form', compact('profileData', 'pageTitle'));
             }
         
           
    
     public function validateActivationCode(Request $request)
     {
+        if ($redirect = $this->redirectForLocalLicenseFlow()) {
+            return $redirect;
+        }
+
         $request->validate([
             'activation_code' => 'required|string',
             'package' => 'required|string',
@@ -370,6 +386,27 @@ class SystemSettingController extends Controller
                 'alert-type' => 'error'
             ]);
         }
+    }
+
+    private function redirectForLocalLicenseFlow()
+    {
+        $deployment = app(\App\Services\DeploymentModeService::class);
+        $installation = app(\App\Services\InstallationStateService::class);
+        $licenses = app(\App\Services\LocalLicenseService::class);
+
+        if ($licenses->isLocallyActivated()) {
+            return redirect()
+                ->route('admin.license.show')
+                ->with('status', 'This installation is already activated.');
+        }
+
+        if ($deployment->isSelfHosted() && $installation->installed()) {
+            return redirect()
+                ->route('admin.license.show')
+                ->withErrors(['license' => 'No active local license was found. Please contact support or rerun the installer/reset procedure.']);
+        }
+
+        return null;
     }
 
 

@@ -143,9 +143,15 @@ class LocationDashboardMetricsService
 
     public function cachedStatCardPayloadForUser(?User $user): array
     {
+        $packageScope = app(PackageScopeService::class)->current();
         $cacheKey = implode(':', [
             'dashboard-stat-cards',
             $this->packageVisibilityService->package(),
+            $packageScope->scope_type ?? 'scope-none',
+            $packageScope->state_id ?? 'state-all',
+            $packageScope->senatorial_district_id ?? 'senatorial-all',
+            $packageScope->federal_constituency_id ?? 'federal-all',
+            $packageScope->lga_id ?? 'lga-all',
             $user?->access_level ?? 'guest',
             $this->scopeService->getScopeType($user),
             $this->scopeService->getScopeId($user) ?? 'all',
@@ -257,6 +263,7 @@ class LocationDashboardMetricsService
 
     public function electionOperations(?User $user): array
     {
+        $scopeType = $this->scopeService->getScopeType($user);
         $activeElection = Election::query()
             ->where('status', 'ongoing')
             ->orWhereDate('year', now()->toDateString())
@@ -289,6 +296,7 @@ class LocationDashboardMetricsService
         $incidentsReported = (int) (clone $incidentsQuery)->count();
 
         return [
+            'title' => app(CampaignPackageUiService::class)->electionStatisticsTitleForScope($scopeType),
             'active_election' => $activeElection ? [
                 'id' => $activeElection->id,
                 'uuid' => $activeElection->uuid,
@@ -463,6 +471,10 @@ class LocationDashboardMetricsService
 
     private function countRegions(?User $user): int
     {
+        if ($this->licensedScope()->applies()) {
+            return $this->licensedScope()->enforcementSummary()['state_id'] ? 1 : 0;
+        }
+
         return match ($this->scopeService->getScopeType($user)) {
             LocationScopeService::REGION => 1,
             LocationScopeService::STATE,
@@ -477,16 +489,24 @@ class LocationDashboardMetricsService
 
     private function countStates(?User $user): int
     {
-        return match ($this->scopeService->getScopeType($user)) {
-            LocationScopeService::REGION => State::where('region_id', $user?->region_id)->count(),
+        $query = State::query();
+
+        match ($this->scopeService->getScopeType($user)) {
+            LocationScopeService::REGION => $query->where('region_id', $user?->region_id),
             LocationScopeService::STATE,
             LocationScopeService::SENATORIAL,
             LocationScopeService::FEDERAL,
             LocationScopeService::LGA,
             LocationScopeService::WARD,
-            LocationScopeService::POLLING_UNIT => $this->stateIdForScopedUser($user) ? 1 : 0,
-            default => State::count(),
+            LocationScopeService::POLLING_UNIT => $this->stateIdForScopedUser($user)
+                ? $query->where('id', $this->stateIdForScopedUser($user))
+                : $query->whereRaw('1 = 0'),
+            default => $query,
         };
+
+        $this->licensedScope()->applyToStatesQuery($query);
+
+        return (int) $query->count();
     }
 
     private function countSenatorialDistricts(?User $user): int
@@ -494,14 +514,14 @@ class LocationDashboardMetricsService
         $query = SenatorialDistrict::query();
 
         return match ($this->scopeService->getScopeType($user)) {
-            LocationScopeService::REGION => (int) $query->whereHas('state', fn (Builder $stateQuery) => $stateQuery->where('region_id', $user?->region_id))->count(),
-            LocationScopeService::STATE => (int) $query->where('state_id', $user?->state_id)->count(),
-            LocationScopeService::SENATORIAL => $user?->senatorial_district_id ? 1 : 0,
-            LocationScopeService::FEDERAL => FederalConstituency::where('id', $user?->federal_constituency_id)->whereNotNull('senatorial_district_id')->distinct('senatorial_district_id')->count('senatorial_district_id'),
-            LocationScopeService::LGA => LocalGovernmentArea::where('id', $user?->lga_id)->whereNotNull('senatorial_district_id')->distinct('senatorial_district_id')->count('senatorial_district_id'),
+            LocationScopeService::REGION => (int) $this->licensedScope()->applyToSenatorialDistrictsQuery($query->whereHas('state', fn (Builder $stateQuery) => $stateQuery->where('region_id', $user?->region_id)))->count(),
+            LocationScopeService::STATE => (int) $this->licensedScope()->applyToSenatorialDistrictsQuery($query->where('state_id', $user?->state_id))->count(),
+            LocationScopeService::SENATORIAL => (int) $this->licensedScope()->applyToSenatorialDistrictsQuery($query->where('id', $user?->senatorial_district_id))->count(),
+            LocationScopeService::FEDERAL => (int) $this->licensedScope()->applyToSenatorialDistrictsQuery($query->whereIn('id', FederalConstituency::where('id', $user?->federal_constituency_id)->select('senatorial_district_id')))->count(),
+            LocationScopeService::LGA => (int) $this->licensedScope()->applyToSenatorialDistrictsQuery($query->whereIn('id', LocalGovernmentArea::where('id', $user?->lga_id)->select('senatorial_district_id')))->count(),
             LocationScopeService::WARD,
             LocationScopeService::POLLING_UNIT => $this->distinctPollingUnitBoundaryCount($user, 'senatorial_district_id'),
-            default => (int) $query->count(),
+            default => (int) $this->licensedScope()->applyToSenatorialDistrictsQuery($query)->count(),
         };
     }
 
@@ -510,14 +530,14 @@ class LocationDashboardMetricsService
         $query = FederalConstituency::query();
 
         return match ($this->scopeService->getScopeType($user)) {
-            LocationScopeService::REGION => (int) $query->whereHas('state', fn (Builder $stateQuery) => $stateQuery->where('region_id', $user?->region_id))->count(),
-            LocationScopeService::STATE => (int) $query->where('state_id', $user?->state_id)->count(),
-            LocationScopeService::SENATORIAL => (int) $query->where('senatorial_district_id', $user?->senatorial_district_id)->count(),
-            LocationScopeService::FEDERAL => $user?->federal_constituency_id ? 1 : 0,
-            LocationScopeService::LGA => LocalGovernmentArea::where('id', $user?->lga_id)->whereNotNull('federal_constituency_id')->distinct('federal_constituency_id')->count('federal_constituency_id'),
+            LocationScopeService::REGION => (int) $this->licensedScope()->applyToFederalConstituenciesQuery($query->whereHas('state', fn (Builder $stateQuery) => $stateQuery->where('region_id', $user?->region_id)))->count(),
+            LocationScopeService::STATE => (int) $this->licensedScope()->applyToFederalConstituenciesQuery($query->where('state_id', $user?->state_id))->count(),
+            LocationScopeService::SENATORIAL => (int) $this->licensedScope()->applyToFederalConstituenciesQuery($query->where('senatorial_district_id', $user?->senatorial_district_id))->count(),
+            LocationScopeService::FEDERAL => (int) $this->licensedScope()->applyToFederalConstituenciesQuery($query->where('id', $user?->federal_constituency_id))->count(),
+            LocationScopeService::LGA => (int) $this->licensedScope()->applyToFederalConstituenciesQuery($query->whereIn('id', LocalGovernmentArea::where('id', $user?->lga_id)->select('federal_constituency_id')))->count(),
             LocationScopeService::WARD,
             LocationScopeService::POLLING_UNIT => $this->distinctPollingUnitBoundaryCount($user, 'federal_constituency_id'),
-            default => (int) $query->count(),
+            default => (int) $this->licensedScope()->applyToFederalConstituenciesQuery($query)->count(),
         };
     }
 
@@ -567,6 +587,11 @@ class LocationDashboardMetricsService
         $this->scopeService->applyScope($query, $user, 'polling_units', 'polling_units');
 
         return $query;
+    }
+
+    private function licensedScope(): LicensedScopeQueryService
+    {
+        return app(LicensedScopeQueryService::class);
     }
 
     private function distinctUserLocationCount(?User $user, string $column): int
@@ -651,6 +676,8 @@ class LocationDashboardMetricsService
             return [];
         }
 
+        $this->licensedScope()->applyToSenatorialDistrictsQuery($query);
+
         return $query->limit(12)->get()->map(fn (SenatorialDistrict $district) => [
             'label' => $district->name,
             'context' => $district->state?->name,
@@ -675,6 +702,8 @@ class LocationDashboardMetricsService
             return [];
         }
 
+        $this->licensedScope()->applyToFederalConstituenciesQuery($query);
+
         return $query->limit(12)->get()->map(fn (FederalConstituency $constituency) => [
             'label' => $constituency->name,
             'context' => $constituency->state?->name,
@@ -696,6 +725,8 @@ class LocationDashboardMetricsService
             $this->scopeService->applyScope($query, $user, 'local_government_areas', 'local_government_areas');
         }
 
+        $this->licensedScope()->applyToLgasQuery($query);
+
         return $query->limit(12)->get()->map(fn (LocalGovernmentArea $lga) => [
             'label' => $lga->name,
             'context' => $lga->state?->name,
@@ -716,6 +747,8 @@ class LocationDashboardMetricsService
         } else {
             $this->scopeService->applyScope($query, $user, 'local_government_areas', 'local_government_areas');
         }
+
+        $this->licensedScope()->applyToLgasQuery($query);
 
         return $query->limit(12)->get()->map(fn (LocalGovernmentArea $lga) => [
             'label' => $lga->name,
@@ -743,7 +776,7 @@ class LocationDashboardMetricsService
         $label = strtoupper($this->scopeLabel($user));
 
         return match ($this->scopeService->getScopeType($user)) {
-            LocationScopeService::NATIONAL => 'Nationwide Statistics',
+            LocationScopeService::NATIONAL => app(CampaignPackageUiService::class)->statisticsTitle(),
             LocationScopeService::FEDERAL => "{$label} FEDERAL CONSTITUENCY",
             default => "{$label} STATISTICS",
         };

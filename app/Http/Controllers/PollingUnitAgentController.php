@@ -9,6 +9,8 @@ use App\Models\LocalGovernmentArea;
 use App\Models\Ward;
 use App\Models\User;
 use App\Services\LocationScopeService;
+use App\Services\CampaignPackageLocationFormService;
+use App\Services\LicensedScopeQueryService;
 use App\Services\PollingUnitAgentApprovalPolicyService;
 use App\Services\PollingUnitAgentAssignmentService;
 use Illuminate\Http\Request;
@@ -23,7 +25,9 @@ class PollingUnitAgentController extends Controller
     public function __construct(
         private readonly PollingUnitAgentAssignmentService $assignments,
         private readonly PollingUnitAgentApprovalPolicyService $policy,
-        private readonly LocationScopeService $scopeService
+        private readonly LocationScopeService $scopeService,
+        private readonly CampaignPackageLocationFormService $locationForms,
+        private readonly LicensedScopeQueryService $licensedScope
     ) {
         View::share('pageTitle', 'Polling Unit Agents');
     }
@@ -89,6 +93,7 @@ class PollingUnitAgentController extends Controller
         abort_unless($this->assignments->pollingUnitHasCapacity((int) $profileData->polling_unit_id), 422, 'This polling unit already has the maximum number of approved agents.');
 
         $data = $this->validateIdentityRequest($request, true, [], false);
+        $this->licensedScope->assertPayloadWithinScope(['polling_unit_id' => $profileData->polling_unit_id]);
         $pollingUnit = PollingUnit::findOrFail($profileData->polling_unit_id);
 
         try {
@@ -132,6 +137,7 @@ class PollingUnitAgentController extends Controller
             'profileData' => $profileData,
             'users' => $this->userOptions($profileData),
             'states' => $this->stateOptions($profileData),
+            'locationForm' => $this->locationForms->context($profileData),
         ]);
     }
 
@@ -155,6 +161,7 @@ class PollingUnitAgentController extends Controller
         ]);
 
         $pollingUnit = PollingUnit::findOrFail($data['polling_unit_id']);
+        $this->licensedScope->assertPayloadWithinScope(['polling_unit_id' => $pollingUnit->id]);
         abort_unless($this->policy->canNominate($profileData, $pollingUnit), 403);
         abort_unless($this->assignments->pollingUnitHasCapacity((int) $pollingUnit->id), 422, 'This polling unit already has the maximum number of approved agents.');
 
@@ -283,8 +290,9 @@ class PollingUnitAgentController extends Controller
 
         return view('backend.shared.agents.direct-assign', [
             'profileData' => $profileData,
-            'users' => User::with('pollingUnit.ward.localGovernmentArea.state')->orderBy('firstname')->limit(1000)->get(),
+            'users' => $this->userOptions($profileData),
             'states' => $this->stateOptions($profileData),
+            'locationForm' => $this->locationForms->context($profileData),
         ]);
     }
 
@@ -301,6 +309,7 @@ class PollingUnitAgentController extends Controller
             'override_reason' => ['nullable', 'string', 'max:5000'],
         ]);
         $pollingUnit = PollingUnit::findOrFail($data['polling_unit_id']);
+        $this->licensedScope->assertPayloadWithinScope(['polling_unit_id' => $pollingUnit->id]);
         abort_unless($this->policy->canDirectAssign($profileData, $pollingUnit), 403);
         $assignedUser = User::findOrFail($data['user_id']);
         $isOverride = $data['assignment_mode'] === 'override';
@@ -502,6 +511,8 @@ class PollingUnitAgentController extends Controller
             LocationScopeService::POLLING_UNIT => $query->where('id', $viewer->state_id),
             default => null,
         };
+
+        $this->licensedScope->applyToStatesQuery($query);
 
         return $query->get(['id', 'name']);
     }

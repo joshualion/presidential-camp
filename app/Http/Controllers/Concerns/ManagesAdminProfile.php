@@ -11,10 +11,13 @@ use App\Models\Religion;
 use App\Models\State;
 use App\Models\SystemSetting;
 use App\Models\Ward;
+use App\Services\CampaignPackageLocationFormService;
+use App\Services\LicensedScopeQueryService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Models\Role;
 
 trait ManagesAdminProfile
@@ -24,12 +27,14 @@ trait ManagesAdminProfile
         $profileData = $this->getProfileData();
         $pageTitle = 'Profile';
         $roles = Role::all();
+        $locationOptions = app(CampaignPackageLocationFormService::class)->options($profileData);
+        $locationForm = app(CampaignPackageLocationFormService::class)->context($profileData, $profileData, $profileData->access_level);
         $countries = Country::all();
-        $regions = $this->getRegions();
-        $states = State::all();
-        $lgas = LocalGovernmentArea::all();
-        $wards = Ward::all();
-        $pollingUnits = PollingUnit::all();
+        $regions = $locationOptions['regions'];
+        $states = $locationOptions['states'];
+        $lgas = $locationOptions['lgas'];
+        $wards = $locationOptions['wards'];
+        $pollingUnits = $locationOptions['pollingUnits'];
         $religions = Religion::all();
         $ageGrades = AgeGrade::all();
         $userSupportGroups = $profileData->supportGroups()->pluck('name')->toArray();
@@ -46,13 +51,15 @@ trait ManagesAdminProfile
             'wards',
             'pollingUnits',
             'religions',
-            'ageGrades'
+            'ageGrades',
+            'locationForm'
         ));
     }
 
     protected function storeAdminProfile(Request $request)
     {
         $profileData = $this->getProfileData();
+        $request->merge(app(CampaignPackageLocationFormService::class)->mergeFixedPayload($request->all()));
         $requireBank = optional(SystemSetting::first())->require_bank_details;
         $bankRule = $requireBank ? 'required|string|max:255' : 'nullable|string|max:255';
         $accountRule = $requireBank ? 'required|string|size:10' : 'nullable|string|size:10';
@@ -88,6 +95,17 @@ trait ManagesAdminProfile
             'qualification' => 'nullable|string|max:255',
             'photo' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
         ]);
+
+        $scopeErrors = app(LicensedScopeQueryService::class)->payloadErrors([
+            'state_id' => $validatedData['state_id'] ?? null,
+            'lga_id' => $validatedData['lga_id'] ?? null,
+            'ward_id' => $validatedData['ward_id'] ?? null,
+            'polling_unit_id' => $validatedData['polling_unit_id'] ?? null,
+        ]);
+
+        if ($scopeErrors !== []) {
+            throw ValidationException::withMessages($scopeErrors);
+        }
 
         $profileData->update([
             'firstname' => $validatedData['firstname'],

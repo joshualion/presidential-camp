@@ -33,7 +33,7 @@
     <!-- Bottom Navigation Menu -->
     <div class="d-flex justify-content-around py-2">
       <!-- Menu Item 1: Home -->
-      <button class="btn btn-link text-muted shadow" style="background-color: {{ $SystemSetting->dark_theme_color ?? '#008751' }}; width: 35px; height: 35px;" title="Home" onclick="location.href='/community/feed'">
+      <button class="btn btn-link text-muted shadow" style="background-color: {{ $SystemSetting->dark_theme_color ?? '#008751' }}; width: 35px; height: 35px;" title="Home" onclick="location.href='{{ route('timeline') }}'">
         <i class="fas fa-home fa-lg" style="font-size: 1.2rem; color: #f9f9f9;"></i>
       </button>
 
@@ -51,7 +51,7 @@
       </div>
 
       <!-- Menu Item 3: Profile -->
-      <button class="btn btn-link text-muted shadow" style="background-color: {{ $SystemSetting->dark_theme_color ?? '#008751' }}; width: 35px; height: 35px;" title="Profile" onclick="location.href='/community/profile'">
+      <button class="btn btn-link text-muted shadow" style="background-color: {{ $SystemSetting->dark_theme_color ?? '#008751' }}; width: 35px; height: 35px;" title="Profile" onclick="location.href='{{ route('profile.timeline') }}'">
         <i class="fas fa-user fa-lg" style="font-size: 1.2rem; color: #f9f9f9;"></i>
       </button>
 

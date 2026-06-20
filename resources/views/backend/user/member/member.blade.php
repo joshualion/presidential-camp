@@ -297,42 +297,8 @@
     <label for="access_level" class="col-sm-2 col-form-label">Access Level</label>
     <div class="col-sm-10">
         <select class="form-control @error('access_level') is-invalid @enderror" name="access_level" id="access_level" required>
-            <option value="" disabled selected>Select Access Level</option>
-                @if(auth()->user()->access_level == 'superadmin' || auth()->user()->access_level == 'nationaladmin')
-                    <option value="nationaladmin" {{ ($member->access_level == 'nationaladmin') ? 'selected' : '' }}>National Admin Access</option>
-                @endif
-
-                @if(auth()->user()->access_level == 'superadmin' || auth()->user()->access_level == 'nationaladmin' || auth()->user()->access_level == 'regionaladmin')
-                    <option value="regionaladmin" {{ ($member->access_level == 'regionaladmin') ? 'selected' : '' }}>Regional Admin Access</option>
-                @endif
-
-                @if(auth()->user()->access_level == 'superadmin' || auth()->user()->access_level == 'nationaladmin' || auth()->user()->access_level == 'regionaladmin' || auth()->user()->access_level == 'stateadmin')
-                    <option value="stateadmin" {{ ($member->access_level == 'stateadmin') ? 'selected' : '' }}>State Admin Access</option>
-                @endif
-
-                @if(auth()->user()->access_level == 'superadmin' || auth()->user()->access_level == 'nationaladmin' || auth()->user()->access_level == 'regionaladmin' || auth()->user()->access_level == 'stateadmin')
-                    <option value="senatorialadmin" {{ ($member->access_level == 'senatorialadmin') ? 'selected' : '' }}>Senatorial District Admin Access</option>
-                    <option value="federaladmin" {{ ($member->access_level == 'federaladmin') ? 'selected' : '' }}>Federal Constituency Admin Access</option>
-                @endif
-
-                @if(auth()->user()->access_level == 'superadmin' || auth()->user()->access_level == 'nationaladmin' || auth()->user()->access_level == 'regionaladmin' || auth()->user()->access_level == 'stateadmin' || auth()->user()->access_level == 'lgaadmin')
-                    <option value="lgaadmin" {{ ($member->access_level == 'lgaadmin') ? 'selected' : '' }}>LGA Admin Access</option>
-                @endif
-
-                @if(auth()->user()->access_level == 'superadmin' || auth()->user()->access_level == 'nationaladmin' || auth()->user()->access_level == 'regionaladmin' || auth()->user()->access_level == 'stateadmin' || auth()->user()->access_level == 'lgaadmin' || auth()->user()->access_level == 'wardadmin')
-                    <option value="wardadmin" {{ ($member->access_level == 'wardadmin') ? 'selected' : '' }}>Ward Admin Access</option>
-                @endif
-
-                @if(auth()->user()->access_level == 'superadmin' || auth()->user()->access_level == 'nationaladmin' || auth()->user()->access_level == 'regionaladmin' || auth()->user()->access_level == 'stateadmin' || auth()->user()->access_level == 'lgaadmin' || auth()->user()->access_level == 'wardadmin' || auth()->user()->access_level == 'puadmin')
-                    <option value="puadmin" {{ ($member->access_level == 'puadmin') ? 'selected' : '' }}>Polling Unit Admin Access</option>
-                @endif
-
-                <option value="user" {{ ($member->access_level == 'user') ? 'selected' : '' }}>Member Access</option>
-
-                @if(auth()->user()->access_level == 'superadmin')
-                    <option value="superadmin" {{ ($member->access_level == 'superadmin') ? 'selected' : '' }}>Super Admin Access</option>
-                @endif
-
+            <option value="" disabled {{ old('access_level', $selectedAccessLevel ?? null) ? '' : 'selected' }}>Select Access Level</option>
+            @include('backend.shared.member.access-level-options', ['selectedAccessLevel' => $selectedAccessLevel ?? ($member->access_level ?? null)])
         </select>
         @error('access_level')
             <div class="invalid-feedback">{{ $message }}</div>
@@ -340,8 +306,12 @@
     </div>
 </div>
 
-@if(($profileData->hasRole('National ICT Director')) || ($profileData->hasRole('Regional ICT Director')) || ($profileData->hasAnyRole('State ICT Director')) || ($profileData->hasAnyRole('Senatorial ICT Director')) || ($profileData->hasAnyRole('Federal Constituency ICT Director')) || ($profileData->hasAnyRole('Federal ICT Director')) || ($profileData->hasAnyRole('LGA ICT Director')) || ($profileData->hasAnyRole('Ward ICT Director')) || ($profileData->hasAnyRole('PU ICT Director')) || ( $profileData->access_level == 'superadmin'))
+@if(!empty($assignableAccessLevels ?? []))
 
+
+@if(!empty($invalidPackageRoleWarning))
+    <div class="alert alert-warning">{{ $invalidPackageRoleWarning }}</div>
+@endif
 
 <!-- Role -->
 <div class="form-group row">
@@ -634,7 +604,7 @@
         let accessLevel = this.value;
 
         // Make an AJAX request to get roles based on access_level
-        fetch(`/get-roles-by-access-level/${accessLevel}`)
+        fetch("{{ url('get-roles-by-access-level') }}/" + encodeURIComponent(accessLevel))
             .then(response => response.json())
             .then(data => {
                 let rolesDropdown = document.getElementById('roles');

@@ -5,7 +5,7 @@
       <ul class="nav nav-pills nav-sidebar flex-column sidebar-nav" data-widget="treeview" role="menu" data-accordion="false">
 
             <li class="tab nav-item menu-close">
-                        <a href="/superadmin/dashboard" class="nav-link">
+                        <a href="{{ url('superadmin/dashboard') }}" class="nav-link">
                           <i class="nav-icon fas fa-home"></i>
                           <p>
                             Dashboard
@@ -28,7 +28,7 @@
               <ul class="nav nav-treeview">
 
                 <li class="nav-item">
-                  <a href="/superadmin/members/fetch/" class="nav-link">
+                  <a href="{{ url('superadmin/members/fetch') }}" class="nav-link">
                     <i class="fas fa-user nav-icon"></i>
                     <p>All Members</p>
                   </a>
@@ -37,21 +37,21 @@
 
 
                 <li class="nav-item">
-                  <a href="/superadmin/members/bylga" class="nav-link">
+                  <a href="{{ url('superadmin/members/bylga') }}" class="nav-link">
                   <i class="fas fa-user nav-icon"></i>
                     <p>Members by LGA</p>
                   </a>
                 </li>
 
                 <li class="nav-item">
-                  <a href="/superadmin/members/byward/" class="nav-link">
+                  <a href="{{ url('superadmin/members/byward') }}" class="nav-link">
                   <i class="fas fa-user nav-icon"></i>
                     <p>Members By Wards</p>
                   </a>
                 </li>
 
                 <li class="nav-item">
-                  <a href="/superadmin/members/bypu/" class="nav-link">
+                  <a href="{{ url('superadmin/members/bypu') }}" class="nav-link">
                   <i class="fas fa-user nav-icon"></i>
                     <p>Members By PU</p>
                   </a>
@@ -75,27 +75,27 @@
                       <ul class="nav nav-treeview">
 
                         <li class="nav-item">
-                          <a href="/superadmin/elections" class="nav-link">
+                          <a href="{{ url('superadmin/elections') }}" class="nav-link">
                             <i class="fas fa-award nav-icon"></i>
                             <p>Manage Elections</p>
                           </a>
                         </li>
                         <li class="nav-item">
-                          <a href="/superadmin/election/operations-center" class="nav-link">
+                          <a href="{{ url('superadmin/election/operations-center') }}" class="nav-link">
                             <i class="fas fa-broadcast-tower nav-icon"></i>
                             <p>Situation Room</p>
                           </a>
                         </li>
                         @if(app(\App\Services\PollingUnitResultPermissionService::class)->userHasAnyApprovedAssignment($profileData))
                         <li class="nav-item">
-                          <a href="/superadmin/vote/add" class="nav-link">
+                          <a href="{{ url('superadmin/vote/add') }}" class="nav-link">
                           <i class="fa fa-cloud nav-icon"></i>
                             <p>Upload Polls Result</p>
                           </a>
                         </li>
 
                         <li class="nav-item">
-                          <a href="/superadmin/incident/add" class="nav-link">
+                          <a href="{{ url('superadmin/incident/add') }}" class="nav-link">
                           <i class="fa fa-book nav-icon"></i>
                             <p>Report  Incidents</p>
                           </a>
@@ -117,21 +117,21 @@
               <ul class="nav nav-treeview">
 
               <li class="nav-item">
-                  <a href="/superadmin/dashboard" class="nav-link">
+                  <a href="{{ url('superadmin/dashboard') }}" class="nav-link">
                     <i class="fas fa-award nav-icon"></i>
                     <p>Elections</p>
                   </a>
                 </li>
 
                 <li class="nav-item">
-                  <a href="/superadmin/dashboard" class="nav-link">
+                  <a href="{{ url('superadmin/dashboard') }}" class="nav-link">
                     <i class="fas fa-vote-yea nav-icon"></i>
                     <p>Members</p>
                   </a>
                 </li>
 
                 <li class="nav-item">
-                  <a href="/superadmin/state/dashboard" class="nav-link">
+                  <a href="{{ url('superadmin/state/dashboard') }}" class="nav-link">
                   <i class="fa fa-thumbs-up nav-icon"></i>
                     <p>Finances</p>
                   </a>
@@ -152,14 +152,14 @@
       <ul class="nav nav-treeview">
 
         <li class="nav-item">
-          <a href="/superadmin/products" class="nav-link">
+          <a href="{{ url('superadmin/products') }}" class="nav-link">
             <i class="fas fa-shopping-cart nav-icon"></i>
             <p>Funding Sources</p>
           </a>
       </li>
 
       <li class="nav-item">
-          <a href="/superadmin/dashboard" class="nav-link">
+          <a href="{{ url('superadmin/dashboard') }}" class="nav-link">
             <i class="fas fa-hand-holding-usd nav-icon"></i>
             <p>Income</p>
           </a>
@@ -168,21 +168,21 @@
 
 
         <li class="nav-item">
-          <a href="/superadmin/dashboard" class="nav-link">
+          <a href="{{ url('superadmin/dashboard') }}" class="nav-link">
             <i class="fas fa-credit-card nav-icon"></i>
             <p>Expenses</p>
           </a>
         </li>
 
         {{-- <li class="nav-item">
-          <a href="/superadmin/dashboard" class="nav-link">
+          <a href="{{ url('superadmin/dashboard') }}" class="nav-link">
             <i class="fas fa-shopping-cart nav-icon"></i>
             <p>Sales Records</p>
           </a>
         </li>
 
         <li class="nav-item">
-          <a href="/superadmin/state/dashboard" class="nav-link">
+          <a href="{{ url('superadmin/state/dashboard') }}" class="nav-link">
           <i class="fas fa-dollar-sign nav-icon"></i>
             <p>Funding Request</p>
           </a>
@@ -205,14 +205,14 @@
       <ul class="nav nav-treeview">
 
       <li class="nav-item">
-          <a href="/superadmin/events" class="nav-link">
+          <a href="{{ url('superadmin/events') }}" class="nav-link">
             <i class="fas fa-award nav-icon"></i>
             <p>All Events</p>
           </a>
         </li>
 
         <li class="nav-item">
-          <a href="/superadmin/event/add" class="nav-link">
+          <a href="{{ url('superadmin/event/add') }}" class="nav-link">
             <i class="fas fa-plus nav-icon"></i>
             <p>Add Event</p>
           </a>
@@ -236,24 +236,18 @@
               <ul class="nav nav-treeview">
 
                   <li class="nav-item">
-                    <a href="/superadmin/bulksms/send" class="nav-link">
+                    <a href="{{ url('superadmin/bulksms/send') }}" class="nav-link">
                       <i class="fas fa-sms	 nav-icon"></i>
                       <p>Send SMS</p>
                     </a>
                   </li>
                   <li class="nav-item">
-                    <a href="/messages" class="nav-link">
+                    <a href="{{ route('messages.page') }}" class="nav-link">
                       <i class="fas fa-comments nav-icon"></i>
                       <p>Internal Communication</p>
                     </a>
                   </li>
 
-                 <li class="nav-item">
-                  <a href="/superadmin/chat/messenger" class="nav-link">
-                  <i class="fas fa-comment-alt nav-icon"></i>
-                    <p>Live Chat</p>
-                  </a>
-                </li>
                 <!-- <li class="nav-item">
                   <a href="#" class="nav-link">
                   <i class="fas fa-envelope-square nav-icon"></i>
@@ -283,27 +277,27 @@
       </a>
       <ul class="nav nav-treeview" style="display: none;">
           <li class="nav-item">
-            <a href="/admin/products" class="nav-link">
+            <a href="{{ url('admin/products') }}" class="nav-link">
             <i class="fas fa-gem nav-icon"></i>
               <p>Products </p>
             </a>
           </li>
           <li class="nav-item">
-            <a href="/admin/product/categories" class="nav-link">
+            <a href="{{ url('admin/product/categories') }}" class="nav-link">
             <i class="fas fa-shopping-basket nav-icon"></i>
               <p>Categories </p>
             </a>
           </li>
 
           <li class="nav-item">
-            <a href="/admin/product/add" class="nav-link">
+            <a href="{{ url('admin/product/add') }}" class="nav-link">
             <i class="fas fa-upload nav-icon"></i>
               <p> Upload Product </p>
             </a>
           </li>
 
           <li class="nav-item">
-            <a href="/admin/product/category/add" class="nav-link">
+            <a href="{{ url('admin/product/category/add') }}" class="nav-link">
             <i class="fas fa-plus  nav-icon"></i>
               <p> Add Category </p>
             </a>
@@ -325,7 +319,7 @@
 
                 @if($packageVisibility->canSeeRegionalModules())
                   <li class="nav-item">
-                    <a href="/superadmin/location/regions" class="nav-link">
+                    <a href="{{ url('superadmin/location/regions') }}" class="nav-link">
                       <i class="	fas fa-map-marker	 nav-icon"></i>
                       <p>Regions</p>
                     </a>
@@ -334,7 +328,7 @@
 
                 @if($packageVisibility->canSeeStateModules())
                   <li class="nav-item">
-                    <a href="/superadmin/location/states/" class="nav-link">
+                    <a href="{{ url('superadmin/location/states') }}" class="nav-link">
                     <i class="fas fa-map-marker-alt nav-icon"></i>
                       <p>States</p>
                     </a>
@@ -342,7 +336,7 @@
                 @endif
                 @if($packageVisibility->canSeeSenatorialModules())
                 <li class="nav-item">
-                  <a href="/superadmin/location/senatorial-districts" class="nav-link">
+                  <a href="{{ url('superadmin/location/senatorial-districts') }}" class="nav-link">
                   <i class="fas fa-map nav-icon"></i>
                     <p>Senatorial Districts</p>
                   </a>
@@ -350,7 +344,7 @@
                 @endif
                 @if($packageVisibility->canSeeFederalModules())
                 <li class="nav-item">
-                  <a href="/superadmin/location/federal-constituencies" class="nav-link">
+                  <a href="{{ url('superadmin/location/federal-constituencies') }}" class="nav-link">
                   <i class="fas fa-landmark nav-icon"></i>
                     <p>Federal Constituencies</p>
                   </a>
@@ -358,7 +352,7 @@
                 @endif
                 @if($packageVisibility->canSeeLgaModules())
                 <li class="nav-item">
-                  <a href="/superadmin/location/localgovernments" class="nav-link">
+                  <a href="{{ url('superadmin/location/localgovernments') }}" class="nav-link">
                   <i class="fas fa-map-pin nav-icon"></i>
                     <p>LGA's</p>
                   </a>
@@ -367,7 +361,7 @@
 
                 @if($packageVisibility->canSeeWardModules())
                 <li class="nav-item">
-                  <a href="/superadmin/location/wards" class="nav-link">
+                  <a href="{{ url('superadmin/location/wards') }}" class="nav-link">
                   <i class="fas fa-map-marked-alt nav-icon"></i>
                     <p> Wards</p>
                   </a>
@@ -375,7 +369,7 @@
                 @endif
                 @if($packageVisibility->canSeePollingUnitModules())
                 <li class="nav-item">
-                  <a href="/superadmin/location/pollingunits" class="nav-link">
+                  <a href="{{ url('superadmin/location/pollingunits') }}" class="nav-link">
                   <i class="fas fa-monument nav-icon"></i>
                     <p> Polling Units</p>
                   </a>
@@ -399,14 +393,21 @@
           @if(($profileData->hasRole('National ICT Director')) || ( $profileData->access_level == 'superadmin'))
 
                 <li class="nav-item">
-                  <a href="/superadmin/system/settings" class="nav-link">
+                  <a href="{{ url('superadmin/system/settings') }}" class="nav-link">
                     <i class="fas fa-tools	 nav-icon"></i>
                     <p>General Settings</p>
                   </a>
                 </li>
 
                 <li class="nav-item">
-                  <a href="/superadmin/settings/smtp" class="nav-link">
+                  <a href="{{ route('admin.license.show') }}" class="nav-link">
+                    <i class="fas fa-certificate nav-icon"></i>
+                    <p>License Status</p>
+                  </a>
+                </li>
+
+                <li class="nav-item">
+                  <a href="{{ url('superadmin/settings/smtp') }}" class="nav-link">
                   <i class="fas fa-award nav-icon"></i>
                     <p> SMTP Settings</p>
                   </a>
@@ -414,7 +415,7 @@
 
                 {{-- Payment Settings temporarily disabled pending finance module completion.
                 <li class="nav-item">
-                  <a href="/superadmin/settings/paymentgateway" class="nav-link">
+                  <a href="{{ url('superadmin/settings/paymentgateway') }}" class="nav-link">
                   <i class="fas fa-credit-card nav-icon"></i>
                     <p> Payment Settings</p>
                   </a>
@@ -422,7 +423,7 @@
                 --}}
 
                 <li class="nav-item">
-                  <a href="/superadmin/setting/volunteer/group" class="nav-link">
+                  <a href="{{ url('superadmin/setting/volunteer/group') }}" class="nav-link">
                   <i class="fas fa-handshake nav-icon"></i>
                     <p> Volunteer Group Settings</p>
                   </a>
@@ -431,29 +432,31 @@
 
 
                 <li class="nav-item">
-                  <a href="/superadmin/election/setting/politicalparty" class="nav-link">
+                  <a href="{{ url('superadmin/election/setting/politicalparty') }}" class="nav-link">
                     <i class="fas fa-vote-yea nav-icon"></i>
                     <p>Political Parties</p>
                   </a>
                 </li>
 
 
+                @if(app(\App\Services\CommunityRealtimeService::class)->moduleAvailable())
                 <li class="nav-item">
-                  <a href="/superadmin/community/forum" class="nav-link">
+                  <a href="{{ url('superadmin/community/forum') }}" class="nav-link">
                   <i class="fas fa-comments nav-icon"></i>
                     <p> Community Settings</p>
                   </a>
                 </li>
+                @endif
 
                 <li class="nav-item">
-                  <a href="/superadmin/setting/agegrade" class="nav-link">
+                  <a href="{{ url('superadmin/setting/agegrade') }}" class="nav-link">
                   <i class="fas fa-user-graduate nav-icon"></i>
                     <p> Age Grade Settings</p>
                   </a>
                 </li>
 
                 <li class="nav-item">
-                  <a href="/superadmin/setting/religion" class="nav-link">
+                  <a href="{{ url('superadmin/setting/religion') }}" class="nav-link">
                   <i class="fas fa-praying-hands nav-icon"></i>
                     <p> Religion Settings</p>
                   </a>
@@ -462,7 +465,7 @@
           @endif
 
                 <li class="nav-item">
-                  <a href="/superadmin/bulksms/setting" class="nav-link">
+                  <a href="{{ url('superadmin/bulksms/setting') }}" class="nav-link">
                   <i class="fas fa-sms nav-icon"></i>
                     <p>SMS Settings</p>
                   </a>
@@ -483,27 +486,27 @@
                 <ul class="nav nav-treeview">
 
                 <li class="nav-item">
-                    <a href="/superadmin/settings/rolespermission" class="nav-link">
+                    <a href="{{ url('superadmin/settings/rolespermission') }}" class="nav-link">
                       <i class="fas fa-eye nav-icon"></i>
                       <p>Roles Permissions</p>
                     </a>
                 </li>
 
                 <li class="nav-item">
-                    <a href="/superadmin/settings/add/roles/permission" class="nav-link">
+                    <a href="{{ url('superadmin/settings/add/roles/permission') }}" class="nav-link">
                       <i class="fas fa-plus-square	 nav-icon"></i>
                       <p>Assign Roles Permission</p>
                     </a>
                 </li>
 
                 <li class="nav-item">
-                    <a href="/superadmin/settings/permissions" class="nav-link">
+                    <a href="{{ url('superadmin/settings/permissions') }}" class="nav-link">
                       <i class="fas fa-door-open	 nav-icon"></i>
                       <p>Manage Permissions</p>
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="/superadmin/settings/roles" class="nav-link">
+                    <a href="{{ url('superadmin/settings/roles') }}" class="nav-link">
                       <i class="fas fa-crown	 nav-icon"></i>
                       <p>Manage Roles</p>
                     </a>
@@ -523,14 +526,14 @@
                         <ul class="nav nav-treeview">
 
                           <li class="nav-item">
-                            <a href="/superadmin/profile" class="nav-link">
+                            <a href="{{ url('superadmin/profile') }}" class="nav-link">
                               <i class="fas fa-file nav-icon"></i>
                               <p> Manage Profile</p>
                             </a>
                           </li>
 
                           <li class="nav-item">
-                            <a href="/superadmin/change/password" class="nav-link">
+                            <a href="{{ url('superadmin/change/password') }}" class="nav-link">
                             <i class="fas fa-lock nav-icon"></i>
                               <p>Change Password</p>
                             </a>
@@ -541,7 +544,7 @@
                         </ul>
             </li>
             <li class="nav-item">
-                            <a href="/superadmin/logout" class="nav-link">
+                            <a href="{{ url('superadmin/logout') }}" class="nav-link">
                             <i class="fas fa-power-off nav-icon"></i>
                               <p>Logout</p>
                             </a>

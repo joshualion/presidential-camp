@@ -145,6 +145,8 @@
                         </div>
                         </div>
                         @unless($profileData->access_level === 'nationaladmin')
+                        @include('backend.shared.location-form.context')
+
                         <!-- Voting Region -->
                         <div class="form-group row">
                         <label for="region_id" class="col-sm-2 col-form-label">Voting Region</label>

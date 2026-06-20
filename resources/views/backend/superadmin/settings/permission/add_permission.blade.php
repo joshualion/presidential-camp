@@ -11,14 +11,14 @@
               <div class="card-header">
                 <h3 class="card-title">Add Permission</h3>
                 <div class="card-tools">
-                    <a href="{{ route('nationaladmin.settings.permissions') }}"><button class="btn btn-default"> <i class="fas fa-eye"></i> All Permissions</button></a>
+                    <a href="{{ route($profileData->access_level.'.settings.permissions') }}"><button class="btn btn-default"> <i class="fas fa-eye"></i> All Permissions</button></a>
                 </div>
               </div>
               <!-- /.card-header -->
               <div class="card-body">
 
               <!-- form start -->
-              <form class="form" action="{{route('nationaladmin.settings.permission.store')}}" method="POST">
+              <form class="form" action="{{route($profileData->access_level.'.settings.permission.store')}}" method="POST">
                 @csrf
                 <div class="card-body">
                   <div class="form-group">

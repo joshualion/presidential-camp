@@ -23,6 +23,8 @@ use Illuminate\Support\Facades\View;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
+use App\Services\LicensedScopeQueryService;
 use App\Services\StructuralLocationAccessService;
 
 class LocationController extends Controller
@@ -44,6 +46,20 @@ class LocationController extends Controller
        private function structuralAccess(): StructuralLocationAccessService
        {
            return app(StructuralLocationAccessService::class);
+       }
+
+       private function licensedScope(): LicensedScopeQueryService
+       {
+           return app(LicensedScopeQueryService::class);
+       }
+
+       private function validateLicensedPayload(array $payload): void
+       {
+           $errors = $this->licensedScope()->payloadErrors($payload);
+
+           if ($errors !== []) {
+               throw ValidationException::withMessages($errors);
+           }
        }
 
        private function superAdminOnly(): void
@@ -96,6 +112,7 @@ class LocationController extends Controller
 
            $profileData = $this->getProfileData();
            $this->superAdminOnly();
+           abort_if($this->licensedScope()->applies(), 403, 'Regions cannot be created inside a scoped self-hosted license.');
 
             // Prepare the region data
             $regionData = $request->except(['_token', '_method']);
@@ -115,6 +132,7 @@ class LocationController extends Controller
            $profileData = $this->getProfileData();
            $region = Region::where('uuid', $uuid)->firstOrFail();
            $this->structuralAccess()->assertCanUpdate($profileData, $region);
+           $this->licensedScope()->abortIfRegionNotAllowed($region->id);
 
            return view('backend.'.$profileData->access_level.'.region.edit-region', compact('profileData', 'region'));
        }
@@ -128,6 +146,7 @@ class LocationController extends Controller
            $profileData = $this->getProfileData();
            $region = Region::where('uuid', $uuid)->firstOrFail();
            $this->structuralAccess()->assertCanUpdate($profileData, $region);
+           $this->licensedScope()->abortIfRegionNotAllowed($region->id);
            $region->update(['name' => $request->name]);
 
            return $this->redirectToLocation('regions')->with([
@@ -140,6 +159,7 @@ class LocationController extends Controller
         $profileData = $this->getProfileData();
         $this->superAdminOnly();
         $region = Region::where('uuid', $uuid)->first(); // Retrieve the region
+        $this->licensedScope()->abortIfRegionNotAllowed($region?->id);
 
         // Check if the region has any states or users associated with it
         if ($region->states()->count() > 0 || $region->users()->count() > 0) {
@@ -193,6 +213,7 @@ class LocationController extends Controller
             ]);
             $profileData = $this->getProfileData();
             $this->superAdminOnly();
+            abort_if($this->licensedScope()->applies(), 403, 'States cannot be created inside a scoped self-hosted license.');
 
             $stateData = $request->except(['_token', '_method']);
             $stateData['user_id'] = $profileData->id;
@@ -208,6 +229,7 @@ class LocationController extends Controller
         $profileData = $this->getProfileData();
         $state = State::where('uuid', $uuid)->firstOrFail();
         $this->structuralAccess()->assertCanUpdate($profileData, $state);
+        $this->licensedScope()->abortIfStateNotAllowed($state->id);
         $regions = $profileData->access_level === 'superadmin' ? Region::all() : Region::where('id', $state->region_id)->get();
 
         return view('backend.'.$profileData->access_level.'.state.edit-state', compact('profileData', 'state', 'regions'));
@@ -230,6 +252,8 @@ class LocationController extends Controller
             $state = State::where('uuid', $uuid)->firstOrFail();
 
             $this->structuralAccess()->assertCanUpdate($profileData, $state);
+            $this->licensedScope()->abortIfStateNotAllowed($state->id);
+            $this->validateLicensedPayload(['state_id' => $state->id]);
             $state->update($stateData);
 
             return $this->redirectToLocation('states')->with([
@@ -244,6 +268,7 @@ class LocationController extends Controller
         $profileData = $this->getProfileData();
         $this->superAdminOnly();
         $state = State::where('uuid', $uuid)->first(); // Retrieve the state
+        $this->licensedScope()->abortIfStateNotAllowed($state?->id);
 
         // Check if the state has any users associated with it
         if ($state->users()->count() > 0) {
@@ -281,7 +306,10 @@ class LocationController extends Controller
     {
         $profileData = $this->getProfileData();
         $this->superAdminOnly();
-        $states = State::orderBy('name', 'ASC')->get();
+        $states = $this->structuralAccess()
+            ->applyScope(State::query(), $profileData, 'states')
+            ->orderBy('name', 'ASC')
+            ->get();
 
         return view('backend.'.$profileData->access_level.'.senatorial-district.add-senatorial-district', compact('profileData', 'states'));
     }
@@ -293,6 +321,7 @@ class LocationController extends Controller
             'name' => 'required',
             'state_id' => 'required',
         ]);
+        $this->validateLicensedPayload($request->only(['state_id']));
 
         SenatorialDistrict::create([
             'name' => $request->name,
@@ -314,8 +343,9 @@ class LocationController extends Controller
         $profileData = $this->getProfileData();
         $district = SenatorialDistrict::where('uuid', $uuid)->firstOrFail();
         $this->structuralAccess()->assertCanUpdate($profileData, $district);
+        $this->licensedScope()->abortIfSenatorialDistrictNotAllowed($district->id);
         $states = $profileData->access_level === 'superadmin'
-            ? State::orderBy('name', 'ASC')->get()
+            ? $this->structuralAccess()->applyScope(State::query(), $profileData, 'states')->orderBy('name', 'ASC')->get()
             : State::where('id', $district->state_id)->get();
 
         return view('backend.'.$profileData->access_level.'.senatorial-district.edit-senatorial-district', compact('profileData', 'district', 'states'));
@@ -331,6 +361,11 @@ class LocationController extends Controller
         $profileData = $this->getProfileData();
         $district = SenatorialDistrict::where('uuid', $uuid)->firstOrFail();
         $this->structuralAccess()->assertCanUpdate($profileData, $district);
+        $this->licensedScope()->abortIfSenatorialDistrictNotAllowed($district->id);
+        $this->validateLicensedPayload([
+            'state_id' => $request->state_id,
+            'senatorial_district_id' => $district->id,
+        ]);
 
         $data = [
             'name' => $request->name,
@@ -356,6 +391,7 @@ class LocationController extends Controller
         $profileData = $this->getProfileData();
         $this->superAdminOnly();
         $district = SenatorialDistrict::where('uuid', $uuid)->firstOrFail();
+        $this->licensedScope()->abortIfSenatorialDistrictNotAllowed($district->id);
 
         if (
             $district->federalConstituencies()->count() > 0 ||
@@ -396,8 +432,14 @@ class LocationController extends Controller
     {
         $profileData = $this->getProfileData();
         $this->superAdminOnly();
-        $states = State::orderBy('name', 'ASC')->get();
-        $senatorialDistricts = SenatorialDistrict::with('state')->orderBy('name', 'ASC')->get();
+        $states = $this->structuralAccess()
+            ->applyScope(State::query(), $profileData, 'states')
+            ->orderBy('name', 'ASC')
+            ->get();
+        $senatorialDistricts = $this->structuralAccess()
+            ->applyScope(SenatorialDistrict::with('state'), $profileData, 'senatorial_districts')
+            ->orderBy('name', 'ASC')
+            ->get();
 
         return view('backend.'.$profileData->access_level.'.federal-constituency.add-federal-constituency', compact('profileData', 'states', 'senatorialDistricts'));
     }
@@ -410,6 +452,7 @@ class LocationController extends Controller
             'state_id' => 'required',
             'senatorial_district_id' => 'nullable',
         ]);
+        $this->validateLicensedPayload($request->only(['state_id', 'senatorial_district_id']));
 
         FederalConstituency::create([
             'name' => $request->name,
@@ -432,11 +475,12 @@ class LocationController extends Controller
         $profileData = $this->getProfileData();
         $constituency = FederalConstituency::where('uuid', $uuid)->firstOrFail();
         $this->structuralAccess()->assertCanUpdate($profileData, $constituency);
+        $this->licensedScope()->abortIfFederalConstituencyNotAllowed($constituency->id);
         $states = $profileData->access_level === 'superadmin'
-            ? State::orderBy('name', 'ASC')->get()
+            ? $this->structuralAccess()->applyScope(State::query(), $profileData, 'states')->orderBy('name', 'ASC')->get()
             : State::where('id', $constituency->state_id)->get();
         $senatorialDistricts = $profileData->access_level === 'superadmin'
-            ? SenatorialDistrict::with('state')->orderBy('name', 'ASC')->get()
+            ? $this->structuralAccess()->applyScope(SenatorialDistrict::with('state'), $profileData, 'senatorial_districts')->orderBy('name', 'ASC')->get()
             : SenatorialDistrict::with('state')->where('state_id', $constituency->state_id)->orderBy('name', 'ASC')->get();
 
         return view('backend.'.$profileData->access_level.'.federal-constituency.edit-federal-constituency', compact('profileData', 'constituency', 'states', 'senatorialDistricts'));
@@ -453,6 +497,12 @@ class LocationController extends Controller
         $profileData = $this->getProfileData();
         $constituency = FederalConstituency::where('uuid', $uuid)->firstOrFail();
         $this->structuralAccess()->assertCanUpdate($profileData, $constituency);
+        $this->licensedScope()->abortIfFederalConstituencyNotAllowed($constituency->id);
+        $this->validateLicensedPayload([
+            'state_id' => $request->state_id,
+            'senatorial_district_id' => $request->senatorial_district_id,
+            'federal_constituency_id' => $constituency->id,
+        ]);
 
         $data = [
             'name' => $request->name,
@@ -479,6 +529,7 @@ class LocationController extends Controller
         $profileData = $this->getProfileData();
         $this->superAdminOnly();
         $constituency = FederalConstituency::where('uuid', $uuid)->firstOrFail();
+        $this->licensedScope()->abortIfFederalConstituencyNotAllowed($constituency->id);
 
         if (
             $constituency->localGovernmentAreas()->count() > 0 ||
@@ -519,7 +570,10 @@ class LocationController extends Controller
 
         $profileData = $this->getProfileData();
         $this->superAdminOnly();
-        $states = State::orderBy('name', 'ASC')->get();
+        $states = $this->structuralAccess()
+            ->applyScope(State::query(), $profileData, 'states')
+            ->orderBy('name', 'ASC')
+            ->get();
 
         return view('backend.'.$profileData->access_level.'.lga.add-lga', compact('profileData', 'states'));
 
@@ -533,6 +587,7 @@ class LocationController extends Controller
             'name' => 'required',
             'state' => 'required',
         ]);
+        $this->validateLicensedPayload(['state_id' => $request->state]);
 
         $profileData = $this->getProfileData(); // Get the profile data
         $this->superAdminOnly();
@@ -559,8 +614,9 @@ class LocationController extends Controller
         $profileData = $this->getProfileData();
         $lga = LocalGovernmentArea::where('uuid', $uuid)->firstOrFail();
         $this->structuralAccess()->assertCanUpdate($profileData, $lga);
+        $this->licensedScope()->abortIfLgaNotAllowed($lga->id);
         $states = $profileData->access_level === 'superadmin'
-            ? State::orderBy('name', 'ASC')->get()
+            ? $this->structuralAccess()->applyScope(State::query(), $profileData, 'states')->orderBy('name', 'ASC')->get()
             : State::where('id', $lga->state_id)->get();
         return view('backend.'.$profileData->access_level.'.lga.edit-lga', compact('profileData', 'lga', 'states'));
     }
@@ -575,6 +631,11 @@ class LocationController extends Controller
         $profileData = $this->getProfileData();
         $lga = LocalGovernmentArea::where('uuid', $uuid)->firstOrFail();
         $this->structuralAccess()->assertCanUpdate($profileData, $lga);
+        $this->licensedScope()->abortIfLgaNotAllowed($lga->id);
+        $this->validateLicensedPayload([
+            'state_id' => $request->state_id,
+            'lga_id' => $lga->id,
+        ]);
         $lgaData = $profileData->access_level === 'superadmin'
             ? $request->except(['_token', '_method'])
             : $request->only(['name']);
@@ -593,6 +654,7 @@ class LocationController extends Controller
         $profileData = $this->getProfileData();
         $this->superAdminOnly();
         $lga = LocalGovernmentArea::where('uuid', $uuid)->first(); // Retrieve the state
+        $this->licensedScope()->abortIfLgaNotAllowed($lga?->id);
 
         // Check if the lga has any users or wards associated with it
         if ($lga->users()->count() > 0 || $lga->wards()->count() > 0) {
@@ -695,6 +757,7 @@ class LocationController extends Controller
                     ->join('states', 'local_government_areas.state_id', '=', 'states.id')
                     ->orderBy('states.name', 'ASC')
                     ->orderBy('local_government_areas.name', 'ASC')
+                    ->tap(fn ($query) => $this->structuralAccess()->applyScope($query, $profileData, 'local_government_areas'))
                     ->get(['local_government_areas.*']);
 
         return view('backend.'.$profileData->access_level.'.ward.add-ward', compact('profileData', 'lgas'));
@@ -707,6 +770,7 @@ class LocationController extends Controller
             'name' => 'required',
             'lga_id' => 'required',
         ]);
+        $this->validateLicensedPayload($request->only(['lga_id']));
 
         $profileData = $this->getProfileData();
         $this->superAdminOnly();
@@ -731,11 +795,12 @@ class LocationController extends Controller
         $profileData = $this->getProfileData();
         $ward = Ward::where('uuid', $uuid)->firstOrFail();
         $this->structuralAccess()->assertCanUpdate($profileData, $ward);
+        $this->licensedScope()->abortIfWardNotAllowed($ward->id);
         $lgas = LocalGovernmentArea::with('state')
                     ->join('states', 'local_government_areas.state_id', '=', 'states.id')
                     ->orderBy('states.name', 'ASC')
                     ->orderBy('local_government_areas.name', 'ASC')
-                    ->when($profileData->access_level !== 'superadmin', fn ($query) => $this->structuralAccess()->applyScope($query, $profileData, 'local_government_areas'))
+                    ->tap(fn ($query) => $this->structuralAccess()->applyScope($query, $profileData, 'local_government_areas'))
                     ->get(['local_government_areas.*']);
         return view('backend.'.$profileData->access_level.'.ward.edit-ward', compact('profileData', 'ward', 'lgas'));
     }
@@ -751,6 +816,11 @@ class LocationController extends Controller
         $profileData = $this->getProfileData();
         $ward = Ward::where('uuid', $uuid)->firstOrFail();
         $this->structuralAccess()->assertCanUpdate($profileData, $ward);
+        $this->licensedScope()->abortIfWardNotAllowed($ward->id);
+        $this->validateLicensedPayload([
+            'lga_id' => $request->lga_id,
+            'ward_id' => $ward->id,
+        ]);
         $wardData = $profileData->access_level === 'superadmin'
             ? $request->except(['_token', '_method'])
             : $request->only(['name']);
@@ -768,6 +838,7 @@ class LocationController extends Controller
         $profileData = $this->getProfileData();
         $this->superAdminOnly();
         $ward = Ward::where('uuid', $uuid)->first(); // Retrieve the state
+        $this->licensedScope()->abortIfWardNotAllowed($ward?->id);
 
         // Check if the lga has any users or wards associated with it
         if ($ward->users()->count() > 0 ||$ward->pollingUnits()->count() > 0) {
@@ -862,12 +933,14 @@ class LocationController extends Controller
                     ->join('states', 'local_government_areas.state_id', '=', 'states.id')
                     ->orderBy('states.name', 'ASC')
                     ->orderBy('local_government_areas.name', 'ASC')
+                    ->tap(fn ($query) => $this->structuralAccess()->applyScope($query, $profileData, 'local_government_areas'))
                     ->get(['local_government_areas.*']);
 
         $wards = Ward::with('localGovernmentArea') // Ensures the relationship is loaded
                     ->join('local_government_areas', 'wards.lga_id', '=', 'local_government_areas.id')
                     ->orderBy('local_government_areas.name', 'ASC')
                     ->orderBy('wards.name', 'ASC')
+                    ->tap(fn ($query) => $this->structuralAccess()->applyScope($query, $profileData, 'wards'))
                     ->get(['wards.*', 'local_government_areas.name as lga_name']);
 
         return view('backend.'.$profileData->access_level.'.pu.add-pu', compact('profileData', 'wards', 'lgas'));
@@ -881,6 +954,7 @@ class LocationController extends Controller
             'name' => 'required',
             'ward_id' => 'required',
         ]);
+        $this->validateLicensedPayload($request->only(['ward_id']));
 
         $profileData = $this->getProfileData();
         $this->superAdminOnly();
@@ -905,19 +979,20 @@ class LocationController extends Controller
         $profileData = $this->getProfileData();
         $pu = PollingUnit::where('uuid', $uuid)->firstOrFail();
         $this->structuralAccess()->assertCanUpdate($profileData, $pu);
+        $this->licensedScope()->abortIfPollingUnitNotAllowed($pu->id);
 
             $lgas = LocalGovernmentArea::with('state')
             ->join('states', 'local_government_areas.state_id', '=', 'states.id')
             ->orderBy('states.name', 'ASC')
             ->orderBy('local_government_areas.name', 'ASC')
-            ->when($profileData->access_level !== 'superadmin', fn ($query) => $this->structuralAccess()->applyScope($query, $profileData, 'local_government_areas'))
+            ->tap(fn ($query) => $this->structuralAccess()->applyScope($query, $profileData, 'local_government_areas'))
             ->get(['local_government_areas.*']);
 
             $wards = Ward::with('localGovernmentArea') // Ensures the relationship is loaded
             ->join('local_government_areas', 'wards.lga_id', '=', 'local_government_areas.id')
             ->orderBy('local_government_areas.name', 'ASC')
             ->orderBy('wards.name', 'ASC')
-            ->when($profileData->access_level !== 'superadmin', fn ($query) => $this->structuralAccess()->applyScope($query, $profileData, 'wards'))
+            ->tap(fn ($query) => $this->structuralAccess()->applyScope($query, $profileData, 'wards'))
             ->get(['wards.*', 'local_government_areas.name as lga_name']);
             return view('backend.'.$profileData->access_level.'.pu.edit-pu', compact('profileData', 'pu', 'wards', 'lgas'));
             }
@@ -933,6 +1008,11 @@ class LocationController extends Controller
         $profileData = $this->getProfileData();
         $pu = PollingUnit::where('uuid', $uuid)->firstOrFail();
         $this->structuralAccess()->assertCanUpdate($profileData, $pu);
+        $this->licensedScope()->abortIfPollingUnitNotAllowed($pu->id);
+        $this->validateLicensedPayload([
+            'ward_id' => $request->ward_id,
+            'polling_unit_id' => $pu->id,
+        ]);
         $puData = $profileData->access_level === 'superadmin'
             ? $request->except(['lga_id', '_token', '_method'])
             : $request->only(['name']);
@@ -950,6 +1030,7 @@ class LocationController extends Controller
         $profileData = $this->getProfileData();
         $this->superAdminOnly();
         $pu = PollingUnit::where('uuid', $uuid)->first(); // Retrieve the Pu
+        $this->licensedScope()->abortIfPollingUnitNotAllowed($pu?->id);
 
         // Check if the PU has any users  associated with it
         if ($pu->users()->count() > 0 ) {

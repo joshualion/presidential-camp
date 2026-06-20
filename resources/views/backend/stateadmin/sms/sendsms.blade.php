@@ -337,7 +337,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const puIdFilter = $('#pu-dropdown').val() || null;
 
             $.ajax({
-                url: "/get-group-recipients",
+                url: "{{ url('get-group-recipients') }}",
                 type: "POST",
                 data: {
                     group_id: groupId,

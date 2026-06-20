@@ -6,6 +6,9 @@ use App\Models\Post;
 use App\Models\User;
 use Illuminate\Http\Request;
 use App\Services\FileStorageService;
+use App\Services\CommunityModerationService;
+use App\Services\LicensedScopeQueryService;
+use App\Services\LocationScopeService;
 use App\Events\NewPostCreated;
 use App\Events\NewActivityNotification;
 use App\Models\ActivityNotification;
@@ -15,6 +18,7 @@ use Illuminate\Support\Facades\Log;
 use App\Models\SystemSetting;
 use Carbon\Carbon;
 use Illuminate\Support\Str;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
 class HomeController extends Controller
 {
@@ -253,13 +257,19 @@ class HomeController extends Controller
     {
         try {
             $settings = SystemSetting::first();
-            $postMaxLength = $settings->community_post_max_length ?? 750;
-            $commentMaxLength = $settings->community_comment_max_length ?? 750; // fallback used elsewhere
-            $attachmentMaxMb = $settings->community_attachment_max_mb ?? 10;
-            $allowImages = ($settings->community_allow_images ?? 1) ? true : false;
-            $allowVideos = ($settings->community_allow_videos ?? 1) ? true : false;
             $dailyPostLimit = $settings->community_daily_post_limit ?? null;
-            $attachmentMaxKb = $attachmentMaxMb * 1024;
+            $profileData = $this->getProfileData();
+
+            if (!$profileData) {
+                throw new \Exception('Profile data not found.');
+            }
+
+            app(CommunityModerationService::class)->assertCommunityAvailable($profileData, 'community.post.create');
+            app(CommunityModerationService::class)->assertCanUploadMedia(
+                $profileData,
+                $request->file('photo'),
+                $request->file('video')
+            );
 
             // Enforce daily post limit
             if ($dailyPostLimit) {
@@ -272,24 +282,14 @@ class HomeController extends Controller
                 }
             }
 
-            $photoRule = $allowImages
-                ? "nullable|image|max:{$attachmentMaxKb}"
-                : 'prohibited';
-
-            $videoRule = $allowVideos
-                ? "nullable|mimes:mp4,mov,avi|max:{$attachmentMaxKb}"
-                : 'prohibited';
-
-            // Validate the request
-            $validatedData = $request->validate([
-                'content' => "nullable|string|max:{$postMaxLength}|required_without_all:photo,video",
-                'photo' => $photoRule . '|required_without_all:content,video',
-                'video' => $videoRule . '|required_without_all:content,photo',
-                'audience' => 'required|string',
-            ], [
+            $validatedData = $request->validate(app(CommunityModerationService::class)->postValidationRules(), [
                 'content.required_without_all' => 'You must provide content, a photo, or a video.',
                 'photo.required_without_all' => 'You must provide content, a photo, or a video.',
                 'video.required_without_all' => 'You must provide content, a photo, or a video.',
+                'photo.prohibited' => 'Image uploads are disabled for the Community Forum.',
+                'video.prohibited' => 'Video uploads are disabled for the Community Forum.',
+                'photo.max' => 'The image is larger than the allowed Community Forum image size.',
+                'video.max' => 'The video is larger than the allowed Community Forum video size.',
             ]);
     
             // Initialize file paths
@@ -318,12 +318,6 @@ class HomeController extends Controller
                 }
             }
     
-            // Retrieve additional profile data
-            $profileData = $this->getProfileData();
-            if (!$profileData) {
-                throw new \Exception('Profile data not found.');
-            }
-    
             $country_id = $profileData->country_id;  // Assuming the user has a country relationship
             $region_id = $profileData->region_id;    // Assuming the user has a region relationship
             $state_id = $profileData->state_id;      // Assuming the user has a state relationship
@@ -333,7 +327,7 @@ class HomeController extends Controller
     
             // Create the post
             $post = $profileData->posts()->create([
-                'content' => $validatedData['content'],
+                'content' => $validatedData['content'] ?? null,
                 'image_url' => $photoFilename,
                 'video_url' => $videoFilename,
                 'audience' => $validatedData['audience'],
@@ -351,6 +345,7 @@ class HomeController extends Controller
             }
 
             $post->load('user');
+            app(CommunityModerationService::class)->annotatePost($post, $profileData);
 
             // Broadcast the event (if WebSocket is available), but fail soft to allow polling fallback
             if (config('app.web_socket_availability')) {
@@ -363,8 +358,15 @@ class HomeController extends Controller
                 }
             }
 
-            // Create activity notification for this post
-            $this->createActivityNotificationForPost($profileData, $post, $validatedData['audience']);
+            // Create activity notification for this post without blocking the saved post.
+            try {
+                $this->createActivityNotificationForPost($profileData, $post, $validatedData['audience']);
+            } catch (\Throwable $e) {
+                Log::warning('Post notification creation failed, continuing with polling fallback', [
+                    'post_id' => $post->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
     
             // Respond with the new post
             return response()->json([
@@ -381,6 +383,12 @@ class HomeController extends Controller
                 'message' => 'Validation failed.',
                 'errors' => $e->errors(),
             ], 422);
+
+        } catch (HttpExceptionInterface $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage() ?: 'This community action is not allowed.',
+            ], $e->getStatusCode());
     
         } catch (\Exception $e) {
             // Log the error for debugging
@@ -468,6 +476,7 @@ public function fetchPosts(Request $request)
 
     // Get profile data for filtering
     $profileData = $this->getProfileData();
+    $this->applyPostAuthorScope($query, $profileData);
 
     // Check audience type and apply filters accordingly
     switch ($audience) {
@@ -550,7 +559,7 @@ public function fetchPosts(Request $request)
     $posts = $query->latest()->paginate($perPage);
 
     // Append liked_by_me and liker_names for UI
-    $posts->getCollection()->transform(function ($post) use ($userId) {
+    $posts->getCollection()->transform(function ($post) use ($userId, $profileData) {
         $post->liked_by_me = $userId ? $post->likedBy()->where('user_id', $userId)->exists() : false;
         $post->liker_names = $post->likedBy()
             ->limit(5)
@@ -561,7 +570,7 @@ public function fetchPosts(Request $request)
             })
             ->filter()
             ->values();
-        return $post;
+        return app(CommunityModerationService::class)->annotatePost($post, $profileData);
     });
 
     return response()->json($posts);
@@ -584,7 +593,8 @@ public function fetchPosts(Request $request)
             ->latest()
             ->paginate($perPage);
 
-        $posts->getCollection()->transform(function ($post) use ($userId) {
+        $actor = Auth::user();
+        $posts->getCollection()->transform(function ($post) use ($userId, $actor) {
             $post->liked_by_me = $post->likedBy()->where('user_id', $userId)->exists();
             $post->liker_names = $post->likedBy()
                 ->limit(5)
@@ -595,7 +605,7 @@ public function fetchPosts(Request $request)
                 })
                 ->filter()
                 ->values();
-            return $post;
+            return app(CommunityModerationService::class)->annotatePost($post, $actor);
         });
 
         return response()->json($posts);
@@ -643,7 +653,8 @@ public function fetchPosts(Request $request)
             ->latest()
             ->paginate($perPage);
 
-        $posts->getCollection()->transform(function ($post) use ($me) {
+        $actor = Auth::user();
+        $posts->getCollection()->transform(function ($post) use ($me, $actor) {
             $post->liked_by_me = $me ? $post->likedBy()->where('user_id', $me)->exists() : false;
             $post->liker_names = $post->likedBy()
                 ->limit(5)
@@ -654,7 +665,7 @@ public function fetchPosts(Request $request)
                 })
                 ->filter()
                 ->values();
-            return $post;
+            return app(CommunityModerationService::class)->annotatePost($post, $actor);
         });
 
         return response()->json($posts);
@@ -704,6 +715,9 @@ public function fetchPosts(Request $request)
         if (!$userId) {
             return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 401);
         }
+        if (!app(CommunityModerationService::class)->postInActorScope(Auth::user(), $post)) {
+            return response()->json(['status' => 'error', 'message' => 'Post is outside your community scope.'], 403);
+        }
 
         $alreadyLiked = $post->likedBy()->where('user_id', $userId)->exists();
 
@@ -713,7 +727,15 @@ public function fetchPosts(Request $request)
         } else {
             // Like
             $post->likedBy()->attach($userId);
-            $this->notifyPostLike($post, Auth::user());
+            try {
+                $this->notifyPostLike($post, Auth::user());
+            } catch (\Throwable $e) {
+                Log::warning('Like notification creation failed, continuing with polling fallback', [
+                    'post_id' => $post->id,
+                    'actor_id' => $userId,
+                    'error' => $e->getMessage(),
+                ]);
+            }
         }
 
         $likes = $post->likedBy()->count();
@@ -799,6 +821,10 @@ public function fetchPosts(Request $request)
 
     public function postLikers(Request $request, Post $post)
     {
+        if (!Auth::user() || !app(CommunityModerationService::class)->postInActorScope(Auth::user(), $post)) {
+            return response()->json(['status' => 'error', 'message' => 'Post is outside your community scope.'], 403);
+        }
+
         $page = max((int) $request->input('page', 1), 1);
         $perPage = min(max((int) $request->input('per_page', 50), 1), 200);
 
@@ -843,8 +869,8 @@ public function fetchPosts(Request $request)
      // Delete the post
      public function destroyPost(Post $post)
      {
-         $this->ensureCanManagePost($post);
-         // Delete the post
+         $this->ensureCanDeletePost($post);
+         app(CommunityModerationService::class)->cleanupPostMedia($post);
          $post->delete();
  
          return response()->json([
@@ -990,11 +1016,32 @@ public function fetchPosts(Request $request)
     private function ensureCanManagePost(Post $post): void
     {
         $user = Auth::user();
-        $isOwner = $user && $post->user_id === $user->id;
-        $isSuperAdmin = $user && $user->hasRole('superadmin');
 
-        if (!($isOwner || $isSuperAdmin)) {
+        if (!$user || !app(CommunityModerationService::class)->canEditPost($user, $post)) {
             abort(403, 'You are not allowed to modify this post.');
         }
+    }
+
+    private function ensureCanDeletePost(Post $post): void
+    {
+        $user = Auth::user();
+
+        if (!$user || !app(CommunityModerationService::class)->canDeletePost($user, $post)) {
+            abort(403, 'You are not allowed to delete this post.');
+        }
+    }
+
+    private function applyPostAuthorScope($query, ?User $actor): void
+    {
+        if (!$actor) {
+            $query->whereRaw('1 = 0');
+            return;
+        }
+
+        $authorQuery = User::query()->select('users.id');
+        app(LocationScopeService::class)->applyScope($authorQuery, $actor, 'users', 'users');
+        app(LicensedScopeQueryService::class)->applyToUsersQuery($authorQuery);
+
+        $query->whereIn('user_id', $authorQuery);
     }
 }

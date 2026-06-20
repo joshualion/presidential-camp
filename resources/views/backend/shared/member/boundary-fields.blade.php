@@ -4,6 +4,8 @@
     $selectedFederalConstituencyId = old('federal_constituency_id', $member->federal_constituency_id ?? null);
 @endphp
 
+@include('backend.shared.location-form.context')
+
 <div class="form-group row">
     <label for="senatorial-district-dropdown" class="col-sm-2 col-form-label">Senatorial District</label>
     <div class="col-sm-10">

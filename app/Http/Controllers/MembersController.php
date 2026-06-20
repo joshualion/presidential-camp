@@ -21,12 +21,17 @@ use Illuminate\Support\Facades\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use App\Models\User;
+use App\Services\CampaignPackagePermissionService;
+use App\Services\CampaignPackageLocationFormService;
+use App\Services\CampaignPackageRoleService;
 use App\Services\LocationScopeService;
+use App\Services\LicensedScopeQueryService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Spatie\Permission\Models\Role;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\MembersExport;
+use Illuminate\Validation\ValidationException;
 
 
 
@@ -46,7 +51,7 @@ class MembersController extends Controller
 
      protected function canDeleteUsers(User $profileData): bool
      {
-         return $profileData->access_level === 'superadmin';
+         return $this->packagePermissions()->canDeleteUsers($profileData);
      }
 
      protected function accessLevelRank(?string $accessLevel): ?int
@@ -69,58 +74,32 @@ class MembersController extends Controller
 
      protected function accessLevelLabels(): array
      {
-         return [
-             'superadmin' => 'Super Admin Access',
-             'nationaladmin' => 'National Admin Access',
-             'regionaladmin' => 'Regional Admin Access',
-             'stateadmin' => 'State Admin Access',
-             'senatorialadmin' => 'Senatorial District Admin Access',
-             'federaladmin' => 'Federal Constituency Admin Access',
-             'lgaadmin' => 'LGA Admin Access',
-             'wardadmin' => 'Ward Admin Access',
-             'puadmin' => 'Polling Unit Admin Access',
-             'user' => 'Member Access',
-         ];
+         return $this->packageRoles()->accessLevelLabels();
      }
 
      protected function assignableAccessLevels(User $profileData): array
      {
-         $profileRank = $this->accessLevelRank($profileData->access_level);
-
-         if ($profileRank === null) {
-             return ['user' => $this->accessLevelLabels()['user']];
-         }
-
-         return collect($this->accessLevelLabels())
-             ->filter(fn (string $label, string $accessLevel) => $this->accessLevelRank($accessLevel) >= $profileRank)
-             ->all();
+         return $this->packageRoles()->assignableAccessLevels($profileData);
      }
 
      protected function assignableRoles(User $profileData, ?User $member = null)
      {
-         $allowedGroups = array_keys($this->assignableAccessLevels($profileData));
-
-         if ($member?->access_level && !in_array($member->access_level, $allowedGroups, true)) {
-             $allowedGroups[] = $member->access_level;
-         }
-
-         $groupOrder = array_flip(array_keys($this->accessLevelLabels()));
-
-         return Role::query()
-             ->whereIn('group_name', $allowedGroups)
-             ->orderBy('id')
-             ->get()
-             ->sortBy(fn (Role $role) => (($groupOrder[$role->group_name] ?? 99) * 1000) + $role->id)
-             ->values();
+         return $this->packageRoles()->assignableRoles($profileData, $member);
      }
 
      protected function canAssignRole(User $profileData, Role $role, ?string $accessLevel = null): bool
      {
-         if (!array_key_exists($role->group_name, $this->assignableAccessLevels($profileData))) {
-             return false;
-         }
+         return $this->packageRoles()->canAssignRole($profileData, $role, $accessLevel);
+     }
 
-         return !$accessLevel || $role->group_name === $accessLevel;
+     protected function packageRoles(): CampaignPackageRoleService
+     {
+         return app(CampaignPackageRoleService::class);
+     }
+
+     protected function packagePermissions(): CampaignPackagePermissionService
+     {
+         return app(CampaignPackagePermissionService::class);
      }
 
      protected function canAccessMember(User $profileData, ?User $member): bool
@@ -149,30 +128,34 @@ class MembersController extends Controller
              return false;
          }
 
-         return $profileData->access_level === 'superadmin'
-             || $profileData->hasAnyRole([
-                 'National ICT Director',
-                 'Regional ICT Director',
-                 'State ICT Director',
-                'Senatorial ICT Director',
-                'Federal Constituency ICT Director',
-                'Federal ICT Director',
-                 'LGA ICT Director',
-                 'Ward ICT Director',
-                 'PU ICT Director',
-             ]);
+         return $this->packagePermissions()->canEditUsers($profileData);
      }
 
      protected function memberIsWithinScope(User $profileData, User $member): bool
      {
-         if ($profileData->access_level === 'superadmin') {
-             return true;
-         }
-
          $query = User::query()->whereKey($member->id);
-         app(LocationScopeService::class)->applyScope($query, $profileData, 'users', 'users');
+         app(LocationScopeService::class)->applyScope($query, $profileData->access_level === 'superadmin' ? null : $profileData, 'users', 'users');
 
          return $query->exists();
+     }
+
+     private function licensedScope(): LicensedScopeQueryService
+     {
+         return app(LicensedScopeQueryService::class);
+     }
+
+     private function locationForms(): CampaignPackageLocationFormService
+     {
+         return app(CampaignPackageLocationFormService::class);
+     }
+
+     private function validateLicensedPayload(array $payload): void
+     {
+         $errors = $this->licensedScope()->payloadErrors($payload);
+
+         if ($errors !== []) {
+             throw ValidationException::withMessages($errors);
+         }
      }
 
      private function invalidMemberAccessNotification(): array
@@ -215,6 +198,28 @@ class MembersController extends Controller
              'senatorial_district_id' => 'nullable|exists:senatorial_districts,id',
              'federal_constituency_id' => 'nullable|exists:federal_constituencies,id',
          ];
+     }
+
+     protected function memberLocationRules(string $accessLevel, string $pollingUnitField = 'polling_unit_id'): array
+     {
+         $rules = [
+             'region_id' => 'nullable|exists:regions,id',
+             'state_id' => 'nullable|exists:states,id',
+             'lga_id' => 'nullable|exists:local_government_areas,id',
+             'ward_id' => 'nullable|exists:wards,id',
+             $pollingUnitField => 'nullable|exists:polling_units,id',
+         ];
+
+         return match ($accessLevel) {
+             'regionaladmin' => array_merge($rules, ['region_id' => 'required|exists:regions,id']),
+             'stateadmin' => array_merge($rules, ['state_id' => 'required|exists:states,id']),
+             'senatorialadmin' => array_merge($rules, ['senatorial_district_id' => 'required|exists:senatorial_districts,id']),
+             'federaladmin' => array_merge($rules, ['federal_constituency_id' => 'required|exists:federal_constituencies,id']),
+             'lgaadmin' => array_merge($rules, ['lga_id' => 'required|exists:local_government_areas,id']),
+             'wardadmin' => array_merge($rules, ['ward_id' => 'required|exists:wards,id']),
+             'puadmin', 'user' => array_merge($rules, [$pollingUnitField => 'required|exists:polling_units,id']),
+             default => $rules,
+         };
      }
 
      protected function resolveBoundaryAssignments(Request $request, string $accessLevel)
@@ -319,10 +324,13 @@ class MembersController extends Controller
          $country = Country::where('id',$country_id)->first();
 
          if($country->name == 'Nigeria'){
-             $region = Region::where('country_id', $country_id)->where('name', '!=', 'No-region')->get();
+             $query = Region::where('country_id', $country_id)->where('name', '!=', 'No-region');
          }else{
-         $region = Region::where('country_id', $country_id)->get();
+             $query = Region::where('country_id', $country_id);
          }
+
+         $this->licensedScope()->applyToRegionsQuery($query);
+         $region = $query->get();
 
          $region->loadCount(['users as members_count' => function ($query) {
              $query->where('access_level', '!=', 'superadmin');
@@ -995,25 +1003,30 @@ class MembersController extends Controller
      {
          $profileData = $this->getProfileData();
          $pageTitle = 'Add Member';
+         $locationOptions = $this->locationForms()->options($profileData);
+         $locationForm = $this->locationForms()->context($profileData);
          $countries = Country::all();
-         $regions = $this->getRegions();
-         $states = State::all();
-         $lgas =   LocalGovernmentArea::all();
-         $wards = Ward::all();
-         $pus = PollingUnit::all();
-         $senatorialDistricts = SenatorialDistrict::orderBy('name')->get();
-         $federalConstituencies = FederalConstituency::orderBy('name')->get();
+         $regions = $locationOptions['regions'];
+         $states = $locationOptions['states'];
+         $lgas = $locationOptions['lgas'];
+         $wards = $locationOptions['wards'];
+         $pus = $locationOptions['pollingUnits'];
+         $pollingUnits = $locationOptions['pollingUnits'];
+         $senatorialDistricts = $locationOptions['senatorialDistricts'];
+         $federalConstituencies = $locationOptions['federalConstituencies'];
 
 
             $roles = $this->assignableRoles($profileData);
+            $assignableAccessLevels = $this->assignableAccessLevels($profileData);
 
 
-         return view('backend.'.$profileData->access_level.'.member.add', compact( 'profileData', 'pageTitle', 'roles', 'countries', 'regions', 'states', 'lgas', 'wards', 'senatorialDistricts', 'federalConstituencies'));
+         return view('backend.'.$profileData->access_level.'.member.add', compact( 'profileData', 'pageTitle', 'roles', 'assignableAccessLevels', 'countries', 'regions', 'states', 'lgas', 'wards', 'pus', 'pollingUnits', 'senatorialDistricts', 'federalConstituencies', 'locationForm'));
      }
 
      public function storeMember(Request $request)
      {
         $profileData = $this->getProfileData();
+         $request->merge($this->locationForms()->mergeFixedPayload($request->all()));
          $request->validate([
              'username' => 'required|string|max:255|unique:users',
              'firstname' => 'required|string',
@@ -1021,6 +1034,7 @@ class MembersController extends Controller
              'email' => 'required|email|unique:users,email',
              'password' => 'required|confirmed|min:6',
              'access_level' => 'required',
+             'gender' => 'required|in:male,female',
          ] + $this->boundaryValidationRules());
 
           // 👇 determine if this new user should be forced into credentials update
@@ -1043,15 +1057,32 @@ class MembersController extends Controller
              return redirect()->back()->with($this->invalidMemberAccessNotification());
          }
 
+         if (!$this->packageRoles()->canAssignAccessLevel($profileData, $access_level)) {
+             throw ValidationException::withMessages([
+                 'access_level' => 'The selected access level is not available for this licensed campaign package.',
+             ]);
+         }
+
          if ($profileAccessRank > $requestedAccessRank) {
              return redirect()->back()->with($this->unauthorizedMemberAccessNotification('assign this access level to'));
          }
+
+         $request->validate($this->memberLocationRules($access_level, 'pu_id'));
 
          $boundaryAssignments = $this->resolveBoundaryAssignments($request, $access_level);
 
          if (!is_array($boundaryAssignments)) {
              return $boundaryAssignments;
          }
+
+         $this->validateLicensedPayload([
+             'state_id' => $request->state_id,
+             'senatorial_district_id' => $boundaryAssignments['senatorial_district_id'],
+             'federal_constituency_id' => $boundaryAssignments['federal_constituency_id'],
+             'lga_id' => $request->lga_id,
+             'ward_id' => $request->ward_id,
+             'polling_unit_id' => $request->pu_id,
+         ]);
 
          $user = User::create([
              'uuid' => Str::uuid()->toString(),
@@ -1061,6 +1092,7 @@ class MembersController extends Controller
              'email' => $request->email,
              'password' => Hash::make($request->password),
              'access_level' => $access_level,
+             'gender' => $request->gender,
              'country_id' => $request->country_id,
              'region_id' => $request->region_id,
              'state_id' => $request->state_id,
@@ -1078,7 +1110,7 @@ class MembersController extends Controller
              $roleId = $request->roles; // Make sure $request->roles contains the correct role ID
 
          // Find the role by its ID
-         $role = Role::findById($roleId);
+         $role = Role::find($roleId);
 
              if ($role && $this->canAssignRole($profileData, $role, $access_level)) {
                  // Sync the role to the member using its name
@@ -1090,10 +1122,12 @@ class MembersController extends Controller
                      'alert-type' => 'error'
                  ];
 
-                 return redirect()->back()->withErrors($notification);
+                 throw ValidationException::withMessages([
+                     'roles' => 'The selected role is not available for this access level or campaign package.',
+                 ]);
              }
              } else {
-                 $defaultRole = Role::where('name', 'Member')->where('group_name', 'user')->first();
+                 $defaultRole = $this->packageRoles()->defaultRole($profileData);
 
                  if ($defaultRole) {
                      $user->syncRoles([$defaultRole->name]);
@@ -1127,24 +1161,31 @@ class MembersController extends Controller
         }
          // $roles = Role::all();  // Assuming a member can have multiple roles
          $countries = Country::all();
-         $regions = $this->getRegions();
-         $states = State::all();
-         $lgas = LocalGovernmentArea::all();
-         $wards = Ward::all();
-         $pollingUnits = PollingUnit::all();
-         $senatorialDistricts = SenatorialDistrict::orderBy('name')->get();
-         $federalConstituencies = FederalConstituency::orderBy('name')->get();
+         $locationOptions = $this->locationForms()->options($profileData);
+         $locationForm = $this->locationForms()->context($profileData, $member, $member->access_level);
+         $regions = $locationOptions['regions'];
+         $states = $locationOptions['states'];
+         $lgas = $locationOptions['lgas'];
+         $wards = $locationOptions['wards'];
+         $pollingUnits = $locationOptions['pollingUnits'];
+         $senatorialDistricts = $locationOptions['senatorialDistricts'];
+         $federalConstituencies = $locationOptions['federalConstituencies'];
          $religions = Religion::all();
          $ageGrades = AgeGrade::all();
 
 
-        $roles = $this->assignableRoles($profileData, $member);
+        $roles = $this->packageRoles()->rolesForAccessLevel($profileData, $member->access_level, $member);
+        $assignableAccessLevels = $this->assignableAccessLevels($profileData);
+        $invalidPackageRoleWarning = $member->roles
+            ->map(fn (Role $role) => $this->packageRoles()->invalidRoleMessage($role, $member->access_level))
+            ->filter()
+            ->first();
 
 
 
          return view('backend.'.$profileData->access_level.'.member.member', compact(
              'profileData', 'pageTitle', 'member', 'roles', 'countries',
-             'regions', 'states', 'lgas', 'wards', 'pollingUnits', 'senatorialDistricts', 'federalConstituencies', 'religions', 'ageGrades'
+             'assignableAccessLevels', 'invalidPackageRoleWarning', 'regions', 'states', 'lgas', 'wards', 'pollingUnits', 'senatorialDistricts', 'federalConstituencies', 'religions', 'ageGrades', 'locationForm'
          ));
      }
 
@@ -1155,6 +1196,7 @@ class MembersController extends Controller
          $profileData = $this->getProfileData();
          // Find the member by ID and update
          $member = User::findOrFail($request->id);
+         $request->merge($this->locationForms()->mergeFixedPayload($request->all()));
 
          if ($this->accessLevelRank($profileData->access_level) === null || $this->accessLevelRank($member->access_level) === null) {
              return redirect()->back()->with($this->invalidMemberAccessNotification());
@@ -1165,6 +1207,7 @@ class MembersController extends Controller
          }
 
          // Validation rules
+         $requestedAccessLevel = $request->access_level ?: $member->access_level;
          $validatedData = $request->validate([
              'firstname' => 'required|string|max:255',
              'lastname' => 'required|string|max:255',
@@ -1174,25 +1217,24 @@ class MembersController extends Controller
              'vin' => 'nullable|string|max:255',
              'age_grade_id' => 'required|exists:age_grades,id',
              'gender' => 'required|in:male,female',
-             'region_id' => 'required|exists:regions,id',
-             'state_id' => 'required|exists:states,id',
-             'lga_id' => 'required|exists:local_government_areas,id',
-             'ward_id' => 'required|exists:wards,id',
-             'polling_unit_id' => 'required|exists:polling_units,id',
              'access_level' => 'nullable|string',
              'religion_id' => 'required|exists:religions,id',
              'address' => 'nullable|string|max:255',
              'occupation' => 'nullable|string|max:255',
              'qualification' => 'nullable|string|max:255',
              'photo' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
-         ] + $this->boundaryValidationRules());
-
-         $requestedAccessLevel = $request->access_level ?: $member->access_level;
+         ] + $this->memberLocationRules($requestedAccessLevel, 'polling_unit_id') + $this->boundaryValidationRules());
          $requestedAccessRank = $this->accessLevelRank($requestedAccessLevel);
          $profileAccessRank = $this->accessLevelRank($profileData->access_level);
 
          if ($requestedAccessRank === null || $profileAccessRank === null) {
              return redirect()->back()->with($this->invalidMemberAccessNotification());
+         }
+
+         if (!$this->packageRoles()->canAssignAccessLevel($profileData, $requestedAccessLevel)) {
+             throw ValidationException::withMessages([
+                 'access_level' => 'The selected access level is not available for this licensed campaign package.',
+             ]);
          }
 
          if ($profileAccessRank > $requestedAccessRank) {
@@ -1204,6 +1246,15 @@ class MembersController extends Controller
          if (!is_array($boundaryAssignments)) {
              return $boundaryAssignments;
          }
+
+         $this->validateLicensedPayload([
+             'state_id' => $request->state_id,
+             'senatorial_district_id' => $boundaryAssignments['senatorial_district_id'],
+             'federal_constituency_id' => $boundaryAssignments['federal_constituency_id'],
+             'lga_id' => $request->lga_id,
+             'ward_id' => $request->ward_id,
+             'polling_unit_id' => $request->polling_unit_id,
+         ]);
 
 
          $member->update([
@@ -1242,7 +1293,7 @@ class MembersController extends Controller
              $roleId = $request->roles; // Make sure $request->roles contains the correct role ID
 
          // Find the role by its ID
-         $role = Role::findById($roleId);
+         $role = Role::find($roleId);
 
              if ($role && $this->canAssignRole($profileData, $role, $requestedAccessLevel)) {
                  // Sync the role to the member using its name
@@ -1254,10 +1305,12 @@ class MembersController extends Controller
                      'alert-type' => 'error'
                  ];
 
-                 return redirect()->back()->with($notification);
+                 throw ValidationException::withMessages([
+                     'roles' => 'The selected role is not available for this access level or campaign package.',
+                 ]);
              }
              } else {
-                 $defaultRole = Role::where('name', 'Member')->where('group_name', 'user')->first();
+                 $defaultRole = $this->packageRoles()->defaultRole($profileData);
 
                  if ($defaultRole) {
                      $member->syncRoles([$defaultRole->name]);
@@ -1290,17 +1343,19 @@ class MembersController extends Controller
 
          $roles = Role::all();  // Assuming a member can have multiple roles
          $countries = Country::all();
-         $regions = $this->getRegions();
-         $states = State::all();
-         $lgas = LocalGovernmentArea::all();
-         $wards = Ward::all();
-         $pollingUnits = PollingUnit::all();
+         $locationOptions = $this->locationForms()->options($profileData);
+         $locationForm = $this->locationForms()->context($profileData, $member, $member->access_level);
+         $regions = $locationOptions['regions'];
+         $states = $locationOptions['states'];
+         $lgas = $locationOptions['lgas'];
+         $wards = $locationOptions['wards'];
+         $pollingUnits = $locationOptions['pollingUnits'];
          $religions = Religion::all();
          $ageGrades = AgeGrade::all();
 
          return view('backend.'.$profileData->access_level.'.member.show_member', compact(
              'profileData', 'pageTitle', 'member', 'roles', 'countries',
-             'regions', 'states', 'lgas', 'wards', 'pollingUnits', 'religions', 'ageGrades'
+             'regions', 'states', 'lgas', 'wards', 'pollingUnits', 'religions', 'ageGrades', 'locationForm'
          ));
 
      }
@@ -1366,6 +1421,10 @@ class MembersController extends Controller
 
          if ($this->accessLevelRank($profileData->access_level) === null || $this->accessLevelRank($member->access_level) === null) {
              return redirect()->back()->with($this->invalidMemberAccessNotification());
+         }
+
+         if (!$this->canAccessMember($profileData, $member)) {
+             return redirect()->back()->with($this->unauthorizedMemberAccessNotification('delete'));
          }
          // Attempt to delete the member
          try {

@@ -22,6 +22,7 @@ use App\Services\FileStorageService;
 use App\Services\ElectionAnalyticsService;
 use App\Services\ElectionOperationsService;
 use App\Services\ElectionReportService;
+use App\Services\LicensedScopeQueryService;
 use App\Services\LocationScopeService;
 use App\Services\PackageGovernanceService;
 use App\Services\PollingUnitResultPermissionService;
@@ -105,6 +106,11 @@ class ElectionController extends Controller
      private function applyPollingUnitScope($query, $profileData, $table = 'polling_units')
      {
          return app(LocationScopeService::class)->applyScope($query, $profileData, 'polling_units', $table);
+     }
+
+     private function licensedScope(): LicensedScopeQueryService
+     {
+         return app(LicensedScopeQueryService::class);
      }
 
      private function scopedPollingUnitsCount($profileData)
@@ -469,6 +475,7 @@ class ElectionController extends Controller
 
             $targetPollingUnitId = (int) ($data['polling_unit_id'] ?? $profileData->polling_unit_id ?? $permission->firstApprovedPollingUnitId($profileData));
             $election = Election::findOrFail($data['election_id']);
+            $this->licensedScope()->assertPayloadWithinScope(['polling_unit_id' => $targetPollingUnitId]);
 
             abort_unless($permission->canSubmitPollingUnitResult($profileData, $targetPollingUnitId, $election), 403);
 
@@ -1015,6 +1022,7 @@ class ElectionController extends Controller
         ]);
 
         $profileData = $this->getProfileData();
+        $this->licensedScope()->assertPayloadWithinScope($validated);
         abort_unless($this->canUploadPollingUnitResults($profileData, (int) $validated['polling_unit_id']), 403);
 
         $reportingKeys = $this->reportingKeysForPollingUnit($validated['polling_unit_id']);

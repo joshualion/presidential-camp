@@ -1,5 +1,5 @@
 <template>
-  <div v-if="post.user?.id && post.user.id === profileData.id">
+  <div v-if="canShowActions">
     <div class="dropdown">
       <span
         class="text-small dropdown-toggle d-block ml-3"
@@ -11,10 +11,12 @@
       </span>
       <ul class="dropdown-menu">
         <li>
-          <a class="dropdown-item" href="#" @click.prevent="$emit('edit-request', post)">Edit Post</a>
+          <a v-if="canEdit" class="dropdown-item" href="#" @click.prevent="$emit('edit-request', post)">Edit Post</a>
         </li>
         <li>
-          <a class="dropdown-item text-danger" href="#" @click.prevent="$emit('delete-request', post)">Delete Post</a>
+          <a v-if="canDelete" class="dropdown-item text-danger" href="#" @click.prevent="$emit('delete-request', post)">
+            {{ isOwner ? 'Delete Post' : 'Remove as Moderator' }}
+          </a>
         </li>
       </ul>
     </div>
@@ -31,6 +33,20 @@ export default {
     profileData: {
       type: Object,
       default: () => ({}),
+    },
+  },
+  computed: {
+    isOwner() {
+      return !!this.post.user?.id && !!this.profileData?.id && Number(this.post.user.id) === Number(this.profileData.id);
+    },
+    canEdit() {
+      return this.isOwner || this.post.can_edit === true;
+    },
+    canDelete() {
+      return this.isOwner || this.post.can_delete === true;
+    },
+    canShowActions() {
+      return this.canEdit || this.canDelete || this.post.can_moderate === true;
     },
   },
 };

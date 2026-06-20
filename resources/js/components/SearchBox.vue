@@ -74,7 +74,7 @@
                 @mousedown.prevent="goTo(person.url)"
               >
                 <img
-                  :src="person.avatar || '/uploads/no_image.jpg'"
+                  :src="person.avatar || noImageUrl"
                   alt="profile"
                   class="avatar me-2"
                 />
@@ -164,7 +164,7 @@
                 @click="goTo(person.url)"
               >
                 <img
-                  :src="person.avatar || '/uploads/no_image.jpg'"
+                  :src="person.avatar || noImageUrl"
                   alt="profile"
                   class="avatar me-2"
                 />
@@ -207,6 +207,7 @@
 
 <script>
 import axios from 'axios';
+import { cmMedia, cmRoute } from '../utils/campaignManager';
 
 export default {
   name: 'SearchBox',
@@ -243,6 +244,9 @@ export default {
     },
     modeClass() {
       return this.mode === 'mobile' ? 'search-mobile' : 'search-desktop';
+    },
+    noImageUrl() {
+      return cmMedia('noImage');
     },
   },
   mounted() {
@@ -294,7 +298,7 @@ export default {
         return;
       }
       this.loading = true;
-      axios.get('/search/suggest', {
+      axios.get(cmRoute('searchSuggest'), {
         params: {
           query: term,
           limit: 5,
@@ -316,7 +320,7 @@ export default {
       const term = (this.query || '').trim();
       if (!term) return;
       this.saveRecent(term);
-      window.location.href = `/search?query=${encodeURIComponent(term)}`;
+      window.location.href = `${cmRoute('searchIndex')}?query=${encodeURIComponent(term)}`;
     },
     goTo(url) {
       if (!url) return;

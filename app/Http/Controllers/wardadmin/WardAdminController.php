@@ -298,12 +298,47 @@ class WardAdminController extends Controller
 
 
 
+    public function RegionDashBoard($uuid)
+    {
+        app(\App\Services\DashboardDrilldownService::class)->region($uuid);
+
+        abort(404);
+    }
+
+    public function StateDashBoard($uuid)
+    {
+        app(\App\Services\DashboardDrilldownService::class)->state($uuid);
+
+        abort(404);
+    }
+
+    public function localGovernmentDashBoard($uuid)
+    {
+        $pageTitle = 'Local Government Dashboard';
+        $profileData = $this->getProfileData();
+        $lga = app(\App\Services\DashboardDrilldownService::class)->lga($uuid);
+
+        $wardCount = Ward::where('lga_id', $lga->id)->count();
+        $wardWithUsersCount = Ward::where('lga_id', $lga->id)->whereHas('users')->count();
+        $wards = Ward::where('lga_id', $lga->id)->pluck('id');
+        $puCount = PollingUnit::whereIn('ward_id', $wards)->count();
+        $puWithUsersCount = PollingUnit::whereIn('ward_id', $wards)->whereHas('users')->count();
+        $excoCount = User::where('lga_id', $lga->id)->where('access_level', '!=', 'user')->where('access_level', '!=', 'superadmin')->where('access_level', '!=', 'puadmin')->count();
+        $memberCount = User::where('lga_id', $lga->id)->where('access_level', '!=', 'superadmin')->where('access_level', 'user')->count();
+        $userCount = User::where('lga_id', $lga->id)->where('access_level', '!=', 'superadmin')->count();
+        $newMembers = User::where('lga_id', $lga->id)->where('access_level', '!=', 'superadmin')->where('created_at', '>=', Carbon::now()->subDays(1))->count();
+        $dashboardMetrics = app(LocationDashboardMetricsService::class)->forLocalGovernmentArea($lga, $profileData);
+
+        return view('backend.'.$profileData->access_level.'.lga.dashboard',
+            compact('profileData', 'pageTitle', 'lga', 'dashboardMetrics', 'wardCount', 'wardWithUsersCount', 'puCount', 'puWithUsersCount', 'excoCount', 'memberCount', 'userCount', 'newMembers'));
+    }
+
     public function wardDashBoard($uuid)
 
     {
         $pageTitle = 'Ward Dashboard';
         $profileData  = $this->getProfileData();
-        $ward = Ward::where('uuid', $uuid)->first();
+        $ward = app(\App\Services\DashboardDrilldownService::class)->ward($uuid);
 
         if(!$ward){
             $notification = [
@@ -313,6 +348,7 @@ class WardAdminController extends Controller
 
             return redirect()->back()->with($notification);
         }
+        app(\App\Services\LicensedScopeQueryService::class)->abortIfWardNotAllowed($ward->id);
 
 
 
@@ -352,11 +388,14 @@ class WardAdminController extends Controller
 
 
 
+            $dashboardMetrics = app(LocationDashboardMetricsService::class)->forWard($ward, $profileData);
+
             return view('backend.'.$profileData->access_level.'.ward.dashboard',
                     compact(
                         'profileData',
                         'pageTitle',
                         'ward',
+                        'dashboardMetrics',
                         'puCount',
                         'puWithUsersCount',
                         'excoCount',
@@ -375,7 +414,7 @@ class WardAdminController extends Controller
     {
         $pageTitle = 'Polling Unit Dashboard';
         $profileData  = $this->getProfileData();
-        $pu = PollingUnit::where('uuid', $uuid)->first();
+        $pu = app(\App\Services\DashboardDrilldownService::class)->pollingUnit($uuid);
 
                 if(!$pu){
                     $notification = [
@@ -385,6 +424,7 @@ class WardAdminController extends Controller
 
                     return redirect()->back()->with($notification);
                 }
+        app(\App\Services\LicensedScopeQueryService::class)->abortIfPollingUnitNotAllowed($pu->id);
 
              $excoCount = User::where('polling_unit_id', $pu->id)
              ->where('access_level', '!=', 'user')
@@ -414,11 +454,14 @@ class WardAdminController extends Controller
 
 
 
+            $dashboardMetrics = app(LocationDashboardMetricsService::class)->forPollingUnit($pu, $profileData);
+
             return view('backend.'.$profileData->access_level.'.pu.dashboard',
                     compact(
                         'profileData',
                         'pageTitle',
                         'pu',
+                        'dashboardMetrics',
                         'excoCount',
                         'memberCount',
                         'eligibleVotersCount',

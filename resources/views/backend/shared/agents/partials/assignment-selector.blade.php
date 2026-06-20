@@ -2,6 +2,8 @@
     Select a user to see the user's registered polling unit. The appointment will default to that polling unit where available.
 </div>
 
+@include('backend.shared.location-form.context')
+
 <input type="hidden" name="polling_unit_id" id="assigned-polling-unit-id" value="{{ old('polling_unit_id') }}">
 
 <div class="form-group">
@@ -86,6 +88,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const lgaSelect = document.getElementById('agent-lga-select');
     const wardSelect = document.getElementById('agent-ward-select');
     const pollingUnitSelect = document.getElementById('agent-polling-unit-select');
+    const fixedLocationFields = window.campaignFixedLocationFields || {};
     let registeredLocation = null;
 
     function option(label, value = '') {
@@ -199,6 +202,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (userSelect.value) {
         loadUserLocation();
+    } else if (fixedLocationFields.lga_id) {
+        loadWards(fixedLocationFields.lga_id);
+    } else if (fixedLocationFields.state_id) {
+        stateSelect.value = fixedLocationFields.state_id;
+        loadLgas(fixedLocationFields.state_id);
     }
     setMode();
 });

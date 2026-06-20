@@ -14,7 +14,10 @@ use Illuminate\Database\Eloquent\Builder;
 
 class StructuralLocationAccessService
 {
-    public function __construct(private readonly LocationScopeService $scopeService)
+    public function __construct(
+        private readonly LocationScopeService $scopeService,
+        private readonly LicensedScopeQueryService $licensedScope
+    )
     {
     }
 
@@ -36,10 +39,10 @@ class StructuralLocationAccessService
     public function applyScope(Builder $query, ?User $user, string $subject): Builder
     {
         if (!$user || in_array($user->access_level, ['superadmin', 'nationaladmin'], true)) {
-            return $query;
+            return $this->licensedScope->applyToSubject($query, $subject);
         }
 
-        return match ($subject) {
+        $query = match ($subject) {
             'regions' => $this->scopeRegions($query, $user),
             'states' => $this->scopeStates($query, $user),
             'senatorial_districts' => $this->scopeSenatorialDistricts($query, $user),
@@ -49,6 +52,8 @@ class StructuralLocationAccessService
             'polling_units' => $this->scopePollingUnits($query, $user),
             default => $query->whereRaw('1 = 0'),
         };
+
+        return $this->licensedScope->applyToSubject($query, $subject);
     }
 
     public function isWithinScope(?User $user, object $record): bool

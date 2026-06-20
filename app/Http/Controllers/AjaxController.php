@@ -21,6 +21,7 @@ use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Role;
 use App\Services\LocationScopeService;
 use App\Services\StructuralLocationAccessService;
+use App\Services\CampaignPackageRoleService;
 
 class AjaxController extends Controller
 {
@@ -43,8 +44,9 @@ class AjaxController extends Controller
 
     public function ajaxGetStates(Request $request)
     {
-        $state['states'] = State::where("region_id", $request->region_id)
-                                ->get(["name", "id"]);
+        $query = State::where("region_id", $request->region_id);
+        $this->structuralAccess()->applyScope($query, $this->getProfileData(), 'states');
+        $state['states'] = $query->get(["name", "id"]);
 
         return response()->json($state);
     }
@@ -52,48 +54,54 @@ class AjaxController extends Controller
 
     public function ajaxGetLgas(Request $request)
     {
-        $lga['lgas'] = LocalGovernmentArea::where("state_id", $request->state_id)
-                                ->get(["name", "id"]);
+        $query = LocalGovernmentArea::where("state_id", $request->state_id);
+        $this->structuralAccess()->applyScope($query, $this->getProfileData(), 'local_government_areas');
+        $lga['lgas'] = $query->get(["name", "id"]);
         return response()->json($lga);
     }
 
     public function ajaxGetWards(Request $request)
     {
-        $ward['wards'] = Ward::where("lga_id", $request->lga_id)
-                                ->get(["name", "id"]);
+        $query = Ward::where("lga_id", $request->lga_id);
+        $this->structuralAccess()->applyScope($query, $this->getProfileData(), 'wards');
+        $ward['wards'] = $query->get(["name", "id"]);
         return response()->json($ward);
     }
 
     public function ajaxGetPollingUnits(Request $request)
     {
-        $pollingUnit['pollingUnits'] = PollingUnit::where("ward_id", $request->ward_id)
-                                ->get(["name", "id"]);
+        $query = PollingUnit::where("ward_id", $request->ward_id);
+        $this->structuralAccess()->applyScope($query, $this->getProfileData(), 'polling_units');
+        $pollingUnit['pollingUnits'] = $query->get(["name", "id"]);
         return response()->json($pollingUnit);
     }
 
     public function ajaxGetSenatorialDistricts(Request $request)
     {
-        $senatorialDistricts['senatorialDistricts'] = SenatorialDistrict::where('state_id', $request->state_id)
-            ->orderBy('name')
-            ->get(['name', 'id']);
+        $query = SenatorialDistrict::where('state_id', $request->state_id)
+            ->orderBy('name');
+        $this->structuralAccess()->applyScope($query, $this->getProfileData(), 'senatorial_districts');
+        $senatorialDistricts['senatorialDistricts'] = $query->get(['name', 'id']);
 
         return response()->json($senatorialDistricts);
     }
 
     public function ajaxGetFederalConstituenciesByState(Request $request)
     {
-        $federalConstituencies['federalConstituencies'] = FederalConstituency::where('state_id', $request->state_id)
-            ->orderBy('name')
-            ->get(['name', 'id']);
+        $query = FederalConstituency::where('state_id', $request->state_id)
+            ->orderBy('name');
+        $this->structuralAccess()->applyScope($query, $this->getProfileData(), 'federal_constituencies');
+        $federalConstituencies['federalConstituencies'] = $query->get(['name', 'id']);
 
         return response()->json($federalConstituencies);
     }
 
     public function ajaxGetFederalConstituenciesBySenatorialDistrict(Request $request)
     {
-        $federalConstituencies['federalConstituencies'] = FederalConstituency::where('senatorial_district_id', $request->senatorial_district_id)
-            ->orderBy('name')
-            ->get(['name', 'id']);
+        $query = FederalConstituency::where('senatorial_district_id', $request->senatorial_district_id)
+            ->orderBy('name');
+        $this->structuralAccess()->applyScope($query, $this->getProfileData(), 'federal_constituencies');
+        $federalConstituencies['federalConstituencies'] = $query->get(['name', 'id']);
 
         return response()->json($federalConstituencies);
     }
@@ -101,9 +109,15 @@ class AjaxController extends Controller
 
     public function getRolesByAccessLevel($accessLevel)
         {
-            // Find roles where 'role_group' matches the selected 'access_level'
-            $roles = Role::where('group_name', $accessLevel)->get();
-            // Return the roles as a JSON response
+            $roles = app(CampaignPackageRoleService::class)
+                ->rolesForAccessLevel($this->getProfileData(), $accessLevel)
+                ->map(fn (Role $role) => [
+                    'id' => $role->id,
+                    'name' => $role->name,
+                    'group_name' => $role->group_name,
+                ])
+                ->values();
+
             return response()->json($roles);
         }
 
@@ -560,6 +574,7 @@ class AjaxController extends Controller
                    }
 
 
+                   $this->structuralAccess()->applyScope($wards, $this->getProfileData(), 'wards');
                    $wards->withCount(['users as members_count' => function ($query) {
                        $query->where('access_level', '!=', 'superadmin');
                    }]);
@@ -671,6 +686,7 @@ class AjaxController extends Controller
             $pollingUnits = PollingUnit::query()->orderBy('name', 'ASC');
         }
 
+                   $this->structuralAccess()->applyScope($pollingUnits, $this->getProfileData(), 'polling_units');
                    $pollingUnits->withCount(['users as members_count' => function ($query) {
                        $query->where('access_level', '!=', 'superadmin');
                    }]);
@@ -745,6 +761,8 @@ class AjaxController extends Controller
         } else {
             $pollingUnits = PollingUnit::query()->orderBy('name', 'ASC');
         }
+
+        $this->structuralAccess()->applyScope($pollingUnits, $this->getProfileData(), 'polling_units');
 
         return datatables()->eloquent($pollingUnits)
             ->addIndexColumn()

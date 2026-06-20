@@ -16,16 +16,17 @@
               <div class="card-header">
                 <h3 class="card-title">Add Roles in Permission</h3>
                 <div class="card-tools">
-                <a href="{{ route('nationaladmin.settings.roles') }}"><button class="btn btn-default"> <i class="fas fa-eye"></i> Manage Roles</button></a>
+                <a href="{{ route($profileData->access_level.'.settings.roles') }}"><button class="btn btn-default"> <i class="fas fa-eye"></i> Manage Roles</button></a>
 
-                <a href="{{ route('nationaladmin.settings.permissions') }}"><button class="btn btn-default"> <i class="fas fa-eye"></i> Manage Permissions</button></a>
+                <a href="{{ route($profileData->access_level.'.settings.permissions') }}"><button class="btn btn-default"> <i class="fas fa-eye"></i> Manage Permissions</button></a>
                 </div>
               </div>
               <!-- /.card-header -->
               <div class="card-body">
+              @include('backend.shared.rbac.package-notice')
 
               <!-- form start -->
-              <form class="form" action="{{route('nationaladmin.settings.role.permission.store')}}" method="POST">
+              <form class="form" action="{{route($profileData->access_level.'.settings.role.permission.store')}}" method="POST">
                 @csrf
 
 
@@ -36,6 +37,9 @@
                           <option value="{{$role->id}}">{{$role->name}}</option>
                           @endforeach
                           </select>
+                          @error('role_id')
+                            <div class="text-danger small">{{ $message }}</div>
+                          @enderror
                   </div>
 
                   <div class="form-group form-checkbox col-4 form-check-inline">

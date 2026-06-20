@@ -10,12 +10,16 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\View;
 use Illuminate\Database\QueryException;
 use App\Models\User;
+use App\Services\CampaignPackagePermissionService;
+use App\Services\CampaignPackageRoleService;
+use App\Services\CampaignPackageUiService;
 use App\Exports\PermissionExport;
 use App\Imports\PermissionImport;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\DB;
 
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class RolePermissionController extends Controller
 {
@@ -31,6 +35,57 @@ class RolePermissionController extends Controller
      {
          $id = Auth::user()->id;
          return User::find($id);
+     }
+
+     private function packageRoles(): CampaignPackageRoleService
+     {
+         return app(CampaignPackageRoleService::class);
+     }
+
+     private function packagePermissions(): CampaignPackagePermissionService
+     {
+         return app(CampaignPackagePermissionService::class);
+     }
+
+     private function packageUi(): CampaignPackageUiService
+     {
+         return app(CampaignPackageUiService::class);
+     }
+
+     private function roleManagementViewData(User $profileData, array $extra = []): array
+     {
+         return array_merge([
+             'profileData' => $profileData,
+             'rbacPackageDisplay' => $this->packageUi()->packageDisplayName(),
+             'rbacScopeDisplay' => $this->packageUi()->scopeDisplayName(),
+             'rbacPackageMode' => $this->packagePermissions()->packageModeActive(),
+             'rbacRoleGroups' => $this->packageRoles()->manageableRoleGroups($profileData),
+         ], $extra);
+     }
+
+     private function manageableRoleOrFail(int|string $id, User $profileData): Role
+     {
+         $role = Role::findOrFail($id);
+
+         if (!$this->packagePermissions()->canManageRole($profileData, $role)) {
+             throw ValidationException::withMessages([
+                 'role' => 'This role is not available for the current campaign package.',
+             ]);
+         }
+
+         return $role;
+     }
+
+     private function permissionGroups()
+     {
+         $query = DB::table('permissions')->select('group_name')->groupBy('group_name');
+
+         if ($this->packagePermissions()->packageModeActive()) {
+             $groups = array_keys($this->packageRoles()->manageableRoleGroups($this->getProfileData()));
+             $query->whereIn('group_name', $groups);
+         }
+
+         return $query->get();
      }
 
      public function allPermission(){
@@ -162,25 +217,38 @@ class RolePermissionController extends Controller
     // Role Routes
 
     public function allrole(){
-        $roles = Role::all();
         $profileData = $this->getProfileData();
+        $roles = $this->packageRoles()->manageableRoles($profileData);
         $pageTitle = 'Roles';
-        return view('backend.'.$profileData->access_level.'.settings.role.roles', compact('roles','profileData', 'pageTitle'));
+        return view('backend.'.$profileData->access_level.'.settings.role.roles', $this->roleManagementViewData($profileData, compact('roles', 'pageTitle')));
      }
 
      public function addrole(){
         $profileData = $this->getProfileData();
         $pageTitle = 'Add Role';
-        return view('backend.'.$profileData->access_level.'.settings.role.add_role', compact('profileData', 'pageTitle'));
+        return view('backend.'.$profileData->access_level.'.settings.role.add_role', $this->roleManagementViewData($profileData, compact('pageTitle')));
      }
 
      public function storerole(Request $request){
 
         $profileData = $this->getProfileData();
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'group_name' => 'required|string',
+        ]);
+
+        if (!$this->packagePermissions()->canCreateRole($profileData, $validated['name'], $validated['group_name'])) {
+            throw ValidationException::withMessages([
+                'name' => 'This role is not available for the current campaign package.',
+                'group_name' => 'This access level is not available for the current campaign package.',
+            ]);
+        }
+
         try{
         $role = Role::create([
-            'name' => $request->name,
-            'group_name' => $request->group_name,
+            'name' => $validated['name'],
+            'guard_name' => 'web',
+            'group_name' => $validated['group_name'],
           ]);
 
           $notification = array(
@@ -209,21 +277,35 @@ class RolePermissionController extends Controller
     }
 
         public function editrole($id){
-            $role = Role::findOrFail(decrypt($id));
             $profileData = $this->getProfileData();
+            $role = $this->manageableRoleOrFail(decrypt($id), $profileData);
             $pageTitle = 'Edit Role';
-            return view('backend.'.$profileData->access_level.'.settings.role.edit_role', compact('role', 'profileData', 'pageTitle'));
+            return view('backend.'.$profileData->access_level.'.settings.role.edit_role', $this->roleManagementViewData($profileData, compact('role', 'pageTitle')));
         }
 
 
         public function updaterole(Request $request){
             $profileData =  $this->getProfileData();
+            $validated = $request->validate([
+                'id' => 'required|integer',
+                'name' => 'required|string|max:255',
+                'group_name' => 'required|string',
+            ]);
+
+            $this->manageableRoleOrFail($validated['id'], $profileData);
+
+            if (!$this->packagePermissions()->canCreateRole($profileData, $validated['name'], $validated['group_name'])) {
+                throw ValidationException::withMessages([
+                    'name' => 'This role is not available for the current campaign package.',
+                    'group_name' => 'This access level is not available for the current campaign package.',
+                ]);
+            }
             
             try {
-                $role_id = $request->id;
+                $role_id = $validated['id'];
                 Role::findOrfail($role_id)->update([
-                'name' => $request->name,
-                'group_name' => $request->group_name,
+                'name' => $validated['name'],
+                'group_name' => $validated['group_name'],
               ]);
 
               $notification = array(
@@ -253,39 +335,37 @@ class RolePermissionController extends Controller
 
 
         public function deleterole($id){
-            Role::findOrFail(decrypt($id))->delete();
+            $profileData = $this->getProfileData();
+            $this->manageableRoleOrFail(decrypt($id), $profileData)->delete();
             $notification = array(
                 'message' => 'Role Deleted Successfully',
                 'alert-type' => 'success'
               );
+
+            return redirect()->back()->with($notification);
         }
 
 
         // Role & Permission Functions
         public function addRolePermission(){
-            $roles = Role::all();
             $profileData = $this->getProfileData();
+            $roles = $this->packageRoles()->manageableRoles($profileData);
             $permissions = Permission::all();
-            $permission_groups = User::getPermissionGroups();
-            return view('backend.'.$profileData->access_level.'.settings.rolespermission.add_role_permission', compact('roles', 'permissions','profileData','permission_groups'));
+            $permission_groups = $this->permissionGroups();
+            return view('backend.'.$profileData->access_level.'.settings.rolespermission.add_role_permission', $this->roleManagementViewData($profileData, compact('roles', 'permissions', 'permission_groups')));
         }
 
 
         public function RolePermissionStore(Request $request){
             $profileData = $this->getProfileData();
+            $validated = $request->validate([
+                'role_id' => 'required|integer',
+                'permission' => 'array',
+                'permission.*' => 'integer|exists:permissions,id',
+            ]);
+            $role = $this->manageableRoleOrFail($validated['role_id'], $profileData);
             
-            $permissions = $request->input('permission');
-
-            if (!empty($permissions)) {
-                $data = [];
-
-            foreach ($permissions as  $permissionId){
-                        $data['role_id'] = $request->role_id;
-                        $data['permission_id'] = $permissionId;
-                        DB::table('role_has_permissions')->insert($data);
-                }//end foreach
-
-            }//end if
+            $role->syncPermissions($validated['permission'] ?? []);
 
                 $notification = array(
                     'message' => 'Role Permission Assigned Successfully',
@@ -297,28 +377,30 @@ class RolePermissionController extends Controller
 
 
         public function allRolesPermission(){
-            $roles = Role::all();
             $profileData = $this->getProfileData();
-            return view('backend.'.$profileData->access_level.'.settings.rolespermission.rolespermission', compact('roles', 'profileData'));
+            $roles = $this->packageRoles()
+                ->manageableRoles($profileData)
+                ->each(fn (Role $role) => $role->loadMissing('permissions'));
+            return view('backend.'.$profileData->access_level.'.settings.rolespermission.rolespermission', $this->roleManagementViewData($profileData, compact('roles')));
         }
 
 
         public function editRolePermission($id){
-            $role = Role::findOrFail(decrypt($id));
             $profileData = $this->getProfileData();
+            $role = $this->manageableRoleOrFail(decrypt($id), $profileData);
             $permissions = Permission::all();
-            $permission_groups = User::getPermissionGroups();
-            return view('backend.'.$profileData->access_level.'.settings.rolespermission.edit_role_permission', compact('role', 'permissions','profileData','permission_groups'));
+            $permission_groups = $this->permissionGroups();
+            return view('backend.'.$profileData->access_level.'.settings.rolespermission.edit_role_permission', $this->roleManagementViewData($profileData, compact('role', 'permissions', 'permission_groups')));
         }
 
         public function updateRolePermission(Request $request, $id){
             $profileData = $this->getProfileData();
-            
-            $role = Role::findOrFail($id);
-            $permissions = $request->input('permission');
-            if(!empty($permissions)){
-                $role->syncPermissions($permissions);
-            }
+            $role = $this->manageableRoleOrFail($id, $profileData);
+            $validated = $request->validate([
+                'permission' => 'array',
+                'permission.*' => 'integer|exists:permissions,id',
+            ]);
+            $role->syncPermissions($validated['permission'] ?? []);
             $notification = array(
                 'message' => 'Role Permission Updated Successfully',
                 'alert-type' => 'success'
@@ -330,7 +412,9 @@ class RolePermissionController extends Controller
         }
 
         public function deleteRolePermission($id){
-            DB::table('role_has_permissions')->where('role_id', decrypt($id))->delete();
+            $profileData = $this->getProfileData();
+            $role = $this->manageableRoleOrFail(decrypt($id), $profileData);
+            DB::table('role_has_permissions')->where('role_id', $role->id)->delete();
             $notification = array(
                 'message' => 'Role Permission Deleted Successfully',
                 'alert-type' => 'success'

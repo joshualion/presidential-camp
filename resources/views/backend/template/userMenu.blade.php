@@ -14,7 +14,7 @@ $pu = \App\Models\PollingUnit::find($profileData->polling_unit_id);
       <ul class="nav nav-pills nav-sidebar flex-column sidebar-nav" data-widget="treeview" role="menu" data-accordion="false">
 
             <li class="tab nav-item menu-close">
-                        <a href="/dashboard" class="nav-link">
+                        <a href="{{ url('dashboard') }}" class="nav-link">
                           <i class="nav-icon fas fa-home"></i>
                           <p>
                             Dashboard
@@ -62,7 +62,7 @@ $pu = \App\Models\PollingUnit::find($profileData->polling_unit_id);
           <ul class="nav nav-treeview">
 
           <li class="nav-item">
-              <a href="/pu/elections" class="nav-link">
+              <a href="{{ url('pu/elections') }}" class="nav-link">
                 <i class="fas fa-award nav-icon"></i>
                 <p>Election Reports</p>
               </a>
@@ -86,7 +86,7 @@ $pu = \App\Models\PollingUnit::find($profileData->polling_unit_id);
                 <ul class="nav nav-treeview">
 
                 <li class="nav-item">
-                    <a href="/pu/dashboard" class="nav-link">
+                    <a href="{{ url('pu/dashboard') }}" class="nav-link">
                       <i class="fas fa-credit-card nav-icon"></i>
                       <p>Expenses</p>
                     </a>
@@ -95,7 +95,7 @@ $pu = \App\Models\PollingUnit::find($profileData->polling_unit_id);
 
 
                   <li class="nav-item">
-                    <a href="/pu/lga/dashboard" class="nav-link">
+                    <a href="{{ url('pu/lga/dashboard') }}" class="nav-link">
                     <i class="fas fa-dollar-sign nav-icon"></i>
                       <p>Funding Request</p>
                     </a>
@@ -118,14 +118,14 @@ $pu = \App\Models\PollingUnit::find($profileData->polling_unit_id);
                 <ul class="nav nav-treeview">
 
                 <li class="nav-item">
-                    <a href="/pu/events" class="nav-link">
+                    <a href="{{ url('pu/events') }}" class="nav-link">
                       <i class="fas fa-award nav-icon"></i>
                       <p>All Events</p>
                     </a>
                   </li>
 
                   <li class="nav-item">
-                    <a href="/pu/event/add" class="nav-link">
+                    <a href="{{ url('pu/event/add') }}" class="nav-link">
                       <i class="fas fa-plus nav-icon"></i>
                       <p>Add Event</p>
                     </a>
@@ -151,14 +151,14 @@ $pu = \App\Models\PollingUnit::find($profileData->polling_unit_id);
                         <ul class="nav nav-treeview">
 
                           <li class="nav-item">
-                            <a href="/profile" class="nav-link">
+                            <a href="{{ url('profile') }}" class="nav-link">
                               <i class="fas fa-file nav-icon"></i>
                               <p> Manage Profile</p>
                             </a>
                           </li>
 
                           <li class="nav-item">
-                            <a href="/change/password" class="nav-link">
+                            <a href="{{ url('change/password') }}" class="nav-link">
                             <i class="fas fa-lock nav-icon"></i>
                               <p>Change Password</p>
                             </a>
@@ -172,7 +172,7 @@ $pu = \App\Models\PollingUnit::find($profileData->polling_unit_id);
 
             {{-- Logout --}}
             <li class="nav-item">
-                            <a href="/logout" class="nav-link">
+                            <a href="{{ url('logout') }}" class="nav-link">
                             <i class="fas fa-power-off nav-icon"></i>
                               <p>Logout</p>
                             </a>

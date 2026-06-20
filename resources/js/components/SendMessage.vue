@@ -1,14 +1,14 @@
 <template>
-  <div class="row">
-    <div class="col-md-3 myUser card">
-      <div class="card-header mb-3 text-left myrow">
+  <div class="internal-messenger">
+    <aside class="conversation-pane">
+      <div class="conversation-pane-header">
         <strong class="card-title">Conversations</strong>
       </div>
-      <ul class="user">
+      <ul class="user conversation-list">
         <li v-for="c in conversations" :key="c.id" @click="selectConversation(c)" :class="{'active': activeConversation?.id === c.id}">
           <a href="javascript:void(0)">
             <img
-              :src="firstParticipantPhoto(c) || '/uploads/no_image.jpg'"
+              :src="firstParticipantPhoto(c) || routeUrl('noImage')"
               alt="UserImage"
               class="rounded-circle avatar-img me-3"
             />
@@ -18,34 +18,34 @@
           </a>
         </li>
       </ul>
-    </div>
+    </aside>
 
-    <div class="col-md-9">
-      <div class="card card-primary">
-        <div class="active-contact card-header text-left myrow d-flex align-items-center">
+    <section class="message-pane">
+      <div class="message-card">
+        <div class="active-contact message-header d-flex align-items-center">
           <strong class="card-title mb-0">
             {{ activeConversation ? conversationName(activeConversation) : 'Select a conversation' }}
           </strong>
           <span v-if="otherTyping" class="ms-2 text-muted" style="font-size: 0.85rem;">typing...</span>
         </div>
-        <div class="card-body chat-msg" v-if="activeConversation">
+        <div class="message-body chat-msg" v-if="activeConversation">
           <ul class="chat">
             <li
               v-for="msg in messages"
               :key="msg.id"
-              :class="msg.sender_id === profileData.id ? 'buyer clearfix bubble-right' : 'sender clearfix bubble-left'"
+              :class="isOwnMessage(msg) ? 'buyer clearfix bubble-right' : 'sender clearfix bubble-left'"
             >
-              <div class="bubble" :class="msg.sender_id === profileData.id ? 'from-me' : 'from-them'">
+              <div class="bubble" :class="isOwnMessage(msg) ? 'from-me' : 'from-them'">
                 <p class="mb-1">{{ msg.body }}</p>
                 <small class="text-muted">{{ formatDate(msg.created_at) }}</small>
               </div>
             </li>
           </ul>
         </div>
-        <div class="card-body text-center text-muted" v-else>
+        <div class="message-body text-center text-muted d-flex align-items-center justify-content-center" v-else>
           Select a conversation to start messaging.
         </div>
-        <div class="card-footer border-top">
+        <div class="message-toolbar border-top">
           <div class="d-flex justify-content-between align-items-center">
             <span class="text-muted small">Need to reach someone new?</span>
             <button class="btn btn-sm btn-primary text-white" @click="showComposer = true">
@@ -53,10 +53,10 @@
             </button>
           </div>
           <div v-if="showComposer" class="mt-3">
-            <new-conversation @started="handleComposerStart" @cancel="showComposer = false" />
+            <new-conversation :routes="routes" @started="handleComposerStart" @cancel="showComposer = false" />
           </div>
         </div>
-        <div class="card-footer" v-if="activeConversation">
+        <div class="message-composer" v-if="activeConversation">
           <div class="input-group">
             <textarea
               v-model="newMessage"
@@ -71,7 +71,7 @@
           </div>
         </div>
       </div>
-    </div>
+    </section>
   </div>
 </template>
 
@@ -79,6 +79,7 @@
 import axios from 'axios';
 import dayjs from 'dayjs';
 import NewConversation from './NewConversation.vue';
+import { cmIntervals, cmMedia, cmRealtime, cmRoute } from '../utils/campaignManager';
 
 export default {
   components: {
@@ -92,6 +93,10 @@ export default {
     profileData: {
       type: Object,
       required: true,
+    },
+    routes: {
+      type: Object,
+      default: () => ({}),
     },
   },
   data() {
@@ -110,7 +115,7 @@ export default {
   computed: {
     headerParticipant() {
       if (!this.activeConversation) return null;
-      return (this.activeConversation.participants || []).find((p) => p.id !== this.profileData.id) || this.activeConversation.participants?.[0] || null;
+      return this.otherParticipant(this.activeConversation) || this.activeConversation.participants?.[0] || null;
     },
   },
   mounted() {
@@ -121,6 +126,31 @@ export default {
     this.startPollingFallback();
   },
   methods: {
+    routeUrl(name, params = {}) {
+      const fallbackMap = {
+        conversations: 'messagesConversations',
+        conversationMessages: 'messagesConversationMessages',
+        conversationSend: 'messagesConversationSend',
+        conversationTyping: 'messagesConversationTyping',
+        conversationRead: 'messagesConversationRead',
+        recipients: 'messagesRecipients',
+        start: 'messagesStart',
+        ensure: 'messagesEnsure',
+      };
+      if (name === 'noImage') return this.routes?.noImage || cmMedia('noImage');
+      if (name === 'memberImageBase') return this.routes?.memberImageBase || cmMedia('memberImages');
+      let url = this.routes?.[name] || cmRoute(fallbackMap[name] || name, params);
+      Object.entries(params).forEach(([key, value]) => {
+        url = url.replace(`__${key.toUpperCase()}__`, encodeURIComponent(value));
+      });
+      return url;
+    },
+    isOwnMessage(message) {
+      return String(message?.sender_id) === String(this.profileData?.id);
+    },
+    otherParticipant(conv) {
+      return (conv.participants || []).find((p) => String(p.id) !== String(this.profileData.id)) || null;
+    },
     handleComposerStart(payload) {
       const conv = payload?.conversation;
       const msg = payload?.message;
@@ -143,6 +173,7 @@ export default {
       });
     },
     monitorConnection() {
+      if (!cmRealtime().realtimeAvailable) return;
       if (!window.Echo || !window.Echo.connector) return;
       const conn = window.Echo.connector?.pusher?.connection || window.Echo.connector?.connection;
       if (conn?.bind) {
@@ -161,12 +192,13 @@ export default {
       // Poll frequently if websocket isn't confirmed
       this.pollInterval = setInterval(() => {
         if (this.connectionReady) return;
+        if (document.visibilityState === 'hidden') return;
         if (this.activeConversation) {
           this.fetchMessages(this.activeConversation.id);
         } else {
           this.fetchConversations();
         }
-      }, 1000);
+      }, this.activeConversation ? cmIntervals().message_thread : cmIntervals().conversation_list);
     },
     stopPollingFallback() {
       if (this.pollInterval) {
@@ -183,6 +215,7 @@ export default {
       });
     },
     subscribeTyping() {
+      if (!cmRealtime().realtimeAvailable) return;
       if (!window.Echo || !this.profileData?.id) return;
       window.Echo.private(`messages.user.${this.profileData.id}`)
         .listen('MessageTyping', (payload) => {
@@ -195,6 +228,7 @@ export default {
         });
     },
     subscribeMessages() {
+      if (!cmRealtime().realtimeAvailable) return;
       if (!window.Echo || !this.profileData?.id) return;
       window.Echo.private(`messages.user.${this.profileData.id}`)
         .listen('MessageSent', (payload) => {
@@ -212,7 +246,7 @@ export default {
     },
     async fetchConversations() {
       try {
-        const response = await axios.get('/messages/conversations');
+        const response = await axios.get(this.routeUrl('conversations'));
         this.conversations = response.data?.data || response.data || [];
         if (this.conversations.length && !this.activeConversation) {
           this.selectConversation(this.conversations[0]);
@@ -228,7 +262,7 @@ export default {
     },
     async fetchMessages(conversationId) {
       try {
-        const response = await axios.get(`/messages/conversations/${conversationId}/messages`);
+        const response = await axios.get(this.routeUrl('conversationMessages', { conversation: conversationId }));
         const data = response.data?.data || response.data || [];
         this.messages = [...data].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
         this.scrollToBottom();
@@ -242,7 +276,7 @@ export default {
       this.newMessage = '';
       try {
         const response = await axios.post(
-          `/messages/conversations/${this.activeConversation.id}/messages`,
+          this.routeUrl('conversationSend', { conversation: this.activeConversation.id }),
           { message: body },
         );
         const msg = response.data?.message || response.data;
@@ -255,15 +289,15 @@ export default {
     },
     notifyTyping() {
       if (!this.activeConversation) return;
-      axios.post(`/messages/conversations/${this.activeConversation.id}/typing`).catch(() => {});
+      axios.post(this.routeUrl('conversationTyping', { conversation: this.activeConversation.id })).catch(() => {});
     },
     conversationName(conv) {
-      const other = (conv.participants || []).find((p) => p.id !== this.profileData.id) || conv.participants?.[0];
+      const other = this.otherParticipant(conv) || conv.participants?.[0];
       return other ? `${other.firstname ?? ''} ${other.lastname ?? other.username ?? ''}`.trim() : 'Conversation';
     },
     firstParticipantPhoto(conv) {
-      const other = (conv.participants || []).find((p) => p.id !== this.profileData.id) || conv.participants?.[0];
-      return other?.photo ? `/uploads/member_images/${other.photo}` : null;
+      const other = this.otherParticipant(conv) || conv.participants?.[0];
+      return other?.photo ? `${this.routeUrl('memberImageBase')}/${other.photo}` : null;
     },
     formatDate(date) {
       return dayjs(date).format('MMM D, h:mm A');
@@ -282,10 +316,71 @@ export default {
 </script>
 
 <style scoped>
+.internal-messenger {
+  display: flex;
+  min-height: 620px;
+  width: 100%;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.conversation-pane {
+  width: 320px;
+  flex: 0 0 320px;
+  background: #f8fafc;
+  border-right: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.conversation-pane-header,
+.message-header,
+.message-toolbar,
+.message-composer {
+  padding: 14px 16px;
+}
+
+.conversation-pane-header {
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.message-pane {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+}
+
+.message-card {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.message-header {
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.message-body {
+  flex: 1;
+  min-height: 0;
+  padding: 16px;
+}
+
+.message-toolbar,
+.message-composer {
+  background: #fff;
+}
+
 .user {
   list-style: none;
   padding: 0;
   margin: 0;
+  overflow-y: auto;
+  flex: 1;
 }
 
 .user li a {
@@ -315,6 +410,11 @@ export default {
 
 .active-contact {
   min-height: 56px;
+}
+
+.chat-msg {
+  overflow-y: auto;
+  max-height: 520px;
 }
 
 .bubble {
@@ -350,6 +450,21 @@ export default {
   position: absolute;
   z-index: 5;
   width: 100%;
+}
+
+@media (max-width: 768px) {
+  .internal-messenger {
+    flex-direction: column;
+    min-height: 560px;
+  }
+
+  .conversation-pane {
+    width: 100%;
+    flex-basis: auto;
+    max-height: 260px;
+    border-right: 0;
+    border-bottom: 1px solid #e5e7eb;
+  }
 }
 </style>
 

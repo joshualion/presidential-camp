@@ -12,6 +12,7 @@ use App\Models\State;
 use App\Models\LocalGovernmentArea;
 use App\Models\Ward;
 use App\Models\PollingUnit;
+use App\Services\LicensedScopeQueryService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\View;
@@ -35,6 +36,7 @@ class BulksmsController extends Controller
     private function filterRecipients(Request $request)
     {
         $users = User::query()->where('access_level', '!=', 'superadmin')->whereNotNull('phone');                 
+        app(LicensedScopeQueryService::class)->applyToUsersQuery($users);
        
 
        
@@ -104,7 +106,9 @@ class BulksmsController extends Controller
     {
         $profileData = $this->getProfileData();
         $countries = Country::all();
-         $regions = Region::all();
+        $regionsQuery = Region::query();
+        app(LicensedScopeQueryService::class)->applyToRegionsQuery($regionsQuery);
+        $regions = $regionsQuery->get();
         // $states = State::all();
         // $lgas = LocalGovernmentArea::all();
         // $wards = Ward::all();
@@ -177,6 +181,18 @@ class BulksmsController extends Controller
     public function sendSms(Request $request)
     {
         $profileData = $this->getProfileData();
+        $scopeErrors = app(LicensedScopeQueryService::class)->payloadErrors($request->only([
+            'state_id',
+            'senatorial_district_id',
+            'federal_constituency_id',
+            'lga_id',
+            'ward_id',
+            'pu_id',
+        ]));
+
+        if ($scopeErrors !== []) {
+            return response()->json(['status' => 'error', 'message' => reset($scopeErrors)], 403);
+        }
     
         // Retrieve SMS settings
         $smsSetting = BulkSmsSetting::where('user_id', $profileData->id)->first();

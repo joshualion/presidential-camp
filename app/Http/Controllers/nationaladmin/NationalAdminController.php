@@ -4,6 +4,7 @@ namespace App\Http\Controllers\nationaladmin;
 
 use App\Http\Controllers\Controller;
 use App\Services\LocationDashboardMetricsService;
+use App\Services\LicensedScopeQueryService;
 use App\Services\StateDashboardDetailMetricsService;
 use App\Models\AgeGrade;
 use App\Models\Country;
@@ -33,6 +34,11 @@ class NationalAdminController extends Controller
     private function getProfileData()
     {
         return User::find(Auth::user()->id);
+    }
+
+    private function licensedScope(): LicensedScopeQueryService
+    {
+        return app(LicensedScopeQueryService::class);
     }
 
     private function getCountries()
@@ -218,11 +224,12 @@ class NationalAdminController extends Controller
     {
         $pageTitle = 'Region Dashboard';
         $profileData = $this->getProfileData();
-        $region = Region::where('uuid', $uuid)->first();
+        $region = app(\App\Services\DashboardDrilldownService::class)->region($uuid);
 
         if(!$region){
             return redirect()->back()->with('error', 'Region not found');
         }
+        $this->licensedScope()->abortIfRegionNotAllowed($region->id);
 
         $stateCount = State::where('region_id', $region->id)->count();
         $statesWithUsersCount = User::where('region_id', $region->id)->whereNotNull('state_id')->distinct('state_id')->count('state_id');
@@ -248,11 +255,12 @@ class NationalAdminController extends Controller
     {
         $pageTitle = 'State Dashboard';
         $profileData = $this->getProfileData();
-        $state = State::where('uuid', $uuid)->first();
+        $state = app(\App\Services\DashboardDrilldownService::class)->state($uuid);
 
         if(!$state){
             return redirect()->back()->with('error', 'State not found');
         }
+        $this->licensedScope()->abortIfStateNotAllowed($state->id);
 
         $senatorialDistrictCount = SenatorialDistrict::where('state_id', $state->id)->count();
         $senatorialDistrictsWithUsersCount = SenatorialDistrict::where('state_id', $state->id)
@@ -287,11 +295,12 @@ class NationalAdminController extends Controller
     {
         $pageTitle = 'Senatorial District Dashboard';
         $profileData = $this->getProfileData();
-        $district = SenatorialDistrict::with('state')->where('uuid', $uuid)->first();
+        $district = app(\App\Services\DashboardDrilldownService::class)->senatorialDistrict($uuid);
 
         if(!$district){
             return redirect()->back()->with('error', 'Senatorial District not found');
         }
+        $this->licensedScope()->abortIfSenatorialDistrictNotAllowed($district->id);
 
         $lgaCount = LocalGovernmentArea::where('senatorial_district_id', $district->id)->count();
         $lgaWithUsersCount = LocalGovernmentArea::where('senatorial_district_id', $district->id)->whereHas('users')->count();
@@ -353,11 +362,12 @@ class NationalAdminController extends Controller
     {
         $pageTitle = 'Federal Constituency Dashboard';
         $profileData = $this->getProfileData();
-        $constituency = FederalConstituency::with('state')->where('uuid', $uuid)->first();
+        $constituency = app(\App\Services\DashboardDrilldownService::class)->federalConstituency($uuid);
 
         if(!$constituency){
             return redirect()->back()->with('error', 'Federal Constituency not found');
         }
+        $this->licensedScope()->abortIfFederalConstituencyNotAllowed($constituency->id);
 
         $lgaCount = LocalGovernmentArea::where('federal_constituency_id', $constituency->id)->count();
         $lgaWithUsersCount = LocalGovernmentArea::where('federal_constituency_id', $constituency->id)->whereHas('users')->count();
@@ -419,11 +429,12 @@ class NationalAdminController extends Controller
     {
         $pageTitle = 'Local Government Dashboard';
         $profileData = $this->getProfileData();
-        $lga = LocalGovernmentArea::where('uuid', $uuid)->first();
+        $lga = app(\App\Services\DashboardDrilldownService::class)->lga($uuid);
 
         if(!$lga){
             return redirect()->back()->with('error', 'LGA not found');
         }
+        $this->licensedScope()->abortIfLgaNotAllowed($lga->id);
 
         $wardCount = Ward::where('lga_id', $lga->id)->count();
         $wardWithUsersCount = Ward::where('lga_id', $lga->id)->whereHas('users')->count();
@@ -438,18 +449,19 @@ class NationalAdminController extends Controller
         $dashboardMetrics = app(LocationDashboardMetricsService::class)->forLocalGovernmentArea($lga, $profileData);
 
                     return view('backend.'.$profileData->access_level.'.lga.dashboard',
-            compact('profileData', 'pageTitle', 'lga', 'wardCount', 'wardWithUsersCount', 'puCount', 'puWithUsersCount', 'excoCount', 'memberCount', 'userCount', 'newMembers'));
+            compact('profileData', 'pageTitle', 'lga', 'dashboardMetrics', 'wardCount', 'wardWithUsersCount', 'puCount', 'puWithUsersCount', 'excoCount', 'memberCount', 'userCount', 'newMembers'));
     }
 
     public function wardDashBoard($uuid)
     {
         $pageTitle = 'Ward Dashboard';
         $profileData = $this->getProfileData();
-        $ward = Ward::where('uuid', $uuid)->first();
+        $ward = app(\App\Services\DashboardDrilldownService::class)->ward($uuid);
 
         if(!$ward){
             return redirect()->back()->with(['message' => 'Ward not found', 'alert-type' => 'error']);
         }
+        $this->licensedScope()->abortIfWardNotAllowed($ward->id);
 
         $puCount = PollingUnit::where('ward_id', $ward->id)->count();
         $puWithUsersCount = PollingUnit::where('ward_id', $ward->id)->whereHas('users')->count();
@@ -463,18 +475,19 @@ class NationalAdminController extends Controller
         $dashboardMetrics = app(LocationDashboardMetricsService::class)->forWard($ward, $profileData);
 
                     return view('backend.'.$profileData->access_level.'.ward.dashboard',
-            compact('profileData', 'pageTitle', 'ward', 'puCount', 'puWithUsersCount', 'excoCount', 'memberCount', 'eligibleVotersCount', 'inEligibleVotersCount', 'userCount', 'newMembers'));
+            compact('profileData', 'pageTitle', 'ward', 'dashboardMetrics', 'puCount', 'puWithUsersCount', 'excoCount', 'memberCount', 'eligibleVotersCount', 'inEligibleVotersCount', 'userCount', 'newMembers'));
     }
 
     public function PuDashBoard($uuid)
     {
         $pageTitle = 'Polling Unit Dashboard';
         $profileData = $this->getProfileData();
-        $pu = PollingUnit::where('uuid', $uuid)->first();
+        $pu = app(\App\Services\DashboardDrilldownService::class)->pollingUnit($uuid);
 
         if(!$pu){
             return redirect()->back()->with(['message' => 'Polling Unit not found', 'alert-type' => 'error']);
         }
+        $this->licensedScope()->abortIfPollingUnitNotAllowed($pu->id);
 
         $excoCount = User::where('polling_unit_id', $pu->id)->where('access_level', '!=', 'user')->where('access_level', '!=', 'superadmin')->where('access_level', '!=', 'puadmin')->count();
         $memberCount = User::where('polling_unit_id', $pu->id)->where('access_level', '!=', 'superadmin')->where('access_level', 'user')->count();
@@ -486,6 +499,6 @@ class NationalAdminController extends Controller
         $dashboardMetrics = app(LocationDashboardMetricsService::class)->forPollingUnit($pu, $profileData);
 
                     return view('backend.'.$profileData->access_level.'.pu.dashboard',
-            compact('profileData', 'pageTitle', 'pu', 'excoCount', 'memberCount', 'eligibleVotersCount', 'inEligibleVotersCount', 'userCount', 'newMembers'));
+            compact('profileData', 'pageTitle', 'pu', 'dashboardMetrics', 'excoCount', 'memberCount', 'eligibleVotersCount', 'inEligibleVotersCount', 'userCount', 'newMembers'));
     }
 }

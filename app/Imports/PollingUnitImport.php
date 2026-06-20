@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\Ward;
 use App\Models\LocalGovernmentArea;
 use App\Models\State;
+use App\Services\LicensedScopeQueryService;
 use Illuminate\Support\Facades\Auth;
 use Maatwebsite\Excel\Concerns\ToModel;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
@@ -51,6 +52,11 @@ class PollingUnitImport implements ToModel, WithHeadingRow, SkipsOnFailure
             ->where('lga_id', $lga->id)
             ->first();
         if (!$ward) {
+            $this->failedInserts++;
+            return null;
+        }
+
+        if (!app(LicensedScopeQueryService::class)->allowsPayload(['ward_id' => $ward->id])) {
             $this->failedInserts++;
             return null;
         }

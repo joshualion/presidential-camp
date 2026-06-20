@@ -6,6 +6,7 @@ use App\Models\Ward;
 use App\Models\User;
 use App\Models\LocalGovernmentArea;
 use App\Models\State;
+use App\Services\LicensedScopeQueryService;
 use Illuminate\Support\Facades\Auth;
 use Maatwebsite\Excel\Concerns\ToModel;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
@@ -37,6 +38,11 @@ class WardImport implements ToModel, WithHeadingRow
                                   ->first();
 
         if (!$lga) {
+            $this->failedInserts++;
+            return null;
+        }
+
+        if (!app(LicensedScopeQueryService::class)->allowsPayload(['lga_id' => $lga->id])) {
             $this->failedInserts++;
             return null;
         }

@@ -11,14 +11,15 @@
               <div class="card-header">
                 <h3 class="card-title">Add Role</h3>
                 <div class="card-tools">
-                    <a href="{{ route('nationaladmin.settings.roles') }}"><button class="btn btn-default"> <i class="fas fa-eye"></i> All Roles</button></a>
+                    <a href="{{ route($profileData->access_level.'.settings.roles') }}"><button class="btn btn-default"> <i class="fas fa-eye"></i> All Roles</button></a>
                 </div>
               </div>
               <!-- /.card-header -->
               <div class="card-body">
+              @include('backend.shared.rbac.package-notice')
 
               <!-- form start -->
-              <form class="form" action="{{route('nationaladmin.settings.role.store')}}" method="POST">
+              <form class="form" action="{{route($profileData->access_level.'.settings.role.store')}}" method="POST">
                 @csrf
 
                   <div class="form-group">
@@ -30,15 +31,17 @@
                           <select class="form-control" name="group_name" id="group_name" required >
                                <option value="">Select Role Group</option>
                                <optgroup label="Roles">
-                                   <option value="nationaladmin">National Admins</option>
-                                   <option value="regionaladmin">Regional Admins</option>
-                                   <option value="stateadmin">State Admins</option>
-                                   <option value="lgaadmin">LGA Admins</option>
-                                   <option value="wardadmin">Ward Admins</option>
-                                   <option value="puadmin">Polling Unit Admins</option>
-                                   <!-- End payment Options -->
+                                   @foreach($rbacRoleGroups ?? [] as $accessLevel => $label)
+                                       <option value="{{ $accessLevel }}" {{ old('group_name') === $accessLevel ? 'selected' : '' }}>{{ $label }}</option>
+                                   @endforeach
                                </optgroup>
                            </select>
+                           @error('name')
+                               <div class="text-danger small">{{ $message }}</div>
+                           @enderror
+                           @error('group_name')
+                               <div class="text-danger small">{{ $message }}</div>
+                           @enderror
                  </div>
                 <div class="col-3">
                   <button type="submit" class="btn btn-primary btn-block btn-group-lg">Add Role</button>

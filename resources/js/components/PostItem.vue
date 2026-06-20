@@ -6,7 +6,7 @@
           <h6 class="card-title username d-flex align-items-center">
             <a :href="profileLink">
               <img
-                :src="post.user?.photo ? '/uploads/member_images/' + post.user.photo : '/uploads/no_image.jpg'"
+                :src="post.user?.photo ? memberImageUrl(post.user.photo) : noImageUrl"
                 alt="Profile Picture"
                 class="rounded-circle me-3"
               />
@@ -44,14 +44,14 @@
       <img
         v-if="post.image_url && post.image_url.trim() !== ''"
         class="card-img img-responsive"
-        :src="post.image_full_url || ('/uploads/community/photos/' + post.image_url)"
+        :src="post.image_full_url || communityPhotoUrl(post.image_url)"
         alt="image"
       />
 
       <video
         v-if="post.video_url && post.video_url.trim() !== ''"
         class="card-video w-100"
-        :src="post.video_full_url || ('/uploads/community/videos/' + post.video_url)"
+        :src="post.video_full_url || communityVideoUrl(post.video_url)"
         controls
       >
         Your browser does not support the video tag.
@@ -86,8 +86,9 @@
               {{ comment.user?.firstname || comment.user?.username || 'Unknown' }}  {{ comment.user?.lastname || 'Unknown' }}
             </strong>
             <small class="text-muted">{{ formatDate(comment.created_at) }}</small>
-            <div class="ms-auto" v-if="canManageComment(comment)">
+            <div class="ms-auto" v-if="canEditComment(comment) || canDeleteComment(comment)">
               <button
+                v-if="canEditComment(comment)"
                 class="btn btn-link btn-sm p-0 me-2 text-muted"
                 title="Edit comment"
                 aria-label="Edit comment"
@@ -96,6 +97,7 @@
                 <i class="fas fa-pen"></i>
               </button>
               <button
+                v-if="canDeleteComment(comment)"
                 class="btn btn-link btn-sm p-0 text-danger"
                 title="Delete comment"
                 aria-label="Delete comment"
@@ -143,6 +145,7 @@
 <script>
 import PostActions from './PostActions.vue';
 import { formatDate } from '../utils/dateUtils';
+import { cmMedia, cmRoute } from '../utils/campaignManager';
 
 export default {
   components: {
@@ -172,12 +175,15 @@ export default {
     };
   },
   computed: {
+    noImageUrl() {
+      return cmMedia('noImage');
+    },
     profileLink() {
       if (this.post.user?.id === this.profileData?.id) {
-        return '/community/profile';
+        return cmRoute('profileTimeline');
       }
       if (this.post.user?.username) {
-        return `/community/${this.post.user.username}/profile/timeline`;
+        return cmRoute('viewUserPosts', { username: this.post.user.username });
       }
       return '#';
     },
@@ -203,6 +209,15 @@ export default {
     },
   },
   methods: {
+    memberImageUrl(filename) {
+      return cmMedia('memberImages', filename);
+    },
+    communityPhotoUrl(filename) {
+      return cmMedia('communityPhotos', filename);
+    },
+    communityVideoUrl(filename) {
+      return cmMedia('communityVideos', filename);
+    },
     likePost(postId) {
       if (!postId) return;
       this.$emit('like', postId);
@@ -224,11 +239,20 @@ export default {
       this.$emit('post-comment', { postId, content: this.newComment });
       this.newComment = '';
     },
-    canManageComment(comment) {
+    canEditComment(comment) {
       const userId = this.profileData?.id;
       return (
-        comment.user?.id === userId ||
-        this.post.user?.id === userId ||
+        Number(comment.user?.id) === Number(userId) ||
+        this.post.can_moderate === true ||
+        false
+      );
+    },
+    canDeleteComment(comment) {
+      const userId = this.profileData?.id;
+      return (
+        Number(comment.user?.id) === Number(userId) ||
+        Number(this.post.user?.id) === Number(userId) ||
+        this.post.can_moderate === true ||
         false
       );
     },

@@ -14,7 +14,7 @@ $lga = \App\Models\LocalGovernmentArea::find(Auth::user()->lga_id);
       <ul class="nav nav-pills nav-sidebar flex-column sidebar-nav" data-widget="treeview" role="menu" data-accordion="false">
 
             <li class="tab nav-item menu-close">
-                        <a href="/lga/dashboard" class="nav-link">
+                        <a href="{{ url('lga/dashboard') }}" class="nav-link">
                           <i class="nav-icon fas fa-home"></i>
                           <p>
                             Dashboard
@@ -38,7 +38,7 @@ $lga = \App\Models\LocalGovernmentArea::find(Auth::user()->lga_id);
                         <ul class="nav nav-treeview">
 
                           <li class="nav-item">
-                            <a href="/lga/members/fetch/{{$lga->uuid}}" class="nav-link">
+                            <a href="{{ url('lga/members/fetch') }}/{{$lga->uuid}}" class="nav-link">
                               <i class="fas fa-user nav-icon"></i>
                               <p>All Members</p>
                             </a>
@@ -47,14 +47,14 @@ $lga = \App\Models\LocalGovernmentArea::find(Auth::user()->lga_id);
 
 
                           <li class="nav-item">
-                            <a href="/lga/members/byward/{{$lga->uuid}}" class="nav-link">
+                            <a href="{{ url('lga/members/byward') }}/{{$lga->uuid}}" class="nav-link">
                             <i class="fas fa-user nav-icon"></i>
                               <p>Members By Wards</p>
                             </a>
                           </li>
 
                           <li class="nav-item">
-                            <a href="/lga/members/bypu/{{$lga->uuid}}" class="nav-link">
+                            <a href="{{ url('lga/members/bypu') }}/{{$lga->uuid}}" class="nav-link">
                               <i class="fas fa-user nav-icon"></i>
                               <p>Members By PU</p>
                             </a>
@@ -79,27 +79,27 @@ $lga = \App\Models\LocalGovernmentArea::find(Auth::user()->lga_id);
           <ul class="nav nav-treeview">
 
           <li class="nav-item">
-              <a href="/lga/elections" class="nav-link">
+              <a href="{{ url('lga/elections') }}" class="nav-link">
                 <i class="fas fa-award nav-icon"></i>
                 <p>Manage Elections</p>
               </a>
             </li>
             <li class="nav-item">
-              <a href="/lga/election/operations-center" class="nav-link">
+              <a href="{{ url('lga/election/operations-center') }}" class="nav-link">
                 <i class="fas fa-broadcast-tower nav-icon"></i>
                 <p>Situation Room</p>
               </a>
             </li>
             @if(app(\App\Services\PollingUnitResultPermissionService::class)->userHasAnyApprovedAssignment($profileData))
             <li class="nav-item">
-              <a href="/lga/vote/add" class="nav-link">
+              <a href="{{ url('lga/vote/add') }}" class="nav-link">
               <i class="fa fa-cloud nav-icon"></i>
                 <p>Upload Polls Result</p>
               </a>
             </li>
 
             <li class="nav-item">
-              <a href="/lga/incident/add" class="nav-link">
+              <a href="{{ url('lga/incident/add') }}" class="nav-link">
               <i class="fa fa-book nav-icon"></i>
                 <p>Report  Incidents</p>
               </a>
@@ -123,7 +123,7 @@ $lga = \App\Models\LocalGovernmentArea::find(Auth::user()->lga_id);
                 <ul class="nav nav-treeview">
 
                 <li class="nav-item">
-                    <a href="/lga/dashboard" class="nav-link">
+                    <a href="{{ url('lga/dashboard') }}" class="nav-link">
                       <i class="fas fa-credit-card nav-icon"></i>
                       <p>Expenses</p>
                     </a>
@@ -132,7 +132,7 @@ $lga = \App\Models\LocalGovernmentArea::find(Auth::user()->lga_id);
 
 
                   <li class="nav-item">
-                    <a href="/lga/lga/dashboard" class="nav-link">
+                    <a href="{{ url('lga/lga/dashboard') }}" class="nav-link">
                     <i class="fas fa-dollar-sign nav-icon"></i>
                       <p>Funding Request</p>
                     </a>
@@ -155,14 +155,14 @@ $lga = \App\Models\LocalGovernmentArea::find(Auth::user()->lga_id);
                 <ul class="nav nav-treeview">
 
                 <li class="nav-item">
-                    <a href="/lga/events" class="nav-link">
+                    <a href="{{ url('lga/events') }}" class="nav-link">
                       <i class="fas fa-award nav-icon"></i>
                       <p>All Events</p>
                     </a>
                   </li>
 
                   <li class="nav-item">
-                    <a href="/lga/event/add" class="nav-link">
+                    <a href="{{ url('lga/event/add') }}" class="nav-link">
                       <i class="fas fa-plus nav-icon"></i>
                       <p>Add Event</p>
                     </a>
@@ -186,13 +186,13 @@ $lga = \App\Models\LocalGovernmentArea::find(Auth::user()->lga_id);
                         <ul class="nav nav-treeview">
 
                           <li class="nav-item">
-                            <a href="/lga/bulksms/send" class="nav-link">
+                            <a href="{{ url('lga/bulksms/send') }}" class="nav-link">
                               <i class="fas fa-sms	 nav-icon"></i>
                               <p>Send SMS</p>
                             </a>
                           </li>
                           <li class="nav-item">
-                            <a href="/messages" class="nav-link">
+                            <a href="{{ url('messages') }}" class="nav-link">
                               <i class="fas fa-comments nav-icon"></i>
                               <p>Internal Communication</p>
                             </a>
@@ -237,14 +237,14 @@ $lga = \App\Models\LocalGovernmentArea::find(Auth::user()->lga_id);
                         </a>
                         <ul class="nav nav-treeview">
                           <li class="nav-item">
-                            <a href="/lga/location/wards" class="nav-link">
+                            <a href="{{ url('lga/location/wards') }}" class="nav-link">
                             <i class="fas fa-map-marked-alt nav-icon"></i>
                               <p>Wards</p>
                             </a>
                           </li>
 
                           <li class="nav-item">
-                            <a href="/lga/location/pollingunits" class="nav-link">
+                            <a href="{{ url('lga/location/pollingunits') }}" class="nav-link">
                             <i class="fas fa-monument nav-icon"></i>
                               <p>Polling Units</p>
                             </a>
@@ -268,7 +268,7 @@ $lga = \App\Models\LocalGovernmentArea::find(Auth::user()->lga_id);
                         <ul class="nav nav-treeview">
 
                           <li class="nav-item">
-                            <a href="/lga/bulksms/setting" class="nav-link">
+                            <a href="{{ url('lga/bulksms/setting') }}" class="nav-link">
                             <i class="fas fa-sms nav-icon"></i>
                               <p>SMS Settings</p>
                             </a>
@@ -291,7 +291,7 @@ $lga = \App\Models\LocalGovernmentArea::find(Auth::user()->lga_id);
                         <ul class="nav nav-treeview">
 
                           <li class="nav-item">
-                            <a href="/lga/profile" class="nav-link">
+                            <a href="{{ url('lga/profile') }}" class="nav-link">
                               <i class="fas fa-file nav-icon"></i>
                               <p> Manage Profile</p>
                             </a>
@@ -300,7 +300,7 @@ $lga = \App\Models\LocalGovernmentArea::find(Auth::user()->lga_id);
 
 
                           <li class="nav-item">
-                            <a href="/lga/change/password" class="nav-link">
+                            <a href="{{ url('lga/change/password') }}" class="nav-link">
                             <i class="fas fa-lock nav-icon"></i>
                               <p>Change Password</p>
                             </a>
@@ -314,7 +314,7 @@ $lga = \App\Models\LocalGovernmentArea::find(Auth::user()->lga_id);
 
             {{-- Logout --}}
             <li class="nav-item">
-                            <a href="/lga/logout" class="nav-link">
+                            <a href="{{ url('lga/logout') }}" class="nav-link">
                             <i class="fas fa-power-off nav-icon"></i>
                               <p>Logout</p>
                             </a>

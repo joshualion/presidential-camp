@@ -29,7 +29,7 @@ return new class extends Migration
             $table->bigIncrements('id'); // permission id
             $table->string('name', 100);
             $table->string('guard_name', 100);
-            $table->enum('group_name',  ['superadmin', 'nationaladmin', 'regionaladmin', 'stateadmin', 'lgaadmin', 'wardadmin', 'puadmin','user'])->default('user');
+            $table->enum('group_name',  ['superadmin', 'nationaladmin', 'regionaladmin', 'stateadmin', 'senatorialadmin', 'federaladmin', 'lgaadmin', 'wardadmin', 'puadmin','user'])->default('user');
             $table->timestamps();
 
             $table->unique(['name', 'guard_name']);
@@ -44,7 +44,7 @@ return new class extends Migration
             }
             $table->string('name', 100);
             $table->string('guard_name', 100);
-            $table->enum('group_name',  ['superadmin', 'nationaladmin', 'regionaladmin', 'stateadmin', 'lgaadmin', 'wardadmin', 'puadmin','user'])->default('user');
+            $table->enum('group_name',  ['superadmin', 'nationaladmin', 'regionaladmin', 'stateadmin', 'senatorialadmin', 'federaladmin', 'lgaadmin', 'wardadmin', 'puadmin','user'])->default('user');
             $table->timestamps();
             if ($teams || config('permission.testing')) {
                 $table->unique([$columnNames['team_foreign_key'], 'name', 'guard_name']);

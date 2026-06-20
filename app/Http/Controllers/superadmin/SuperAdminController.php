@@ -20,6 +20,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\Str;
 use App\Models\User;
+use App\Services\CampaignDashboardChartService;
 use App\Services\LocationDashboardMetricsService;
 use App\Services\StateDashboardDetailMetricsService;
 use Illuminate\Http\Request;
@@ -303,209 +304,78 @@ class SuperAdminController extends Controller
         //function member Distribution By Gender
         public function SuperAdminGenderDistribution()
         {
-            $maleCount = User::where('access_level', '!=', 'superadmin')->where('gender', 'Male')->count();
-            $femaleCount = User::where('access_level', '!=', 'superadmin')->where('gender', 'Female')->count();
-
-            $genderData = [
-                'labels' => ['Male', 'Female'],
-                'datasets' => [
-                    [
-                        'data' => [$maleCount, $femaleCount],
-                        'backgroundColor' => ['#28a745', '#e74c3c']
-                    ]
-                ]
-            ];
-
-            return response()->json($genderData);
+            return response()->json(app(CampaignDashboardChartService::class)->gender($this->getProfileData()));
         }
 
 
         // function member Distribution By Age
         public function SuperAdminAgeDistribution()
         {
-            // Fetch all age grades
-            $ageGrades = AgeGrade::all(); // Get both id and name
-
-            // Initialize the counts array
-            $ageCounts = [];
-
-            // Loop through each age grade and count the users
-            foreach ($ageGrades as $ageGrade) {
-                // Count users by age_grade_id
-                $count = User::where('access_level', '!=', 'superadmin')->where('age_grade_id', $ageGrade->id)->count();
-                // Append the count to the ageCounts array
-                $ageCounts[] = $count;
-            }
-
-            // Define an array of colors for the chart
-            $colors = [
-                '#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c', '#d35400', '#c0392b', '#34495e', '#27ae60', '#2980b9'
-            ];
-
-            // Use the array of colors for background colors
-            $backgroundColors = array_slice($colors, 0, count($ageGrades));
-
-            // Prepare the data structure for Chart.js
-            $ageData = [
-                'labels' => $ageGrades->pluck('name'), // Pluck age grade names
-                'datasets' => [
-                    [
-                        'label' => 'Age Distribution',
-                        'data' => $ageCounts, // Data for the counts
-                        'backgroundColor' => $backgroundColors
-                    ]
-                ]
-            ];
-
-            // Return the data as JSON for Chart.js
-            return response()->json($ageData);
+            return response()->json(app(CampaignDashboardChartService::class)->age($this->getProfileData()));
         }
 
 
          //function member Distribution By Region
          public function SuperAdminRegionDistribution()
          {
-             $regions = Region::all(); // Assuming you have a Region model and table
-
-             $regionData = [
-                 'labels' => [],
-                 'datasets' => [
-                     [
-                         'data' => [],
-                         'backgroundColor' => [
-                             '#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c', '#d35400', '#c0392b', '#34495e', '#27ae60', '#2980b9'
-                         ]
-                     ]
-                 ]
-             ];
-
-             foreach ($regions as $region) {
-                 $count = User::where('access_level', '!=', 'superadmin')->where('region_id', $region->id)->where('access_level', '!=', 'superadmin')->count();
-                 $regionData['labels'][] = $region->name; // Replace 'name' with the actual column name in the regions table
-                 $regionData['datasets'][0]['data'][] = $count;
-             }
-
-             return response()->json($regionData);
+             return response()->json(app(CampaignDashboardChartService::class)->regions($this->getProfileData()));
          }
 
 
             //function member Distribution By Religion
         public function SuperAdminReligionDistribution()
             {
-                // Fetch religions from the Religion model instead of hardcoding them
-                $religions = Religion::pluck('name', 'id')->toArray(); // Get an array of [id => name] pairs
-
-                $religionCounts = [];
-
-                // Define an array of colors
-                $colors = [
-                    '#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c', '#d35400', '#c0392b', '#34495e', '#27ae60', '#2980b9'
-                ];
-
-                // Use the array of colors for background colors
-                $backgroundColors = array_slice($colors, 0, count($religions));
-
-                // Loop through religions and count users based on religion_id
-                foreach ($religions as $religionId => $religionName) {
-                    $count = User::where('access_level', '!=', 'superadmin')->where('religion_id', $religionId)->where('access_level', '!=', 'superadmin')->count();
-                    $religionCounts[] = $count;
-                }
-
-                // Prepare data for the chart
-                $religionData = [
-                    'labels' => array_values($religions), // Labels (religion names)
-                    'datasets' => [
-                        [
-                            'label' => 'Religion Distribution',
-                            'data' => $religionCounts, // Count of users in each religion
-                            'backgroundColor' => $backgroundColors
-                        ]
-                    ]
-                ];
-
-                return response()->json($religionData);
+                return response()->json(app(CampaignDashboardChartService::class)->religion($this->getProfileData()));
         }
 
           //function member Distribution By Eligible Voters
         public function SuperAdminVoterDistribution()
           {
-              $validVoterCounts = [
-                  'Yes' => User::where('access_level', '!=', 'superadmin')->where('validvoter', 'Yes')->where('access_level', '!=', 'superadmin')->count(),
-                  'No' => User::where('access_level', '!=', 'superadmin')->where('validvoter', 'No')->where('access_level', '!=', 'superadmin')->count(),
-              ];
-
-              $validVoterData = [
-                  'labels' => ['Eligible Voters', 'Ineligible Voters'],
-                  'datasets' => [
-                      [
-                          'data' => array_values($validVoterCounts),
-                          'backgroundColor' => ['#3498db', '#e74c3c']
-                      ]
-                  ]
-              ];
-
-              return response()->json($validVoterData);
+              return response()->json(app(CampaignDashboardChartService::class)->voter($this->getProfileData()));
         }
 
          //function member Distribution By State
          public function SuperAdminStateDistribution()
          {
-             $states = State::all(); // Assuming you have a State model and table
-
-             $stateCounts = [];
-             // Define an array of colors
-             $colors = [
-                 '#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c', '#d35400', '#c0392b', '#34495e', '#27ae60', '#2980b9',
-                 '#e74c3c', '#f39c12', '#1abc9c', '#9b59b6', '#27ae60', '#d35400', '#c0392b', '#34495e', '#3498db', '#2ecc71', '#2980b9',
-                 '#e74c3c', '#f39c12', '#1abc9c', '#9b59b6', '#27ae60', '#d35400', '#c0392b', '#34495e', '#3498db', '#2ecc71', '#2980b9',
-                 '#e74c3c', '#f39c12', '#1abc9c',
-             ];
-
-             // Use the array of colors for background colors
-             $backgroundColors = array_slice($colors, 0, count($states));
-
-             // Iterate over states to get the user count per state
-             foreach ($states as $state) {
-                 $count = User::where('state_id', $state->id)->where('access_level', '!=', 'superadmin')->count();
-                 $stateCounts[] = $count;
-             }
-
-             // Get an array of state names
-             $stateLabels = $states->pluck('name')->toArray();
-
-             // Filter out states with zero user counts
-             $filteredStateCounts = array_filter($stateCounts, function ($count) {
-                 return $count > 0;
-             });
-
-             // Filter corresponding state names and background colors
-             $filteredLabels = array_values(array_intersect_key($stateLabels, $filteredStateCounts));
-             $filteredBackgroundColors = array_slice($backgroundColors, 0, count($filteredLabels));
-
-             // Prepare the state distribution data for the donut chart
-             $stateData = [
-                 'labels' => $filteredLabels,
-                 'datasets' => [
-                     [
-                         'label' => 'State Distribution',
-                         'data' => array_values($filteredStateCounts),
-                         'backgroundColor' => $filteredBackgroundColors
-                     ]
-                 ]
-             ];
-
-             return response()->json($stateData);
+             return response()->json(app(CampaignDashboardChartService::class)->packageGeography($this->getProfileData()));
          }
+
+            public function RegionDashBoard($uuid)
+            {
+                $pageTitle = 'Region Dashboard';
+                $profileData = $this->getProfileData();
+                $region = app(\App\Services\DashboardDrilldownService::class)->region($uuid);
+
+                $stateCount = State::where('region_id', $region->id)->count();
+                $statesWithUsersCount = User::where('region_id', $region->id)->whereNotNull('state_id')->distinct('state_id')->count('state_id');
+                $states = State::where('region_id', $region->id)->pluck('id');
+                $lgaCount = LocalGovernmentArea::whereIn('state_id', $states)->count();
+                $lgaWithUsersCount = User::where('region_id', $region->id)->whereNotNull('lga_id')->distinct('lga_id')->count('lga_id');
+                $lgas = LocalGovernmentArea::whereIn('state_id', $states)->pluck('id');
+                $wardCount = Ward::whereIn('lga_id', $lgas)->count();
+                $wardWithUsersCount = User::where('region_id', $region->id)->whereNotNull('ward_id')->distinct('ward_id')->count('ward_id');
+                $wards = Ward::whereIn('lga_id', $lgas)->pluck('id');
+                $puCount = PollingUnit::whereIn('ward_id', $wards)->count();
+                $puWithUsersCount = User::where('region_id', $region->id)->whereNotNull('polling_unit_id')->distinct('polling_unit_id')->count('polling_unit_id');
+                $excoCount = User::where('region_id', $region->id)->where('access_level', '!=', 'user')->where('access_level', '!=', 'superadmin')->where('access_level', '!=', 'puadmin')->count();
+                $memberCount = User::where('region_id', $region->id)->where('access_level', '!=', 'superadmin')->where('access_level', 'user')->count();
+                $userCount = User::where('region_id', $region->id)->where('access_level', '!=', 'superadmin')->count();
+                $newMembers = User::where('region_id', $region->id)->where('access_level', '!=', 'superadmin')->where('created_at', '>=', Carbon::now()->subDays(1))->count();
+
+                return view('backend.'.$profileData->access_level.'.region.dashboard',
+                    compact('profileData', 'pageTitle', 'region', 'stateCount', 'statesWithUsersCount', 'lgaCount', 'lgaWithUsersCount', 'wardCount', 'wardWithUsersCount', 'puCount', 'puWithUsersCount', 'excoCount', 'memberCount', 'userCount', 'newMembers'));
+            }
 
             public function senatorialDistrictDashBoard($uuid)
             {
                 $pageTitle = 'Senatorial District Dashboard';
                 $profileData  = $this->getProfileData();
-                $district = SenatorialDistrict::with('state')->where('uuid', $uuid)->first();
+                $district = app(\App\Services\DashboardDrilldownService::class)->senatorialDistrict($uuid);
 
                 if(!$district){
                     return redirect()->back()->with('error', 'Senatorial District not found');
                 }
+                app(\App\Services\LicensedScopeQueryService::class)->abortIfSenatorialDistrictNotAllowed($district->id);
 
                 $lgaCount = LocalGovernmentArea::where('senatorial_district_id', $district->id)->count();
                 $lgaWithUsersCount = LocalGovernmentArea::where('senatorial_district_id', $district->id)->whereHas('users')->count();
@@ -568,11 +438,12 @@ class SuperAdminController extends Controller
             {
                 $pageTitle = 'Federal Constituency Dashboard';
                 $profileData  = $this->getProfileData();
-                $constituency = FederalConstituency::with('state')->where('uuid', $uuid)->first();
+                $constituency = app(\App\Services\DashboardDrilldownService::class)->federalConstituency($uuid);
 
                 if(!$constituency){
                     return redirect()->back()->with('error', 'Federal Constituency not found');
                 }
+                app(\App\Services\LicensedScopeQueryService::class)->abortIfFederalConstituencyNotAllowed($constituency->id);
 
                 $lgaCount = LocalGovernmentArea::where('federal_constituency_id', $constituency->id)->count();
                 $lgaWithUsersCount = LocalGovernmentArea::where('federal_constituency_id', $constituency->id)->whereHas('users')->count();
@@ -635,11 +506,12 @@ class SuperAdminController extends Controller
             {
                 $pageTitle = 'State Dashboard';
                 $profileData  = $this->getProfileData();
-                $state = State::where('uuid', $uuid)->first();
+                $state = app(\App\Services\DashboardDrilldownService::class)->state($uuid);
 
                 if(!$state){
                     return redirect()->back()->with('error', 'State not found');
                 }
+                app(\App\Services\LicensedScopeQueryService::class)->abortIfStateNotAllowed($state->id);
 
                 $senatorialDistrictCount = SenatorialDistrict::where('state_id', $state->id)->count();
                 $senatorialDistrictsWithUsersCount = SenatorialDistrict::where('state_id', $state->id)
@@ -736,11 +608,12 @@ class SuperAdminController extends Controller
             {
                 $pageTitle = 'Local Government Dashboard';
                 $profileData  = $this->getProfileData();
-                $lga = LocalGovernmentArea::where('uuid', $uuid)->first();
+                $lga = app(\App\Services\DashboardDrilldownService::class)->lga($uuid);
 
                 if(!$lga){
                     return redirect()->back()->with('error', 'LGA not found');
                 }
+                app(\App\Services\LicensedScopeQueryService::class)->abortIfLgaNotAllowed($lga->id);
 
 
 
@@ -807,7 +680,7 @@ class SuperAdminController extends Controller
             {
                 $pageTitle = 'Ward Dashboard';
                 $profileData  = $this->getProfileData();
-                $ward = Ward::where('uuid', $uuid)->first();
+                $ward = app(\App\Services\DashboardDrilldownService::class)->ward($uuid);
 
                 if(!$ward){
                     $notification = [
@@ -817,6 +690,7 @@ class SuperAdminController extends Controller
 
                     return redirect()->back()->with($notification);
                 }
+                app(\App\Services\LicensedScopeQueryService::class)->abortIfWardNotAllowed($ward->id);
 
 
 
@@ -881,7 +755,7 @@ class SuperAdminController extends Controller
             {
                 $pageTitle = 'Polling Unit Dashboard';
                 $profileData  = $this->getProfileData();
-                $pu = PollingUnit::where('uuid', $uuid)->first();
+                $pu = app(\App\Services\DashboardDrilldownService::class)->pollingUnit($uuid);
 
                         if(!$pu){
                             $notification = [
@@ -891,6 +765,7 @@ class SuperAdminController extends Controller
 
                             return redirect()->back()->with($notification);
                         }
+                app(\App\Services\LicensedScopeQueryService::class)->abortIfPollingUnitNotAllowed($pu->id);
 
                      $excoCount = User::where('polling_unit_id', $pu->id)
                      ->where('access_level', '!=', 'user')

@@ -14,7 +14,7 @@ $region = \App\Models\Region::find(Auth::user()->region_id);
       <ul class="nav nav-pills nav-sidebar flex-column sidebar-nav" data-widget="treeview" role="menu" data-accordion="false">
 
             <li class="tab nav-item menu-close">
-                        <a href="/regional/dashboard" class="nav-link">
+                        <a href="{{ url('regional/dashboard') }}" class="nav-link">
                           <i class="nav-icon fas fa-home"></i>
                           <p>
                             Dashboard
@@ -37,35 +37,35 @@ $region = \App\Models\Region::find(Auth::user()->region_id);
                         <ul class="nav nav-treeview">
 
                           <li class="nav-item">
-                            <a href="/regional/members/fetch/{{$region->uuid}}" class="nav-link">
+                            <a href="{{ url('regional/members/fetch') }}/{{$region->uuid}}" class="nav-link">
                               <i class="fas fa-user nav-icon"></i>
                               <p>All Members</p>
                             </a>
                           </li>
 
                           <li class="nav-item">
-                            <a href="/regional/members/bystate/{{$region->uuid}}" class="nav-link">
+                            <a href="{{ url('regional/members/bystate') }}/{{$region->uuid}}" class="nav-link">
                             <i class="fas fa-user nav-icon"></i>
                               <p>members by States</p>
                             </a>
                           </li>
 
                           <li class="nav-item">
-                            <a href="/regional/members/bylga/{{$region->uuid}}" class="nav-link">
+                            <a href="{{ url('regional/members/bylga') }}/{{$region->uuid}}" class="nav-link">
                             <i class="fas fa-user nav-icon"></i>
                               <p>Members by LGA</p>
                             </a>
                           </li>
 
                           <li class="nav-item">
-                            <a href="/regional/members/byward/{{$region->uuid}}" class="nav-link">
+                            <a href="{{ url('regional/members/byward') }}/{{$region->uuid}}" class="nav-link">
                             <i class="fas fa-user nav-icon"></i>
                               <p>Members By Wards</p>
                             </a>
                           </li>
 
                           <li class="nav-item">
-                            <a href="/regional/members/bypu/{{$region->uuid}}" class="nav-link">
+                            <a href="{{ url('regional/members/bypu') }}/{{$region->uuid}}" class="nav-link">
                               <i class="fas fa-user nav-icon"></i>
                               <p>Members By PU</p>
                             </a>
@@ -89,27 +89,27 @@ $region = \App\Models\Region::find(Auth::user()->region_id);
           <ul class="nav nav-treeview">
 
           <li class="nav-item">
-              <a href="/regional/elections" class="nav-link">
+              <a href="{{ url('regional/elections') }}" class="nav-link">
                 <i class="fas fa-award nav-icon"></i>
                 <p>Manage Elections</p>
               </a>
             </li>
             <li class="nav-item">
-              <a href="/regional/election/operations-center" class="nav-link">
+              <a href="{{ url('regional/election/operations-center') }}" class="nav-link">
                 <i class="fas fa-broadcast-tower nav-icon"></i>
                 <p>Situation Room</p>
               </a>
             </li>
             @if(app(\App\Services\PollingUnitResultPermissionService::class)->userHasAnyApprovedAssignment($profileData))
             <li class="nav-item">
-              <a href="/regional/vote/add" class="nav-link">
+              <a href="{{ url('regional/vote/add') }}" class="nav-link">
               <i class="fa fa-cloud nav-icon"></i>
                 <p>Upload Polls Result</p>
               </a>
             </li>
 
             <li class="nav-item">
-              <a href="/regional/incident/add" class="nav-link">
+              <a href="{{ url('regional/incident/add') }}" class="nav-link">
               <i class="fa fa-book nav-icon"></i>
                 <p>Report  Incidents</p>
               </a>
@@ -131,21 +131,21 @@ $region = \App\Models\Region::find(Auth::user()->region_id);
                         <ul class="nav nav-treeview">
 
                         <li class="nav-item">
-                            <a href="/regional/dashboard" class="nav-link">
+                            <a href="{{ url('regional/dashboard') }}" class="nav-link">
                               <i class="fas fa-award nav-icon"></i>
                               <p>Election Results</p>
                             </a>
                           </li>
 
                           <li class="nav-item">
-                            <a href="/regional/dashboard" class="nav-link">
+                            <a href="{{ url('regional/dashboard') }}" class="nav-link">
                               <i class="fas fa-vote-yea nav-icon"></i>
                               <p>Election Incident Reports</p>
                             </a>
                           </li>
 
                           <li class="nav-item">
-                            <a href="/regional/state/dashboard" class="nav-link">
+                            <a href="{{ url('regional/state/dashboard') }}" class="nav-link">
                             <i class="fa fa-thumbs-up nav-icon"></i>
                               <p>Financial Reports</p>
                             </a>
@@ -166,21 +166,21 @@ $region = \App\Models\Region::find(Auth::user()->region_id);
                 <ul class="nav nav-treeview">
 
                 <li class="nav-item">
-                    <a href="/regional/dashboard" class="nav-link">
+                    <a href="{{ url('regional/dashboard') }}" class="nav-link">
                       <i class="fas fa-credit-card nav-icon"></i>
                       <p>Expenses</p>
                     </a>
                   </li>
 
                   <li class="nav-item">
-                    <a href="/regional/dashboard" class="nav-link">
+                    <a href="{{ url('regional/dashboard') }}" class="nav-link">
                       <i class="fas fa-shopping-cart nav-icon"></i>
                       <p>Sales Records</p>
                     </a>
                   </li>
 
                   <li class="nav-item">
-                    <a href="/regional/state/dashboard" class="nav-link">
+                    <a href="{{ url('regional/state/dashboard') }}" class="nav-link">
                     <i class="fas fa-dollar-sign nav-icon"></i>
                       <p>Funding Request</p>
                     </a>
@@ -204,14 +204,14 @@ $region = \App\Models\Region::find(Auth::user()->region_id);
                 <ul class="nav nav-treeview">
 
                 <li class="nav-item">
-                    <a href="/regional/events" class="nav-link">
+                    <a href="{{ url('regional/events') }}" class="nav-link">
                       <i class="fas fa-award nav-icon"></i>
                       <p>All Events</p>
                     </a>
                   </li>
 
                   <li class="nav-item">
-                    <a href="/regional/event/add" class="nav-link">
+                    <a href="{{ url('regional/event/add') }}" class="nav-link">
                       <i class="fas fa-plus nav-icon"></i>
                       <p>Add Event</p>
                     </a>
@@ -235,13 +235,13 @@ $region = \App\Models\Region::find(Auth::user()->region_id);
                         <ul class="nav nav-treeview">
 
                           <li class="nav-item">
-                            <a href="/regional/bulksms/send" class="nav-link">
+                            <a href="{{ url('regional/bulksms/send') }}" class="nav-link">
                               <i class="fas fa-sms	 nav-icon"></i>
                               <p>Send SMS</p>
                             </a>
                           </li>
                           <li class="nav-item">
-                            <a href="/messages" class="nav-link">
+                            <a href="{{ url('messages') }}" class="nav-link">
                               <i class="fas fa-comments nav-icon"></i>
                               <p>Internal Communication</p>
                             </a>
@@ -286,42 +286,42 @@ $region = \App\Models\Region::find(Auth::user()->region_id);
                         </a>
                         <ul class="nav nav-treeview">
                           <li class="nav-item">
-                            <a href="/regional/location/states" class="nav-link">
+                            <a href="{{ url('regional/location/states') }}" class="nav-link">
                             <i class="fas fa-map-marker-alt nav-icon"></i>
                               <p>States</p>
                             </a>
                           </li>
 
                           <li class="nav-item">
-                            <a href="/regional/location/senatorial-districts" class="nav-link">
+                            <a href="{{ url('regional/location/senatorial-districts') }}" class="nav-link">
                             <i class="fas fa-map nav-icon"></i>
                               <p>Senatorial Districts</p>
                             </a>
                           </li>
 
                           <li class="nav-item">
-                            <a href="/regional/location/federal-constituencies" class="nav-link">
+                            <a href="{{ url('regional/location/federal-constituencies') }}" class="nav-link">
                             <i class="fas fa-landmark nav-icon"></i>
                               <p>Federal Constituencies</p>
                             </a>
                           </li>
 
                           <li class="nav-item">
-                            <a href="/regional/location/localgovernments" class="nav-link">
+                            <a href="{{ url('regional/location/localgovernments') }}" class="nav-link">
                             <i class="fas fa-map-pin nav-icon"></i>
                               <p>LGA's</p>
                             </a>
                           </li>
 
                           <li class="nav-item">
-                            <a href="/regional/location/wards" class="nav-link">
+                            <a href="{{ url('regional/location/wards') }}" class="nav-link">
                             <i class="fas fa-map-marked-alt nav-icon"></i>
                               <p>Wards</p>
                             </a>
                           </li>
 
                           <li class="nav-item">
-                            <a href="/regional/location/pollingunits" class="nav-link">
+                            <a href="{{ url('regional/location/pollingunits') }}" class="nav-link">
                             <i class="fas fa-monument nav-icon"></i>
                               <p>Polling Units</p>
                             </a>
@@ -345,7 +345,7 @@ $region = \App\Models\Region::find(Auth::user()->region_id);
                         <ul class="nav nav-treeview">
 
                           <li class="nav-item">
-                            <a href="/regional/bulksms/setting" class="nav-link">
+                            <a href="{{ url('regional/bulksms/setting') }}" class="nav-link">
                             <i class="fas fa-sms nav-icon"></i>
                               <p>SMS Settings</p>
                             </a>
@@ -368,7 +368,7 @@ $region = \App\Models\Region::find(Auth::user()->region_id);
                         <ul class="nav nav-treeview">
 
                           <li class="nav-item">
-                            <a href="/regional/profile" class="nav-link">
+                            <a href="{{ url('regional/profile') }}" class="nav-link">
                               <i class="fas fa-file nav-icon"></i>
                               <p> Manage Profile</p>
                             </a>
@@ -377,7 +377,7 @@ $region = \App\Models\Region::find(Auth::user()->region_id);
 
 
                           <li class="nav-item">
-                            <a href="/regional/change/password" class="nav-link">
+                            <a href="{{ url('regional/change/password') }}" class="nav-link">
                             <i class="fas fa-lock nav-icon"></i>
                               <p>Change Password</p>
                             </a>
@@ -391,7 +391,7 @@ $region = \App\Models\Region::find(Auth::user()->region_id);
 
             {{-- Logout --}}
             <li class="nav-item">
-                            <a href="/regional/logout" class="nav-link">
+                            <a href="{{ url('regional/logout') }}" class="nav-link">
                             <i class="fas fa-power-off nav-icon"></i>
                               <p>Logout</p>
                             </a>

@@ -101,11 +101,12 @@ class FederalAdminController extends Controller
     {
         $pageTitle = 'Local Government Dashboard';
         $profileData = $this->getProfileData();
-        $lga = LocalGovernmentArea::where('uuid', $uuid)->first();
+        $lga = app(\App\Services\DashboardDrilldownService::class)->lga($uuid);
 
         if(!$lga){
             return redirect()->back()->with('error', 'LGA not found');
         }
+        app(\App\Services\LicensedScopeQueryService::class)->abortIfLgaNotAllowed($lga->id);
 
         $wardCount = Ward::where('lga_id', $lga->id)->count();
         $wardWithUsersCount = Ward::where('lga_id', $lga->id)->whereHas('users')->count();
@@ -120,18 +121,19 @@ class FederalAdminController extends Controller
         $dashboardMetrics = app(LocationDashboardMetricsService::class)->forLocalGovernmentArea($lga, $profileData);
 
                     return view('backend.'.$profileData->access_level.'.lga.dashboard',
-            compact('profileData', 'pageTitle', 'lga', 'wardCount', 'wardWithUsersCount', 'puCount', 'puWithUsersCount', 'excoCount', 'memberCount', 'userCount', 'newMembers'));
+            compact('profileData', 'pageTitle', 'lga', 'dashboardMetrics', 'wardCount', 'wardWithUsersCount', 'puCount', 'puWithUsersCount', 'excoCount', 'memberCount', 'userCount', 'newMembers'));
     }
 
     public function wardDashBoard($uuid)
     {
         $pageTitle = 'Ward Dashboard';
         $profileData = $this->getProfileData();
-        $ward = Ward::where('uuid', $uuid)->first();
+        $ward = app(\App\Services\DashboardDrilldownService::class)->ward($uuid);
 
         if(!$ward){
             return redirect()->back()->with(['message' => 'Ward not found', 'alert-type' => 'error']);
         }
+        app(\App\Services\LicensedScopeQueryService::class)->abortIfWardNotAllowed($ward->id);
 
         $puCount = PollingUnit::where('ward_id', $ward->id)->count();
         $puWithUsersCount = PollingUnit::where('ward_id', $ward->id)->whereHas('users')->count();
@@ -145,18 +147,19 @@ class FederalAdminController extends Controller
         $dashboardMetrics = app(LocationDashboardMetricsService::class)->forWard($ward, $profileData);
 
                     return view('backend.'.$profileData->access_level.'.ward.dashboard',
-            compact('profileData', 'pageTitle', 'ward', 'puCount', 'puWithUsersCount', 'excoCount', 'memberCount', 'eligibleVotersCount', 'inEligibleVotersCount', 'userCount', 'newMembers'));
+            compact('profileData', 'pageTitle', 'ward', 'dashboardMetrics', 'puCount', 'puWithUsersCount', 'excoCount', 'memberCount', 'eligibleVotersCount', 'inEligibleVotersCount', 'userCount', 'newMembers'));
     }
 
     public function puDashBoard($uuid)
     {
         $pageTitle = 'Polling Unit Dashboard';
         $profileData = $this->getProfileData();
-        $pu = PollingUnit::where('uuid', $uuid)->first();
+        $pu = app(\App\Services\DashboardDrilldownService::class)->pollingUnit($uuid);
 
         if(!$pu){
             return redirect()->back()->with(['message' => 'Polling Unit not found', 'alert-type' => 'error']);
         }
+        app(\App\Services\LicensedScopeQueryService::class)->abortIfPollingUnitNotAllowed($pu->id);
 
         $excoCount = User::where('polling_unit_id', $pu->id)->where('access_level', '!=', 'user')->where('access_level', '!=', 'superadmin')->where('access_level', '!=', 'puadmin')->count();
         $memberCount = User::where('polling_unit_id', $pu->id)->where('access_level', '!=', 'superadmin')->where('access_level', 'user')->count();
@@ -168,7 +171,7 @@ class FederalAdminController extends Controller
         $dashboardMetrics = app(LocationDashboardMetricsService::class)->forPollingUnit($pu, $profileData);
 
                     return view('backend.'.$profileData->access_level.'.pu.dashboard',
-            compact('profileData', 'pageTitle', 'pu', 'excoCount', 'memberCount', 'eligibleVotersCount', 'inEligibleVotersCount', 'userCount', 'newMembers'));
+            compact('profileData', 'pageTitle', 'pu', 'dashboardMetrics', 'excoCount', 'memberCount', 'eligibleVotersCount', 'inEligibleVotersCount', 'userCount', 'newMembers'));
     }
 
     private function getProfileData()

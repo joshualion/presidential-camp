@@ -10,6 +10,7 @@
 
 <script>
 import axios from "axios";
+import { cmRoute } from '../utils/campaignManager';
 
 export default {
   props: ["userId"],
@@ -29,8 +30,8 @@ export default {
   methods: {
     async fetchFollowers(userId) {
       try {
-        const response = await axios.get(`/api/followers/${userId}`);
-        this.followers = response.data;
+        const response = await axios.get(cmRoute('userFollowers', { user: userId }));
+        this.followers = response.data?.followers?.data || response.data?.followers || [];
       } catch (error) {
         console.error("Error fetching followers:", error);
       }

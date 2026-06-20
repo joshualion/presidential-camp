@@ -12,7 +12,7 @@
 <nav class="mt-2">
     <ul class="nav nav-pills nav-sidebar flex-column sidebar-nav" data-widget="treeview" role="menu" data-accordion="false">
         <li class="tab nav-item menu-close">
-            <a href="/senatorial/dashboard" class="nav-link">
+            <a href="{{ url('senatorial/dashboard') }}" class="nav-link">
                 <i class="nav-icon fas fa-home"></i>
                 <p>
                     Dashboard
@@ -32,28 +32,28 @@
             </a>
             <ul class="nav nav-treeview">
                 <li class="nav-item">
-                    <a href="/senatorial/members/fetch/{{ $district?->uuid }}" class="nav-link">
+                    <a href="{{ url('senatorial/members/fetch') }}/{{ $district?->uuid }}" class="nav-link">
                         <i class="fas fa-user nav-icon"></i>
                         <p>All Members</p>
                     </a>
                 </li>
 
                 <li class="nav-item">
-                    <a href="/senatorial/members/bylga/{{ $district?->uuid }}" class="nav-link">
+                    <a href="{{ url('senatorial/members/bylga') }}/{{ $district?->uuid }}" class="nav-link">
                         <i class="fas fa-user nav-icon"></i>
                         <p>Members by LGA</p>
                     </a>
                 </li>
 
                 <li class="nav-item">
-                    <a href="/senatorial/members/byward/{{ $district?->uuid }}" class="nav-link">
+                    <a href="{{ url('senatorial/members/byward') }}/{{ $district?->uuid }}" class="nav-link">
                         <i class="fas fa-user nav-icon"></i>
                         <p>Members By Wards</p>
                     </a>
                 </li>
 
                 <li class="nav-item">
-                    <a href="/senatorial/members/bypu/{{ $district?->uuid }}" class="nav-link">
+                    <a href="{{ url('senatorial/members/bypu') }}/{{ $district?->uuid }}" class="nav-link">
                         <i class="fas fa-user nav-icon"></i>
                         <p>Members By PU</p>
                     </a>
@@ -75,26 +75,26 @@
             </a>
             <ul class="nav nav-treeview">
                 <li class="nav-item">
-                    <a href="/senatorial/elections" class="nav-link">
+                    <a href="{{ url('senatorial/elections') }}" class="nav-link">
                         <i class="fas fa-award nav-icon"></i>
                         <p>Manage Elections</p>
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="/senatorial/election/operations-center" class="nav-link">
+                    <a href="{{ url('senatorial/election/operations-center') }}" class="nav-link">
                         <i class="fas fa-broadcast-tower nav-icon"></i>
                         <p>Situation Room</p>
                     </a>
                 </li>
                 @if(app(\App\Services\PollingUnitResultPermissionService::class)->userHasAnyApprovedAssignment($profileData))
                 <li class="nav-item">
-                    <a href="/senatorial/vote/add" class="nav-link">
+                    <a href="{{ url('senatorial/vote/add') }}" class="nav-link">
                         <i class="fa fa-cloud nav-icon"></i>
                         <p>Upload Polls Result</p>
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="/senatorial/incident/add" class="nav-link">
+                    <a href="{{ url('senatorial/incident/add') }}" class="nav-link">
                         <i class="fa fa-book nav-icon"></i>
                         <p>Report Incidents</p>
                     </a>
@@ -114,7 +114,7 @@
             </a>
             <ul class="nav nav-treeview">
                 <li class="nav-item">
-                    <a href="/messages" class="nav-link">
+                    <a href="{{ url('messages') }}" class="nav-link">
                         <i class="fas fa-comments nav-icon"></i>
                         <p>Internal Communication</p>
                     </a>
@@ -134,25 +134,25 @@
             </a>
             <ul class="nav nav-treeview">
                 <li class="nav-item">
-                    <a href="/senatorial/location/federal-constituencies" class="nav-link">
+                    <a href="{{ url('senatorial/location/federal-constituencies') }}" class="nav-link">
                         <i class="fas fa-landmark nav-icon"></i>
                         <p>Federal Constituencies</p>
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="/senatorial/location/localgovernments" class="nav-link">
+                    <a href="{{ url('senatorial/location/localgovernments') }}" class="nav-link">
                         <i class="fas fa-map-pin nav-icon"></i>
                         <p>LGA's</p>
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="/senatorial/location/wards" class="nav-link">
+                    <a href="{{ url('senatorial/location/wards') }}" class="nav-link">
                         <i class="fas fa-map-marked-alt nav-icon"></i>
                         <p>Wards</p>
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="/senatorial/location/pollingunits" class="nav-link">
+                    <a href="{{ url('senatorial/location/pollingunits') }}" class="nav-link">
                         <i class="fas fa-monument nav-icon"></i>
                         <p>Polling Units</p>
                     </a>
@@ -172,13 +172,13 @@
             </a>
             <ul class="nav nav-treeview">
                 <li class="nav-item">
-                    <a href="/senatorial/profile" class="nav-link">
+                    <a href="{{ url('senatorial/profile') }}" class="nav-link">
                         <i class="fas fa-file nav-icon"></i>
                         <p>Manage Profile</p>
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="/senatorial/change/password" class="nav-link">
+                    <a href="{{ url('senatorial/change/password') }}" class="nav-link">
                         <i class="fas fa-lock nav-icon"></i>
                         <p>Change Password</p>
                     </a>
@@ -189,7 +189,7 @@
 
         {{-- Logout --}}
         <li class="nav-item">
-            <a href="/senatorial/logout" class="nav-link">
+            <a href="{{ url('senatorial/logout') }}" class="nav-link">
                 <i class="fas fa-power-off nav-icon"></i>
                 <p>Logout</p>
             </a>

@@ -6,6 +6,7 @@ namespace App\Imports;
 use App\Models\User;
 use App\Models\LocalGovernmentArea;
 use App\Models\State;
+use App\Services\LicensedScopeQueryService;
 use Illuminate\Support\Facades\Auth;
 use Maatwebsite\Excel\Concerns\ToModel;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
@@ -32,7 +33,10 @@ class LocalGovernmentImport implements ToModel, WithHeadingRow
             return null;
         }
 
-       
+        if (!app(LicensedScopeQueryService::class)->allowsPayload(['state_id' => $state->id])) {
+            $this->failedInserts++;
+            return null;
+        }
 
         $existingLocalGovernmentArea = LocalGovernmentArea::where('name', $row['name'])
                             ->where('state_id', $state->id)

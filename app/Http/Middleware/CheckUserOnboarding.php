@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use App\Support\SafeDatabase;
 
 class CheckUserOnboarding
 {
@@ -63,12 +64,14 @@ class CheckUserOnboarding
      */
     protected function isProfileComplete($user): bool
     {
-        $requireBank = optional(\App\Models\SystemSetting::first())->require_bank_details;
+        $requireBank = SafeDatabase::hasTable('system_settings')
+            ? optional(\App\Models\SystemSetting::first())->require_bank_details
+            : false;
         $hasBank = $user->bank && $user->bank_account_number;
 
         $baseComplete = $user->firstname && $user->lastname && $user->phone;
         $locationComplete = match ($user->access_level) {
-            'nationaladmin' => true,
+            'superadmin', 'nationaladmin' => true,
             'regionaladmin' => !empty($user->region_id),
             'stateadmin' => !empty($user->state_id),
             'senatorialadmin' => !empty($user->senatorial_district_id),

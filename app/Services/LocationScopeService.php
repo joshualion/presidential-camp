@@ -57,14 +57,13 @@ class LocationScopeService
     {
         $scopeType = $this->getScopeType($user);
         $scopeId = $this->getScopeId($user);
-
-        if ($scopeType === self::NATIONAL || empty($scopeId)) {
-            return $query;
-        }
-
         $subject ??= $this->inferSubject($query);
 
-        return match ($subject) {
+        if ($scopeType === self::NATIONAL || empty($scopeId)) {
+            return $this->applyLicensedScope($query, $subject);
+        }
+
+        $query = match ($subject) {
             'users', 'members' => $this->applyUserScope($query, $scopeType, $scopeId, $table ?? 'users'),
             'polling_units' => $this->applyPollingUnitScope($query, $scopeType, $scopeId, $table ?? 'polling_units'),
             'wards' => $this->applyWardScope($query, $scopeType, $scopeId, $table ?? 'wards'),
@@ -74,13 +73,15 @@ class LocationScopeService
             'polling_unit_results', 'election_results' => $this->applyPollingUnitResultScope($query, $scopeType, $scopeId, $table ?? 'polling_unit_results'),
             default => $this->applyUserScope($query, $scopeType, $scopeId, $table),
         };
+
+        return $this->applyLicensedScope($query, $subject);
     }
 
     public function applyBoundaryFilter(EloquentBuilder|QueryBuilder $query, string $boundaryType, int $boundaryId, ?string $subject = null, ?string $table = null): EloquentBuilder|QueryBuilder
     {
         $subject ??= $this->inferSubject($query);
 
-        return match ($subject) {
+        $query = match ($subject) {
             'users', 'members' => $this->applyUserScope($query, $boundaryType, $boundaryId, $table ?? 'users'),
             'polling_units' => $this->applyPollingUnitScope($query, $boundaryType, $boundaryId, $table ?? 'polling_units'),
             'wards' => $this->applyWardScope($query, $boundaryType, $boundaryId, $table ?? 'wards'),
@@ -90,6 +91,8 @@ class LocationScopeService
             'polling_unit_results', 'election_results' => $this->applyPollingUnitResultScope($query, $boundaryType, $boundaryId, $table ?? 'polling_unit_results'),
             default => $query,
         };
+
+        return $this->applyLicensedScope($query, $subject);
     }
 
     public function resolveRecordLocation(object $record): array
@@ -149,8 +152,8 @@ class LocationScopeService
         return match ($scopeType) {
             self::REGION => $this->whereRelated($query, 'ward.localGovernmentArea.state', 'region_id', $scopeId, $table, 'states.region_id'),
             self::STATE => $this->whereRelated($query, 'ward.localGovernmentArea', 'state_id', $scopeId, $table, 'local_government_areas.state_id'),
-            self::SENATORIAL => $this->whereColumn($query, $table, 'senatorial_district_id', $scopeId),
-            self::FEDERAL => $this->whereColumn($query, $table, 'federal_constituency_id', $scopeId),
+            self::SENATORIAL => $this->wherePollingUnitBoundaryWithLgaFallback($query, $table, 'senatorial_district_id', $scopeId),
+            self::FEDERAL => $this->wherePollingUnitBoundaryWithLgaFallback($query, $table, 'federal_constituency_id', $scopeId),
             self::LGA => $this->whereRelated($query, 'ward', 'lga_id', $scopeId, $table, 'wards.lga_id'),
             self::WARD => $this->whereColumn($query, $table, 'ward_id', $scopeId),
             self::POLLING_UNIT => $this->whereColumn($query, $table, 'id', $scopeId),
@@ -240,6 +243,33 @@ class LocationScopeService
         });
     }
 
+    private function wherePollingUnitBoundaryWithLgaFallback(EloquentBuilder|QueryBuilder $query, string $table, string $column, int $scopeId): EloquentBuilder|QueryBuilder
+    {
+        return $query->where(function ($boundaryQuery) use ($table, $column, $scopeId) {
+            $this->whereColumn($boundaryQuery, $table, $column, $scopeId);
+
+            $boundaryQuery->orWhere(function ($fallbackQuery) use ($table, $column, $scopeId) {
+                $fallbackQuery->whereNull("{$table}.{$column}");
+
+                if ($fallbackQuery instanceof EloquentBuilder) {
+                    $fallbackQuery->whereHas('ward.localGovernmentArea', fn ($lgaQuery) => $lgaQuery->where($column, $scopeId));
+
+                    return;
+                }
+
+                $fallbackQuery->whereExists(function ($lgaQuery) use ($table, $column, $scopeId) {
+                    $lgaQuery
+                        ->selectRaw('1')
+                        ->from('polling_units as scoped_polling_units')
+                        ->join('wards as scoped_wards', 'scoped_polling_units.ward_id', '=', 'scoped_wards.id')
+                        ->join('local_government_areas as scoped_lgas', 'scoped_wards.lga_id', '=', 'scoped_lgas.id')
+                        ->whereColumn('scoped_polling_units.id', "{$table}.id")
+                        ->where("scoped_lgas.{$column}", $scopeId);
+                });
+            });
+        });
+    }
+
     private function wherePollingUnitScope(EloquentBuilder|QueryBuilder $query, string $table, string $scopeType, int $scopeId): EloquentBuilder|QueryBuilder
     {
         if ($query instanceof EloquentBuilder) {
@@ -276,6 +306,11 @@ class LocationScopeService
         }
 
         return $query->from;
+    }
+
+    private function applyLicensedScope(EloquentBuilder|QueryBuilder $query, ?string $subject): EloquentBuilder|QueryBuilder
+    {
+        return app(LicensedScopeQueryService::class)->applyToSubject($query, $subject);
     }
 
     private function resolvePollingUnit(object $record): ?PollingUnit

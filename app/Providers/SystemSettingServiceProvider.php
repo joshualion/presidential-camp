@@ -7,6 +7,7 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\View;
 use App\Models\SystemSetting;
 use Illuminate\Support\Facades\Route;
+use App\Support\SafeDatabase;
 
 class SystemSettingServiceProvider extends ServiceProvider
 {
@@ -29,7 +30,7 @@ class SystemSettingServiceProvider extends ServiceProvider
         // });
 
         View::composer('*', function ($view) {
-            if (Schema::hasTable('system_settings')) {
+            if (SafeDatabase::hasTable('system_settings')) {
                 // Only try to fetch the first record if the table exists
                 $SystemSetting = SystemSetting::first();
                 

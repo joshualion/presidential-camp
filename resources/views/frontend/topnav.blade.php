@@ -93,7 +93,7 @@
     };
 
     const fetchUnread = () => {
-        fetch('/messages/unread-count', { headers: { 'Accept': 'application/json' }})
+        fetch(@json(route('messages.unread-count')), { headers: { 'Accept': 'application/json' }})
             .then(res => res.json())
             .then(data => {
                 const c = data?.unread || 0;
@@ -103,10 +103,14 @@
             .catch(() => {});
     };
 
-    // initial fetch and poll every 5s
+    // initial fetch and poll using self-hosted-safe interval
     document.addEventListener('DOMContentLoaded', () => {
+        const intervals = window.CampaignManager?.community?.intervals || {};
         fetchUnread();
-        setInterval(fetchUnread, 5000);
+        setInterval(() => {
+            if (document.visibilityState === 'hidden') return;
+            fetchUnread();
+        }, intervals.message_badge || 30000);
     });
 })();
 </script>
@@ -147,7 +151,7 @@
             <!-- RIGHT: Actions -->
             <div class="micro-actions d-flex align-items-center gap-3">
 
-                <a href="/community/feed" class="micro-icon" title="Home">
+                <a href="{{ route('timeline') }}" class="micro-icon" title="Home">
                     <i class="fas fa-home"></i>
                 </a>
 

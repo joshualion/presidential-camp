@@ -11,14 +11,15 @@
               <div class="card-header">
                 <h3 class="card-title">Edit Role</h3>
                 <div class="card-tools">
-                    <a href="{{ route('nationaladmin.settings.roles') }}"><button class="btn btn-default"> <i class="fas fa-eye"></i> All Roles</button></a>
+                    <a href="{{ route($profileData->access_level.'.settings.roles') }}"><button class="btn btn-default"> <i class="fas fa-eye"></i> All Roles</button></a>
                 </div>
               </div>
               <!-- /.card-header -->
               <div class="card-body">
+              @include('backend.shared.rbac.package-notice')
 
               <!-- form start -->
-              <form class="form" action="{{route('nationaladmin.settings.role.update',  $role->id)}}" method="POST">
+              <form class="form" action="{{route($profileData->access_level.'.settings.role.update',  $role->id)}}" method="POST">
                 @csrf
                 <div class="card-body">
                   <div class="form-group">
@@ -31,15 +32,17 @@
                           <select class="form-control" name="group_name" id="group_name" required >
                                <option value="">Select Role Group</option>
                                <optgroup label="Roles">
-                                <option value="nationaladmin" @if($role->group_name == 'nationaladmin') selected @endif>National Admins</option>
-                                <option value="regionaladmin" @if($role->group_name == 'regionaladmin') selected @endif>Regional Admins</option>
-                                <option value="stateadmin" @if($role->group_name == 'stateadmin') selected @endif>State Admins</option>
-                                <option value="lgaadmin" @if($role->group_name == 'lgaadmin') selected @endif>LGA Admins</option>
-                                <option value="wardadmin" @if($role->group_name == 'wardadmin') selected @endif>Ward Admins</option>
-                                <option value="puadmin" @if($role->group_name == 'puadmin') selected @endif>Polling Unit Admins</option>
-                                <!-- End payment Options -->
+                                @foreach($rbacRoleGroups ?? [] as $accessLevel => $label)
+                                    <option value="{{ $accessLevel }}" @if(old('group_name', $role->group_name) == $accessLevel) selected @endif>{{ $label }}</option>
+                                @endforeach
                                </optgroup>
                            </select>
+                           @error('name')
+                               <div class="text-danger small">{{ $message }}</div>
+                           @enderror
+                           @error('group_name')
+                               <div class="text-danger small">{{ $message }}</div>
+                           @enderror
                  </div>
 
 

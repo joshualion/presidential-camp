@@ -11,9 +11,9 @@
               <div class="card-header">
                 <h3 class="card-title">All Permissions</h3>
                 <div class="card-tools">
-                     <a href="{{ route('nationaladmin.settings.permission.add') }}"><button class="btn btn-default"> <i class="fa fa-plus-square"></i> Add Permission</button></a>
-                     <a href="{{route('nationaladmin.settings.import.permission')}}"><button class="btn btn-dark"> <i class="fa fa-file-excel"></i> Import</button></a>
-                     <a href="{{ route('nationaladmin.settings.roles') }}"><button class="btn btn-default"> <i class="fas fa-pencil-alt"></i> Manage Roles</button></a>
+                     <a href="{{ route($profileData->access_level.'.settings.permission.add') }}"><button class="btn btn-default"> <i class="fa fa-plus-square"></i> Add Permission</button></a>
+                     <a href="{{route($profileData->access_level.'.settings.import.permission')}}"><button class="btn btn-dark"> <i class="fa fa-file-excel"></i> Import</button></a>
+                     <a href="{{ route($profileData->access_level.'.settings.roles') }}"><button class="btn btn-default"> <i class="fas fa-pencil-alt"></i> Manage Roles</button></a>
                 </div>
               </div>
               <!-- /.card-header -->
@@ -40,8 +40,8 @@
                     <td>{{ $permission->guard_name}}</td>
                     <td>{{ $permission->group_name}}</td>
                     <td>
-                      <a href="{{ route('nationaladmin.settings.permission.edit',  encrypt($permission->id))}}" ><button class="btn btn-success btn-sm"><i class="fas fa-pencil-alt"></i> Edit</button></a>
-                      <form action="{{ route('nationaladmin.settings.permission.delete',  encrypt($permission->id)) }}" method="POST" style="display: inline-block;">
+                      <a href="{{ route($profileData->access_level.'.settings.permission.edit',  encrypt($permission->id))}}" ><button class="btn btn-success btn-sm"><i class="fas fa-pencil-alt"></i> Edit</button></a>
+                      <form action="{{ route($profileData->access_level.'.settings.permission.delete',  encrypt($permission->id)) }}" method="POST" style="display: inline-block;">
                         @csrf
                         @method('DELETE')
                         <button type="submit" class="btn btn-danger btn-sm delete-btn"><i class="fas fa-trash"></i> Delete</button>
@@ -140,7 +140,6 @@ $(document).ready(function() {
 
 
 @endsection
-
 
 
 

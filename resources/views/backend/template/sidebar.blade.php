@@ -168,7 +168,7 @@
                   }
               @endphp
 
-          <a href="{{$url}}" class="d-block">{{(!empty($profileData->firstname)) ? ($profileData->firstname.' '. $profileData->lastname ) : ('Unamed User')}}</a>
+          <a href="{{ url(ltrim($url, '/')) }}" class="d-block">{{(!empty($profileData->firstname)) ? ($profileData->firstname.' '. $profileData->lastname ) : ('Unamed User')}}</a>
         </div>
         @if(Auth::user()->access_level === 'superadmin')
           <div class="ms-auto">
@@ -322,7 +322,7 @@
       );
 
       if (isElectionPath) {
-        const electionIndexLink = sidebar.querySelector(`.sidebar-nav a.nav-link[href="/${section}/elections"]`);
+        const electionIndexLink = sidebar.querySelector(`.sidebar-nav a.nav-link[href="{{ url('${section}/elections') }}"]`);
         const electionMenuItem = electionIndexLink?.closest('.nav-treeview')?.closest('.nav-item');
         const electionMenuLink = electionMenuItem?.querySelector(':scope > a.nav-link');
         electionMenuItem?.classList.add('menu-open');

@@ -14,7 +14,7 @@ $ward = \App\Models\Ward::find(Auth::user()->ward_id);
       <ul class="nav nav-pills nav-sidebar flex-column sidebar-nav" data-widget="treeview" role="menu" data-accordion="false">
 
             <li class="tab nav-item menu-close">
-                        <a href="/ward/dashboard" class="nav-link">
+                        <a href="{{ url('ward/dashboard') }}" class="nav-link">
                           <i class="nav-icon fas fa-home"></i>
                           <p>
                             Dashboard
@@ -38,7 +38,7 @@ $ward = \App\Models\Ward::find(Auth::user()->ward_id);
                         <ul class="nav nav-treeview">
 
                           <li class="nav-item">
-                            <a href="/ward/members/fetch/{{$ward->uuid}}" class="nav-link">
+                            <a href="{{ url('ward/members/fetch') }}/{{$ward->uuid}}" class="nav-link">
                               <i class="fas fa-user nav-icon"></i>
                               <p>All Members</p>
                             </a>
@@ -47,7 +47,7 @@ $ward = \App\Models\Ward::find(Auth::user()->ward_id);
 
 
                           <li class="nav-item">
-                            <a href="/ward/members/bypu/{{$ward->uuid}}" class="nav-link">
+                            <a href="{{ url('ward/members/bypu') }}/{{$ward->uuid}}" class="nav-link">
                               <i class="fas fa-user nav-icon"></i>
                               <p>Members By PU</p>
                             </a>
@@ -72,27 +72,27 @@ $ward = \App\Models\Ward::find(Auth::user()->ward_id);
           <ul class="nav nav-treeview">
 
           <li class="nav-item">
-              <a href="/ward/elections" class="nav-link">
+              <a href="{{ url('ward/elections') }}" class="nav-link">
                 <i class="fas fa-award nav-icon"></i>
                 <p>Manage Elections</p>
               </a>
             </li>
             <li class="nav-item">
-              <a href="/ward/election/operations-center" class="nav-link">
+              <a href="{{ url('ward/election/operations-center') }}" class="nav-link">
                 <i class="fas fa-broadcast-tower nav-icon"></i>
                 <p>Situation Room</p>
               </a>
             </li>
             @if(app(\App\Services\PollingUnitResultPermissionService::class)->userHasAnyApprovedAssignment($profileData))
             <li class="nav-item">
-              <a href="/ward/vote/add" class="nav-link">
+              <a href="{{ url('ward/vote/add') }}" class="nav-link">
               <i class="fa fa-cloud nav-icon"></i>
                 <p>Upload Polls Result</p>
               </a>
             </li>
 
             <li class="nav-item">
-              <a href="/ward/incident/add" class="nav-link">
+              <a href="{{ url('ward/incident/add') }}" class="nav-link">
               <i class="fa fa-book nav-icon"></i>
                 <p>Report  Incidents</p>
               </a>
@@ -116,7 +116,7 @@ $ward = \App\Models\Ward::find(Auth::user()->ward_id);
                 <ul class="nav nav-treeview">
 
                 <li class="nav-item">
-                    <a href="/ward/dashboard" class="nav-link">
+                    <a href="{{ url('ward/dashboard') }}" class="nav-link">
                       <i class="fas fa-credit-card nav-icon"></i>
                       <p>Expenses</p>
                     </a>
@@ -125,7 +125,7 @@ $ward = \App\Models\Ward::find(Auth::user()->ward_id);
 
 
                   <li class="nav-item">
-                    <a href="/ward/lga/dashboard" class="nav-link">
+                    <a href="{{ url('ward/lga/dashboard') }}" class="nav-link">
                     <i class="fas fa-dollar-sign nav-icon"></i>
                       <p>Funding Request</p>
                     </a>
@@ -148,14 +148,14 @@ $ward = \App\Models\Ward::find(Auth::user()->ward_id);
                 <ul class="nav nav-treeview">
 
                 <li class="nav-item">
-                    <a href="/ward/events" class="nav-link">
+                    <a href="{{ url('ward/events') }}" class="nav-link">
                       <i class="fas fa-award nav-icon"></i>
                       <p>All Events</p>
                     </a>
                   </li>
 
                   <li class="nav-item">
-                    <a href="/ward/event/add" class="nav-link">
+                    <a href="{{ url('ward/event/add') }}" class="nav-link">
                       <i class="fas fa-plus nav-icon"></i>
                       <p>Add Event</p>
                     </a>
@@ -179,13 +179,13 @@ $ward = \App\Models\Ward::find(Auth::user()->ward_id);
                         <ul class="nav nav-treeview">
 
                           <li class="nav-item">
-                            <a href="/ward/bulksms/send" class="nav-link">
+                            <a href="{{ url('ward/bulksms/send') }}" class="nav-link">
                               <i class="fas fa-sms	 nav-icon"></i>
                               <p>Send SMS</p>
                             </a>
                           </li>
                           <li class="nav-item">
-                            <a href="/messages" class="nav-link">
+                            <a href="{{ url('messages') }}" class="nav-link">
                               <i class="fas fa-comments nav-icon"></i>
                               <p>Internal Communication</p>
                             </a>
@@ -230,7 +230,7 @@ $ward = \App\Models\Ward::find(Auth::user()->ward_id);
                         </a>
                         <ul class="nav nav-treeview">
                           <li class="nav-item">
-                            <a href="/ward/location/pollingunits" class="nav-link">
+                            <a href="{{ url('ward/location/pollingunits') }}" class="nav-link">
                             <i class="fas fa-monument nav-icon"></i>
                               <p>Polling Units</p>
                             </a>
@@ -254,7 +254,7 @@ $ward = \App\Models\Ward::find(Auth::user()->ward_id);
                         <ul class="nav nav-treeview">
 
                           <li class="nav-item">
-                            <a href="/ward/bulksms/setting" class="nav-link">
+                            <a href="{{ url('ward/bulksms/setting') }}" class="nav-link">
                             <i class="fas fa-sms nav-icon"></i>
                               <p>SMS Settings</p>
                             </a>
@@ -277,7 +277,7 @@ $ward = \App\Models\Ward::find(Auth::user()->ward_id);
                         <ul class="nav nav-treeview">
 
                           <li class="nav-item">
-                            <a href="/ward/profile" class="nav-link">
+                            <a href="{{ url('ward/profile') }}" class="nav-link">
                               <i class="fas fa-file nav-icon"></i>
                               <p> Manage Profile</p>
                             </a>
@@ -286,7 +286,7 @@ $ward = \App\Models\Ward::find(Auth::user()->ward_id);
 
 
                           <li class="nav-item">
-                            <a href="/ward/change/password" class="nav-link">
+                            <a href="{{ url('ward/change/password') }}" class="nav-link">
                             <i class="fas fa-lock nav-icon"></i>
                               <p>Change Password</p>
                             </a>
@@ -300,7 +300,7 @@ $ward = \App\Models\Ward::find(Auth::user()->ward_id);
 
             {{-- Logout --}}
             <li class="nav-item">
-                            <a href="/ward/logout" class="nav-link">
+                            <a href="{{ url('ward/logout') }}" class="nav-link">
                             <i class="fas fa-power-off nav-icon"></i>
                               <p>Logout</p>
                             </a>

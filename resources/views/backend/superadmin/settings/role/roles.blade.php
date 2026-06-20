@@ -17,6 +17,7 @@
                 </div>
                 <!-- /.card-header -->
                 <div class="card-body">
+                    @include('backend.shared.rbac.package-notice')
                     <table id="myroles" class="table table-bordered table-striped">
                     <thead>
                     <tr>
@@ -39,8 +40,8 @@
                         <td>{{ $role->guard_name}}</td>
                         <td>{{ $role->group_name}}</td>
                         <td>
-                        <a href="{{ route('nationaladmin.settings.role.edit',  encrypt($role->id))}}" ><button class="btn btn-success btn-sm"><i class="fas fa-pencil-alt"></i> Edit</button></a>
-                        <form action="{{ route('nationaladmin.settings.role.delete',  encrypt($role->id)) }}" method="POST" style="display: inline-block;">
+                        <a href="{{ route($profileData->access_level.'.settings.role.edit',  encrypt($role->id))}}" ><button class="btn btn-success btn-sm"><i class="fas fa-pencil-alt"></i> Edit</button></a>
+                        <form action="{{ route($profileData->access_level.'.settings.role.delete',  encrypt($role->id)) }}" method="POST" style="display: inline-block;">
                             @csrf
                             @method('DELETE')
                             <button type="submit" class="btn btn-danger btn-sm delete-btn"><i class="fas fa-trash"></i> Delete</button>
@@ -139,7 +140,6 @@ $(document).ready(function() {
 
 
 @endsection
-
 
 
 

@@ -18,6 +18,8 @@ use App\Models\State;
 use App\Models\SystemSetting;
 use App\Models\Vote;
 use App\Models\Ward;
+use App\Services\CampaignDashboardChartService;
+use App\Services\LicensedScopeQueryService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -44,6 +46,40 @@ class ChartsController extends Controller
     {
         $id = Auth::user()->id;
         return User::find($id);
+    }
+
+    private function licensedScope(): LicensedScopeQueryService
+    {
+        return app(LicensedScopeQueryService::class);
+    }
+
+    private function chartService(): CampaignDashboardChartService
+    {
+        return app(CampaignDashboardChartService::class);
+    }
+
+    private function userQuery()
+    {
+        $query = User::where('access_level', '!=', 'superadmin');
+        $this->licensedScope()->applyToUsersQuery($query);
+
+        return $query;
+    }
+
+    private function regionsQuery()
+    {
+        $query = Region::query();
+        $this->licensedScope()->applyToRegionsQuery($query);
+
+        return $query;
+    }
+
+    private function statesQuery()
+    {
+        $query = State::query();
+        $this->licensedScope()->applyToStatesQuery($query);
+
+        return $query;
     }
 
     //Function to get the system country
@@ -74,305 +110,88 @@ class ChartsController extends Controller
 
     public function NationalGenderDistribution()
     {
-        $maleCount = User::where('access_level', '!=', 'superadmin')->where('gender', 'Male')->count();
-        $femaleCount = User::where('access_level', '!=', 'superadmin')->where('gender', 'Female')->count();
-
-        return response()->json([
-            'labels' => ['Male', 'Female'],
-            'datasets' => [
-                [
-                    'data' => [$maleCount, $femaleCount],
-                    'backgroundColor' => ['#28a745', '#e74c3c']
-                ]
-            ]
-        ]);
+        return response()->json($this->chartService()->gender($this->getProfileData()));
     }
 
     public function NationalAgeDistribution()
     {
-        $ageGrades = AgeGrade::all();
-        $ageCounts = [];
-
-        foreach ($ageGrades as $ageGrade) {
-            $ageCounts[] = User::where('access_level', '!=', 'superadmin')->where('age_grade_id', $ageGrade->id)->count();
-        }
-
-        $colors = [
-            '#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c', '#d35400', '#c0392b', '#34495e', '#27ae60', '#2980b9'
-        ];
-
-        return response()->json([
-            'labels' => $ageGrades->pluck('name'),
-            'datasets' => [
-                [
-                    'label' => 'Age Distribution',
-                    'data' => $ageCounts,
-                    'backgroundColor' => array_slice($colors, 0, count($ageGrades))
-                ]
-            ]
-        ]);
+        return response()->json($this->chartService()->age($this->getProfileData()));
     }
 
     public function NationalRegionDistribution()
     {
-        $regions = Region::all();
-        $regionData = [
-            'labels' => [],
-            'datasets' => [
-                [
-                    'data' => [],
-                    'backgroundColor' => [
-                        '#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c', '#d35400', '#c0392b', '#34495e', '#27ae60', '#2980b9'
-                    ]
-                ]
-            ]
-        ];
-
-        foreach ($regions as $region) {
-            $regionData['labels'][] = $region->name;
-            $regionData['datasets'][0]['data'][] = User::where('access_level', '!=', 'superadmin')->where('region_id', $region->id)->count();
-        }
-
-        return response()->json($regionData);
+        return response()->json($this->chartService()->regions($this->getProfileData()));
     }
 
     public function NationalReligionDistribution()
     {
-        $religions = Religion::pluck('name', 'id')->toArray();
-        $religionCounts = [];
-        $colors = [
-            '#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c', '#d35400', '#c0392b', '#34495e', '#27ae60', '#2980b9'
-        ];
-
-        foreach ($religions as $religionId => $religionName) {
-            $religionCounts[] = User::where('access_level', '!=', 'superadmin')->where('religion_id', $religionId)->count();
-        }
-
-        return response()->json([
-            'labels' => array_values($religions),
-            'datasets' => [
-                [
-                    'label' => 'Religion Distribution',
-                    'data' => $religionCounts,
-                    'backgroundColor' => array_slice($colors, 0, count($religions))
-                ]
-            ]
-        ]);
+        return response()->json($this->chartService()->religion($this->getProfileData()));
     }
 
     public function NationalVoterDistribution()
     {
-        return response()->json([
-            'labels' => ['Eligible Voters', 'Ineligible Voters'],
-            'datasets' => [
-                [
-                    'data' => [
-                        User::where('access_level', '!=', 'superadmin')->where('validvoter', 'Yes')->count(),
-                        User::where('access_level', '!=', 'superadmin')->where('validvoter', 'No')->count(),
-                    ],
-                    'backgroundColor' => ['#3498db', '#e74c3c']
-                ]
-            ]
-        ]);
+        return response()->json($this->chartService()->voter($this->getProfileData()));
     }
 
     public function NationalStateDistribution()
     {
-        $states = State::all();
-        $stateCounts = [];
-        $colors = [
-            '#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c', '#d35400', '#c0392b', '#34495e', '#27ae60', '#2980b9',
-            '#e74c3c', '#f39c12', '#1abc9c', '#9b59b6', '#27ae60', '#d35400', '#c0392b', '#34495e', '#3498db', '#2ecc71', '#2980b9',
-            '#e74c3c', '#f39c12', '#1abc9c', '#9b59b6', '#27ae60', '#d35400', '#c0392b', '#34495e', '#3498db', '#2ecc71', '#2980b9',
-            '#e74c3c', '#f39c12', '#1abc9c',
-        ];
-
-        foreach ($states as $state) {
-            $stateCounts[] = User::where('state_id', $state->id)->where('access_level', '!=', 'superadmin')->count();
-        }
-
-        $stateLabels = $states->pluck('name')->toArray();
-        $filteredStateCounts = array_filter($stateCounts, fn ($count) => $count > 0);
-        $filteredLabels = array_values(array_intersect_key($stateLabels, $filteredStateCounts));
-
-        return response()->json([
-            'labels' => $filteredLabels,
-            'datasets' => [
-                [
-                    'label' => 'State Distribution',
-                    'data' => array_values($filteredStateCounts),
-                    'backgroundColor' => array_slice($colors, 0, count($filteredLabels))
-                ]
-            ]
-        ]);
+        return response()->json($this->chartService()->packageGeography($this->getProfileData()));
     }
 
     public function GenderDistributionByRegion($uuid)
     {
         $region = Region::where('uuid', $uuid)->firstOrFail();
+        $this->licensedScope()->abortIfRegionNotAllowed($region->id);
 
-        $maleCount = User::where('access_level', '!=', 'superadmin')
-                            ->where('region_id', $region->id)
-                            ->where('gender', 'Male')->count();
-        $femaleCount = User::where('access_level', '!=', 'superadmin')
-                            ->where('region_id', $region->id)
-                            ->where('gender', 'Female')->count();
-
-        $genderData = [
-            'labels' => ['Male', 'Female'],
-            'datasets' => [
-                [
-                    'data' => [$maleCount, $femaleCount],
-                    'backgroundColor' => ['#28a745', '#e74c3c']
-                ]
-            ]
-        ];
-
-        return response()->json($genderData);
+        return response()->json($this->chartService()->gender($this->getProfileData(), ['type' => 'region', 'id' => $region->id]));
     }
 
     public function GenderDistributionByState($uuid)
     {
         $state = State::where('uuid', $uuid)->firstOrFail();
+        $this->licensedScope()->abortIfStateNotAllowed($state->id);
 
-        $maleCount = User::where('access_level', '!=', 'superadmin')
-                            ->where('state_id', $state->id)
-                            ->where('gender', 'Male')->count();
-        $femaleCount = User::where('access_level', '!=', 'superadmin')
-                            ->where('state_id', $state->id)
-                            ->where('gender', 'Female')->count();
-
-        $genderData = [
-            'labels' => ['Male', 'Female'],
-            'datasets' => [
-                [
-                    'data' => [$maleCount, $femaleCount],
-                    'backgroundColor' => ['#28a745', '#e74c3c']
-                ]
-            ]
-        ];
-
-        return response()->json($genderData);
+        return response()->json($this->chartService()->gender($this->getProfileData(), ['type' => 'state', 'id' => $state->id]));
     }
 
     public function GenderDistributionByLga($uuid)
     {
         $lga = LocalGovernmentArea::where('uuid', $uuid)->firstOrFail();
+        $this->licensedScope()->abortIfLgaNotAllowed($lga->id);
 
-        $maleCount = User::where('access_level', '!=', 'superadmin')
-                            ->where('lga_id', $lga->id)
-                            ->where('gender', 'Male')->count();
-        $femaleCount = User::where('access_level', '!=', 'superadmin')
-                            ->where('lga_id', $lga->id)
-                            ->where('gender', 'Female')->count();
-
-        $genderData = [
-            'labels' => ['Male', 'Female'],
-            'datasets' => [
-                [
-                    'data' => [$maleCount, $femaleCount],
-                    'backgroundColor' => ['#28a745', '#e74c3c']
-                ]
-            ]
-        ];
-
-        return response()->json($genderData);
+        return response()->json($this->chartService()->gender($this->getProfileData(), ['type' => 'lga', 'id' => $lga->id]));
     }
 
     public function GenderDistributionBySenatorialDistrict($uuid)
     {
         $district = SenatorialDistrict::where('uuid', $uuid)->firstOrFail();
+        $this->licensedScope()->abortIfSenatorialDistrictNotAllowed($district->id);
 
-        $maleCount = User::where('access_level', '!=', 'superadmin')
-                            ->where('senatorial_district_id', $district->id)
-                            ->where('gender', 'Male')->count();
-        $femaleCount = User::where('access_level', '!=', 'superadmin')
-                            ->where('senatorial_district_id', $district->id)
-                            ->where('gender', 'Female')->count();
-
-        $genderData = [
-            'labels' => ['Male', 'Female'],
-            'datasets' => [
-                [
-                    'data' => [$maleCount, $femaleCount],
-                    'backgroundColor' => ['#28a745', '#e74c3c']
-                ]
-            ]
-        ];
-
-        return response()->json($genderData);
+        return response()->json($this->chartService()->gender($this->getProfileData(), ['type' => 'senatorial', 'id' => $district->id]));
     }
 
     public function GenderDistributionByFederalConstituency($uuid)
     {
         $constituency = FederalConstituency::where('uuid', $uuid)->firstOrFail();
+        $this->licensedScope()->abortIfFederalConstituencyNotAllowed($constituency->id);
 
-        $maleCount = User::where('access_level', '!=', 'superadmin')
-                            ->where('federal_constituency_id', $constituency->id)
-                            ->where('gender', 'Male')->count();
-        $femaleCount = User::where('access_level', '!=', 'superadmin')
-                            ->where('federal_constituency_id', $constituency->id)
-                            ->where('gender', 'Female')->count();
-
-        $genderData = [
-            'labels' => ['Male', 'Female'],
-            'datasets' => [
-                [
-                    'data' => [$maleCount, $femaleCount],
-                    'backgroundColor' => ['#28a745', '#e74c3c']
-                ]
-            ]
-        ];
-
-        return response()->json($genderData);
+        return response()->json($this->chartService()->gender($this->getProfileData(), ['type' => 'federal', 'id' => $constituency->id]));
     }
 
     public function GenderDistributionByWard($uuid)
     {
         $ward = Ward::where('uuid', $uuid)->firstOrFail();
+        $this->licensedScope()->abortIfWardNotAllowed($ward->id);
 
-        $maleCount = User::where('access_level', '!=', 'superadmin')
-                            ->where('ward_id', $ward->id)
-                            ->where('gender', 'Male')->count();
-        $femaleCount = User::where('access_level', '!=', 'superadmin')
-                            ->where('ward_id', $ward->id)
-                            ->where('gender', 'Female')->count();
-
-        $genderData = [
-            'labels' => ['Male', 'Female'],
-            'datasets' => [
-                [
-                    'data' => [$maleCount, $femaleCount],
-                    'backgroundColor' => ['#28a745', '#e74c3c']
-                ]
-            ]
-        ];
-
-        return response()->json($genderData);
+        return response()->json($this->chartService()->gender($this->getProfileData(), ['type' => 'ward', 'id' => $ward->id]));
     }
 
     public function GenderDistributionByPu($uuid)
     {
         $pu = PollingUnit::where('uuid', $uuid)->firstOrFail();
+        $this->licensedScope()->abortIfPollingUnitNotAllowed($pu->id);
 
-        $maleCount = User::where('access_level', '!=', 'superadmin')
-                            ->where('polling_unit_id', $pu->id)
-                            ->where('gender', 'Male')->count();
-        $femaleCount = User::where('access_level', '!=', 'superadmin')
-                            ->where('polling_unit_id', $pu->id)
-                            ->where('gender', 'Female')->count();
-
-        $genderData = [
-            'labels' => ['Male', 'Female'],
-            'datasets' => [
-                [
-                    'data' => [$maleCount, $femaleCount],
-                    'backgroundColor' => ['#28a745', '#e74c3c']
-                ]
-            ]
-        ];
-
-        return response()->json($genderData);
+        return response()->json($this->chartService()->gender($this->getProfileData(), ['type' => 'polling_unit', 'id' => $pu->id]));
     }
 
 
@@ -381,625 +200,139 @@ class ChartsController extends Controller
     public function AgeDistributionByRegion($uuid)
     {
         $region = Region::where('uuid', $uuid)->firstOrFail();
-        $profileData  = $this->getProfileData();
+        $this->licensedScope()->abortIfRegionNotAllowed($region->id);
 
-        // Fetch all age grades
-        $ageGrades = AgeGrade::all(); // Get both id and name
-
-        // Initialize the counts array
-        $ageCounts = [];
-
-        // Loop through each age grade and count the users
-        foreach ($ageGrades as $ageGrade) {
-            // Count users by age_grade_id
-            $count = User::where('access_level', '!=', 'superadmin')
-                            ->where('region_id', $region->id)
-                            ->where('age_grade_id', $ageGrade->id)->count();
-            // Append the count to the ageCounts array
-            $ageCounts[] = $count;
-        }
-
-        // Define an array of colors for the chart
-        $colors = [
-            '#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c', '#d35400', '#c0392b', '#34495e', '#27ae60', '#2980b9'
-        ];
-
-        // Use the array of colors for background colors
-        $backgroundColors = array_slice($colors, 0, count($ageGrades));
-
-        // Prepare the data structure for Chart.js
-        $ageData = [
-            'labels' => $ageGrades->pluck('name'), // Pluck age grade names
-            'datasets' => [
-                [
-                    'label' => 'Age Distribution',
-                    'data' => $ageCounts, // Data for the counts
-                    'backgroundColor' => $backgroundColors
-                ]
-            ]
-        ];
-
-        // Return the data as JSON for Chart.js
-        return response()->json($ageData);
+        return response()->json($this->chartService()->age($this->getProfileData(), ['type' => 'region', 'id' => $region->id]));
     }
 
     public function AgeDistributionByState($uuid)
     {
         $state = State::where('uuid', $uuid)->firstOrFail();
-        $profileData  = $this->getProfileData();
+        $this->licensedScope()->abortIfStateNotAllowed($state->id);
 
-        // Fetch all age grades
-        $ageGrades = AgeGrade::all(); // Get both id and name
-
-        // Initialize the counts array
-        $ageCounts = [];
-
-        // Loop through each age grade and count the users
-        foreach ($ageGrades as $ageGrade) {
-            // Count users by age_grade_id
-            $count = User::where('access_level', '!=', 'superadmin')
-                            ->where('state_id', $state->id)
-                            ->where('age_grade_id', $ageGrade->id)->count();
-            // Append the count to the ageCounts array
-            $ageCounts[] = $count;
-        }
-
-        // Define an array of colors for the chart
-        $colors = [
-            '#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c', '#d35400', '#c0392b', '#34495e', '#27ae60', '#2980b9'
-        ];
-
-        // Use the array of colors for background colors
-        $backgroundColors = array_slice($colors, 0, count($ageGrades));
-
-        // Prepare the data structure for Chart.js
-        $ageData = [
-            'labels' => $ageGrades->pluck('name'), // Pluck age grade names
-            'datasets' => [
-                [
-                    'label' => 'Age Distribution',
-                    'data' => $ageCounts, // Data for the counts
-                    'backgroundColor' => $backgroundColors
-                ]
-            ]
-        ];
-
-        // Return the data as JSON for Chart.js
-        return response()->json($ageData);
+        return response()->json($this->chartService()->age($this->getProfileData(), ['type' => 'state', 'id' => $state->id]));
     }
 
     public function AgeDistributionByLga($uuid)
     {
         $lga = LocalGovernmentArea::where('uuid', $uuid)->firstOrFail();
+        $this->licensedScope()->abortIfLgaNotAllowed($lga->id);
 
-
-        // Fetch all age grades
-        $ageGrades = AgeGrade::all(); // Get both id and name
-
-        // Initialize the counts array
-        $ageCounts = [];
-
-        // Loop through each age grade and count the users
-        foreach ($ageGrades as $ageGrade) {
-            // Count users by age_grade_id
-            $count = User::where('access_level', '!=', 'superadmin')
-                            ->where('lga_id', $lga->id)
-                            ->where('age_grade_id', $ageGrade->id)->count();
-            // Append the count to the ageCounts array
-            $ageCounts[] = $count;
-        }
-
-        // Define an array of colors for the chart
-        $colors = [
-            '#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c', '#d35400', '#c0392b', '#34495e', '#27ae60', '#2980b9'
-        ];
-
-        // Use the array of colors for background colors
-        $backgroundColors = array_slice($colors, 0, count($ageGrades));
-
-        // Prepare the data structure for Chart.js
-        $ageData = [
-            'labels' => $ageGrades->pluck('name'), // Pluck age grade names
-            'datasets' => [
-                [
-                    'label' => 'Age Distribution',
-                    'data' => $ageCounts, // Data for the counts
-                    'backgroundColor' => $backgroundColors
-                ]
-            ]
-        ];
-
-        // Return the data as JSON for Chart.js
-        return response()->json($ageData);
+        return response()->json($this->chartService()->age($this->getProfileData(), ['type' => 'lga', 'id' => $lga->id]));
     }
 
     public function AgeDistributionBySenatorialDistrict($uuid)
     {
         $district = SenatorialDistrict::where('uuid', $uuid)->firstOrFail();
-        $ageGrades = AgeGrade::all();
-        $ageCounts = [];
+        $this->licensedScope()->abortIfSenatorialDistrictNotAllowed($district->id);
 
-        foreach ($ageGrades as $ageGrade) {
-            $count = User::where('access_level', '!=', 'superadmin')
-                            ->where('senatorial_district_id', $district->id)
-                            ->where('age_grade_id', $ageGrade->id)->count();
-            $ageCounts[] = $count;
-        }
-
-        $colors = [
-            '#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c', '#d35400', '#c0392b', '#34495e', '#27ae60', '#2980b9'
-        ];
-
-        $ageData = [
-            'labels' => $ageGrades->pluck('name'),
-            'datasets' => [
-                [
-                    'label' => 'Age Distribution',
-                    'data' => $ageCounts,
-                    'backgroundColor' => array_slice($colors, 0, count($ageGrades))
-                ]
-            ]
-        ];
-
-        return response()->json($ageData);
+        return response()->json($this->chartService()->age($this->getProfileData(), ['type' => 'senatorial', 'id' => $district->id]));
     }
 
     public function AgeDistributionByFederalConstituency($uuid)
     {
         $constituency = FederalConstituency::where('uuid', $uuid)->firstOrFail();
-        $ageGrades = AgeGrade::all();
-        $ageCounts = [];
+        $this->licensedScope()->abortIfFederalConstituencyNotAllowed($constituency->id);
 
-        foreach ($ageGrades as $ageGrade) {
-            $count = User::where('access_level', '!=', 'superadmin')
-                            ->where('federal_constituency_id', $constituency->id)
-                            ->where('age_grade_id', $ageGrade->id)->count();
-            $ageCounts[] = $count;
-        }
-
-        $colors = [
-            '#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c', '#d35400', '#c0392b', '#34495e', '#27ae60', '#2980b9'
-        ];
-
-        $ageData = [
-            'labels' => $ageGrades->pluck('name'),
-            'datasets' => [
-                [
-                    'label' => 'Age Distribution',
-                    'data' => $ageCounts,
-                    'backgroundColor' => array_slice($colors, 0, count($ageGrades))
-                ]
-            ]
-        ];
-
-        return response()->json($ageData);
+        return response()->json($this->chartService()->age($this->getProfileData(), ['type' => 'federal', 'id' => $constituency->id]));
     }
 
        //function member Distribution By Eligible Voters
     public function VoterDistributionByRegion($uuid)
-       {
+    {
            $region = Region::where('uuid', $uuid)->firstOrFail();
-           $validVoterCounts = [
-               'Yes' => User::where('access_level', '!=', 'superadmin')
-                            ->where('region_id', $region->id)
-                            ->where('validvoter', 'Yes')
-                            ->where('access_level', '!=', 'superadmin')->count(),
+           $this->licensedScope()->abortIfRegionNotAllowed($region->id);
 
-                            'No' => User::where('access_level', '!=', 'superadmin')
-                            ->where('region_id', $region->id)
-                            ->where('validvoter', 'No')
-                            ->where('access_level', '!=', 'superadmin')->count(),
-           ];
-
-           $validVoterData = [
-               'labels' => ['Eligible Voters', 'Ineligible Voters'],
-               'datasets' => [
-                   [
-                       'data' => array_values($validVoterCounts),
-                       'backgroundColor' => ['#3498db', '#e74c3c']
-                   ]
-               ]
-           ];
-
-           return response()->json($validVoterData);
+           return response()->json($this->chartService()->voter($this->getProfileData(), ['type' => 'region', 'id' => $region->id]));
     }
 
     public function VoterDistributionByState($uuid)
     {
         $state = State::where('uuid', $uuid)->firstOrFail();
-        $validVoterCounts = [
-            'Yes' => User::where('access_level', '!=', 'superadmin')
-                         ->where('state_id', $state->id)
-                         ->where('validvoter', 'Yes')->count(),
+        $this->licensedScope()->abortIfStateNotAllowed($state->id);
 
-                         'No' => User::where('access_level', '!=', 'superadmin')
-                         ->where('state_id', $state->id)
-                         ->where('validvoter', 'No')->count(),
-        ];
-
-        $validVoterData = [
-            'labels' => ['Eligible Voters', 'Ineligible Voters'],
-            'datasets' => [
-                [
-                    'data' => array_values($validVoterCounts),
-                    'backgroundColor' => ['#3498db', '#e74c3c']
-                ]
-            ]
-        ];
-
-        return response()->json($validVoterData);
+        return response()->json($this->chartService()->voter($this->getProfileData(), ['type' => 'state', 'id' => $state->id]));
     }
 
     public function VoterDistributionByLga($uuid)
     {
         $lga = LocalGovernmentArea::where('uuid', $uuid)->firstOrFail();
-        $validVoterCounts = [
-            'Yes' => User::where('access_level', '!=', 'superadmin')
-                         ->where('lga_id', $lga->id)
-                         ->where('validvoter', 'Yes')
-                         ->where('access_level', '!=', 'superadmin')->count(),
+        $this->licensedScope()->abortIfLgaNotAllowed($lga->id);
 
-                         'No' => User::where('access_level', '!=', 'superadmin')
-                         ->where('lga_id', $lga->id)
-                         ->where('validvoter', 'No')
-                         ->where('access_level', '!=', 'superadmin')->count(),
-        ];
-
-        $validVoterData = [
-            'labels' => ['Eligible Voters', 'Ineligible Voters'],
-            'datasets' => [
-                [
-                    'data' => array_values($validVoterCounts),
-                    'backgroundColor' => ['#3498db', '#e74c3c']
-                ]
-            ]
-        ];
-
-        return response()->json($validVoterData);
+        return response()->json($this->chartService()->voter($this->getProfileData(), ['type' => 'lga', 'id' => $lga->id]));
     }
 
     public function VoterDistributionBySenatorialDistrict($uuid)
     {
         $district = SenatorialDistrict::where('uuid', $uuid)->firstOrFail();
-        $validVoterCounts = [
-            'Yes' => User::where('access_level', '!=', 'superadmin')
-                         ->where('senatorial_district_id', $district->id)
-                         ->where('validvoter', 'Yes')->count(),
+        $this->licensedScope()->abortIfSenatorialDistrictNotAllowed($district->id);
 
-            'No' => User::where('access_level', '!=', 'superadmin')
-                         ->where('senatorial_district_id', $district->id)
-                         ->where('validvoter', 'No')->count(),
-        ];
-
-        $validVoterData = [
-            'labels' => ['Eligible Voters', 'Ineligible Voters'],
-            'datasets' => [
-                [
-                    'data' => array_values($validVoterCounts),
-                    'backgroundColor' => ['#3498db', '#e74c3c']
-                ]
-            ]
-        ];
-
-        return response()->json($validVoterData);
+        return response()->json($this->chartService()->voter($this->getProfileData(), ['type' => 'senatorial', 'id' => $district->id]));
     }
 
     public function VoterDistributionByFederalConstituency($uuid)
     {
         $constituency = FederalConstituency::where('uuid', $uuid)->firstOrFail();
-        $validVoterCounts = [
-            'Yes' => User::where('access_level', '!=', 'superadmin')
-                         ->where('federal_constituency_id', $constituency->id)
-                         ->where('validvoter', 'Yes')->count(),
+        $this->licensedScope()->abortIfFederalConstituencyNotAllowed($constituency->id);
 
-            'No' => User::where('access_level', '!=', 'superadmin')
-                         ->where('federal_constituency_id', $constituency->id)
-                         ->where('validvoter', 'No')->count(),
-        ];
-
-        $validVoterData = [
-            'labels' => ['Eligible Voters', 'Ineligible Voters'],
-            'datasets' => [
-                [
-                    'data' => array_values($validVoterCounts),
-                    'backgroundColor' => ['#3498db', '#e74c3c']
-                ]
-            ]
-        ];
-
-        return response()->json($validVoterData);
+        return response()->json($this->chartService()->voter($this->getProfileData(), ['type' => 'federal', 'id' => $constituency->id]));
     }
 
     public function VoterDistributionByWard($uuid)
     {
         $ward = Ward::where('uuid', $uuid)->firstOrFail();
-        $validVoterCounts = [
-            'Yes' => User::where('access_level', '!=', 'superadmin')
-                         ->where('ward_id', $ward->id)
-                         ->where('validvoter', 'Yes')
-                         ->where('access_level', '!=', 'superadmin')->count(),
+        $this->licensedScope()->abortIfWardNotAllowed($ward->id);
 
-                         'No' => User::where('access_level', '!=', 'superadmin')
-                         ->where('ward_id', $ward->id)
-                         ->where('validvoter', 'No')
-                         ->where('access_level', '!=', 'superadmin')->count(),
-        ];
-
-        $validVoterData = [
-            'labels' => ['Eligible Voters', 'Ineligible Voters'],
-            'datasets' => [
-                [
-                    'data' => array_values($validVoterCounts),
-                    'backgroundColor' => ['#3498db', '#e74c3c']
-                ]
-            ]
-        ];
-
-        return response()->json($validVoterData);
+        return response()->json($this->chartService()->voter($this->getProfileData(), ['type' => 'ward', 'id' => $ward->id]));
     }
 
     public function VoterDistributionByPu($uuid)
     {
         $pu = PollingUnit::where('uuid', $uuid)->firstOrFail();
-        $validVoterCounts = [
-            'Yes' => User::where('access_level', '!=', 'superadmin')
-                         ->where('polling_unit_id', $pu->id)
-                         ->where('validvoter', 'Yes')
-                         ->where('access_level', '!=', 'superadmin')->count(),
+        $this->licensedScope()->abortIfPollingUnitNotAllowed($pu->id);
 
-                         'No' => User::where('access_level', '!=', 'superadmin')
-                         ->where('polling_unit_id', $pu->id)
-                         ->where('validvoter', 'No')
-                         ->where('access_level', '!=', 'superadmin')->count(),
-        ];
-
-        $validVoterData = [
-            'labels' => ['Eligible Voters', 'Ineligible Voters'],
-            'datasets' => [
-                [
-                    'data' => array_values($validVoterCounts),
-                    'backgroundColor' => ['#3498db', '#e74c3c']
-                ]
-            ]
-        ];
-
-        return response()->json($validVoterData);
+        return response()->json($this->chartService()->voter($this->getProfileData(), ['type' => 'polling_unit', 'id' => $pu->id]));
     }
 
       //function member Distribution By State
     public function StateDistributionByRegion($uuid)
-      {
+    {
           $region = Region::where('uuid', $uuid)->firstOrFail();
-          $states = State::where('region_id', $region->id)->get(); // Assuming you have a State model and table
+          $this->licensedScope()->abortIfRegionNotAllowed($region->id);
 
-          $stateCounts = [];
-          // Define an array of colors
-          $colors = [
-              '#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c', '#d35400', '#c0392b', '#34495e', '#27ae60', '#2980b9',
-              '#e74c3c', '#f39c12', '#1abc9c', '#9b59b6', '#27ae60', '#d35400', '#c0392b', '#34495e', '#3498db', '#2ecc71', '#2980b9',
-              '#e74c3c', '#f39c12', '#1abc9c', '#9b59b6', '#27ae60', '#d35400', '#c0392b', '#34495e', '#3498db', '#2ecc71', '#2980b9',
-              '#e74c3c', '#f39c12', '#1abc9c',
-          ];
-
-          // Use the array of colors for background colors
-          $backgroundColors = array_slice($colors, 0, count($states));
-
-          // Iterate over states to get the user count per state
-          foreach ($states as $state) {
-              $count = User::where('state_id', $state->id)
-              ->where('access_level', '!=', 'superadmin')
-              ->where('region_id', $region->id)
-              ->where('access_level', '!=', 'superadmin')->count();
-              $stateCounts[] = $count;
-          }
-
-          // Get an array of state names
-          $stateLabels = $states->pluck('name')->toArray();
-
-          // Filter out states with zero user counts
-          $filteredStateCounts = array_filter($stateCounts, function ($count) {
-              return $count > 0;
-          });
-
-          // Filter corresponding state names and background colors
-          $filteredLabels = array_values(array_intersect_key($stateLabels, $filteredStateCounts));
-          $filteredBackgroundColors = array_slice($backgroundColors, 0, count($filteredLabels));
-
-          // Prepare the state distribution data for the donut chart
-          $stateData = [
-              'labels' => $filteredLabels,
-              'datasets' => [
-                  [
-                      'label' => 'State Distribution',
-                      'data' => array_values($filteredStateCounts),
-                      'backgroundColor' => $filteredBackgroundColors
-                  ]
-              ]
-          ];
-
-          return response()->json($stateData);
+          return response()->json($this->chartService()->states($this->getProfileData(), ['type' => 'region', 'id' => $region->id]));
     }
 
     public function lgaDistributionByState($uuid)
     {
         $state = State::where('uuid', $uuid)->firstOrFail();
-        $lgas  = LocalGovernmentArea::where('state_id', $state->id)->get(); // Assuming you have a LocalGovernmentArea model and table
+        $this->licensedScope()->abortIfStateNotAllowed($state->id);
 
-        $lgaCounts = [];
-        // Define an array of colors
-        $colors = [
-            '#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c', '#d35400', '#c0392b', '#34495e', '#27ae60', '#2980b9',
-            '#e74c3c', '#f39c12', '#1abc9c', '#9b59b6', '#27ae60', '#d35400', '#c0392b', '#34495e', '#3498db', '#2ecc71', '#2980b9',
-            '#e74c3c', '#f39c12', '#1abc9c', '#9b59b6', '#27ae60', '#d35400', '#c0392b', '#34495e', '#3498db', '#2ecc71', '#2980b9',
-            '#e74c3c', '#f39c12', '#1abc9c',
-        ];
-
-        // Use the array of colors for background colors
-        $backgroundColors = array_slice($colors, 0, count($lgas));
-
-        // Iterate over states to get the user count per state
-            foreach ($lgas as $lga) {
-                $count = User::where('lga_id', $lga->id)
-                ->where('access_level', '!=', 'superadmin')
-                ->where('state_id', $state->id)->count();
-                $lgaCounts[] = $count;
-            }
-
-        // Get an array of state names
-        $lgaLabels = $lgas->pluck('name')->toArray();
-
-        // Filter out states with zero user counts
-        $filteredlgaCounts = array_filter($lgaCounts, function ($count) {
-            return $count > 0;
-        });
-
-        // Filter corresponding state names and background colors
-        $filteredLabels = array_values(array_intersect_key($lgaLabels, $filteredlgaCounts));
-        $filteredBackgroundColors = array_slice($backgroundColors, 0, count($filteredLabels));
-
-        // Prepare the state distribution data for the donut chart
-        $lgaData = [
-            'labels' => $filteredLabels,
-            'datasets' => [
-                [
-                    'label' => 'LGA Distribution',
-                    'data' => array_values($filteredlgaCounts),
-                    'backgroundColor' => $filteredBackgroundColors
-                ]
-            ]
-        ];
-
-        return response()->json($lgaData);
+        return response()->json($this->chartService()->lgas($this->getProfileData(), ['type' => 'state', 'id' => $state->id]));
     }
 
     public function lgaDistributionBySenatorialDistrict($uuid)
     {
         $district = SenatorialDistrict::where('uuid', $uuid)->firstOrFail();
-        $lgas  = LocalGovernmentArea::where('senatorial_district_id', $district->id)->get();
+        $this->licensedScope()->abortIfSenatorialDistrictNotAllowed($district->id);
 
-        $lgaCounts = [];
-        $colors = [
-            '#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c', '#d35400', '#c0392b', '#34495e', '#27ae60', '#2980b9',
-            '#e74c3c', '#f39c12', '#1abc9c', '#9b59b6', '#27ae60', '#d35400', '#c0392b', '#34495e', '#3498db', '#2ecc71', '#2980b9',
-            '#e74c3c', '#f39c12', '#1abc9c', '#9b59b6', '#27ae60', '#d35400', '#c0392b', '#34495e', '#3498db', '#2ecc71', '#2980b9',
-            '#e74c3c', '#f39c12', '#1abc9c',
-        ];
-
-        foreach ($lgas as $lga) {
-            $count = User::where('lga_id', $lga->id)
-                ->where('senatorial_district_id', $district->id)
-                ->where('access_level', '!=', 'superadmin')->count();
-            $lgaCounts[] = $count;
-        }
-
-        $lgaLabels = $lgas->pluck('name')->toArray();
-        $filteredlgaCounts = array_filter($lgaCounts, function ($count) {
-            return $count > 0;
-        });
-
-        $lgaData = [
-            'labels' => array_values(array_intersect_key($lgaLabels, $filteredlgaCounts)),
-            'datasets' => [
-                [
-                    'label' => 'LGA Distribution',
-                    'data' => array_values($filteredlgaCounts),
-                    'backgroundColor' => array_slice($colors, 0, count($filteredlgaCounts))
-                ]
-            ]
-        ];
-
-        return response()->json($lgaData);
+        return response()->json($this->chartService()->lgas($this->getProfileData(), ['type' => 'senatorial_district', 'id' => $district->id]));
     }
 
     public function lgaDistributionByFederalConstituency($uuid)
     {
         $constituency = FederalConstituency::where('uuid', $uuid)->firstOrFail();
-        $lgas  = LocalGovernmentArea::where('federal_constituency_id', $constituency->id)->get();
+        $this->licensedScope()->abortIfFederalConstituencyNotAllowed($constituency->id);
 
-        $lgaCounts = [];
-        $colors = [
-            '#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c', '#d35400', '#c0392b', '#34495e', '#27ae60', '#2980b9',
-            '#e74c3c', '#f39c12', '#1abc9c', '#9b59b6', '#27ae60', '#d35400', '#c0392b', '#34495e', '#3498db', '#2ecc71', '#2980b9',
-            '#e74c3c', '#f39c12', '#1abc9c', '#9b59b6', '#27ae60', '#d35400', '#c0392b', '#34495e', '#3498db', '#2ecc71', '#2980b9',
-            '#e74c3c', '#f39c12', '#1abc9c',
-        ];
-
-        foreach ($lgas as $lga) {
-            $count = User::where('lga_id', $lga->id)
-                ->where('federal_constituency_id', $constituency->id)
-                ->where('access_level', '!=', 'superadmin')->count();
-            $lgaCounts[] = $count;
-        }
-
-        $lgaLabels = $lgas->pluck('name')->toArray();
-        $filteredlgaCounts = array_filter($lgaCounts, function ($count) {
-            return $count > 0;
-        });
-
-        $lgaData = [
-            'labels' => array_values(array_intersect_key($lgaLabels, $filteredlgaCounts)),
-            'datasets' => [
-                [
-                    'label' => 'LGA Distribution',
-                    'data' => array_values($filteredlgaCounts),
-                    'backgroundColor' => array_slice($colors, 0, count($filteredlgaCounts))
-                ]
-            ]
-        ];
-
-        return response()->json($lgaData);
+        return response()->json($this->chartService()->lgas($this->getProfileData(), ['type' => 'federal_constituency', 'id' => $constituency->id]));
     }
 
     public function wardDistributionByLga($uuid)
     {
         $lga = LocalGovernmentArea::where('uuid', $uuid)->firstOrFail();
-        $wards  = Ward::where('lga_id', $lga->id)->get(); // Assuming you have a Ward model and table
+        $this->licensedScope()->abortIfLgaNotAllowed($lga->id);
 
-        $wardCounts = [];
-        // Define an array of colors
-        $colors = [
-            '#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c', '#d35400', '#c0392b', '#34495e', '#27ae60', '#2980b9',
-            '#e74c3c', '#f39c12', '#1abc9c', '#9b59b6', '#27ae60', '#d35400', '#c0392b', '#34495e', '#3498db', '#2ecc71', '#2980b9',
-            '#e74c3c', '#f39c12', '#1abc9c', '#9b59b6', '#27ae60', '#d35400', '#c0392b', '#34495e', '#3498db', '#2ecc71', '#2980b9',
-            '#e74c3c', '#f39c12', '#1abc9c',
-        ];
-
-        // Use the array of colors for background colors
-        $backgroundColors = array_slice($colors, 0, count($wards));
-
-        // Iterate over wards to get the user count per ward
-            foreach ($wards as $ward) {
-                $count = User::where('ward_id', $ward->id)
-                ->where('lga_id', $lga->id)
-                ->where('access_level', '!=', 'superadmin')->count();
-                $wardCounts[] = $count;
-            }
-
-        // Get an array of state names
-        $wardLabels = $wards->pluck('name')->toArray();
-
-        // Filter out states with zero user counts
-        $filteredwardCounts = array_filter($wardCounts, function ($count) {
-            return $count > 0;
-        });
-
-        // Filter corresponding state names and background colors
-        $filteredLabels = array_values(array_intersect_key($wardLabels, $filteredwardCounts));
-        $filteredBackgroundColors = array_slice($backgroundColors, 0, count($filteredLabels));
-
-        // Prepare the state distribution data for the donut chart
-        $wardData = [
-            'labels' => $filteredLabels,
-            'datasets' => [
-                [
-                    'label' => 'Ward Distribution',
-                    'data' => array_values($filteredwardCounts),
-                    'backgroundColor' => $filteredBackgroundColors
-                ]
-            ]
-        ];
-
-        return response()->json($wardData);
+        return response()->json($this->chartService()->wards($this->getProfileData(), ['type' => 'lga', 'id' => $lga->id]));
     }
 
 
@@ -1016,6 +349,7 @@ class ChartsController extends Controller
             ->select('party_id', DB::raw('SUM(quantity) as total_votes'))
             ->where('election_id', $election->id)
             ->groupBy('party_id');
+        $this->licensedScope()->applyToVotesQuery($voteQuery);
 
         // Apply regional constraints based on user's access level
         switch ($profileData->access_level) {

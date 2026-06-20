@@ -29,6 +29,7 @@
 import axios from 'axios';
 import PostItem from './PostItem.vue';
 import { formatDate } from '../utils/dateUtils';
+import { cmRoute } from '../utils/campaignManager';
 
 export default {
   components: {
@@ -65,8 +66,8 @@ export default {
       this.loading = true;
       try {
         const endpoint = this.username
-          ? `/community/${this.username}/profile/posts`
-          : '/community/profile/posts';
+          ? cmRoute('viewUserPostsFeed', { username: this.username })
+          : cmRoute('userPostsFetch');
         const response = await axios.get(endpoint, {
           params: { page: this.currentPage },
         });
@@ -112,7 +113,7 @@ export default {
       post.liked_by_me = !wasLiked;
       post.likes = (post.likes || 0) + (post.liked_by_me ? 1 : -1);
       try {
-        const response = await axios.post(`/posts/${postId}/like`);
+        const response = await axios.post(cmRoute('postsLike', { post: postId }));
         const serverLikes = response.data?.likes;
         const liked = response.data?.liked;
         if (typeof serverLikes === 'number') post.likes = serverLikes;
@@ -129,7 +130,7 @@ export default {
       post.showComments = !post.showComments;
       if (post.showComments && !post.commentsLoaded) {
         try {
-          const response = await axios.get(`/posts/${postId}/comments`);
+          const response = await axios.get(cmRoute('commentsIndex', { post: postId }));
           post.comments = response.data?.comments || [];
           post.comments_count = post.comments.length;
           post.commentsLoaded = true;
@@ -148,7 +149,7 @@ export default {
         return;
       }
       try {
-        const response = await axios.post(`/posts/${postId}/comments`, { content: trimmed });
+        const response = await axios.post(cmRoute('commentsStore', { post: postId }), { content: trimmed });
         const post = this.posts.find((p) => p.id === postId);
         if (post) {
           if (!post.comments) post.comments = [];
@@ -174,7 +175,7 @@ export default {
         return;
       }
       try {
-        const response = await axios.put(`/comments/${commentId}`, { content: trimmed });
+        const response = await axios.put(cmRoute('commentsUpdate', { comment: commentId }), { content: trimmed });
         const updated = response.data?.comment;
         const post = this.posts.find((p) => p.id === postId);
         if (post?.comments) {
@@ -194,7 +195,7 @@ export default {
     async deleteComment({ commentId, postId }) {
       if (!commentId || !postId) return;
       try {
-        await axios.delete(`/comments/${commentId}`);
+        await axios.delete(cmRoute('commentsDestroy', { comment: commentId }));
         const post = this.posts.find((p) => p.id === postId);
         if (post?.comments) {
           post.comments = post.comments.filter((c) => c.id !== commentId);
@@ -209,7 +210,7 @@ export default {
     },
     async fetchFollowingIds() {
       try {
-        const response = await axios.get('/community/me/following/ids');
+        const response = await axios.get(cmRoute('followingIds'));
         this.followingIds = response.data?.ids || [];
       } catch (error) {
         console.warn('Unable to load following ids', error);
@@ -219,10 +220,10 @@ export default {
       if (!userId || userId === this.profileData?.id) return;
       try {
         if (isFollowing) {
-          await axios.delete(`/community/users/${userId}/follow`);
+          await axios.delete(cmRoute('userFollow', { user: userId }));
           this.followingIds = this.followingIds.filter((id) => id !== userId);
         } else {
-          await axios.post(`/community/users/${userId}/follow`);
+          await axios.post(cmRoute('userFollow', { user: userId }));
           if (!this.followingIds.includes(userId)) {
             this.followingIds.push(userId);
           }

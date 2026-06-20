@@ -161,20 +161,46 @@ class RegionalAdminController extends Controller
         return abort(404);
     }
 
-    public function RegionDashBoard()
+    public function RegionDashBoard($uuid)
     {
-        return abort(404);
+        $pageTitle = 'Region Dashboard';
+        $profileData = $this->getProfileData();
+        $region = app(\App\Services\DashboardDrilldownService::class)->region($uuid);
+
+        if ($profileData->region_id && (int) $region->id !== (int) $profileData->region_id) {
+            abort(403);
+        }
+
+        $stateCount = State::where('region_id', $region->id)->count();
+        $statesWithUsersCount = User::where('region_id', $region->id)->whereNotNull('state_id')->distinct('state_id')->count('state_id');
+        $states = State::where('region_id', $region->id)->pluck('id');
+        $lgaCount = LocalGovernmentArea::whereIn('state_id', $states)->count();
+        $lgaWithUsersCount = User::where('region_id', $region->id)->whereNotNull('lga_id')->distinct('lga_id')->count('lga_id');
+        $lgas = LocalGovernmentArea::whereIn('state_id', $states)->pluck('id');
+        $wardCount = Ward::whereIn('lga_id', $lgas)->count();
+        $wardWithUsersCount = User::where('region_id', $region->id)->whereNotNull('ward_id')->distinct('ward_id')->count('ward_id');
+        $wards = Ward::whereIn('lga_id', $lgas)->pluck('id');
+        $puCount = PollingUnit::whereIn('ward_id', $wards)->count();
+        $puWithUsersCount = User::where('region_id', $region->id)->whereNotNull('polling_unit_id')->distinct('polling_unit_id')->count('polling_unit_id');
+        $excoCount = User::where('region_id', $region->id)->where('access_level', '!=', 'user')->where('access_level', '!=', 'superadmin')->where('access_level', '!=', 'puadmin')->count();
+        $memberCount = User::where('region_id', $region->id)->where('access_level', '!=', 'superadmin')->where('access_level', 'user')->count();
+        $userCount = User::where('region_id', $region->id)->where('access_level', '!=', 'superadmin')->count();
+        $newMembers = User::where('region_id', $region->id)->where('access_level', '!=', 'superadmin')->where('created_at', '>=', Carbon::now()->subDays(1))->count();
+
+        return view('backend.'.$profileData->access_level.'.region.dashboard',
+            compact('profileData', 'pageTitle', 'region', 'stateCount', 'statesWithUsersCount', 'lgaCount', 'lgaWithUsersCount', 'wardCount', 'wardWithUsersCount', 'puCount', 'puWithUsersCount', 'excoCount', 'memberCount', 'userCount', 'newMembers'));
     }
 
     public function StateDashBoard($uuid)
     {
         $pageTitle = 'State Dashboard';
         $profileData = $this->getProfileData();
-        $state = State::where('uuid', $uuid)->first();
+        $state = app(\App\Services\DashboardDrilldownService::class)->state($uuid);
 
         if(!$state){
             return redirect()->back()->with('error', 'State not found');
         }
+        app(\App\Services\LicensedScopeQueryService::class)->abortIfStateNotAllowed($state->id);
 
         if ($profileData->region_id && (int) $state->region_id !== (int) $profileData->region_id) {
             abort(403);
@@ -212,11 +238,12 @@ class RegionalAdminController extends Controller
     {
         $pageTitle = 'Senatorial District Dashboard';
         $profileData = $this->getProfileData();
-        $district = SenatorialDistrict::with('state')->where('uuid', $uuid)->first();
+        $district = app(\App\Services\DashboardDrilldownService::class)->senatorialDistrict($uuid);
 
         if(!$district){
             return redirect()->back()->with('error', 'Senatorial District not found');
         }
+        app(\App\Services\LicensedScopeQueryService::class)->abortIfSenatorialDistrictNotAllowed($district->id);
 
         $lgaCount = LocalGovernmentArea::where('senatorial_district_id', $district->id)->count();
         $lgaWithUsersCount = LocalGovernmentArea::where('senatorial_district_id', $district->id)->whereHas('users')->count();
@@ -278,11 +305,12 @@ class RegionalAdminController extends Controller
     {
         $pageTitle = 'Federal Constituency Dashboard';
         $profileData = $this->getProfileData();
-        $constituency = FederalConstituency::with('state')->where('uuid', $uuid)->first();
+        $constituency = app(\App\Services\DashboardDrilldownService::class)->federalConstituency($uuid);
 
         if(!$constituency){
             return redirect()->back()->with('error', 'Federal Constituency not found');
         }
+        app(\App\Services\LicensedScopeQueryService::class)->abortIfFederalConstituencyNotAllowed($constituency->id);
 
         $lgaCount = LocalGovernmentArea::where('federal_constituency_id', $constituency->id)->count();
         $lgaWithUsersCount = LocalGovernmentArea::where('federal_constituency_id', $constituency->id)->whereHas('users')->count();

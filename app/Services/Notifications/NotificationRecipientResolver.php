@@ -3,6 +3,7 @@
 namespace App\Services\Notifications;
 
 use App\Models\User;
+use App\Services\LicensedScopeQueryService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
@@ -22,7 +23,7 @@ class NotificationRecipientResolver
 
     public function resolve(string $eventType, ?User $actor, NotificationContext $context, bool $excludeActor = true): Collection
     {
-        return User::query()
+        $query = User::query()
             ->where('status', 'active')
             ->whereIn('access_level', self::ADMIN_LEVELS)
             ->when($excludeActor && $actor, fn (Builder $q) => $q->whereKeyNot($actor->id))
@@ -36,8 +37,11 @@ class NotificationRecipientResolver
                 $this->orJurisdictionMatch($query, 'lgaadmin', 'lga_id', $context->lgaId);
                 $this->orJurisdictionMatch($query, 'wardadmin', 'ward_id', $context->wardId);
                 $this->orJurisdictionMatch($query, 'puadmin', 'polling_unit_id', $context->pollingUnitId);
-            })
-            ->get();
+            });
+
+        app(LicensedScopeQueryService::class)->applyToUsersQuery($query);
+
+        return $query->get();
     }
 
     private function orJurisdictionMatch(Builder $query, string $accessLevel, string $column, ?int $value): void

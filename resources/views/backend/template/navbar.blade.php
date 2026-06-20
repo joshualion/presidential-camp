@@ -7,7 +7,7 @@
         <a class="nav-link" data-widget="pushmenu" href="#" role="button"><i class="fas fa-bars"></i></a>
       </li>
       <li class="nav-item d-none d-sm-inline-block">
-        @if($SystemSetting && $SystemSetting->frontend_community == 1)
+        @if($SystemSetting && $SystemSetting->frontend_community == 1 && app(\App\Services\CommunityRealtimeService::class)->moduleAvailable())
         <a href="{{route('timeline')}}" class="nav-link">FRONTEND COMMUNITY</a>
         @endif
       </li>

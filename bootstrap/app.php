@@ -1,7 +1,11 @@
 <?php
 
 use App\Http\Middleware\EnsureSystemNotActivated;
+use App\Http\Middleware\EnsureCommunityEnabled;
 use App\Http\Middleware\KuyakEyenIno;
+use App\Http\Middleware\BlockInstallerIfInstalled;
+use App\Http\Middleware\RedirectIfNotInstalled;
+use App\Http\Middleware\UseInstallerSafeDrivers;
 use App\Http\Middleware\ValidateLicense;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -20,6 +24,12 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->trustProxies(at: '*');
+        $middleware->web(prepend: [
+            UseInstallerSafeDrivers::class,
+        ]);
+        $middleware->web(append: [
+            RedirectIfNotInstalled::class,
+        ]);
 
         $middleware->alias([
                          'access_level' => Accesslevel::class,
@@ -27,6 +37,8 @@ return Application::configure(basePath: dirname(__DIR__))
                          'kuyak_eyen_ino' => KuyakEyenIno::class,
                          'EnsureSystemNotActivated' => EnsureSystemNotActivated::class,
                          'eyen_ino_no_way' => ValidateLicense::class,
+                         'installer.block_if_installed' => BlockInstallerIfInstalled::class,
+                         'community.enabled' => EnsureCommunityEnabled::class,
                         ]);
 
     })

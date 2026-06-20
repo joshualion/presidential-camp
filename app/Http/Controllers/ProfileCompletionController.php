@@ -13,10 +13,13 @@ use App\Models\State;
 use App\Models\SupportGroup;
 use App\Models\SystemSetting;
 use App\Models\Ward;
+use App\Services\CampaignPackageLocationFormService;
+use App\Services\LicensedScopeQueryService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class ProfileCompletionController extends Controller
 {
@@ -28,6 +31,11 @@ class ProfileCompletionController extends Controller
     private function getProfileData()
     {
         return Auth::user();
+    }
+
+    private function locationForms(): CampaignPackageLocationFormService
+    {
+        return app(CampaignPackageLocationFormService::class);
     }
 
        //Function to get the system country
@@ -68,19 +76,21 @@ class ProfileCompletionController extends Controller
     $pageTitle = 'Complete Your Profile';
 
     // Fetch additional data required for the profile form
+    $locationOptions = $this->locationForms()->options($profileData);
+    $locationForm = $this->locationForms()->context($profileData, $profileData, $profileData->access_level);
     $countries = Country::all();
-    $regions = $this->getRegions();
-    $states = State::all();
-    $lgas = LocalGovernmentArea::all();
-    $wards = Ward::all();
-    $pollingUnits = PollingUnit::all();
+    $regions = $locationOptions['regions'];
+    $states = $locationOptions['states'];
+    $lgas = $locationOptions['lgas'];
+    $wards = $locationOptions['wards'];
+    $pollingUnits = $locationOptions['pollingUnits'];
     $religions = Religion::all();
     $ageGrades = AgeGrade::all();
 
     // Render the profile completion form
     return view('backend.' . $profileData->access_level . '.complete-profile', compact(
         'profileData', 'pageTitle', 'countries', 'regions', 'states',
-        'lgas', 'wards', 'pollingUnits', 'religions', 'ageGrades'
+        'lgas', 'wards', 'pollingUnits', 'religions', 'ageGrades', 'locationForm'
     ));
 }
 
@@ -94,6 +104,7 @@ class ProfileCompletionController extends Controller
     public function complete(Request $request)
     {
         $profileData = $this->getProfileData();
+        $request->merge($this->locationForms()->mergeFixedPayload($request->all()));
         $requireBank = optional(SystemSetting::first())->require_bank_details;
         $bankRule = $requireBank ? 'required|string|max:255' : 'nullable|string|max:255';
         $accountRule = $requireBank ? 'required|string|size:10' : 'nullable|string|size:10';
@@ -118,6 +129,17 @@ class ProfileCompletionController extends Controller
             'qualification' => 'nullable|string|max:255',
             'photo' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
         ], $locationRules));
+
+        $scopeErrors = app(LicensedScopeQueryService::class)->payloadErrors([
+            'state_id' => $validatedData['state_id'] ?? null,
+            'lga_id' => $validatedData['lga_id'] ?? null,
+            'ward_id' => $validatedData['ward_id'] ?? null,
+            'polling_unit_id' => $validatedData['polling_unit_id'] ?? null,
+        ]);
+
+        if ($scopeErrors !== []) {
+            throw ValidationException::withMessages($scopeErrors);
+        }
 
         $profileData->update([
             'firstname' => $validatedData['firstname'],

@@ -39,10 +39,17 @@
 
 <script>
 import axios from 'axios';
+import { cmRoute } from '../utils/campaignManager';
 
 export default {
   name: 'NewConversation',
   emits: ['started', 'cancel'],
+  props: {
+    routes: {
+      type: Object,
+      default: () => ({}),
+    },
+  },
   data() {
     return {
       recipientGroups: [],
@@ -54,9 +61,16 @@ export default {
     this.loadRecipients();
   },
   methods: {
+    route(name) {
+      const fallbackMap = {
+        recipients: 'messagesRecipients',
+        start: 'messagesStart',
+      };
+      return this.routes?.[name] || cmRoute(fallbackMap[name] || name);
+    },
     async loadRecipients() {
       try {
-        const res = await axios.get('/messages/recipients');
+        const res = await axios.get(this.route('recipients'));
         this.recipientGroups = res.data?.data || res.data || [];
       } catch (e) {
         this.recipientGroups = [];
@@ -65,7 +79,7 @@ export default {
     selectedRecipient() {
       if (!this.selectedRecipientId) return null;
       for (const group of this.recipientGroups) {
-        const found = (group.options || []).find((o) => o.id === this.selectedRecipientId);
+        const found = (group.options || []).find((o) => String(o.id) === String(this.selectedRecipientId));
         if (found) return found;
       }
       return null;
@@ -74,7 +88,7 @@ export default {
       const target = this.selectedRecipient();
       if (!target || !this.composeMessage.trim()) return;
       try {
-        const response = await axios.post('/messages/start', {
+        const response = await axios.post(this.route('start'), {
           recipient_id: target.id,
           message: this.composeMessage.trim(),
         });

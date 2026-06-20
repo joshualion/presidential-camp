@@ -135,6 +135,7 @@ import axios from 'axios';
 import Lightbox from './LightBox.vue';
 import PostItem from './PostItem.vue';
 import { formatDate } from '../utils/dateUtils';
+import { cmIntervals, cmRealtime, cmRoute } from '../utils/campaignManager';
 
 const Swal = window.Swal;
 const allowedAudiences = ['public', 'region', 'state', 'lga', 'ward', 'pu'];
@@ -192,6 +193,7 @@ export default {
     },
   },
   mounted() {
+    this.useWebSocket = cmRealtime().realtimeAvailable;
     this.setupWebSocket();
     this.setupPollingFallback();
     this.setupUserActivityTracking();
@@ -231,7 +233,7 @@ export default {
 
       this.loading = true;
       try {
-        const response = await axios.get('/community/posts', {
+        const response = await axios.get(cmRoute('postsFetch'), {
           params: {
             audience: this.audience,
             page: this.currentPage,
@@ -266,7 +268,7 @@ export default {
     },
     async refreshLatestPosts() {
       try {
-        const response = await axios.get('/community/posts', {
+        const response = await axios.get(cmRoute('postsFetch'), {
           params: {
             audience: this.audience,
             page: 1,
@@ -289,6 +291,12 @@ export default {
       }
     },
     setupWebSocket() {
+      if (!cmRealtime().realtimeAvailable) {
+        this.useWebSocket = false;
+        this.setupPollingFallback();
+        return;
+      }
+
       if (!window.Echo || typeof window.Echo.private !== 'function') {
         this.useWebSocket = false;
         this.setupPollingFallback();
@@ -357,7 +365,7 @@ export default {
         if (this.isUserActive) {
           this.refreshLatestPosts();
         }
-      }, 10000);
+      }, cmIntervals().feed);
     },
     cleanupWebSocket() {
       if (window.Echo && this.postsChannel) {
@@ -424,7 +432,7 @@ export default {
         return;
       }
       try {
-        const response = await axios.put(`/posts/${updatedPost.id}`, {
+        const response = await axios.put(cmRoute('postsUpdate', { post: updatedPost.id }), {
           content: trimmed || updatedPost.content,
         });
 
@@ -459,7 +467,7 @@ export default {
 
       if (confirmation.isConfirmed) {
         try {
-          await axios.delete(`/posts/${post.id}`);
+          await axios.delete(cmRoute('postsDestroy', { post: post.id }));
           this.posts = this.posts.filter((p) => p.id !== post.id);
           this.deletingPost = null;
           Swal.fire('Deleted!', 'Your post has been deleted.', 'success');
@@ -479,7 +487,7 @@ export default {
       post.likes = (post.likes || 0) + (post.liked_by_me ? 1 : -1);
 
       try {
-        const response = await axios.post(`/posts/${postId}/like`);
+        const response = await axios.post(cmRoute('postsLike', { post: postId }));
         const serverLikes = response.data?.likes;
         const liked = response.data?.liked;
         if (typeof serverLikes === 'number') {
@@ -509,7 +517,7 @@ export default {
       }
 
       try {
-        const response = await axios.post(`/posts/${postId}/comments`, {
+        const response = await axios.post(cmRoute('commentsStore', { post: postId }), {
           content: trimmed,
         });
 
@@ -540,7 +548,7 @@ export default {
         return;
       }
       try {
-        const response = await axios.put(`/comments/${commentId}`, { content: trimmed });
+        const response = await axios.put(cmRoute('commentsUpdate', { comment: commentId }), { content: trimmed });
         const updated = response.data?.comment;
         const post = this.posts.find((p) => p.id === postId);
         if (post?.comments) {
@@ -569,7 +577,7 @@ export default {
       if (!confirm.isConfirmed) return;
 
       try {
-        await axios.delete(`/comments/${commentId}`);
+        await axios.delete(cmRoute('commentsDestroy', { comment: commentId }));
         const post = this.posts.find((p) => p.id === postId);
         if (post?.comments) {
           post.comments = post.comments.filter((c) => c.id !== commentId);
@@ -588,7 +596,7 @@ export default {
       // Lazy load comments when first opened
       if (post.showComments && !post.commentsLoaded) {
         try {
-          const response = await axios.get(`/posts/${postId}/comments`);
+          const response = await axios.get(cmRoute('commentsIndex', { post: postId }));
           post.comments = response.data?.comments || [];
           post.comments_count = post.comments.length;
           post.commentsLoaded = true;
@@ -617,7 +625,7 @@ export default {
       if (!this.likersPostId) return;
       this.likersLoading = true;
       try {
-        const response = await axios.get(`/posts/${this.likersPostId}/likers`, {
+        const response = await axios.get(cmRoute('postsLikers', { post: this.likersPostId }), {
           params: {
             page: this.likersPage,
             per_page: this.likersPerPage,
@@ -653,7 +661,7 @@ export default {
     },
     async fetchFollowingIds() {
       try {
-        const response = await axios.get('/community/me/following/ids');
+        const response = await axios.get(cmRoute('followingIds'));
         this.followingIds = response.data?.ids || [];
       } catch (error) {
         console.warn('Unable to load following ids', error);
@@ -663,10 +671,10 @@ export default {
       if (!userId || userId === this.profileData?.id) return;
       try {
         if (isFollowing) {
-          await axios.delete(`/community/users/${userId}/follow`);
+          await axios.delete(cmRoute('userFollow', { user: userId }));
           this.followingIds = this.followingIds.filter((id) => id !== userId);
         } else {
-          await axios.post(`/community/users/${userId}/follow`);
+          await axios.post(cmRoute('userFollow', { user: userId }));
           if (!this.followingIds.includes(userId)) {
             this.followingIds.push(userId);
           }

@@ -16,6 +16,11 @@ class Ward extends Model
         return $this->belongsTo(LocalGovernmentArea::class,'lga_id');
     }
 
+    public function lga()
+    {
+        return $this->localGovernmentArea();
+    }
+
 
     public function pollingUnits(){
         return $this->hasMany(PollingUnit::class);

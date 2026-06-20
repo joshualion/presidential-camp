@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\SystemSetting;
 use App\Models\User;
+use App\Support\SafeDatabase;
 
 class PackageGovernanceService
 {
@@ -15,7 +16,18 @@ class PackageGovernanceService
 
     public function package(): string
     {
-        return $this->normalize(SystemSetting::query()->value('package') ?? env('CAMPAIGN_PACKAGE_TYPE', self::PRESIDENTIAL));
+        if (SafeDatabase::hasTable('local_licenses')) {
+            $localPackage = \App\Models\LocalLicense::query()->latest('id')->value('package_type');
+            if ($localPackage) {
+                return $this->normalize($localPackage);
+            }
+        }
+
+        if (SafeDatabase::hasTable('system_settings')) {
+            return $this->normalize(SystemSetting::query()->value('package') ?? env('CAMPAIGN_PACKAGE_TYPE', self::PRESIDENTIAL));
+        }
+
+        return $this->normalize(env('CAMPAIGN_PACKAGE_TYPE', self::PRESIDENTIAL));
     }
 
     public function normalize(?string $package): string

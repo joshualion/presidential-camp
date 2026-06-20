@@ -4,6 +4,8 @@ namespace App\Observers;
 
 use App\Services\DashboardStatSnapshotService;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class DashboardStatSnapshotObserver
 {
@@ -11,8 +13,12 @@ class DashboardStatSnapshotObserver
     {
         $this->queueRefresh($model);
 
-        if ($model->wasChanged()) {
-            app(DashboardStatSnapshotService::class)->queueAffectedRefreshesForAttributes($model->getOriginal());
+        try {
+            if ($model->wasChanged()) {
+                app(DashboardStatSnapshotService::class)->queueAffectedRefreshesForAttributes($model->getOriginal());
+            }
+        } catch (Throwable $e) {
+            $this->reportNonCriticalFailure($e);
         }
     }
 
@@ -28,6 +34,18 @@ class DashboardStatSnapshotObserver
 
     private function queueRefresh(Model $model): void
     {
-        app(DashboardStatSnapshotService::class)->queueAffectedRefreshes($model);
+        try {
+            app(DashboardStatSnapshotService::class)->queueAffectedRefreshes($model);
+        } catch (Throwable $e) {
+            $this->reportNonCriticalFailure($e);
+        }
+    }
+
+    private function reportNonCriticalFailure(Throwable $e): void
+    {
+        Log::warning('Dashboard stat snapshot observer skipped a non-critical refresh.', [
+            'exception' => $e::class,
+            'message' => $e->getMessage(),
+        ]);
     }
 }

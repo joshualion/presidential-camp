@@ -298,15 +298,23 @@ class LgaAdminController extends Controller
 
 
 
+    public function RegionDashBoard($uuid)
+    {
+        app(\App\Services\DashboardDrilldownService::class)->region($uuid);
+
+        abort(404);
+    }
+
     public function StateDashBoard($uuid)
     {
         $pageTitle = 'State Dashboard';
         $profileData  = $this->getProfileData();
-        $state = State::where('uuid', $uuid)->first();
+        $state = app(\App\Services\DashboardDrilldownService::class)->state($uuid);
 
         if(!$state){
             return redirect()->back()->with('error', 'State not found');
         }
+        app(\App\Services\LicensedScopeQueryService::class)->abortIfStateNotAllowed($state->id);
 
         $lgaCount = LocalGovernmentArea::where('state_id', $state->id)->count();
 
@@ -383,11 +391,12 @@ class LgaAdminController extends Controller
     {
         $pageTitle = 'Local Government Dashboard';
         $profileData  = $this->getProfileData();
-        $lga = LocalGovernmentArea::where('uuid', $uuid)->first();
+        $lga = app(\App\Services\DashboardDrilldownService::class)->lga($uuid);
 
         if(!$lga){
             return redirect()->back()->with('error', 'LGA not found');
         }
+        app(\App\Services\LicensedScopeQueryService::class)->abortIfLgaNotAllowed($lga->id);
 
 
 
@@ -428,11 +437,14 @@ class LgaAdminController extends Controller
 
 
 
+            $dashboardMetrics = app(LocationDashboardMetricsService::class)->forLocalGovernmentArea($lga, $profileData);
+
             return view('backend.'.$profileData->access_level.'.lga.dashboard',
                     compact(
                         'profileData',
                         'pageTitle',
                         'lga',
+                        'dashboardMetrics',
                         'wardCount',
                         'wardWithUsersCount',
                         'puCount',
@@ -452,7 +464,7 @@ class LgaAdminController extends Controller
     {
         $pageTitle = 'Ward Dashboard';
         $profileData  = $this->getProfileData();
-        $ward = Ward::where('uuid', $uuid)->first();
+        $ward = app(\App\Services\DashboardDrilldownService::class)->ward($uuid);
 
         if(!$ward){
             $notification = [
@@ -462,6 +474,7 @@ class LgaAdminController extends Controller
 
             return redirect()->back()->with($notification);
         }
+        app(\App\Services\LicensedScopeQueryService::class)->abortIfWardNotAllowed($ward->id);
 
 
 
@@ -501,11 +514,14 @@ class LgaAdminController extends Controller
 
 
 
+            $dashboardMetrics = app(LocationDashboardMetricsService::class)->forWard($ward, $profileData);
+
             return view('backend.'.$profileData->access_level.'.ward.dashboard',
                     compact(
                         'profileData',
                         'pageTitle',
                         'ward',
+                        'dashboardMetrics',
                         'puCount',
                         'puWithUsersCount',
                         'excoCount',
@@ -524,7 +540,7 @@ class LgaAdminController extends Controller
     {
         $pageTitle = 'Polling Unit Dashboard';
         $profileData  = $this->getProfileData();
-        $pu = PollingUnit::where('uuid', $uuid)->first();
+        $pu = app(\App\Services\DashboardDrilldownService::class)->pollingUnit($uuid);
 
                 if(!$pu){
                     $notification = [
@@ -534,6 +550,7 @@ class LgaAdminController extends Controller
 
                     return redirect()->back()->with($notification);
                 }
+        app(\App\Services\LicensedScopeQueryService::class)->abortIfPollingUnitNotAllowed($pu->id);
 
              $excoCount = User::where('polling_unit_id', $pu->id)
              ->where('access_level', '!=', 'user')
@@ -563,11 +580,14 @@ class LgaAdminController extends Controller
 
 
 
+            $dashboardMetrics = app(LocationDashboardMetricsService::class)->forPollingUnit($pu, $profileData);
+
             return view('backend.'.$profileData->access_level.'.pu.dashboard',
                     compact(
                         'profileData',
                         'pageTitle',
                         'pu',
+                        'dashboardMetrics',
                         'excoCount',
                         'memberCount',
                         'eligibleVotersCount',

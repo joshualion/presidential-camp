@@ -34,7 +34,7 @@
             @click="openItem(item)"
           >
             <img
-              :src="item.actor?.avatar || '/uploads/no_image.jpg'"
+              :src="item.actor?.avatar || noImageUrl"
               alt="avatar"
               class="rounded-circle me-2"
               width="36"
@@ -51,7 +51,7 @@
         </ul>
       </div>
       <div class="card-footer text-center">
-        <a href="/community/feed#notifications" class="small">View all</a>
+        <a :href="notificationsUrl" class="small">View all</a>
       </div>
     </div>
 
@@ -65,6 +65,7 @@
 
 <script>
 import axios from 'axios';
+import { cmIntervals, cmMedia, cmRealtime, cmRoute } from '../utils/campaignManager';
 
 export default {
   name: 'ActivityBell',
@@ -129,11 +130,20 @@ export default {
     titleText() {
       return `Notifications${this.unreadCount ? ` (${this.unreadCount})` : ''}`;
     },
+    noImageUrl() {
+      return cmMedia('noImage');
+    },
+    notificationsUrl() {
+      return `${cmRoute('timeline')}#notifications`;
+    },
   },
   mounted() {
     this.fetchCount();
     this.fetchFeed();
-    this.poller = setInterval(this.fetchCount, 10000);
+    this.poller = setInterval(() => {
+      if (document.visibilityState === 'hidden') return;
+      this.fetchCount();
+    }, cmIntervals().notifications);
     this.bindEcho();
     document.addEventListener('click', this.handleOutside);
   },
@@ -201,10 +211,11 @@ export default {
         // ignore
       }
       if (this.unreadCount > 0) this.unreadCount -= 1;
-      const targetUrl = item.data?.url || (item.data?.post_id ? `/community/feed#post-${item.data.post_id}` : null);
+      const targetUrl = item.data?.url || (item.data?.post_id ? `${cmRoute('timeline')}#post-${item.data.post_id}` : null);
       if (targetUrl) window.location.href = targetUrl;
     },
     bindEcho() {
+      if (!cmRealtime().realtimeAvailable) return;
       if (!window.Echo) return;
       const scopes = [];
       const s = this.userScope || {};

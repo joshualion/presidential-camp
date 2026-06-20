@@ -1,7 +1,19 @@
 document.addEventListener("DOMContentLoaded", () => {
     const MAX_CONTENT_LENGTH = 750;
-    const MAX_IMAGE_SIZE = 1 * 1024 * 1024; // 1MB
-    const MAX_VIDEO_SIZE = 20 * 1024 * 1024; // 20MB
+    const mediaPolicy =
+        window.CampaignManager &&
+        window.CampaignManager.community &&
+        window.CampaignManager.community.media
+            ? window.CampaignManager.community.media
+            : {};
+    const imagesEnabled = mediaPolicy.images_enabled !== false;
+    const videosEnabled = mediaPolicy.videos_enabled === true;
+    const imageMaxMb = Number(mediaPolicy.image_max_mb || 5);
+    const videoMaxMb = Number(mediaPolicy.video_max_mb || 20);
+    const imageMimes = mediaPolicy.image_mimes || ["jpg", "jpeg", "png", "webp"];
+    const videoMimes = mediaPolicy.video_mimes || ["mp4", "webm", "mov"];
+    const MAX_IMAGE_SIZE = imageMaxMb * 1024 * 1024;
+    const MAX_VIDEO_SIZE = videoMaxMb * 1024 * 1024;
     const modalElement = document.getElementById("postModal");
     const allowedAudience =
         modalElement && modalElement.dataset && modalElement.dataset.allowedAudience
@@ -36,8 +48,8 @@ document.addEventListener("DOMContentLoaded", () => {
         <div class="text-end small text-muted mt-1"><span class="content-count">0</span> / ${MAX_CONTENT_LENGTH}</div>
             <div id="photoDropArea" class="drag-drop-area mt-3">
                 <p class="drag-drop-text mb-1">Add photo to your post</p>
-                <small class="text-muted d-block mb-2">Images up to 1MB each. JPG, PNG, GIF, WEBP.</small>
-                <input type="file" id="photoUpload" accept="image/*" class="file-input" name="photo" multiple />
+                <small class="text-muted d-block mb-2">Images up to ${imageMaxMb}MB. ${imageMimes.join(", ").toUpperCase()}.</small>
+                <input type="file" id="photoUpload" accept="image/jpeg,image/png,image/webp" class="file-input" name="photo" />
                 <div id="photoPreviewContainer" class="preview-container"></div>
             </div>
              
@@ -49,8 +61,8 @@ document.addEventListener("DOMContentLoaded", () => {
             
             <div id="videoDropArea" class="drag-drop-area mt-3">
                 <p class="drag-drop-text mb-1">Drag & drop your videos here or click to upload</p>
-                <small class="text-muted d-block mb-2">Videos up to 20MB. MP4, MOV, or WEBM.</small>
-                <input type="file" id="videoUpload" accept="video/*" class="file-input" name="video" multiple />
+                <small class="text-muted d-block mb-2">Videos up to ${videoMaxMb}MB. ${videoMimes.join(", ").toUpperCase()}.</small>
+                <input type="file" id="videoUpload" accept="video/mp4,video/webm,video/quicktime" class="file-input" name="video" />
                 <div id="videoPreviewContainer" class="preview-container"></div>
             </div>
             <input type="hidden" value="" name="content" />
@@ -100,16 +112,42 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const triggerButtons = document.querySelectorAll('[data-bs-target="#postModal"]');
     triggerButtons.forEach((button) => {
+        if ((button.getAttribute("data-type") === "photo" && !imagesEnabled) ||
+            (button.getAttribute("data-type") === "video" && !videosEnabled)) {
+            button.disabled = true;
+            button.classList.add("disabled");
+            button.removeAttribute("data-bs-toggle");
+            button.removeAttribute("data-bs-target");
+            button.title = button.getAttribute("data-type") === "video"
+                ? "Video uploads are disabled for this community."
+                : "Image uploads are disabled for this community.";
+        }
         button.addEventListener("click", () => {
             const type = button.getAttribute("data-type");
+            if ((type === "photo" && !imagesEnabled) || (type === "video" && !videosEnabled)) {
+                showValidationMessage(`${type === "video" ? "Video" : "Image"} uploads are disabled for this community.`, "warning");
+                return;
+            }
             updateModalContent(type);
         });
     });
 
     const footerButtons = document.querySelectorAll("#postModal .modal-footer button[data-type]");
     footerButtons.forEach((button) => {
+        if ((button.getAttribute("data-type") === "photo" && !imagesEnabled) ||
+            (button.getAttribute("data-type") === "video" && !videosEnabled)) {
+            button.disabled = true;
+            button.classList.add("disabled");
+            button.title = button.getAttribute("data-type") === "video"
+                ? "Video uploads are disabled for this community."
+                : "Image uploads are disabled for this community.";
+        }
         button.addEventListener("click", () => {
             const type = button.getAttribute("data-type");
+            if ((type === "photo" && !imagesEnabled) || (type === "video" && !videosEnabled)) {
+                showValidationMessage(`${type === "video" ? "Video" : "Image"} uploads are disabled for this community.`, "warning");
+                return;
+            }
             updateModalContent(type);
         });
     });
@@ -123,13 +161,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (file.size <= MAX_IMAGE_SIZE) {
                     validFiles.push(file);
                 } else {
-                    overLimitNames.push(`${file.name} (over 1MB)`);
+                    overLimitNames.push(`${file.name} (over ${imageMaxMb}MB)`);
                 }
             } else if (type === "video" && file.type.startsWith("video/")) {
                 if (file.size <= MAX_VIDEO_SIZE) {
                     validFiles.push(file);
                 } else {
-                    overLimitNames.push(`${file.name} (over 20MB)`);
+                    overLimitNames.push(`${file.name} (over ${videoMaxMb}MB)`);
                 }
             }
         });
@@ -137,8 +175,8 @@ document.addEventListener("DOMContentLoaded", () => {
         if (overLimitNames.length) {
             const message =
                 type === "photo"
-                    ? `Image limit is 1MB. Please remove: ${overLimitNames.join(", ")}.`
-                    : `Video limit is 20MB. Please remove: ${overLimitNames.join(", ")}.`;
+                    ? `Image limit is ${imageMaxMb}MB. Please remove: ${overLimitNames.join(", ")}.`
+                    : `Video limit is ${videoMaxMb}MB. Please remove: ${overLimitNames.join(", ")}.`;
             showValidationMessage(message, "warning");
         } else {
             hideValidationMessage();
@@ -280,11 +318,11 @@ document.addEventListener("DOMContentLoaded", () => {
             const files = Array.from(input.files || []);
             for (const file of files) {
                 if (file.type.startsWith("image/") && file.size > MAX_IMAGE_SIZE) {
-                    showValidationMessage(`Images must be 1MB or less. "${file.name}" is too large.`, "warning");
+                    showValidationMessage(`Images must be ${imageMaxMb}MB or less. "${file.name}" is too large.`, "warning");
                     return { valid: false };
                 }
                 if (file.type.startsWith("video/") && file.size > MAX_VIDEO_SIZE) {
-                    showValidationMessage(`Videos must be 20MB or less. "${file.name}" is too large.`, "warning");
+                    showValidationMessage(`Videos must be ${videoMaxMb}MB or less. "${file.name}" is too large.`, "warning");
                     return { valid: false };
                 }
             }

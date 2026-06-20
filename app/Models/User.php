@@ -36,6 +36,7 @@ class User extends Authenticatable
         'polling_unit_id',
         'religion_id',
         'age_grade_id',
+        'gender',
         'phone',
         'validVoter',
         'vin',
@@ -74,6 +75,23 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    public function setGenderAttribute($value): void
+    {
+        $this->attributes['gender'] = self::normalizeGender($value);
+    }
+
+    public function getGenderAttribute($value): ?string
+    {
+        return self::normalizeGender($value);
+    }
+
+    public static function normalizeGender($value): ?string
+    {
+        $gender = strtolower(trim((string) $value));
+
+        return in_array($gender, ['male', 'female'], true) ? $gender : null;
     }
 
 

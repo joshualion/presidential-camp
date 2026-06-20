@@ -176,13 +176,30 @@ $canMessage = $profileData->id !== $userData->id && $viewerRank >= $targetRank;
                     <div class="shadow-sm">
                 <div class=" card card-body">
                     <h5 class="card-title"><i class="fas fa-comment me-2"></i> Posts</h5>
+                    @php
+                        $messageRoutes = [
+                            'conversations' => route('messages.conversations'),
+                            'conversationMessages' => url('/messages/conversations/__CONVERSATION__/messages'),
+                            'conversationSend' => url('/messages/conversations/__CONVERSATION__/messages'),
+                            'conversationTyping' => url('/messages/conversations/__CONVERSATION__/typing'),
+                            'conversationRead' => url('/messages/conversations/__CONVERSATION__/read'),
+                            'recipients' => route('messages.recipients'),
+                            'start' => route('messages.start'),
+                            'ensure' => route('messages.ensure'),
+                            'noImage' => asset('uploads/no_image.jpg'),
+                            'memberImageBase' => asset('uploads/member_images'),
+                        ];
+                    @endphp
                     <div id="app" class="newsfeed">
                         <profile-feed
                           :audience="'{{ $userAudience }}'"
                           :profile-data='@json($profileData)'
                           :username="'{{ $userData->username }}'"
                         ></profile-feed>
-                        <messenger-widget :profile-data='@json($profileData)'></messenger-widget>
+                        <messenger-widget
+                          :profile-data='@json($profileData)'
+                          :routes='@json($messageRoutes)'
+                        ></messenger-widget>
                     </div>
                 </div>
             </div>

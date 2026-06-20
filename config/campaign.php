@@ -1,0 +1,21 @@
+<?php
+
+return [
+    'deployment_mode' => env('DEPLOYMENT_MODE', 'managed'),
+    'installer_enabled' => env('INSTALLER_ENABLED', true),
+    'portal_api_base' => rtrim(env('CAMPAIGN_PORTAL_API_BASE', 'https://campaignmanager.ng/api/v2'), '/'),
+    'package_type' => env('CAMPAIGN_PACKAGE_TYPE', 'presidential'),
+    'community' => [
+        'polling' => [
+            'notifications' => env('COMMUNITY_NOTIFICATION_POLL_MS', 30000),
+            'feed' => env('COMMUNITY_FEED_POLL_MS', 45000),
+            'message_thread' => env('COMMUNITY_MESSAGE_THREAD_POLL_MS', 7000),
+            'conversation_list' => env('COMMUNITY_CONVERSATION_POLL_MS', 20000),
+            'message_badge' => env('COMMUNITY_MESSAGE_BADGE_POLL_MS', 30000),
+        ],
+        'media' => [
+            'image_max_mb' => env('COMMUNITY_IMAGE_MAX_MB', 5),
+            'video_max_mb' => env('COMMUNITY_VIDEO_MAX_MB', 20),
+        ],
+    ],
+];

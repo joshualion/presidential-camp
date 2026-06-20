@@ -9,7 +9,9 @@ use Illuminate\Http\Request;
 use App\Events\NewCommentCreated;
 use App\Events\NewActivityNotification;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use App\Models\SystemSetting;
+use App\Services\CommunityModerationService;
 use Carbon\Carbon;
 
 class CommentController extends Controller
@@ -17,10 +19,27 @@ class CommentController extends Controller
     // Store a new comment
     public function store(Request $request, Post $post)
     {
-        $request->validate([
+        $actor = Auth::user();
+        if (!$actor) {
+            return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 401);
+        }
+        if (!app(CommunityModerationService::class)->canCreateComment($actor)
+            || !app(CommunityModerationService::class)->postInActorScope($actor, $post)) {
+            return response()->json(['status' => 'error', 'message' => 'You are not allowed to comment on this post.'], 403);
+        }
+
+        $validated = $request->validate([
             'content' => 'required|string|max:' . ($this->commentMaxLength()),
             'parent_id' => 'nullable|exists:comments,id', // For nested comments
         ]);
+
+        if (!empty($validated['parent_id'])
+            && !Comment::query()->whereKey($validated['parent_id'])->where('post_id', $post->id)->exists()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'The selected parent comment does not belong to this post.',
+            ], 422);
+        }
 
         $settings = SystemSetting::first();
         $dailyCommentLimit = $settings->community_daily_comment_limit ?? null;
@@ -36,15 +55,30 @@ class CommentController extends Controller
 
         $comment = $post->comments()->create([
             'user_id' => auth()->id(),
-            'content' => $request->input('content'),
-            'parent_id' => $request->input('parent_id'),
+            'content' => $validated['content'],
+            'parent_id' => $validated['parent_id'] ?? null,
         ]);
 
-        // Broadcast the NewCommentCreated event
-        broadcast(new NewCommentCreated($comment))->toOthers();
+        try {
+            broadcast(new NewCommentCreated($comment))->toOthers();
+        } catch (\Throwable $exception) {
+            Log::warning('Comment broadcast failed, falling back to polling', [
+                'comment_id' => $comment->id,
+                'post_id' => $post->id,
+                'error' => $exception->getMessage(),
+            ]);
+        }
 
-        // Notify post author (if different)
-        $this->notifyPostAuthor($post, $comment);
+        // Notify post author (if different), without blocking comment creation.
+        try {
+            $this->notifyPostAuthor($post, $comment);
+        } catch (\Throwable $exception) {
+            Log::warning('Comment notification creation failed, continuing with polling fallback', [
+                'comment_id' => $comment->id,
+                'post_id' => $post->id,
+                'error' => $exception->getMessage(),
+            ]);
+        }
 
         return response()->json([
             'status' => 'success',
@@ -55,6 +89,11 @@ class CommentController extends Controller
     // Fetch comments for a post
     public function index(Post $post)
     {
+        $actor = Auth::user();
+        if (!$actor || !app(CommunityModerationService::class)->postInActorScope($actor, $post)) {
+            return response()->json(['status' => 'error', 'message' => 'Post is outside your community scope.'], 403);
+        }
+
         $comments = $post->comments()
             ->with('user', 'replies.user') // Load user and replies
             ->whereNull('parent_id') // Only top-level comments
@@ -70,12 +109,8 @@ class CommentController extends Controller
     // Delete a comment
     public function destroy(Comment $comment)
     {
-        $userId = auth()->id();
-        $isCommentOwner = $comment->user_id === $userId;
-        $isPostOwner = $comment->post && $comment->post->user_id === $userId;
-        $isAdmin = auth()->user()?->hasRole('superadmin') ?? false;
-
-        if (!($isCommentOwner || $isPostOwner || $isAdmin)) {
+        $actor = Auth::user();
+        if (!$actor || !app(CommunityModerationService::class)->canDeleteComment($actor, $comment)) {
             return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 403);
         }
 
@@ -94,12 +129,8 @@ class CommentController extends Controller
             'content' => 'required|string|max:' . ($this->commentMaxLength()),
         ]);
 
-        $userId = auth()->id();
-        $isCommentOwner = $comment->user_id === $userId;
-        $isPostOwner = $comment->post && $comment->post->user_id === $userId;
-        $isAdmin = auth()->user()?->hasRole('superadmin') ?? false;
-
-        if (!($isCommentOwner || $isPostOwner || $isAdmin)) {
+        $actor = Auth::user();
+        if (!$actor || !app(CommunityModerationService::class)->canEditComment($actor, $comment)) {
             return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 403);
         }
 
