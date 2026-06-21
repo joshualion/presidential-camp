@@ -4,6 +4,16 @@ namespace App\Services;
 
 class ModuleGateService
 {
+    private const DISABLED_BY_DEFAULT_MODULES = [
+        'bulk_sms',
+        'campaign_store',
+        'donations',
+        'finance',
+        'finance_requests',
+        'sms',
+        'sponsored_placements',
+    ];
+
     public function __construct(private PackageScopeService $scope)
     {
     }
@@ -11,9 +21,27 @@ class ModuleGateService
     public function enabled(string $moduleKey): bool
     {
         $moduleKey = $this->normalize($moduleKey);
+        $configured = config('campaign.modules.'.$moduleKey);
 
         if (!$this->scope->hasLocalLicense()) {
+            if (in_array($moduleKey, self::DISABLED_BY_DEFAULT_MODULES, true)) {
+                return (bool) $configured;
+            }
+
             return $this->scope->isManaged() || !$this->scope->isSelfHosted();
+        }
+
+        $explicitState = $this->scope->localLicenseHasModule($moduleKey);
+        if ($moduleKey === CommunityRealtimeService::MODULE_KEY && $explicitState === null) {
+            return true;
+        }
+
+        if ($explicitState !== null) {
+            return $explicitState;
+        }
+
+        if (in_array($moduleKey, self::DISABLED_BY_DEFAULT_MODULES, true)) {
+            return (bool) $configured;
         }
 
         return in_array($moduleKey, array_map([$this, 'normalize'], $this->scope->enabledModules()), true);

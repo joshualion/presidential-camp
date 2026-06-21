@@ -186,12 +186,6 @@ $lga = \App\Models\LocalGovernmentArea::find(Auth::user()->lga_id);
                         <ul class="nav nav-treeview">
 
                           <li class="nav-item">
-                            <a href="{{ url('lga/bulksms/send') }}" class="nav-link">
-                              <i class="fas fa-sms	 nav-icon"></i>
-                              <p>Send SMS</p>
-                            </a>
-                          </li>
-                          <li class="nav-item">
                             <a href="{{ url('messages') }}" class="nav-link">
                               <i class="fas fa-comments nav-icon"></i>
                               <p>Internal Communication</p>
@@ -267,12 +261,6 @@ $lga = \App\Models\LocalGovernmentArea::find(Auth::user()->lga_id);
                         </a>
                         <ul class="nav nav-treeview">
 
-                          <li class="nav-item">
-                            <a href="{{ url('lga/bulksms/setting') }}" class="nav-link">
-                            <i class="fas fa-sms nav-icon"></i>
-                              <p>SMS Settings</p>
-                            </a>
-                          </li>
                         </ul>
 
             </li>

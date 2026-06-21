@@ -222,9 +222,14 @@ export default {
       scopes.push('activity-public');
       if (s.region_id) scopes.push(`activity-region-${s.region_id}`);
       if (s.state_id) scopes.push(`activity-state-${s.state_id}`);
+      if (s.senatorial_district_id) scopes.push(`activity-senatorial_district-${s.senatorial_district_id}`);
+      if (s.federal_constituency_id) scopes.push(`activity-federal_constituency-${s.federal_constituency_id}`);
       if (s.lga_id) scopes.push(`activity-lga-${s.lga_id}`);
       if (s.ward_id) scopes.push(`activity-ward-${s.ward_id}`);
       if (s.pu_id) scopes.push(`activity-pu-${s.pu_id}`);
+      (s.support_group_ids || []).forEach((id) => {
+        if (id) scopes.push(`activity-support_group-${id}`);
+      });
 
       scopes.forEach((ch) => {
         try {

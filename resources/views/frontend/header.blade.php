@@ -15,13 +15,13 @@
 @vite(['resources/css/app.css', 'resources/js/app.js'])
 
 <!-- jQuery (needed by legacy scripts on the page) -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+<script src="{{ asset('frontend/js/jquery.min.js') }}"></script>
 
 <!-- Bootstrap 5 CSS -->
-<link id="bootstrap-css" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link id="bootstrap-css" href="{{ asset('frontend/css/bootstrap.min.css') }}" rel="stylesheet">
 
 <!-- FontAwesome Icons -->
-<link id="fontawesome-css" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+<link id="fontawesome-css" href="{{ asset('assets/plugins/fontawesome-free/css/all.min.css') }}" rel="stylesheet">
 
   <!-- SweetAlerts -->
 <link rel="stylesheet" href="{{asset('assets/plugins/sweetalert2/sweetalert2.min.css')}}" />

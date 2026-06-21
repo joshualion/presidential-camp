@@ -49,6 +49,10 @@ class CommunityRealtimeService
             return 'Community Forum is not enabled for this license.';
         }
 
+        if (!$this->enabled()) {
+            return 'Community Forum is available for this installation and is currently disabled.';
+        }
+
         if ($this->realtimeAvailable()) {
             return 'Realtime updates are available through Reverb/WebSockets.';
         }

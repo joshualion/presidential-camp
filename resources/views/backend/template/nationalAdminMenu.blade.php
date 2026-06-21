@@ -239,12 +239,6 @@
                         <ul class="nav nav-treeview">
 
                           <li class="nav-item">
-                            <a href="{{ url('national/bulksms/send') }}" class="nav-link">
-                              <i class="fas fa-sms	 nav-icon"></i>
-                              <p>Send SMS</p>
-                            </a>
-                          </li>
-                          <li class="nav-item">
                             <a href="{{ url('messages') }}" class="nav-link">
                               <i class="fas fa-comments nav-icon"></i>
                               <p>Internal Communication</p>
@@ -452,12 +446,6 @@
 
                     @endif
 
-                          <li class="nav-item">
-                            <a href="{{ url('national/bulksms/setting') }}" class="nav-link">
-                            <i class="fas fa-sms nav-icon"></i>
-                              <p>SMS Settings</p>
-                            </a>
-                          </li>
                         </ul>
 
             </li>

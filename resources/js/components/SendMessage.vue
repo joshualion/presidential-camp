@@ -318,11 +318,11 @@ export default {
 <style scoped>
 .internal-messenger {
   display: flex;
-  min-height: 620px;
+  min-height: min(680px, calc(100vh - 230px));
   width: 100%;
   background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
+  border: 0;
+  border-radius: 0;
   overflow: hidden;
 }
 
@@ -414,7 +414,7 @@ export default {
 
 .chat-msg {
   overflow-y: auto;
-  max-height: 520px;
+  max-height: none;
 }
 
 .bubble {

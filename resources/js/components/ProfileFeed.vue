@@ -87,11 +87,10 @@ export default {
               liker_names: p.liker_names ?? [],
             })),
           ];
-          this.currentPage += 1;
-          this.hasMore = payload.current_page < (payload.last_page || this.currentPage);
-        } else {
-          this.hasMore = false;
         }
+
+        this.currentPage = (payload.current_page ?? this.currentPage) + 1;
+        this.hasMore = (payload.current_page ?? 1) < (payload.last_page ?? 1);
       } catch (error) {
         console.error(error);
       } finally {

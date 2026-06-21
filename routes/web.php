@@ -150,9 +150,13 @@ Route::middleware(['auth','check_onboarding', 'kuyak_eyen_ino', 'eyen_ino_no_way
     // comunity pages
     Route::get('/community/feed', [HomeController::class,'index'])->name('timeline');
     Route::get('/community/profile', [HomeController::class,'profileTimeline'])->name('profile.timeline');
+    Route::get('/community/pages/{page}', [HomeController::class, 'legalPage'])
+        ->whereIn('page', ['privacy-policy', 'terms-and-conditions', 'disclaimer'])
+        ->name('community.legal');
     Route::post('/community/post/store', [HomeController::class,'storePost'])->name('posts.store');
         //Get feed:
     Route::get('/community/posts', [HomeController::class, 'fetchPosts'])->name('posts.fetch');
+    Route::get('/community/audience/options', [HomeController::class, 'audienceOptions'])->name('community.audience.options');
     Route::get('/community/profile/posts', [HomeController::class, 'fetchAuthUserPosts'])->name('user.posts.fetch');
     Route::get('/community/{username}/profile/timeline', [HomeController::class, 'ViewUserPosts'])->name('view.user.posts');
     Route::get('/community/{username}/profile/posts', [HomeController::class, 'viewUserProfilePost'])->name('view.user.posts.feed');

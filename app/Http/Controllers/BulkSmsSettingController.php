@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\BulkSmsSetting;
 use App\Models\User;
+use App\Services\ModuleGateService;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
@@ -29,6 +30,8 @@ class BulkSmsSettingController extends Controller
 
     public function index()
     {
+        $this->requireSmsModule();
+
         $profileData = $this->getProfileData();
         $bulksms = BulkSmsSetting::where('user_id', Auth::user()->id)->first();
         if (!empty($bulksms->sender_id) && !empty($bulksms->sms_api_key)) {
@@ -39,6 +42,8 @@ class BulkSmsSettingController extends Controller
     }
 
     public function store(Request $request){
+        $this->requireSmsModule();
+
         $profileData = $this->getProfileData();
        // Validate the request data
        $validator = Validator::make($request->all(), [
@@ -71,6 +76,8 @@ class BulkSmsSettingController extends Controller
 
     public function update(Request $request)
     {
+        $this->requireSmsModule();
+
         $profileData = $this->getProfileData();
         $validator = Validator::make($request->all(), [
               'user_id' => 'required',
@@ -97,6 +104,15 @@ class BulkSmsSettingController extends Controller
               'alert-type' => 'success'
          );
          return redirect()->route($profileData->access_level.'.bulksms.setting')->with($notification);
+    }
+
+    private function requireSmsModule(): void
+    {
+        abort_unless(
+            app(ModuleGateService::class)->enabled('sms') || app(ModuleGateService::class)->enabled('bulk_sms'),
+            403,
+            'SMS module is not available for this release.'
+        );
     }
 
 

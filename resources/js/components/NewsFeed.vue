@@ -255,10 +255,10 @@ export default {
               liker_names: p.liker_names ?? [],
             })),
           ];
-          this.currentPage += 1;
-        } else {
-          this.hasMore = false;
         }
+
+        this.currentPage = (response.data?.current_page ?? this.currentPage) + 1;
+        this.hasMore = (response.data?.current_page ?? 1) < (response.data?.last_page ?? 1);
       } catch (error) {
         console.error(error);
         Swal.fire('Error', 'Unable to fetch posts. Please try again later.', 'error');

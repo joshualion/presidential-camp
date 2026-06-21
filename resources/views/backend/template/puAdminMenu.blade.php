@@ -170,12 +170,6 @@ $pu = \App\Models\PollingUnit::find($profileData->polling_unit_id);
                         <ul class="nav nav-treeview">
 
                           <li class="nav-item">
-                            <a href="{{ url('pu/bulksms/send') }}" class="nav-link">
-                              <i class="fas fa-sms	 nav-icon"></i>
-                              <p>Send SMS</p>
-                            </a>
-                          </li>
-                          <li class="nav-item">
                             <a href="{{ url('messages') }}" class="nav-link">
                               <i class="fas fa-comments nav-icon"></i>
                               <p>Internal Communication</p>
@@ -221,12 +215,6 @@ $pu = \App\Models\PollingUnit::find($profileData->polling_unit_id);
                         </a>
                         <ul class="nav nav-treeview">
 
-                          <li class="nav-item">
-                            <a href="{{ url('pu/bulksms/setting') }}" class="nav-link">
-                            <i class="fas fa-sms nav-icon"></i>
-                              <p>SMS Settings</p>
-                            </a>
-                          </li>
                         </ul>
 
             </li>

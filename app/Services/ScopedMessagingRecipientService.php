@@ -63,6 +63,16 @@ class ScopedMessagingRecipientService
         return $query->exists();
     }
 
+    public function canReplyInExistingConversation(User $sender, User $participant): bool
+    {
+        if ((int) $sender->getKey() === (int) $participant->getKey()) {
+            return false;
+        }
+
+        return $this->userWithinLicensedScope($sender)
+            && $this->userWithinLicensedScope($participant);
+    }
+
     public function allowedTargetLevels(?string $level): array
     {
         return match ($level) {
@@ -87,6 +97,14 @@ class ScopedMessagingRecipientService
             'photo' => $user->photo ? url('uploads/member_images/'.$user->photo) : url('uploads/no_image.jpg'),
             'access_level' => $user->access_level,
         ];
+    }
+
+    private function userWithinLicensedScope(User $user): bool
+    {
+        $query = User::query()->whereKey($user->getKey());
+        $this->licensedScopeQueryService->applyToUsersQuery($query);
+
+        return $query->exists();
     }
 
     private function pollingUnitGroups(User $sender, ?string $search): array

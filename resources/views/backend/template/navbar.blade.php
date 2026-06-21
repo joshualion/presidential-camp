@@ -8,14 +8,16 @@
       </li>
       <li class="nav-item d-none d-sm-inline-block">
         @if($SystemSetting && $SystemSetting->frontend_community == 1 && app(\App\Services\CommunityRealtimeService::class)->moduleAvailable())
-        <a href="{{route('timeline')}}" class="nav-link">FRONTEND COMMUNITY</a>
+        <a href="{{route('timeline')}}" class="nav-link">Community Forum</a>
         @endif
       </li>
       <li class="nav-item d-none d-sm-inline-block">
         <a href="#" class="nav-link"></a>
       </li>
       <li class="nav-item d-none d-md-inline-block">
-        @php($packageContext = app(\App\Services\PackageGovernanceService::class)->context())
+        @php
+          $packageContext = app(\App\Services\PackageGovernanceService::class)->context();
+        @endphp
         <span class="nav-link">
           <span class="badge text-white" style="background-color: {{ $SystemSetting->dark_theme_color ?? '#008751' }}; border-color: {{ $SystemSetting->dark_theme_color ?? '#008751' }};">
             {{ $packageContext['label'] }}
@@ -47,6 +49,30 @@
             </div>
           </form>
         </div>
+      </li>
+
+      @php
+        $messageUnreadCount = 0;
+        if (Auth::check()) {
+            $messageUnreadCount = \App\Models\Conversation::whereHas('participants', function ($q) {
+                    $q->where('user_id', Auth::id());
+                })
+                ->withCount([
+                    'messages as unread_count' => function ($q) {
+                        $q->whereNull('read_at')->where('sender_id', '!=', Auth::id());
+                    },
+                ])
+                ->get()
+                ->sum('unread_count');
+        }
+      @endphp
+      <li class="nav-item" id="backend-message-bell" data-count-url="{{ route('messages.unread-count') }}">
+        <a class="nav-link" href="{{ route('messages.page') }}" role="button" aria-label="Internal Communication">
+          <i class="far fa-envelope"></i>
+          <span class="badge badge-warning navbar-badge {{ $messageUnreadCount > 0 ? '' : 'd-none' }}" data-message-count>
+            {{ $messageUnreadCount > 99 ? '99+' : $messageUnreadCount }}
+          </span>
+        </a>
       </li>
 
       <li class="nav-item dropdown" id="campaign-notification-bell"
@@ -235,6 +261,23 @@
       });
 
       refresh();
+
+      const messageBell = document.getElementById('backend-message-bell');
+      if (messageBell) {
+        const messageBadge = messageBell.querySelector('[data-message-count]');
+        const messageCountUrl = messageBell.dataset.countUrl;
+        const setMessageCount = function (count) {
+          const value = Number(count || 0);
+          messageBadge.textContent = value > 99 ? '99+' : value;
+          messageBadge.classList.toggle('d-none', value <= 0);
+        };
+        const refreshMessageCount = function () {
+          window.axios.get(messageCountUrl).then(function (response) {
+            setMessageCount(response.data.unread || 0);
+          }).catch(function () {});
+        };
+        setInterval(refreshMessageCount, 30000);
+      }
 
       if (window.Echo && userId) {
         window.Echo.private('campaign.notifications.' + userId)

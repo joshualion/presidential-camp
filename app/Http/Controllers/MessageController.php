@@ -236,7 +236,7 @@ class MessageController extends Controller
         return $conversation->participants()
             ->where('users.id', '!=', $sender->id)
             ->get()
-            ->every(fn (User $participant) => $this->recipientService->canMessage($sender, $participant));
+            ->every(fn (User $participant) => $this->recipientService->canReplyInExistingConversation($sender, $participant));
     }
 
     private function broadcastMessage(Message $message, array $participantIds): void

@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Models\Product;
 use App\Models\ProductCategory;
 use App\Models\ProductOrder;
+use App\Services\ModuleGateService;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\OrderConfirmation;
@@ -41,6 +42,8 @@ class ProductController extends Controller
 
       // GET ALL PRODUCT CATEGORIES
       public function allCategories(){
+          $this->requireCampaignStoreModule();
+
           $profileData = $this->getProfileData();
           $categories = ProductCategory::all();
           $authors = User::wherein('id', $categories->pluck('user_id'))->get();
@@ -49,12 +52,16 @@ class ProductController extends Controller
 
 
       public function addCategory(){
+          $this->requireCampaignStoreModule();
+
           $profileData = $this->getProfileData();
           return view('backend.'.$profileData->access_level.'.product.add-category', compact('profileData'));
       }
 
 
       public function storeCategory(Request $request){
+         $this->requireCampaignStoreModule();
+
          // Validate the input data
             $request->validate([
                 'name' => 'required|unique:product_categories|max:255',
@@ -81,12 +88,16 @@ class ProductController extends Controller
       }
 
       public function editCategory($id){
+          $this->requireCampaignStoreModule();
+
           $profileData = $this->getProfileData();
           $category = ProductCategory::find($id);
           return view('backend.'.$profileData->access_level.'.product.edit-category', compact('profileData', 'category'));
       }
 
       public function updateCategory(Request $request, $id){
+          $this->requireCampaignStoreModule();
+
           $profileData = $this->getProfileData();
           $category = ProductCategory::find($id);
           $category->update([
@@ -105,6 +116,8 @@ class ProductController extends Controller
 
 
       public function deleteCategory($id){
+          $this->requireCampaignStoreModule();
+
           $profileData = $this->getProfileData();
           $category = ProductCategory::find($id);
           $category->delete();
@@ -124,6 +137,8 @@ class ProductController extends Controller
 
     /* START PRODUCT MANAGEMENT FUNCTIONS */
     public function allProducts(){
+        $this->requireCampaignStoreModule();
+
         $profileData = $this->getProfileData();
         $products = Product::all();        
         $systemSettings = SystemSetting::all();
@@ -133,6 +148,8 @@ class ProductController extends Controller
 
 
     public function addProduct(){
+        $this->requireCampaignStoreModule();
+
         $profileData = $this->getProfileData();
         $categories  = ProductCategory::all();
         $systemSettings = SystemSetting::all();
@@ -141,6 +158,8 @@ class ProductController extends Controller
 
 
     public function storeProduct(Request $request){
+        $this->requireCampaignStoreModule();
+
         $profileData = $this->getProfileData();
 
         $filename = null; // Initialize the variable
@@ -173,6 +192,8 @@ class ProductController extends Controller
 
 
     public function editProduct($id){
+        $this->requireCampaignStoreModule();
+
         $profileData = $this->getProfileData();
         $product = Product::find($id);
         $category = $product->category_id; // Assuming you have a relationship defined
@@ -185,6 +206,8 @@ class ProductController extends Controller
 
 
     public function updateProduct(Request $request, $id){
+        $this->requireCampaignStoreModule();
+
         $profileData = $this->getProfileData();
         // Step 1: Validation
         $request->validate([
@@ -241,6 +264,8 @@ class ProductController extends Controller
 
 
      public function deleteProduct($id){
+         $this->requireCampaignStoreModule();
+
          $profileData = $this->getProfileData();
          $product = Product::find($id);
          $product->delete();
@@ -261,6 +286,8 @@ class ProductController extends Controller
 
         //Frontend Product Management Routes
       public function storeFront(){
+            $this->requireCampaignStoreModule();
+
             $pageTitle = 'Expert Advisors, Indicators & Scripts';
             $products = Product::where('category_id', 1)->get();
             $Categories = ProductCategory::withCount('products')->get();
@@ -271,6 +298,7 @@ class ProductController extends Controller
 
 
          public function productDetails($id){
+            $this->requireCampaignStoreModule();
 
             $pageTitle = 'Product Details';
              $hashedId = decrypt($id);
@@ -281,6 +309,8 @@ class ProductController extends Controller
 
 
          public function addToCart($id){
+            $this->requireCampaignStoreModule();
+
             $profileData = $this->getProfileData();
             $pageTitle = 'Cart';
             $memberId = $id;
@@ -300,6 +330,7 @@ class ProductController extends Controller
         }
 
          public function storeCart(Request $request){
+            $this->requireCampaignStoreModule();
 
             $profileData = $this->getProfileData();
             $product_id     = $request->product_id;
@@ -460,6 +491,8 @@ class ProductController extends Controller
 
          public function checkOut(Request $request)
         {
+            $this->requireCampaignStoreModule();
+
             $profileData = $this->getProfileData();
 
             $pageTitle = 'Client Orders';
@@ -701,6 +734,7 @@ class ProductController extends Controller
 
 
         public function flutterwaveredirect(Request $request, $id){
+            $this->requireCampaignStoreModule();
 
             $profileData = $this->getProfileData();
             $user_id = $profileData->id;
@@ -821,6 +855,8 @@ class ProductController extends Controller
 
 
         public function usdtDirect(Request $request){
+            $this->requireCampaignStoreModule();
+
             $pageTitle = 'USDT TRC20 ';
             $profileData = $this->getProfileData();
             $user_id = $profileData->id;
@@ -834,9 +870,20 @@ class ProductController extends Controller
 
 
         public function vpsStoreFront(){
+             $this->requireCampaignStoreModule();
+
              $pageTitle = "Trading Servers";
              $plans = Product::where('category_id', 2)->get();
              return view('frontend.vps', compact('plans', 'pageTitle'));
+        }
+
+        private function requireCampaignStoreModule(): void
+        {
+            abort_unless(
+                app(ModuleGateService::class)->enabled('campaign_store'),
+                403,
+                'Campaign store module is not available for this release.'
+            );
         }
 
 }

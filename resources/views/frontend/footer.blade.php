@@ -15,13 +15,13 @@
             <div class="col-12 col-md-6">
                 <ul class="list-inline text-center text-md-end mb-0">
                     <li class="list-inline-item">
-                        <a href="#" class="text-white" style="text-decoration: none;">Privacy Policy</a>
+                        <a href="{{ route('community.legal', ['page' => 'privacy-policy']) }}" class="text-white" style="text-decoration: none;">Privacy Policy</a>
                     </li>
                     <li class="list-inline-item">
-                        <a href="#" class="text-white" style="text-decoration: none;">Terms & Conditions</a>
+                        <a href="{{ route('community.legal', ['page' => 'terms-and-conditions']) }}" class="text-white" style="text-decoration: none;">Terms & Conditions</a>
                     </li>
                     <li class="list-inline-item">
-                        <a href="#" class="text-white" style="text-decoration: none;">Disclaimer</a>
+                        <a href="{{ route('community.legal', ['page' => 'disclaimer']) }}" class="text-white" style="text-decoration: none;">Disclaimer</a>
                     </li>
                 </ul>
             </div>
@@ -108,5 +108,4 @@
         document.head.appendChild(localFontAwesome);
     }
 </script>
-
 

@@ -116,12 +116,19 @@
 </script>
 @endpush
 @php
+    $supportGroupIds = \App\Support\SafeDatabase::hasTable('support_groups') && \App\Support\SafeDatabase::hasTable('user_support_group')
+        ? $profileData->supportGroups()->pluck('support_groups.id')->values()->all()
+        : [];
+
     $userScope = [
         'region_id' => $profileData->region_id ?? null,
         'state_id' => $profileData->state_id ?? null,
+        'senatorial_district_id' => $profileData->senatorial_district_id ?? null,
+        'federal_constituency_id' => $profileData->federal_constituency_id ?? null,
         'lga_id' => $profileData->lga_id ?? null,
         'ward_id' => $profileData->ward_id ?? null,
         'pu_id' => $profileData->polling_unit_id ?? null,
+        'support_group_ids' => $supportGroupIds,
     ];
 @endphp
 <!-- DESKTOP HEADER -->

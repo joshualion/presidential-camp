@@ -13,6 +13,7 @@ use App\Models\LocalGovernmentArea;
 use App\Models\Ward;
 use App\Models\PollingUnit;
 use App\Services\LicensedScopeQueryService;
+use App\Services\ModuleGateService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\View;
@@ -104,6 +105,8 @@ class BulksmsController extends Controller
 
     public function index()
     {
+        $this->requireSmsModule();
+
         $profileData = $this->getProfileData();
         $countries = Country::all();
         $regionsQuery = Region::query();
@@ -180,6 +183,8 @@ class BulksmsController extends Controller
 
     public function sendSms(Request $request)
     {
+        $this->requireSmsModule();
+
         $profileData = $this->getProfileData();
         $scopeErrors = app(LicensedScopeQueryService::class)->payloadErrors($request->only([
             'state_id',
@@ -229,7 +234,15 @@ class BulksmsController extends Controller
     
         return response()->json(['status' => 'success', 'message' => 'Your SMS has been queued and will be sent shortly.']);
     }
-    
+
+    private function requireSmsModule(): void
+    {
+        abort_unless(
+            app(ModuleGateService::class)->enabled('sms') || app(ModuleGateService::class)->enabled('bulk_sms'),
+            403,
+            'SMS module is not available for this release.'
+        );
+    }
 
  
 

@@ -71,15 +71,15 @@ class CheckUserOnboarding
 
         $baseComplete = $user->firstname && $user->lastname && $user->phone;
         $locationComplete = match ($user->access_level) {
-            'superadmin', 'nationaladmin' => true,
-            'regionaladmin' => !empty($user->region_id),
-            'stateadmin' => !empty($user->state_id),
-            'senatorialadmin' => !empty($user->senatorial_district_id),
-            'federaladmin' => !empty($user->federal_constituency_id),
-            'lgaadmin' => !empty($user->lga_id),
-            'wardadmin' => !empty($user->ward_id),
-            'puadmin', 'user' => !empty($user->polling_unit_id),
-            default => !empty($user->lga_id) && !empty($user->ward_id) && !empty($user->polling_unit_id),
+            'superadmin', 'nationaladmin' => !empty($user->country_id),
+            'regionaladmin' => !empty($user->country_id) && !empty($user->region_id),
+            'stateadmin' => !empty($user->country_id) && !empty($user->state_id),
+            'senatorialadmin' => !empty($user->country_id) && !empty($user->state_id) && !empty($user->senatorial_district_id),
+            'federaladmin' => !empty($user->country_id) && !empty($user->state_id) && !empty($user->federal_constituency_id),
+            'lgaadmin' => !empty($user->country_id) && !empty($user->state_id) && !empty($user->lga_id),
+            'wardadmin' => !empty($user->country_id) && !empty($user->state_id) && !empty($user->lga_id) && !empty($user->ward_id),
+            'puadmin', 'user' => !empty($user->country_id) && !empty($user->state_id) && !empty($user->lga_id) && !empty($user->ward_id) && !empty($user->polling_unit_id),
+            default => !empty($user->country_id) && !empty($user->state_id) && !empty($user->lga_id) && !empty($user->ward_id) && !empty($user->polling_unit_id),
         };
 
         if ($requireBank && $user->access_level !== 'user') {

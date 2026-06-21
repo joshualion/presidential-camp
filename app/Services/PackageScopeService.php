@@ -97,6 +97,21 @@ class PackageScopeService
         return $this->current()->modules;
     }
 
+    public function localLicenseHasModule(string $moduleKey): ?bool
+    {
+        $license = $this->localLicense();
+
+        if (!$license) {
+            return null;
+        }
+
+        $normalized = strtolower(trim(str_replace(['-', ' '], '_', $moduleKey)));
+        $module = $license->modules
+            ->first(fn ($module) => strtolower(trim(str_replace(['-', ' '], '_', (string) $module->module_key))) === $normalized);
+
+        return $module ? (bool) $module->enabled : null;
+    }
+
     public function isSelfHosted(): bool
     {
         return $this->deploymentMode() === DeploymentModeService::SELF_HOSTED;

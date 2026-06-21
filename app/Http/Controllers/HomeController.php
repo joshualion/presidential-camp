@@ -6,9 +6,9 @@ use App\Models\Post;
 use App\Models\User;
 use Illuminate\Http\Request;
 use App\Services\FileStorageService;
+use App\Services\CommunityAudienceService;
 use App\Services\CommunityModerationService;
 use App\Services\LicensedScopeQueryService;
-use App\Services\LocationScopeService;
 use App\Events\NewPostCreated;
 use App\Events\NewActivityNotification;
 use App\Models\ActivityNotification;
@@ -93,6 +93,43 @@ class HomeController extends Controller
             'following',
             'pageTitle'
         ));
+    }
+
+    public function legalPage(string $page)
+    {
+        $settings = SystemSetting::first();
+        $profileData = $this->getProfileData();
+        $pages = [
+            'privacy-policy' => [
+                'title' => 'Privacy Policy',
+                'field' => 'privacy_policy',
+                'empty' => 'The privacy policy has not been published yet.',
+            ],
+            'terms-and-conditions' => [
+                'title' => 'Terms & Conditions',
+                'field' => 'tos',
+                'empty' => 'The terms and conditions have not been published yet.',
+            ],
+            'disclaimer' => [
+                'title' => 'Disclaimer',
+                'field' => 'disclaimer',
+                'empty' => 'The disclaimer has not been published yet.',
+            ],
+        ];
+
+        abort_unless(isset($pages[$page]), 404);
+
+        $meta = $pages[$page];
+        $pageTitle = $meta['title'];
+        $content = trim((string) ($settings?->{$meta['field']} ?? ''));
+
+        return view('frontend.legal-page', [
+            'profileData' => $profileData,
+            'pageTitle' => $pageTitle,
+            'legalTitle' => $meta['title'],
+            'legalContent' => $content,
+            'emptyMessage' => $meta['empty'],
+        ]);
     }
 
 
@@ -291,6 +328,8 @@ class HomeController extends Controller
                 'photo.max' => 'The image is larger than the allowed Community Forum image size.',
                 'video.max' => 'The video is larger than the allowed Community Forum video size.',
             ]);
+
+            $audience = app(CommunityAudienceService::class)->validateSelection($profileData, $request->all());
     
             // Initialize file paths
             $photoFilename = null;
@@ -325,12 +364,11 @@ class HomeController extends Controller
             $ward_id = $profileData->ward_id;        // Assuming the user has a ward relationship
             $pu_id = $profileData->polling_unit_id;  // Assuming the user has a polling unit relationship
     
-            // Create the post
-            $post = $profileData->posts()->create([
+            $postPayload = [
                 'content' => $validatedData['content'] ?? null,
                 'image_url' => $photoFilename,
                 'video_url' => $videoFilename,
-                'audience' => $validatedData['audience'],
+                'audience' => $audience['audience'],
                 'country_id' => $country_id,
                 'region_id' => $region_id,
                 'state_id' => $state_id,
@@ -338,7 +376,20 @@ class HomeController extends Controller
                 'ward_id' => $ward_id,
                 'pu_id' => $pu_id,
                 'post_type' => $photoFilename && $videoFilename ? 'mixed' : ($photoFilename ? 'image' : ($videoFilename ? 'video' : 'text')),
-            ]);
+            ];
+
+            if (app(CommunityAudienceService::class)->hasAudienceColumns()) {
+                $postPayload += [
+                    'audience_type' => $audience['audience_type'],
+                    'audience_scope_type' => $audience['audience_scope_type'],
+                    'audience_scope_id' => $audience['audience_scope_id'],
+                    'audience_group_id' => $audience['audience_group_id'],
+                    'audience_metadata' => $audience['audience_metadata'],
+                ];
+            }
+
+            // Create the post
+            $post = $profileData->posts()->create($postPayload);
 
             if (!$post) {
                 throw new \Exception('Failed to create the post.');
@@ -360,7 +411,7 @@ class HomeController extends Controller
 
             // Create activity notification for this post without blocking the saved post.
             try {
-                $this->createActivityNotificationForPost($profileData, $post, $validatedData['audience']);
+                $this->createActivityNotificationForPost($profileData, $post, $audience);
             } catch (\Throwable $e) {
                 Log::warning('Post notification creation failed, continuing with polling fallback', [
                     'post_id' => $post->id,
@@ -402,44 +453,17 @@ class HomeController extends Controller
         }
     }
 
-    private function createActivityNotificationForPost(User $actor, Post $post, string $audience): void
+    private function createActivityNotificationForPost(User $actor, Post $post, array $audience): void
     {
-        $scopeOrder = ['pu' => 0, 'ward' => 1, 'lga' => 2, 'state' => 3, 'region' => 4, 'public' => 5];
-        $accessScopeMap = [
-            'superadmin' => 'public',
-            'nationaladmin' => 'public',
-            'regionaladmin' => 'region',
-            'stateadmin' => 'state',
-            'lgaadmin' => 'lga',
-            'wardadmin' => 'ward',
-            'puadmin' => 'pu',
-            'user' => 'pu',
-        ];
-
-        $actorScope = $accessScopeMap[$actor->access_level] ?? 'pu';
-        $actorRank = $scopeOrder[$actorScope] ?? 0;
-        $audienceRank = $scopeOrder[$audience] ?? $actorRank;
-        $targetScope = $actorRank <= $audienceRank ? $actorScope : $audience;
-
+        $targetScope = 'public';
         $scopeId = null;
-        switch ($targetScope) {
-            case 'region':
-                $scopeId = $actor->region_id;
-                break;
-            case 'state':
-                $scopeId = $actor->state_id;
-                break;
-            case 'lga':
-                $scopeId = $actor->lga_id;
-                break;
-            case 'ward':
-                $scopeId = $actor->ward_id;
-                break;
-            case 'pu':
-                $scopeId = $actor->polling_unit_id;
-                break;
-            default:
-                $scopeId = null;
+
+        if (($audience['audience_type'] ?? null) === CommunityAudienceService::TYPE_SUPPORT_GROUP) {
+            $targetScope = 'support_group';
+            $scopeId = $audience['audience_group_id'] ?? null;
+        } elseif (($audience['audience_type'] ?? null) !== CommunityAudienceService::TYPE_GLOBAL) {
+            $targetScope = (string) ($audience['audience_scope_type'] ?? 'public');
+            $scopeId = $audience['audience_scope_id'] ?? null;
         }
 
         $notification = ActivityNotification::create([
@@ -453,6 +477,7 @@ class HomeController extends Controller
                 'message' => trim(($actor->firstname ?? '') . ' ' . ($actor->lastname ?? '')) . ' made a new post',
                 'post_id' => $post->id,
                 'snippet' => mb_substr(strip_tags((string) $post->content), 0, 100),
+                'url' => url("/community/feed#post-{$post->id}"),
             ],
         ]);
 
@@ -466,7 +491,6 @@ class HomeController extends Controller
 public function fetchPosts(Request $request)
 {
     // Get the audience, page, and last_post_timestamp parameters from the request
-    $audience = $request->input('audience', 'public');
     $lastPostTimestamp = $request->input('last_post_timestamp'); // Timestamp of the latest post in the feed
     $perPage = $request->input('per_page', 10); // Number of posts per page
     $userId = Auth::id();
@@ -478,77 +502,7 @@ public function fetchPosts(Request $request)
     $profileData = $this->getProfileData();
     $this->applyPostAuthorScope($query, $profileData);
 
-    // Check audience type and apply filters accordingly
-    switch ($audience) {
-        case 'public':
-            // No additional filtering for public audience
-            $query->where('audience', 'public');
-            break;
-        case 'region':
-            // Filter posts based on the region_id (user's region vs post's region)
-            $regionId = $profileData->region_id;
-            if ($regionId) {
-                $query->where(function ($q) use ($regionId) {
-                    $q->where('audience', 'public')
-                        ->orWhere('region_id', $regionId);
-                });
-            } else {
-                $query->where('audience', 'public');
-            }
-            break;
-        case 'state':
-            // Filter posts based on the state_id (user's state vs post's state)
-            $stateId = $profileData->state_id;
-            if ($stateId) {
-                $query->where(function ($q) use ($stateId) {
-                    $q->where('audience', 'public')
-                        ->orWhere('state_id', $stateId);
-                });
-            } else {
-                $query->where('audience', 'public');
-            }
-            break;
-        case 'lga':
-            // Filter posts based on the lga_id (user's LGA vs post's LGA)
-            $lgaId = $profileData->lga_id;
-            if ($lgaId) {
-                $query->where(function ($q) use ($lgaId) {
-                    $q->where('audience', 'public')
-                        ->orWhere('lga_id', $lgaId);
-                });
-            } else {
-                $query->where('audience', 'public');
-            }
-            break;
-        case 'ward':
-            // Filter posts based on the ward_id (user's ward vs post's ward)
-            $wardId = $profileData->ward_id;
-            if ($wardId) {
-                $query->where(function ($q) use ($wardId) {
-                    $q->where('audience', 'public')
-                        ->orWhere('ward_id', $wardId);
-                });
-            } else {
-                $query->where('audience', 'public');
-            }
-            break;
-        case 'pu':
-            // Filter posts based on the pu_id (user's polling unit vs post's polling unit)
-            $puId = $profileData->polling_unit_id;
-            if ($puId) {
-                $query->where(function ($q) use ($puId) {
-                    $q->where('audience', 'public')
-                        ->orWhere('pu_id', $puId);
-                });
-            } else {
-                $query->where('audience', 'public');
-            }
-            break;
-        default:
-            // If the audience is not recognized, fall back to public
-            $query->where('audience', 'public');
-            break;
-    }
+    app(CommunityAudienceService::class)->applyVisibility($query, $profileData);
 
     // Filter posts created after the last_post_timestamp
     if ($lastPostTimestamp) {
@@ -575,6 +529,11 @@ public function fetchPosts(Request $request)
 
     return response()->json($posts);
   }
+
+    public function audienceOptions()
+    {
+        return response()->json(app(CommunityAudienceService::class)->options(Auth::user()));
+    }
 
    
     public function fetchAuthUserPosts(Request $request)
@@ -649,11 +608,14 @@ public function fetchPosts(Request $request)
         $posts = Post::with('user')
             ->withCount('comments')
             ->withCount('likedBy as likes_count')
-            ->where('user_id', $userData->id)
-            ->latest()
-            ->paginate($perPage);
+            ->where('user_id', $userData->id);
 
         $actor = Auth::user();
+        app(CommunityAudienceService::class)->applyVisibility($posts, $actor);
+
+        $posts = $posts
+            ->latest()
+            ->paginate($perPage);
         $posts->getCollection()->transform(function ($post) use ($me, $actor) {
             $post->liked_by_me = $me ? $post->likedBy()->where('user_id', $me)->exists() : false;
             $post->liker_names = $post->likedBy()
@@ -673,7 +635,7 @@ public function fetchPosts(Request $request)
 
     public function messagesPage()
     {
-        $pageTitle = "Messages";
+        $pageTitle = "Internal Communication";
         $profileData = $this->getProfileData();
         return view('backend.messages', compact('profileData', 'pageTitle'));
     }
@@ -1039,7 +1001,6 @@ public function fetchPosts(Request $request)
         }
 
         $authorQuery = User::query()->select('users.id');
-        app(LocationScopeService::class)->applyScope($authorQuery, $actor, 'users', 'users');
         app(LicensedScopeQueryService::class)->applyToUsersQuery($authorQuery);
 
         $query->whereIn('user_id', $authorQuery);

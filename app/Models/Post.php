@@ -8,6 +8,12 @@ class Post extends Model
 {
     protected $guarded = [];
 
+    protected $casts = [
+        'audience_scope_id' => 'integer',
+        'audience_group_id' => 'integer',
+        'audience_metadata' => 'array',
+    ];
+
     protected $appends = [
         'image_full_url',
         'video_full_url',

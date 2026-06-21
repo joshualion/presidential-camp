@@ -9,6 +9,7 @@
             'timeline' => route('timeline'),
             'profileTimeline' => route('profile.timeline'),
             'postsFetch' => route('posts.fetch'),
+            'audienceOptions' => route('community.audience.options'),
             'userPostsFetch' => route('user.posts.fetch'),
             'viewUserPosts' => url('/community/__USERNAME__/profile/timeline'),
             'viewUserPostsFeed' => url('/community/__USERNAME__/profile/posts'),

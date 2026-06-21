@@ -179,12 +179,6 @@ $ward = \App\Models\Ward::find(Auth::user()->ward_id);
                         <ul class="nav nav-treeview">
 
                           <li class="nav-item">
-                            <a href="{{ url('ward/bulksms/send') }}" class="nav-link">
-                              <i class="fas fa-sms	 nav-icon"></i>
-                              <p>Send SMS</p>
-                            </a>
-                          </li>
-                          <li class="nav-item">
                             <a href="{{ url('messages') }}" class="nav-link">
                               <i class="fas fa-comments nav-icon"></i>
                               <p>Internal Communication</p>
@@ -253,12 +247,6 @@ $ward = \App\Models\Ward::find(Auth::user()->ward_id);
                         </a>
                         <ul class="nav nav-treeview">
 
-                          <li class="nav-item">
-                            <a href="{{ url('ward/bulksms/setting') }}" class="nav-link">
-                            <i class="fas fa-sms nav-icon"></i>
-                              <p>SMS Settings</p>
-                            </a>
-                          </li>
                         </ul>
 
             </li>

@@ -1,36 +1,9 @@
 @php
     $accessLevel = $profileData->access_level ?? 'user';
-    $maxAudienceByAccess = [
-        'superadmin' => 'public',
-        'nationaladmin' => 'public',
-        'regionaladmin' => 'region',
-        'stateadmin' => 'state',
-        'lgaadmin' => 'lga',
-        'wardadmin' => 'ward',
-        'puadmin' => 'pu',
-        'user' => 'pu',
-    ];
-    $packageMaxAudience = [
-        'national' => 'public',
-        'regional' => 'region',
-        'state' => 'state',
-        'lga' => 'lga',
-        'others' => 'pu',
-    ];
-    $audienceRank = ['public' => 5, 'region' => 4, 'state' => 3, 'lga' => 2, 'ward' => 1, 'pu' => 0];
-    $accessAudience = $maxAudienceByAccess[$accessLevel] ?? 'pu';
-    $packageAudience = $packageMaxAudience[$SystemSetting->package ?? ''] ?? 'pu';
-    $allowedRank = min($audienceRank[$accessAudience] ?? 0, $audienceRank[$packageAudience] ?? 0);
-    $defaultAudience = array_search($allowedRank, $audienceRank, true) ?: 'pu';
-    $audienceLabels = [
-        'public' => 'Nationwide Audience',
-        'region' => (optional($profileData->region)->name ?? 'Region') . ' Audience',
-        'state' => (optional($profileData->state)->name ?? 'State') . ' Audience',
-        'lga' => (optional($profileData->lga)->name ?? 'LGA') . ' Audience',
-        'ward' => 'Ward: ' . (optional($profileData->ward)->name ?? '') . ' Audience',
-        'pu' => 'PU: ' . (optional($profileData->pollingUnit)->name ?? '') . ' Audience',
-    ];
-    $defaultAudienceLabel = $audienceLabels[$defaultAudience] ?? 'Everyone';
+    $audienceData = app(\App\Services\CommunityAudienceService::class)->options($profileData);
+    $defaultAudience = $audienceData['default'];
+    $audienceOptions = $audienceData['options'];
+    $defaultAudienceLabel = $defaultAudience['label'] ?? 'My Campaign Scope';
     $communityMediaPolicy = app(\App\Services\CommunityModerationService::class)->mediaPolicy();
 @endphp
 
@@ -73,14 +46,8 @@
 
 {{-- Post Modal --}}
 <div class="modal fade" id="postModal" tabindex="-1" aria-labelledby="postModalLabel" aria-hidden="true"
-     data-allowed-audience="{{ $defaultAudience }}"
-     data-allowed-rank="{{ $allowedRank }}"
      data-access-level="{{ $accessLevel }}"
-     data-region-name="{{ optional($profileData->region)->name }}"
-     data-state-name="{{ optional($profileData->state)->name }}"
-     data-lga-name="{{ optional($profileData->lga)->name }}"
-     data-ward-name="{{ optional($profileData->ward)->name }}"
-     data-pu-name="{{ optional($profileData->pollingUnit)->name }}">
+     data-support-group-status="{{ $audienceData['support_group_status'] ?? 'deferred' }}">
 
     <div class="modal-dialog">
         <div class="modal-content">
@@ -120,27 +87,27 @@
                         <i class="bi bi-people"></i><small> Change <i class="fas fa-users"></i></small>
                     </button>
                     <ul class="dropdown-menu" id="audienceDropdownMenu" aria-labelledby="audienceDropdown">
-                        @if($SystemSetting && $SystemSetting->package == 'national')
-                        <li><a class="dropdown-item" href="#" data-value="public">Nationwide Audience</a></li>
-                    @endif
-                    @if($SystemSetting && in_array($SystemSetting->package, ['national', 'regional']))
-                        <li><a class="dropdown-item" href="#" data-value="region">{{ $profileData->region->name }} Audience</a></li>
-                    @endif
-                    @if($SystemSetting && in_array($SystemSetting->package, ['national', 'regional', 'state']))
-                        <li><a class="dropdown-item" href="#" data-value="state">{{ $profileData->state->name }} Audience</a></li>
-                    @endif
-                    @if($SystemSetting && in_array($SystemSetting->package, ['national', 'regional', 'state', 'lga']))
-                        <li><a class="dropdown-item" href="#" data-value="lga">{{ $profileData->lga->name }} Audience</a></li>
-                   @endif
-                    @if($SystemSetting && in_array($SystemSetting->package, ['national', 'regional', 'state', 'lga', 'others']))
-                        <li><a class="dropdown-item" href="#" data-value="ward">Ward: {{ $profileData->ward->name }} Audience</a></li>
-                        <li><a class="dropdown-item" href="#" data-value="pu">PU: {{ $profileData->pollingUnit->name }} Audience</a></li>
-                    @endif
+                    @foreach($audienceOptions as $option)
+                        <li>
+                            <a class="dropdown-item" href="#"
+                               data-label="{{ $option['label'] }}"
+                               data-audience="{{ $option['audience_type'] }}"
+                               data-scope-type="{{ $option['audience_scope_type'] }}"
+                               data-scope-id="{{ $option['audience_scope_id'] }}"
+                               data-group-id="{{ $option['audience_group_id'] }}">
+                                {{ $option['label'] }}
+                            </a>
+                        </li>
+                    @endforeach
                     </ul>
                 </div>
 
                 <!-- Hidden Field for Audience -->
-                <input type="hidden" name="audience" id="audienceInput" value="{{ $defaultAudience }}">
+                <input type="hidden" name="audience_type" id="audienceTypeInput" value="{{ $defaultAudience['audience_type'] }}">
+                <input type="hidden" name="audience_scope_type" id="audienceScopeTypeInput" value="{{ $defaultAudience['audience_scope_type'] }}">
+                <input type="hidden" name="audience_scope_id" id="audienceScopeIdInput" value="{{ $defaultAudience['audience_scope_id'] }}">
+                <input type="hidden" name="audience_group_id" id="audienceGroupIdInput" value="">
+                <input type="hidden" name="audience" id="audienceInput" value="{{ $defaultAudience['audience'] }}">
 
                  <!-- Placeholder for dynamic content -->
                         <div id="postContent"></div>
@@ -276,22 +243,13 @@
 {{-- Audience dynamic Selection--}}
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        // Audience Selection with access-level guard
+        // Audience Selection
         const audienceInput = document.getElementById('audienceInput');
+        const audienceTypeInput = document.getElementById('audienceTypeInput');
+        const audienceScopeTypeInput = document.getElementById('audienceScopeTypeInput');
+        const audienceScopeIdInput = document.getElementById('audienceScopeIdInput');
+        const audienceGroupIdInput = document.getElementById('audienceGroupIdInput');
         const audienceDisplay = document.getElementById('audienceDisplay');
-        const modalElement = document.getElementById('postModal');
-        const allowedAudience = (modalElement && modalElement.dataset.allowedAudience) ? modalElement.dataset.allowedAudience : 'pu';
-        const allowedRank = modalElement && modalElement.dataset.allowedRank ? Number(modalElement.dataset.allowedRank) : 0;
-        const audienceRank = { public: 5, region: 4, state: 3, lga: 2, ward: 1, pu: 0 };
-        const labels = {
-            public: 'Sharing with: Nationwide Audience',
-            region: `Sharing with: ${(modalElement && modalElement.dataset.regionName) ? modalElement.dataset.regionName : 'Region'} Audience`,
-            state: `Sharing with: ${(modalElement && modalElement.dataset.stateName) ? modalElement.dataset.stateName : 'State'} Audience`,
-            lga: `Sharing with: ${(modalElement && modalElement.dataset.lgaName) ? modalElement.dataset.lgaName : 'LGA'} Audience`,
-            ward: `Sharing with: Ward: ${(modalElement && modalElement.dataset.wardName) ? modalElement.dataset.wardName : ''} Audience`,
-            pu: `Sharing with: PU: ${(modalElement && modalElement.dataset.puName) ? modalElement.dataset.puName : ''} Audience`,
-        };
-
         const dropdownToggle = document.getElementById('audienceDropdown');
         const dropdownMenu = document.getElementById('audienceDropdownMenu');
 
@@ -318,78 +276,32 @@
             });
         }
 
-        const showAudienceWarning = () => {
-            const alertBox = document.getElementById('postValidation');
-            if (!alertBox) return;
-            alertBox.textContent = `You can share up to ${labels[allowedAudience] || 'your allowed audience'}.`;
-            alertBox.classList.remove('d-none', 'alert-danger');
-            alertBox.classList.add('alert-warning');
-        };
-
-        const hideAudienceWarning = () => {
-            const alertBox = document.getElementById('postValidation');
-            if (!alertBox) return;
-            alertBox.classList.add('d-none');
-            alertBox.textContent = '';
-        };
-
-        const setAudience = (value) => {
-            if (audienceInput) audienceInput.value = value;
-            if (audienceDisplay && labels[value]) audienceDisplay.textContent = labels[value];
+        const setAudience = (item) => {
+            if (!item) return;
+            const legacyAudience = {
+                region: 'region',
+                state: 'state',
+                senatorial_district: 'state',
+                federal_constituency: 'state',
+                lga: 'lga',
+                ward: 'ward',
+                pu: 'pu',
+            };
+            if (audienceTypeInput) audienceTypeInput.value = item.dataset.audience || 'own_scope';
+            if (audienceScopeTypeInput) audienceScopeTypeInput.value = item.dataset.scopeType || '';
+            if (audienceScopeIdInput) audienceScopeIdInput.value = item.dataset.scopeId || '';
+            if (audienceGroupIdInput) audienceGroupIdInput.value = item.dataset.groupId || '';
+            if (audienceInput) audienceInput.value = item.dataset.audience === 'global' ? 'public' : (legacyAudience[item.dataset.scopeType] || 'public');
+            if (audienceDisplay) audienceDisplay.textContent = `Sharing with: ${item.dataset.label || 'My Campaign Scope'}`;
+            dropdownMenu?.classList.remove('show');
         };
 
         document.querySelectorAll('.dropdown-item').forEach(item => {
             item.addEventListener('click', function (e) {
                 e.preventDefault();
-
-                // Get the selected value
-                const selectedValue = this.getAttribute('data-value');
-                const allowed = (audienceRank[selectedValue] || 0) <= (allowedRank || audienceRank[allowedAudience] || 0);
-                if (!allowed) {
-                    showAudienceWarning();
-                    setAudience(allowedAudience);
-                    return;
-                }
-                hideAudienceWarning();
-
-                // Update the hidden input
-                audienceInput.value = selectedValue;
-
-                // Update the audience display text
-                let displayText = '';
-
-                // Define the display text based on the selected value
-                switch (selectedValue) {
-                    case 'public':
-                        displayText = 'Sharing with: Nationwide Audience';
-                        break;
-                    case 'region':
-                        displayText = `Sharing with: {{ $profileData->region->name }} Audience`;
-                        break;
-                    case 'state':
-                        displayText = `Sharing with: {{ $profileData->state->name }} Audience`;
-                        break;
-                    case 'lga':
-                        displayText = `Sharing with: {{ $profileData->lga->name }} Audience`;
-                        break;
-                    case 'ward':
-                        displayText = `Sharing with: Ward: {{ $profileData->ward->name }} Audience`;
-                        break;
-                    case 'pu':
-                        displayText = `Sharing with: PU: {{ $profileData->pollingUnit->name }} Audience`;
-                        break;
-                    default:
-                        displayText = 'Sharing with: Everyone';
-                        break;
-                }
-
-                // Update the text in the audienceDisplay
-                audienceDisplay.textContent = displayText;
+                setAudience(this);
             });
         });
-
-        // Ensure the default audience respects the access level on load
-        setAudience(allowedAudience);
     });
 </script>
 

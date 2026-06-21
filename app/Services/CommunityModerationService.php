@@ -136,7 +136,11 @@ class CommunityModerationService
             'video' => ($policy['videos_enabled']
                 ? 'nullable|file|mimes:'.implode(',', $policy['video_mimes']).'|mimetypes:video/mp4,video/webm,video/quicktime|max:'.($policy['video_max_mb'] * 1024)
                 : 'prohibited').'|required_without_all:content,photo',
-            'audience' => 'required|string|in:public,region,state,lga,ward,pu',
+            'audience' => 'nullable|string|in:public,region,state,lga,ward,pu',
+            'audience_type' => 'nullable|string|in:own_scope,global,specific_scope,support_group',
+            'audience_scope_type' => 'nullable|string|in:region,state,senatorial_district,federal_constituency,lga,ward,pu',
+            'audience_scope_id' => 'nullable|integer|min:1',
+            'audience_group_id' => 'nullable|integer|min:1',
         ];
     }
 

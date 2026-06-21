@@ -186,6 +186,68 @@ test('message creation succeeds with log broadcast default', function () {
     expect($conversation->messages()->where('body', 'No Reverb required')->exists())->toBeTrue();
 });
 
+test('lower level participant can reply to existing higher initiated conversation', function () {
+    messagingState(9, 'Cross River');
+    messagingLicense(9);
+
+    $higher = messagingUser('higher@test.local', ['access_level' => 'stateadmin', 'state_id' => 9]);
+    $lower = messagingUser('lower@test.local', ['access_level' => 'user', 'state_id' => 9]);
+
+    $conversation = Conversation::query()->create([
+        'created_by' => $higher->id,
+        'type' => 'direct',
+    ]);
+    $conversation->participants()->sync([$higher->id, $lower->id]);
+
+    $this->withoutMiddleware([CheckUserOnboarding::class, KuyakEyenIno::class, ValidateLicense::class]);
+
+    $this->actingAs($lower)
+        ->postJson(route('messages.conversation.send', $conversation), ['message' => 'Reply upward'])
+        ->assertOk();
+
+    expect($conversation->messages()->where('sender_id', $lower->id)->where('body', 'Reply upward')->exists())->toBeTrue();
+});
+
+test('lower level user cannot initiate upward conversation', function () {
+    messagingState(9, 'Cross River');
+    messagingLicense(9);
+
+    $higher = messagingUser('higher-init@test.local', ['access_level' => 'stateadmin', 'state_id' => 9]);
+    $lower = messagingUser('lower-init@test.local', ['access_level' => 'user', 'state_id' => 9]);
+
+    $this->withoutMiddleware([CheckUserOnboarding::class, KuyakEyenIno::class, ValidateLicense::class]);
+
+    $this->actingAs($lower)
+        ->postJson(route('messages.start'), [
+            'recipient_id' => $higher->id,
+            'message' => 'Can I start upward?',
+        ])
+        ->assertForbidden();
+});
+
+test('unread message count returns count for authenticated participant', function () {
+    messagingState(9, 'Cross River');
+    messagingLicense(9);
+
+    $sender = messagingUser('unread-sender@test.local', ['access_level' => 'stateadmin', 'state_id' => 9]);
+    $recipient = messagingUser('unread-recipient@test.local', ['access_level' => 'user', 'state_id' => 9]);
+
+    $conversation = Conversation::query()->create([
+        'created_by' => $sender->id,
+        'type' => 'direct',
+    ]);
+    $conversation->participants()->sync([$sender->id, $recipient->id]);
+    $conversation->messages()->create(['sender_id' => $sender->id, 'body' => 'Unread one']);
+    $conversation->messages()->create(['sender_id' => $recipient->id, 'body' => 'Own message']);
+
+    $this->withoutMiddleware([CheckUserOnboarding::class, KuyakEyenIno::class, ValidateLicense::class]);
+
+    $this->actingAs($recipient)
+        ->getJson(route('messages.unread-count'))
+        ->assertOk()
+        ->assertJson(['unread' => 1]);
+});
+
 test('backend messages route is not blocked when community is disabled', function () {
     messagingState(9, 'Cross River');
     messagingLicense(9);

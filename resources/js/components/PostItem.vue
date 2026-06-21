@@ -23,6 +23,7 @@
               @click="toggleFollow"
             >
               <i :class="isFollowingUser ? 'fas fa-user-check' : 'fas fa-user-plus'"></i>
+              <span class="follow-label ms-1">{{ isFollowingUser ? 'Following' : 'Follow' }}</span>
             </button>
           </h6>
           <div class="d-flex align-items-center">
@@ -332,9 +333,10 @@ a {
 }
 
 .follow-btn-icon {
-  padding: 0.25rem 0.4rem;
+  padding: 0.25rem 0.55rem;
   font-size: 0.8rem;
   line-height: 1;
+  white-space: nowrap;
 }
 
 .mention {
