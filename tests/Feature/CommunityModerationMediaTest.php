@@ -214,7 +214,7 @@ function communityModerationUser(array $attributes = [], ?string $roleName = 'Me
         'status' => 'active',
         'requires_update' => false,
         'country_id' => 1,
-        'region_id' => null,
+        'region_id' => 1,
         'state_id' => 9,
         'lga_id' => 1,
         'ward_id' => 1,

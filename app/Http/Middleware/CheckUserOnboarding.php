@@ -70,17 +70,7 @@ class CheckUserOnboarding
         $hasBank = $user->bank && $user->bank_account_number;
 
         $baseComplete = $user->firstname && $user->lastname && $user->phone;
-        $locationComplete = match ($user->access_level) {
-            'superadmin', 'nationaladmin' => !empty($user->country_id),
-            'regionaladmin' => !empty($user->country_id) && !empty($user->region_id),
-            'stateadmin' => !empty($user->country_id) && !empty($user->state_id),
-            'senatorialadmin' => !empty($user->country_id) && !empty($user->state_id) && !empty($user->senatorial_district_id),
-            'federaladmin' => !empty($user->country_id) && !empty($user->state_id) && !empty($user->federal_constituency_id),
-            'lgaadmin' => !empty($user->country_id) && !empty($user->state_id) && !empty($user->lga_id),
-            'wardadmin' => !empty($user->country_id) && !empty($user->state_id) && !empty($user->lga_id) && !empty($user->ward_id),
-            'puadmin', 'user' => !empty($user->country_id) && !empty($user->state_id) && !empty($user->lga_id) && !empty($user->ward_id) && !empty($user->polling_unit_id),
-            default => !empty($user->country_id) && !empty($user->state_id) && !empty($user->lga_id) && !empty($user->ward_id) && !empty($user->polling_unit_id),
-        };
+        $locationComplete = true;
 
         if ($requireBank && $user->access_level !== 'user') {
             if (!$hasBank) {

@@ -8,6 +8,7 @@ use App\Models\SupportGroup;
 use App\Models\SystemSetting;
 use App\Models\User;
 use App\Services\CommunityRealtimeService;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
@@ -37,6 +38,46 @@ beforeEach(function () {
     Country::query()->updateOrCreate(['id' => 1], [
         'uuid' => (string) Str::uuid(),
         'name' => 'Nigeria',
+    ]);
+
+    DB::table('regions')->updateOrInsert(['id' => 1], [
+        'uuid' => (string) Str::uuid(),
+        'name' => 'South South',
+        'country_id' => 1,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    DB::table('states')->updateOrInsert(['id' => 9], [
+        'uuid' => (string) Str::uuid(),
+        'name' => 'Cross River',
+        'region_id' => 1,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    DB::table('local_government_areas')->updateOrInsert(['id' => 1], [
+        'uuid' => (string) Str::uuid(),
+        'name' => 'Calabar Municipal',
+        'state_id' => 9,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    DB::table('wards')->updateOrInsert(['id' => 1], [
+        'uuid' => (string) Str::uuid(),
+        'name' => 'Ward One',
+        'lga_id' => 1,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    DB::table('polling_units')->updateOrInsert(['id' => 1], [
+        'uuid' => (string) Str::uuid(),
+        'name' => 'PU One',
+        'ward_id' => 1,
+        'created_at' => now(),
+        'updated_at' => now(),
     ]);
 
     Religion::query()->updateOrCreate(['id' => 1], [
@@ -69,11 +110,11 @@ function communityGateUser(): User
         'status' => 'active',
         'requires_update' => false,
         'country_id' => 1,
-        'region_id' => null,
-        'state_id' => null,
-        'lga_id' => null,
-        'ward_id' => null,
-        'polling_unit_id' => null,
+        'region_id' => 1,
+        'state_id' => 9,
+        'lga_id' => 1,
+        'ward_id' => 1,
+        'polling_unit_id' => 1,
         'religion_id' => 1,
         'age_grade_id' => 1,
     ]));
@@ -151,10 +192,12 @@ test('community redirects users with incomplete voting location profile', functi
         'religion_id' => 1,
         'age_grade_id' => 1,
     ]));
+    $group = SupportGroup::query()->firstOrCreate(['name' => 'Community Volunteers']);
+    $user->supportGroups()->sync([$group->id]);
 
     $response = $this->actingAs($user)->get(route('timeline'));
 
-    $response->assertRedirect(route('complete.profile'));
+    $response->assertRedirect(route('user.profile'));
 });
 
 test('community ajax endpoint returns forbidden json when disabled', function () {

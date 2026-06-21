@@ -7,6 +7,7 @@ use App\Http\Middleware\BlockInstallerIfInstalled;
 use App\Http\Middleware\RedirectIfNotInstalled;
 use App\Http\Middleware\UseInstallerSafeDrivers;
 use App\Http\Middleware\ValidateLicense;
+use App\Http\Middleware\EnsureCommunityProfileLocationComplete;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -39,6 +40,7 @@ return Application::configure(basePath: dirname(__DIR__))
                          'eyen_ino_no_way' => ValidateLicense::class,
                          'installer.block_if_installed' => BlockInstallerIfInstalled::class,
                          'community.enabled' => EnsureCommunityEnabled::class,
+                         'community.profile_complete' => EnsureCommunityProfileLocationComplete::class,
                         ]);
 
     })
