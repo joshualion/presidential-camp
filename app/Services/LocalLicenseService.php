@@ -124,6 +124,37 @@ class LocalLicenseService
         return $licenseKey ? Str::mask($licenseKey, '*', 4, max(strlen($licenseKey) - 8, 0)) : null;
     }
 
+    public function customerMessage(?string $message, string $fallback = 'Request could not be completed.'): string
+    {
+        $message = trim((string) $message);
+        if ($message === '') {
+            return $fallback;
+        }
+
+        $message = preg_replace('/\bModules\s*:\s*[^.;\n\r]+[.;]?/i', 'Licensed package activated.', $message) ?: $message;
+
+        $hiddenKeys = [
+            'advanced_analytics',
+            'agents',
+            'ai_strategy',
+            'bulk_sms',
+            'elections',
+            'evidence',
+            'executives',
+            'incidents',
+            'members',
+            'messaging',
+            'operations_center',
+            'results',
+        ];
+
+        foreach ($hiddenKeys as $key) {
+            $message = preg_replace('/\b'.preg_quote($key, '/').'\b/i', 'licensed feature', $message) ?: $message;
+        }
+
+        return trim(preg_replace('/\s+/', ' ', $message) ?: $fallback);
+    }
+
     public function log(?LocalLicense $license, ?string $licenseKey, string $action, string $status, ?string $message, array $payload = []): void
     {
         if (!SafeDatabase::hasTable('license_check_logs')) {

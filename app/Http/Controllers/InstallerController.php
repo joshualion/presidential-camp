@@ -197,7 +197,7 @@ class InstallerController extends Controller
             $this->localLicenseService->log(null, $data['license_key'], 'preview', ($preview['ok'] ?? false) ? 'success' : 'failed', $preview['message'] ?? null, $preview);
 
             if (($preview['ok'] ?? false) !== true) {
-                return back()->withInput()->withErrors(['license_key' => $preview['message'] ?? 'License preview failed.']);
+                return back()->withInput()->withErrors(['license_key' => $this->localLicenseService->customerMessage($preview['message'] ?? null, 'License preview failed.')]);
             }
 
             session([

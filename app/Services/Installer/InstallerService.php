@@ -105,7 +105,7 @@ class InstallerService
 
             if (($activation['ok'] ?? false) !== true) {
                 $this->localLicenseService->log(null, $licenseKey, 'activate', 'failed', $activation['message'] ?? null, $activation);
-                return ['ok' => false, 'stage' => 'activation', 'message' => $activation['message'] ?? 'License activation failed.'];
+                return ['ok' => false, 'stage' => 'activation', 'message' => $this->localLicenseService->customerMessage($activation['message'] ?? null, 'License activation failed.')];
             }
 
             $activationPayload = array_replace_recursive($licensePreview, $activation['data'] ?? []);
@@ -553,6 +553,8 @@ class InstallerService
 
     private function cleanMessage(string $message): string
     {
-        return preg_replace('/(password=|DB_PASSWORD=|MAIL_PASSWORD=)[^;\s]+/i', '$1******', $message) ?: 'Installation failed.';
+        $message = preg_replace('/(password=|DB_PASSWORD=|MAIL_PASSWORD=)[^;\s]+/i', '$1******', $message) ?: 'Installation failed.';
+
+        return $this->localLicenseService->customerMessage($message, 'Installation failed.');
     }
 }

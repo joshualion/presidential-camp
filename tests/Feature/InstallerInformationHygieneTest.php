@@ -3,6 +3,7 @@
 use App\Models\LocationProvisioningRun;
 use App\Models\LocalLicense;
 use App\Services\LocationProvisioningIntegrityService;
+use App\Services\LocalLicenseService;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ViewErrorBag;
 
@@ -63,6 +64,20 @@ test('installer license preview hides raw module keys', function () {
         ->and($html)->not->toContain('advanced_analytics')
         ->and($html)->not->toContain('bulk_sms')
         ->and($html)->not->toContain('operations_center');
+});
+
+test('customer license messages hide raw module key lists', function () {
+    $message = app(LocalLicenseService::class)->customerMessage(
+        'Modules: advanced_analytics, agents, ai_strategy, bulk_sms, elections, evidence, executives, incidents, members, messaging, operations_center, results'
+    );
+
+    expect($message)->toContain('Licensed package activated')
+        ->and($message)->not->toContain('advanced_analytics')
+        ->and($message)->not->toContain('agents')
+        ->and($message)->not->toContain('ai_strategy')
+        ->and($message)->not->toContain('bulk_sms')
+        ->and($message)->not->toContain('operations_center')
+        ->and($message)->not->toContain('results');
 });
 
 test('full national integrity blocks install lock when expected counts are short', function () {
