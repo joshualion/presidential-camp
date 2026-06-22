@@ -60,6 +60,9 @@ Route::get('/pu/people/{metric}/data/fetch/{uuid?}', [MembersController::class, 
 Route::get('/pu/people/{metric}/fetch/{uuid?}', [MembersController::class, 'allPeopleMetricMembers'])->whereIn('metric', ['agents', 'eligible-voters', 'without-voter-card', 'new-today', 'new-this-week', 'new-this-month'])->name('puadmin.peopleMetric');
 
 Route::get('/pu/member/add', [MembersController::class, 'addMember'])->name('puadmin.member.add')->middleware('access_level:puadmin');
+Route::get('/pu/members/import', [MembersController::class, 'importMembers'])->name('puadmin.member.import')->middleware('access_level:puadmin');
+Route::get('/pu/members/import/template', [MembersController::class, 'downloadMemberImportTemplate'])->name('puadmin.member.import.template')->middleware('access_level:puadmin');
+Route::post('/pu/members/import', [MembersController::class, 'storeMemberImport'])->name('puadmin.member.import.store')->middleware('access_level:puadmin');
 Route::post('/pu/member/store', [MembersController::class, 'storeMember'])->name('puadmin.member.store')->middleware('access_level:puadmin');
 Route::get('/pu/member/edit/{uuid}', [MembersController::class, 'editMember'])->name('puadmin.member.edit')->middleware('access_level:puadmin');
 Route::put('/pu/member/update/', [MembersController::class, 'updateMember'])->name('puadmin.member.update')->middleware('access_level:puadmin');

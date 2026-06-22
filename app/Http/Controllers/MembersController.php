@@ -26,6 +26,7 @@ use App\Services\CampaignPackageLocationFormService;
 use App\Services\CampaignPackageRoleService;
 use App\Services\LocationScopeService;
 use App\Services\LicensedScopeQueryService;
+use App\Services\MemberImportService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Spatie\Permission\Models\Role;
@@ -1021,6 +1022,47 @@ class MembersController extends Controller
 
 
          return view('backend.'.$profileData->access_level.'.member.add', compact( 'profileData', 'pageTitle', 'roles', 'assignableAccessLevels', 'countries', 'regions', 'states', 'lgas', 'wards', 'pus', 'pollingUnits', 'senatorialDistricts', 'federalConstituencies', 'locationForm'));
+     }
+
+     public function importMembers()
+     {
+         $profileData = $this->getProfileData();
+         $pageTitle = 'Import Members';
+         $assignableAccessLevels = $this->assignableAccessLevels($profileData);
+         $roles = $this->assignableRoles($profileData);
+         $locationForm = $this->locationForms()->context($profileData);
+
+         return view('backend.shared.member.import', compact('profileData', 'pageTitle', 'assignableAccessLevels', 'roles', 'locationForm'));
+     }
+
+     public function downloadMemberImportTemplate(MemberImportService $importer)
+     {
+         $profileData = $this->getProfileData();
+         $filename = 'campaign-manager-member-import-template.csv';
+
+         return response()->streamDownload(function () use ($importer, $profileData): void {
+             $out = fopen('php://output', 'wb');
+             foreach ($importer->templateRows($profileData) as $row) {
+                 fputcsv($out, $row);
+             }
+             fclose($out);
+         }, $filename, [
+             'Content-Type' => 'text/csv',
+         ]);
+     }
+
+     public function storeMemberImport(Request $request, MemberImportService $importer)
+     {
+         $profileData = $this->getProfileData();
+
+         $validated = $request->validate([
+             'import_file' => 'required|file|mimes:csv,txt|max:5120',
+         ]);
+
+         $batch = $importer->import($profileData, $validated['import_file']);
+         $pageTitle = 'Member Import Report';
+
+         return view('backend.shared.member.import-result', compact('profileData', 'pageTitle', 'batch'));
      }
 
      public function storeMember(Request $request)

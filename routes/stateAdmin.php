@@ -60,6 +60,9 @@ Route::get('/state/people/{metric}/data/fetch/{uuid?}', [MembersController::clas
 Route::get('/state/people/{metric}/fetch/{uuid?}', [MembersController::class, 'allPeopleMetricMembers'])->whereIn('metric', ['agents', 'eligible-voters', 'without-voter-card', 'new-today', 'new-this-week', 'new-this-month'])->name('stateadmin.peopleMetric');
 
 Route::get('/state/member/add', [MembersController::class, 'addMember'])->name('stateadmin.member.add')->middleware('access_level:stateadmin');
+Route::get('/state/members/import', [MembersController::class, 'importMembers'])->name('stateadmin.member.import')->middleware('access_level:stateadmin');
+Route::get('/state/members/import/template', [MembersController::class, 'downloadMemberImportTemplate'])->name('stateadmin.member.import.template')->middleware('access_level:stateadmin');
+Route::post('/state/members/import', [MembersController::class, 'storeMemberImport'])->name('stateadmin.member.import.store')->middleware('access_level:stateadmin');
 Route::post('/state/member/store', [MembersController::class, 'storeMember'])->name('stateadmin.member.store')->middleware('access_level:stateadmin');
 Route::get('/state/member/edit/{uuid}', [MembersController::class, 'editMember'])->name('stateadmin.member.edit')->middleware('access_level:stateadmin');
 Route::put('/state/member/update/', [MembersController::class, 'updateMember'])->name('stateadmin.member.update')->middleware('access_level:stateadmin');

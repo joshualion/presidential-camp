@@ -22,6 +22,7 @@
                                 'Pu Agent'
                             ]) || $profileData->access_level == 'superadmin')
                                 <a href="{{ route($profileData->access_level.'.member.add') }}"><button class="btn btn-default"> <i class="fa fa-plus-square"></i> Add New Member</button></a>
+                                @include('backend.shared.member.import-button')
                         @endif
                     </div>
                 </div>

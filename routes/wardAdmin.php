@@ -58,6 +58,9 @@ Route::get('/ward/people/{metric}/data/fetch/{uuid?}', [MembersController::class
 Route::get('/ward/people/{metric}/fetch/{uuid?}', [MembersController::class, 'allPeopleMetricMembers'])->whereIn('metric', ['agents', 'eligible-voters', 'without-voter-card', 'new-today', 'new-this-week', 'new-this-month'])->name('wardadmin.peopleMetric');
 
 Route::get('/ward/member/add', [MembersController::class, 'addMember'])->name('wardadmin.member.add')->middleware('access_level:wardadmin');
+Route::get('/ward/members/import', [MembersController::class, 'importMembers'])->name('wardadmin.member.import')->middleware('access_level:wardadmin');
+Route::get('/ward/members/import/template', [MembersController::class, 'downloadMemberImportTemplate'])->name('wardadmin.member.import.template')->middleware('access_level:wardadmin');
+Route::post('/ward/members/import', [MembersController::class, 'storeMemberImport'])->name('wardadmin.member.import.store')->middleware('access_level:wardadmin');
 Route::post('/ward/member/store', [MembersController::class, 'storeMember'])->name('wardadmin.member.store')->middleware('access_level:wardadmin');
 Route::get('/ward/member/edit/{uuid}', [MembersController::class, 'editMember'])->name('wardadmin.member.edit')->middleware('access_level:wardadmin');
 Route::put('/ward/member/update/', [MembersController::class, 'updateMember'])->name('wardadmin.member.update')->middleware('access_level:wardadmin');

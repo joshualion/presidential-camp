@@ -175,6 +175,9 @@ Route::get('/national/people/{metric}/data/fetch/{uuid?}', [MembersController::c
 Route::get('/national/people/{metric}/fetch/{uuid?}', [MembersController::class, 'allPeopleMetricMembers'])->whereIn('metric', ['agents', 'eligible-voters', 'without-voter-card', 'new-today', 'new-this-week', 'new-this-month'])->name('nationaladmin.peopleMetric');
 
 Route::get('/national/member/add', [MembersController::class, 'addMember'])->name('nationaladmin.member.add')->middleware('access_level:nationaladmin');
+Route::get('/national/members/import', [MembersController::class, 'importMembers'])->name('nationaladmin.member.import')->middleware('access_level:nationaladmin');
+Route::get('/national/members/import/template', [MembersController::class, 'downloadMemberImportTemplate'])->name('nationaladmin.member.import.template')->middleware('access_level:nationaladmin');
+Route::post('/national/members/import', [MembersController::class, 'storeMemberImport'])->name('nationaladmin.member.import.store')->middleware('access_level:nationaladmin');
 Route::post('/national/member/store', [MembersController::class, 'storeMember'])->name('nationaladmin.member.store')->middleware('access_level:nationaladmin');
 Route::get('/national/member/edit/{uuid}', [MembersController::class, 'editMember'])->name('nationaladmin.member.edit')->middleware('access_level:nationaladmin');
 Route::put('/national/member/update/', [MembersController::class, 'updateMember'])->name('nationaladmin.member.update')->middleware('access_level:nationaladmin');

@@ -42,6 +42,9 @@ Route::middleware(['auth', 'check_onboarding'])->group(function () {
     Route::get('/federal/people/{metric}/data/fetch/{uuid?}', [MembersController::class, 'getPeopleMetricMembersData'])->whereIn('metric', ['agents', 'eligible-voters', 'without-voter-card', 'new-today', 'new-this-week', 'new-this-month'])->name('federaladmin.peopleMetric.data');
     Route::get('/federal/people/{metric}/fetch/{uuid?}', [MembersController::class, 'allPeopleMetricMembers'])->whereIn('metric', ['agents', 'eligible-voters', 'without-voter-card', 'new-today', 'new-this-week', 'new-this-month'])->name('federaladmin.peopleMetric');
     Route::get('/federal/member/add', [MembersController::class, 'addMember'])->name('federaladmin.member.add')->middleware('access_level:federaladmin');
+    Route::get('/federal/members/import', [MembersController::class, 'importMembers'])->name('federaladmin.member.import')->middleware('access_level:federaladmin');
+    Route::get('/federal/members/import/template', [MembersController::class, 'downloadMemberImportTemplate'])->name('federaladmin.member.import.template')->middleware('access_level:federaladmin');
+    Route::post('/federal/members/import', [MembersController::class, 'storeMemberImport'])->name('federaladmin.member.import.store')->middleware('access_level:federaladmin');
     Route::post('/federal/member/store', [MembersController::class, 'storeMember'])->name('federaladmin.member.store')->middleware('access_level:federaladmin');
     Route::get('/federal/member/edit/{uuid}', [MembersController::class, 'editMember'])->name('federaladmin.member.edit')->middleware('access_level:federaladmin');
     Route::put('/federal/member/update/', [MembersController::class, 'updateMember'])->name('federaladmin.member.update')->middleware('access_level:federaladmin');

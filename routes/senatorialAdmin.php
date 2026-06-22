@@ -42,6 +42,9 @@ Route::middleware(['auth', 'check_onboarding'])->group(function () {
     Route::get('/senatorial/people/{metric}/data/fetch/{uuid?}', [MembersController::class, 'getPeopleMetricMembersData'])->whereIn('metric', ['agents', 'eligible-voters', 'without-voter-card', 'new-today', 'new-this-week', 'new-this-month'])->name('senatorialadmin.peopleMetric.data');
     Route::get('/senatorial/people/{metric}/fetch/{uuid?}', [MembersController::class, 'allPeopleMetricMembers'])->whereIn('metric', ['agents', 'eligible-voters', 'without-voter-card', 'new-today', 'new-this-week', 'new-this-month'])->name('senatorialadmin.peopleMetric');
     Route::get('/senatorial/member/add', [MembersController::class, 'addMember'])->name('senatorialadmin.member.add')->middleware('access_level:senatorialadmin');
+    Route::get('/senatorial/members/import', [MembersController::class, 'importMembers'])->name('senatorialadmin.member.import')->middleware('access_level:senatorialadmin');
+    Route::get('/senatorial/members/import/template', [MembersController::class, 'downloadMemberImportTemplate'])->name('senatorialadmin.member.import.template')->middleware('access_level:senatorialadmin');
+    Route::post('/senatorial/members/import', [MembersController::class, 'storeMemberImport'])->name('senatorialadmin.member.import.store')->middleware('access_level:senatorialadmin');
     Route::post('/senatorial/member/store', [MembersController::class, 'storeMember'])->name('senatorialadmin.member.store')->middleware('access_level:senatorialadmin');
     Route::get('/senatorial/member/edit/{uuid}', [MembersController::class, 'editMember'])->name('senatorialadmin.member.edit')->middleware('access_level:senatorialadmin');
     Route::put('/senatorial/member/update/', [MembersController::class, 'updateMember'])->name('senatorialadmin.member.update')->middleware('access_level:senatorialadmin');

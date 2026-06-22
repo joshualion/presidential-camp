@@ -60,6 +60,9 @@ Route::get('/lga/people/{metric}/data/fetch/{uuid?}', [MembersController::class,
 Route::get('/lga/people/{metric}/fetch/{uuid?}', [MembersController::class, 'allPeopleMetricMembers'])->whereIn('metric', ['agents', 'eligible-voters', 'without-voter-card', 'new-today', 'new-this-week', 'new-this-month'])->name('lgaadmin.peopleMetric');
 
 Route::get('/lga/member/add', [MembersController::class, 'addMember'])->name('lgaadmin.member.add')->middleware('access_level:lgaadmin');
+Route::get('/lga/members/import', [MembersController::class, 'importMembers'])->name('lgaadmin.member.import')->middleware('access_level:lgaadmin');
+Route::get('/lga/members/import/template', [MembersController::class, 'downloadMemberImportTemplate'])->name('lgaadmin.member.import.template')->middleware('access_level:lgaadmin');
+Route::post('/lga/members/import', [MembersController::class, 'storeMemberImport'])->name('lgaadmin.member.import.store')->middleware('access_level:lgaadmin');
 Route::post('/lga/member/store', [MembersController::class, 'storeMember'])->name('lgaadmin.member.store')->middleware('access_level:lgaadmin');
 Route::get('/lga/member/edit/{uuid}', [MembersController::class, 'editMember'])->name('lgaadmin.member.edit')->middleware('access_level:lgaadmin');
 Route::put('/lga/member/update/', [MembersController::class, 'updateMember'])->name('lgaadmin.member.update')->middleware('access_level:lgaadmin');

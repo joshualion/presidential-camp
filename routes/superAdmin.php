@@ -184,6 +184,9 @@ Route::get('/superadmin/people/{metric}/data/fetch/{uuid?}', [MembersController:
 Route::get('/superadmin/people/{metric}/fetch/{uuid?}', [MembersController::class, 'allPeopleMetricMembers'])->whereIn('metric', ['agents', 'eligible-voters', 'without-voter-card', 'new-today', 'new-this-week', 'new-this-month'])->name('superadmin.peopleMetric')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
 
 Route::get('/superadmin/member/add', [MembersController::class, 'addMember'])->name('superadmin.member.add')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
+Route::get('/superadmin/members/import', [MembersController::class, 'importMembers'])->name('superadmin.member.import')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
+Route::get('/superadmin/members/import/template', [MembersController::class, 'downloadMemberImportTemplate'])->name('superadmin.member.import.template')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
+Route::post('/superadmin/members/import', [MembersController::class, 'storeMemberImport'])->name('superadmin.member.import.store')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
 Route::post('/superadmin/member/store', [MembersController::class, 'storeMember'])->name('superadmin.member.store')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
 Route::get('/superadmin/member/edit/{uuid}', [MembersController::class, 'editMember'])->name('superadmin.member.edit')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
 Route::put('/superadmin/member/update/', [MembersController::class, 'updateMember'])->name('superadmin.member.update')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);

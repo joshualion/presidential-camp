@@ -58,6 +58,9 @@ Route::get('/regional/people/{metric}/data/fetch/{uuid?}', [MembersController::c
 Route::get('/regional/people/{metric}/fetch/{uuid?}', [MembersController::class, 'allPeopleMetricMembers'])->whereIn('metric', ['agents', 'eligible-voters', 'without-voter-card', 'new-today', 'new-this-week', 'new-this-month'])->name('regionaladmin.peopleMetric');
 
 Route::get('/regional/member/add', [MembersController::class, 'addMember'])->name('regionaladmin.member.add')->middleware('access_level:regionaladmin');
+Route::get('/regional/members/import', [MembersController::class, 'importMembers'])->name('regionaladmin.member.import')->middleware('access_level:regionaladmin');
+Route::get('/regional/members/import/template', [MembersController::class, 'downloadMemberImportTemplate'])->name('regionaladmin.member.import.template')->middleware('access_level:regionaladmin');
+Route::post('/regional/members/import', [MembersController::class, 'storeMemberImport'])->name('regionaladmin.member.import.store')->middleware('access_level:regionaladmin');
 Route::post('/regional/member/store', [MembersController::class, 'storeMember'])->name('regionaladmin.member.store')->middleware('access_level:regionaladmin');
 Route::get('/regional/member/edit/{uuid}', [MembersController::class, 'editMember'])->name('regionaladmin.member.edit')->middleware('access_level:regionaladmin');
 Route::put('/regional/member/update/', [MembersController::class, 'updateMember'])->name('regionaladmin.member.update')->middleware('access_level:regionaladmin');

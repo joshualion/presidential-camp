@@ -16,15 +16,7 @@
     <div class="card-body">
         @include('backend.shared.dashboard-stat-grid', [
             'dashboardMetrics' => $stateDashboardMetrics,
-            'groups' => ['coverage'],
-        ])
-        @include('backend.shared.dashboard-stat-grid', [
-            'dashboardMetrics' => $stateDashboardMetrics,
-            'groups' => ['people'],
-        ])
-        @include('backend.shared.dashboard-stat-grid', [
-            'dashboardMetrics' => $stateDashboardMetrics,
-            'groups' => ['membership_activity'],
+            'groups' => ['coverage', 'people', 'membership_activity'],
         ])
     </div>
 </div>
