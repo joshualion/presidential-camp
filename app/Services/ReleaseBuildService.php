@@ -1,0 +1,568 @@
+<?php
+
+namespace App\Services;
+
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Str;
+use RuntimeException;
+use ZipArchive;
+
+class ReleaseBuildService
+{
+    public function __construct(
+        private ReleaseReadinessService $readiness,
+        private ?string $basePath = null,
+        private ?array $releaseConfig = null,
+    ) {
+        $this->basePath ??= base_path();
+        $this->releaseConfig ??= config('release', []);
+    }
+
+    public function dryRun(array $options = []): array
+    {
+        return $this->build(array_merge($options, [
+            'dry_run' => true,
+            'zip' => false,
+        ]));
+    }
+
+    public function build(array $options = []): array
+    {
+        $dryRun = (bool) ($options['dry_run'] ?? false);
+        $zipEnabled = (bool) ($options['zip'] ?? true);
+        $profile = $this->profile((string) ($options['profile'] ?? 'full'));
+        $version = $this->cleanSegment($options['version'] ?? Arr::get($this->releaseConfig, 'identity.version', '0.0.0'));
+        $channel = $this->cleanSegment($options['channel'] ?? Arr::get($this->releaseConfig, 'identity.channel', 'self-hosted'));
+        $effectiveConfig = $this->profileConfig($profile);
+        $profileConfig = Arr::get($effectiveConfig, "profiles.{$profile}", []);
+        $outputDirectory = $this->absolutePath($options['output'] ?? Arr::get($effectiveConfig, 'default_output', 'builds/releases'));
+        $filename = str_replace('{version}', $version, Arr::get($profileConfig, 'filename', "campaign-manager-{$profile}-v{version}.zip"));
+        $zipPath = $outputDirectory.DIRECTORY_SEPARATOR.$filename;
+
+        $readiness = new ReleaseReadinessService($this->basePath, $effectiveConfig);
+        $checks = $readiness->inspect();
+        if ($readiness->hasCriticalFailures($checks)) {
+            throw new RuntimeException('Release readiness has critical failures. Run php artisan campaign:release-check.');
+        }
+
+        $files = $this->collectFiles($profile, $effectiveConfig);
+        $profileChecks = $this->profileChecks($profile, $effectiveConfig, $files);
+        if ($profileChecks['failures'] !== []) {
+            throw new RuntimeException(implode(' ', $profileChecks['failures']));
+        }
+
+        $manifest = $this->manifest($version, $channel, $profile, $effectiveConfig, $files, $checks, $profileChecks);
+        $manifestJson = $this->json($manifest);
+        $estimatedSize = array_sum(array_column($files['included'], 'size')) + strlen($manifestJson);
+
+        $result = [
+            'version' => $version,
+            'channel' => $channel,
+            'profile' => $profile,
+            'filename' => $filename,
+            'zip_path' => $zipPath,
+            'manifest_path' => $this->manifestPath($zipPath, $zipEnabled, $version, $profileConfig),
+            'dry_run' => $dryRun,
+            'zip_enabled' => $zipEnabled,
+            'total_files_considered' => $files['total_considered'],
+            'included_count' => count($files['included']),
+            'excluded_count' => count($files['excluded']),
+            'included_directories' => $this->requiredDirectoriesInPackage($effectiveConfig),
+            'excluded_categories' => $this->excludedCategories($files['excluded']),
+            'estimated_size_bytes' => $estimatedSize,
+            'warnings' => $this->warnings($checks),
+            'profile_warnings' => $profileChecks['warnings'],
+            'manifest' => $manifest,
+            'checksum_sha256' => null,
+            'size_bytes' => null,
+        ];
+
+        if ($dryRun) {
+            return $result;
+        }
+
+        File::ensureDirectoryExists($outputDirectory);
+
+        if ($zipEnabled) {
+            $this->createZip($zipPath, $files['included'], $manifestJson, $effectiveConfig);
+            $result['size_bytes'] = File::size($zipPath);
+            $result['checksum_sha256'] = hash_file('sha256', $zipPath);
+            $result['manifest']['checksum_sha256'] = $result['checksum_sha256'];
+            $result['manifest']['size_bytes'] = $result['size_bytes'];
+        }
+
+        File::put($result['manifest_path'], $this->json($result['manifest']));
+        $this->writeChecksums($outputDirectory, $result);
+
+        return $result;
+    }
+
+    public function collectFiles(string $profile = 'full', ?array $effectiveConfig = null): array
+    {
+        $effectiveConfig ??= $this->profileConfig($profile);
+        $included = [];
+        $excluded = [];
+        $seen = [];
+        $total = 0;
+
+        foreach ($this->includeRoots($profile, $effectiveConfig) as $root) {
+            $path = $this->path($root);
+
+            if (File::isFile($path)) {
+                $total++;
+                $this->pushFile($root, $path, $included, $excluded, $seen, $profile, $effectiveConfig);
+                continue;
+            }
+
+            if (! File::isDirectory($path)) {
+                continue;
+            }
+
+            $iterator = new \RecursiveIteratorIterator(
+                new \RecursiveDirectoryIterator($path, \FilesystemIterator::SKIP_DOTS),
+                \RecursiveIteratorIterator::LEAVES_ONLY
+            );
+
+            foreach ($iterator as $file) {
+                if (! $file->isFile()) {
+                    continue;
+                }
+
+                $total++;
+                $relativePath = $this->relativePath($file->getPathname());
+                $this->pushFile($relativePath, $file->getPathname(), $included, $excluded, $seen, $profile, $effectiveConfig);
+            }
+        }
+
+        usort($included, fn (array $a, array $b) => $a['path'] <=> $b['path']);
+        usort($excluded, fn (array $a, array $b) => $a['path'] <=> $b['path']);
+
+        return [
+            'included' => $included,
+            'excluded' => $excluded,
+            'total_considered' => $total,
+        ];
+    }
+
+    private function pushFile(string $relativePath, string $absolutePath, array &$included, array &$excluded, array &$seen, string $profile, array $effectiveConfig): void
+    {
+        $relativePath = $this->normalize($relativePath);
+
+        if (isset($seen[$relativePath])) {
+            return;
+        }
+
+        $seen[$relativePath] = true;
+        $excludedBy = $this->excludedBy($relativePath, $profile, $effectiveConfig);
+
+        if ($excludedBy !== null) {
+            $excluded[] = [
+                'path' => $relativePath,
+                'reason' => $excludedBy,
+                'size' => File::size($absolutePath),
+            ];
+
+            return;
+        }
+
+        $included[] = [
+            'path' => $relativePath,
+            'absolute_path' => $absolutePath,
+            'size' => File::size($absolutePath),
+        ];
+    }
+
+    private function createZip(string $zipPath, array $files, string $manifestJson, array $effectiveConfig): void
+    {
+        if (!class_exists(ZipArchive::class)) {
+            throw new RuntimeException('PHP ZipArchive extension is required to build release ZIP files.');
+        }
+
+        $zip = new ZipArchive();
+        $temporaryZipPath = $zipPath.'.tmp';
+
+        File::delete($temporaryZipPath);
+
+        if ($zip->open($temporaryZipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+            throw new RuntimeException('Unable to create release ZIP at '.$zipPath);
+        }
+
+        foreach ($this->requiredDirectoriesInPackage($effectiveConfig) as $directory) {
+            $zip->addEmptyDir($directory);
+        }
+
+        foreach ($files as $file) {
+            $zip->addFile($file['absolute_path'], $file['path']);
+            $zip->setCompressionName($file['path'], ZipArchive::CM_STORE);
+        }
+
+        $zip->addFromString('release-manifest.json', $manifestJson);
+        $zip->setCompressionName('release-manifest.json', ZipArchive::CM_STORE);
+        $zip->close();
+
+        if (! File::isFile($temporaryZipPath)) {
+            throw new RuntimeException('Unable to create release ZIP at '.$zipPath);
+        }
+
+        File::delete($zipPath);
+        File::move($temporaryZipPath, $zipPath);
+    }
+
+    private function manifest(string $version, string $channel, string $profile, array $effectiveConfig, array $files, array $checks, array $profileChecks): array
+    {
+        $profileConfig = Arr::get($effectiveConfig, "profiles.{$profile}", []);
+
+        return [
+            'product' => 'Campaign Manager',
+            'app_name' => Arr::get($effectiveConfig, 'identity.name', 'Campaign Manager Core'),
+            'package' => Arr::get($effectiveConfig, 'identity.package', 'campaign-manager-core'),
+            'package_type' => 'universal_core',
+            'version' => $version,
+            'profile' => $profile,
+            'channel' => $channel,
+            'build_date' => now()->toIso8601String(),
+            'minimum_php' => Arr::get($effectiveConfig, 'identity.minimum_php', '8.2.0'),
+            'includes_full_location_data' => (bool) Arr::get($profileConfig, 'includes_full_location_data', false),
+            'includes_bootstrap_location_data' => (bool) Arr::get($profileConfig, 'includes_bootstrap_location_data', false),
+            'includes_vendor' => File::isFile($this->path('vendor/autoload.php')),
+            'includes_built_assets' => File::isFile($this->path('public/build/manifest.json')),
+            'deployment_mode' => 'self_hosted',
+            'licensed_features_controlled_by_activation' => true,
+            'automatic_location_provisioning' => (bool) Arr::get($profileConfig, 'automatic_location_provisioning', false),
+            'requirements' => [
+                'php' => '^8.2',
+                'laravel' => '^11.9',
+                'composer_runtime' => 'vendor is bundled; customers should not need Composer for normal install.',
+                'frontend_runtime' => 'public/build is bundled; customers should not need Node.js, npm, or Vite for normal install.',
+            ],
+            'features' => [
+                'browser_installer' => 'included',
+                'license_activation' => 'included',
+                'location_setup' => $profile === 'full' ? 'complete_data_included' : 'bootstrap_only',
+                'community_forum' => $profile === 'community' ? 'included_as_bootstrap_release' : 'optional_disabled_by_default',
+            ],
+            'counts' => [
+                'files_considered' => $files['total_considered'],
+                'files_included' => count($files['included']),
+                'files_excluded' => count($files['excluded']),
+            ],
+            'location_data' => [
+                'status' => $profileChecks['location_data_ready'] ? 'ready' : 'incomplete',
+                'profile' => $profile,
+                'record_counts' => $profileChecks['location_counts'],
+            ],
+            'built_assets' => [
+                'public/build/manifest.json' => File::isFile($this->path('public/build/manifest.json')),
+            ],
+            'required_post_upload_steps' => [
+                'Point the domain document root to the public directory.',
+                'Copy .env.example to .env and enter database/app URL values.',
+                'Open the browser installer.',
+                'Activate the license.',
+                'Provision licensed geography.',
+                'Create the first superadmin.',
+            ],
+            'excluded_local_files_summary' => $this->customerExcludedSummary($files['excluded']),
+            'warnings' => $this->warnings($checks),
+            'checksum_sha256' => null,
+            'size_bytes' => null,
+        ];
+    }
+
+    private function warnings(array $checks): array
+    {
+        return collect($checks)
+            ->where('status', 'warning')
+            ->map(fn (array $check) => [
+                'label' => $check['label'],
+                'message' => $check['message'],
+            ])
+            ->values()
+            ->all();
+    }
+
+    private function profile(string $profile): string
+    {
+        $profile = strtolower(trim($profile));
+
+        if (!in_array($profile, ['full', 'community'], true)) {
+            throw new RuntimeException('Unsupported release profile. Use full, community, or all.');
+        }
+
+        return $profile;
+    }
+
+    private function profileConfig(string $profile): array
+    {
+        $config = $this->releaseConfig;
+        $profileConfig = Arr::get($config, "profiles.{$profile}");
+
+        if (!$profileConfig) {
+            throw new RuntimeException("Release profile [{$profile}] is not configured.");
+        }
+
+        $config['required_location_csvs'] = Arr::get($profileConfig, 'required_location_csvs', []);
+
+        return $config;
+    }
+
+    private function profileChecks(string $profile, array $effectiveConfig, array $files): array
+    {
+        $profileConfig = Arr::get($effectiveConfig, "profiles.{$profile}", []);
+        $requiredCsvs = Arr::get($profileConfig, 'required_location_csvs', []);
+        $failures = [];
+        $warnings = [];
+
+        foreach ($requiredCsvs as $csv) {
+            if (!File::isFile($this->path($csv))) {
+                $failures[] = 'The selected release profile is missing its location data package.';
+                break;
+            }
+        }
+
+        $includedPaths = collect($files['included'])->pluck('path')->all();
+
+        if ($profile === 'community') {
+            $fullDataIncluded = collect($includedPaths)->contains(fn (string $path) => str_starts_with($path, 'storage/app/imports/inec/prepared/all/'));
+            if ($fullDataIncluded) {
+                $failures[] = 'Community release cannot include the complete location data package.';
+            }
+        }
+
+        if ($profile === 'full') {
+            $counts = $this->locationRecordCounts('storage/app/imports/inec/prepared/all');
+            foreach (Arr::get($profileConfig, 'expected_location_records', []) as $key => $expected) {
+                if (($counts[$key] ?? 0) !== (int) $expected) {
+                    $failures[] = 'Full-data location package failed integrity checks.';
+                    break;
+                }
+            }
+        } else {
+            $counts = $this->locationRecordCounts('storage/app/imports/campaign-locations/bootstrap');
+        }
+
+        return [
+            'failures' => array_values(array_unique($failures)),
+            'warnings' => $warnings,
+            'location_data_ready' => $failures === [],
+            'location_counts' => $counts,
+        ];
+    }
+
+    private function locationRecordCounts(string $sourceRoot): array
+    {
+        $files = [
+            'states' => 'states.csv',
+            'senatorial_districts' => 'senatorial_districts.csv',
+            'federal_constituencies' => 'federal_constituencies.csv',
+            'lgas' => 'local_government_areas.csv',
+            'wards' => 'wards.csv',
+            'polling_units' => 'polling_units.csv',
+        ];
+
+        $counts = [];
+        $regions = [];
+
+        foreach ($files as $key => $file) {
+            $path = $this->path($sourceRoot.'/'.$file);
+            $counts[$key] = File::isFile($path) ? $this->countCsvRecords($path) : 0;
+
+            if ($key === 'states' && File::isFile($path)) {
+                $lineNumber = 0;
+                foreach (File::lines($path) as $line) {
+                    if ($lineNumber++ === 0) {
+                        continue;
+                    }
+                    $columns = str_getcsv($line);
+                    if (($columns[1] ?? null) !== null) {
+                        $regions[trim((string) $columns[1])] = true;
+                    }
+                }
+            }
+        }
+
+        return array_merge(['regions' => count($regions)], $counts);
+    }
+
+    private function countCsvRecords(string $path): int
+    {
+        $count = 0;
+        foreach (File::lines($path) as $line) {
+            if (trim((string) $line) !== '') {
+                $count++;
+            }
+        }
+
+        return max(0, $count - 1);
+    }
+
+    private function customerExcludedSummary(array $excluded): array
+    {
+        return collect($this->excludedCategories($excluded))
+            ->only(['.env', '.git/.github', 'node_modules', 'logs/cache/sessions', 'uploads', 'installed.lock', 'old builds'])
+            ->all();
+    }
+
+    private function excludedCategories(array $excluded): array
+    {
+        $categories = [
+            '.env' => 0,
+            '.git/.github' => 0,
+            'node_modules' => 0,
+            'logs/cache/sessions' => 0,
+            'uploads' => 0,
+            'installed.lock' => 0,
+            'old builds' => 0,
+            'test artifacts' => 0,
+            'other' => 0,
+        ];
+
+        foreach ($excluded as $file) {
+            $path = $file['path'];
+            $category = match (true) {
+                str_starts_with($path, '.env') => '.env',
+                str_starts_with($path, '.git') || str_starts_with($path, '.github') => '.git/.github',
+                str_starts_with($path, 'node_modules/') => 'node_modules',
+                str_starts_with($path, 'storage/logs/')
+                    || str_starts_with($path, 'storage/framework/cache/')
+                    || str_starts_with($path, 'storage/framework/sessions/')
+                    || str_starts_with($path, 'storage/framework/views/')
+                    || str_starts_with($path, 'bootstrap/cache/') => 'logs/cache/sessions',
+                str_starts_with($path, 'public/uploads/') || str_starts_with($path, 'storage/app/public/uploads/') => 'uploads',
+                $path === 'storage/app/installed.lock' => 'installed.lock',
+                str_starts_with($path, 'builds/') || str_starts_with($path, 'storage/app/releases/') || str_starts_with($path, 'public/releases/') || str_ends_with($path, '.zip') => 'old builds',
+                str_starts_with($path, 'tests/') || str_contains($path, 'phpunit') || str_contains($path, 'pest') => 'test artifacts',
+                default => 'other',
+            };
+            $categories[$category]++;
+        }
+
+        return array_filter($categories, fn (int $count) => $count > 0);
+    }
+
+    private function excludedBy(string $relativePath, string $profile, array $effectiveConfig): ?string
+    {
+        $excludedBy = null;
+
+        foreach ($this->excludePatterns($profile, $effectiveConfig) as $pattern) {
+            $negated = str_starts_with($pattern, '!');
+            $cleanPattern = $negated ? substr($pattern, 1) : $pattern;
+
+            if (! $this->matches($cleanPattern, $relativePath)) {
+                continue;
+            }
+
+            $excludedBy = $negated ? null : $pattern;
+        }
+
+        return $excludedBy;
+    }
+
+    private function matches(string $pattern, string $relativePath): bool
+    {
+        $pattern = $this->normalize($pattern);
+        $relativePath = $this->normalize($relativePath);
+
+        if (Str::is($pattern, $relativePath) || Str::is($pattern, basename($relativePath))) {
+            return true;
+        }
+
+        if (! str_contains($pattern, '*')) {
+            return $relativePath === $pattern || str_starts_with($relativePath, $pattern.'/');
+        }
+
+        return false;
+    }
+
+    private function includeRoots(string $profile, array $effectiveConfig): array
+    {
+        return array_values(array_unique(array_merge(
+            Arr::get($effectiveConfig, 'include_roots', []),
+            Arr::get($effectiveConfig, "profiles.{$profile}.location_data_roots", [])
+        )));
+    }
+
+    private function excludePatterns(string $profile, array $effectiveConfig): array
+    {
+        $patterns = Arr::get($effectiveConfig, 'exclude_patterns', []);
+
+        if ($profile === 'community') {
+            $patterns[] = 'storage/app/imports/inec/prepared/all/*';
+        }
+
+        if ($profile === 'full') {
+            $patterns[] = 'storage/app/imports/campaign-locations/bootstrap/*';
+        }
+
+        return $patterns;
+    }
+
+    private function requiredDirectoriesInPackage(array $effectiveConfig): array
+    {
+        return array_values(array_unique(array_map(
+            fn (string $directory) => $this->normalize($directory),
+            Arr::get($effectiveConfig, 'writable_directories', [])
+        )));
+    }
+
+    private function manifestPath(string $zipPath, bool $zipEnabled, string $version, array $profileConfig): string
+    {
+        if (! $zipEnabled) {
+            return dirname($zipPath).DIRECTORY_SEPARATOR.str_replace('{version}', $version, Arr::get($profileConfig, 'manifest_filename', 'release-manifest.json'));
+        }
+
+        return dirname($zipPath).DIRECTORY_SEPARATOR.str_replace('{version}', $version, Arr::get($profileConfig, 'manifest_filename', basename($zipPath, '.zip').'.json'));
+    }
+
+    private function writeChecksums(string $outputDirectory, array $result): void
+    {
+        if (empty($result['checksum_sha256'])) {
+            return;
+        }
+
+        $path = $outputDirectory.DIRECTORY_SEPARATOR.'checksums.txt';
+        $line = $result['checksum_sha256'].'  '.$result['filename'];
+        $lines = File::isFile($path)
+            ? collect(File::lines($path))->reject(fn (string $existing) => str_ends_with(trim($existing), '  '.$result['filename']))->values()->all()
+            : [];
+
+        $lines[] = $line;
+
+        File::put($path, implode(PHP_EOL, $lines).PHP_EOL);
+    }
+
+    private function absolutePath(string $path): string
+    {
+        if (preg_match('/^[A-Za-z]:[\/\\\\]/', $path) || str_starts_with($path, DIRECTORY_SEPARATOR)) {
+            return rtrim($path, DIRECTORY_SEPARATOR);
+        }
+
+        return $this->path($path);
+    }
+
+    private function path(string $relativePath): string
+    {
+        return rtrim($this->basePath, DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR.str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $relativePath);
+    }
+
+    private function relativePath(string $absolutePath): string
+    {
+        return $this->normalize(Str::after($absolutePath, rtrim($this->basePath, DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR));
+    }
+
+    private function normalize(string $path): string
+    {
+        return trim(str_replace('\\', '/', $path), '/');
+    }
+
+    private function cleanSegment(string $segment): string
+    {
+        return preg_replace('/[^A-Za-z0-9._-]+/', '-', $segment) ?: 'release';
+    }
+
+    private function json(array $payload): string
+    {
+        return json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES).PHP_EOL;
+    }
+}

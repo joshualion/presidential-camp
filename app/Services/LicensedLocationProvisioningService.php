@@ -19,6 +19,15 @@ use RuntimeException;
 
 class LicensedLocationProvisioningService
 {
+    private const CHUNK_STAGES = [
+        'states' => 'states.csv',
+        'senatorial_districts' => 'senatorial_districts.csv',
+        'federal_constituencies' => 'federal_constituencies.csv',
+        'lgas' => 'local_government_areas.csv',
+        'wards' => 'wards.csv',
+        'polling_units' => 'polling_units.csv',
+    ];
+
     private const REQUIRED_FILES = [
         'states.csv',
         'senatorial_districts.csv',
@@ -42,7 +51,17 @@ class LicensedLocationProvisioningService
 
     public function defaultSourcePath(): string
     {
-        return storage_path('app/imports/inec/prepared/all');
+        $fullPath = storage_path('app/imports/inec/prepared/all');
+        if ($this->sourceHasRequiredFiles($fullPath)) {
+            return $fullPath;
+        }
+
+        $bootstrapPath = storage_path('app/imports/campaign-locations/bootstrap');
+        if ($this->sourceHasRequiredFiles($bootstrapPath)) {
+            return $bootstrapPath;
+        }
+
+        return $fullPath;
     }
 
     public function inspectSource(?string $sourcePath = null): array
@@ -66,6 +85,24 @@ class LicensedLocationProvisioningService
             self::REQUIRED_FILES,
             fn (string $file) => !is_file($sourcePath.DIRECTORY_SEPARATOR.$file)
         ));
+    }
+
+    public function usingBootstrapSource(?string $sourcePath = null): bool
+    {
+        $sourcePath ??= $this->defaultSourcePath();
+
+        return str_contains(str_replace('\\', '/', $sourcePath), 'storage/app/imports/campaign-locations/bootstrap');
+    }
+
+    private function sourceHasRequiredFiles(string $sourcePath): bool
+    {
+        foreach (self::REQUIRED_FILES as $file) {
+            if (!is_file($sourcePath.DIRECTORY_SEPARATOR.$file)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     public function provision(?LocalLicense $license = null, bool $dryRun = true, ?string $sourcePath = null): array
@@ -143,6 +180,157 @@ class LicensedLocationProvisioningService
         }
 
         return LocationProvisioningRun::query()->latest('id')->first();
+    }
+
+    public function startOrResumeChunked(?LocalLicense $license = null, ?string $sourcePath = null): LocationProvisioningRun
+    {
+        if (!Schema::hasTable('location_provisioning_runs')) {
+            throw new RuntimeException('Location provisioning progress table is missing. Run installer migrations first.');
+        }
+
+        $license ??= LocalLicense::query()->with('scope')->latest('id')->first();
+        if (!$license) {
+            throw new RuntimeException('No active local license was found for location setup.');
+        }
+
+        $sourcePath ??= $this->defaultSourcePath();
+        $this->ensureFilesExist($sourcePath);
+        $license->loadMissing('scope');
+        $scope = $this->resolveScope($license, $sourcePath);
+
+        $run = LocationProvisioningRun::query()
+            ->where('local_license_id', $license->id)
+            ->whereIn('status', ['pending', 'running', 'failed'])
+            ->latest('id')
+            ->first();
+
+        if ($run) {
+            $metadata = $run->metadata ?: [];
+            $metadata['source_path'] = $sourcePath;
+            $run->update([
+                'status' => 'running',
+                'error_message' => null,
+                'metadata' => $metadata,
+            ]);
+
+            return $run->fresh();
+        }
+
+        $totalRows = $this->countStageRows($sourcePath);
+
+        return LocationProvisioningRun::query()->create([
+            'local_license_id' => $license->id,
+            'deployment_mode' => $this->deploymentMode->mode(),
+            'package_type' => $license->package_type,
+            'scope_type' => $scope['scope_type'],
+            'scope_name' => $scope['scope_name'],
+            'status' => 'pending',
+            'current_stage' => array_key_first(self::CHUNK_STAGES),
+            'processed_rows' => 0,
+            'total_rows' => array_sum($totalRows),
+            'summary' => $this->emptySummary(),
+            'warnings' => [],
+            'metadata' => [
+                'source_path' => $sourcePath,
+                'stage_cursors' => array_fill_keys(array_keys(self::CHUNK_STAGES), 0),
+                'stage_totals' => $totalRows,
+            ],
+            'started_at' => now(),
+        ]);
+    }
+
+    public function processNextChunk(?LocationProvisioningRun $run = null, int $chunkSize = 0): array
+    {
+        $run ??= $this->latestRun();
+        if (!$run) {
+            throw new RuntimeException('Location setup has not started.');
+        }
+
+        if ($run->status === 'completed') {
+            return $this->chunkResponse($run->fresh(), 'complete');
+        }
+
+        $chunkSize = max(1, $chunkSize ?: (int) config('campaign.installer_location_chunk_size', 750));
+        $metadata = $run->metadata ?: [];
+        $sourcePath = $metadata['source_path'] ?? $this->defaultSourcePath();
+        $license = $run->localLicense?->fresh('scope');
+        if (!$license) {
+            throw new RuntimeException('Local license record is missing. Restart license activation or contact support.');
+        }
+
+        $this->activeSourcePath = $sourcePath;
+        $this->allowedLgaCache = [];
+        $this->resetSummary();
+        $this->ensureFilesExist($sourcePath);
+
+        try {
+            $scope = $this->resolveScope($license, $sourcePath);
+            $stage = $run->current_stage ?: array_key_first(self::CHUNK_STAGES);
+            $file = self::CHUNK_STAGES[$stage] ?? null;
+            if (!$file) {
+                return $this->completeChunkedRun($run, $license, $scope);
+            }
+
+            $cursor = (int) data_get($metadata, "stage_cursors.{$stage}", 0);
+            $context = $this->databaseContext();
+            $processedThisChunk = 0;
+            $seen = 0;
+
+            DB::transaction(function () use ($sourcePath, $file, $scope, $stage, &$context, $cursor, $chunkSize, &$processedThisChunk, &$seen) {
+                foreach ($this->readCsv($sourcePath, $file) as $row) {
+                    if ($seen++ < $cursor) {
+                        continue;
+                    }
+
+                    $this->processStageRow($stage, $row, $scope, $context);
+                    $processedThisChunk++;
+
+                    if ($processedThisChunk >= $chunkSize) {
+                        break;
+                    }
+                }
+            });
+
+            $metadata = $run->metadata ?: [];
+            $metadata['stage_cursors'][$stage] = $cursor + $processedThisChunk;
+            $summary = $this->mergeSummary($run->summary ?: $this->emptySummary(), $this->summary);
+            $warnings = array_values(array_slice(array_unique(array_merge($run->warnings ?: [], $this->warnings)), 0, 50));
+
+            if ($processedThisChunk < $chunkSize) {
+                $nextStage = $this->nextStage($stage);
+                $run->fill([
+                    'current_stage' => $nextStage,
+                    'status' => $nextStage ? 'running' : 'completed',
+                    'completed_at' => $nextStage ? null : now(),
+                ]);
+            } else {
+                $run->status = 'running';
+            }
+
+            $run->fill([
+                'processed_rows' => array_sum($metadata['stage_cursors'] ?? []),
+                'created_count' => $this->summaryCount($summary, 'created'),
+                'updated_count' => $this->summaryCount($summary, 'updated'),
+                'skipped_count' => $this->summaryCount($summary, 'skipped'),
+                'summary' => $summary,
+                'warnings' => $warnings,
+                'metadata' => $metadata,
+                'error_message' => null,
+            ])->save();
+
+            if ($run->status === 'completed') {
+                $this->syncLocalLicenseScope($license, $scope, $this->databaseContext());
+            }
+
+            return $this->chunkResponse($run->fresh(), $run->status === 'completed' ? 'complete' : 'continue');
+        } catch (RuntimeException $e) {
+            $run->update([
+                'status' => 'failed',
+                'error_message' => $e->getMessage(),
+            ]);
+
+            throw $e;
+        }
     }
 
     private function resolveScope(LocalLicense $license, string $sourcePath): array
@@ -237,6 +425,159 @@ class LicensedLocationProvisioningService
         }
 
         return $resolved;
+    }
+
+    private function processStageRow(string $stage, array $row, array $scope, array &$context): void
+    {
+        match ($stage) {
+            'states' => $this->processChunkState($row, $scope, $context),
+            'senatorial_districts' => $this->processChunkSenatorial($row, $scope, $context),
+            'federal_constituencies' => $this->processChunkFederal($row, $scope, $context),
+            'lgas' => $this->processChunkLga($row, $scope, $context),
+            'wards' => $this->processChunkWard($row, $scope, $context),
+            'polling_units' => $this->processChunkPollingUnit($row, $scope, $context),
+            default => null,
+        };
+    }
+
+    private function processChunkState(array $row, array $scope, array &$context): void
+    {
+        if (!$this->rowInScope($row, $scope, 'states')) {
+            $this->count('states', 'skipped');
+            return;
+        }
+
+        $this->count('states', 'selected');
+        $country = $context['country'] ?: $this->persistCountry($row['country_name'] ?? 'Nigeria', false);
+        $region = $this->persistRegion($country, $row['region_name'] ?? 'Unknown Region', false);
+        $state = $this->persistState($region, $row, false);
+
+        $context['country'] = $country;
+        $context['regions'][$this->norm($region->name)] = $region;
+        $context['states'][$row['state_code'] ?: $this->norm($row['name'])] = $state;
+    }
+
+    private function processChunkSenatorial(array $row, array $scope, array &$context): void
+    {
+        if (!$this->rowInScope($row, $scope, 'senatorial')) {
+            $this->count('senatorial_districts', 'skipped');
+            return;
+        }
+
+        $state = $this->stateFromContext($context, $row);
+        if (!$state) {
+            $this->count('senatorial_districts', 'skipped');
+            return;
+        }
+
+        $this->count('senatorial_districts', 'selected');
+        $district = $this->persistSenatorialDistrict($state, $row['name'], false);
+        $context['senatorial'][$this->boundaryKey($row)] = $district;
+    }
+
+    private function processChunkFederal(array $row, array $scope, array &$context): void
+    {
+        if (!$this->rowInScope($row, $scope, 'federal')) {
+            $this->count('federal_constituencies', 'skipped');
+            return;
+        }
+
+        $state = $this->stateFromContext($context, $row);
+        if (!$state) {
+            $this->count('federal_constituencies', 'skipped');
+            return;
+        }
+
+        $this->count('federal_constituencies', 'selected');
+        $federal = $this->persistFederalConstituency($state, $this->senatorialFromContext($context, $row), $row['name'], false);
+        $context['federal'][$this->boundaryKey($row)] = $federal;
+    }
+
+    private function processChunkLga(array $row, array $scope, array &$context): void
+    {
+        if (!$this->rowInScope($row, $scope, 'lgas')) {
+            $this->count('lgas', 'skipped');
+            return;
+        }
+
+        $state = $this->stateFromContext($context, $row);
+        if (!$state) {
+            $this->count('lgas', 'skipped');
+            return;
+        }
+
+        $this->count('lgas', 'selected');
+        $lga = $this->persistLga($state, $this->senatorialFromContext($context, $row), $this->federalFromContext($context, $row), $row, false);
+        $context['lgas'][$this->lgaKey($row)] = $lga;
+    }
+
+    private function processChunkWard(array $row, array $scope, array &$context): void
+    {
+        if (!$this->rowInScope($row, $scope, 'wards')) {
+            $this->count('wards', 'skipped');
+            return;
+        }
+
+        $lga = $this->lgaFromContext($context, $row);
+        if (!$lga) {
+            $this->count('wards', 'skipped');
+            return;
+        }
+
+        $this->count('wards', 'selected');
+        $ward = $this->persistWard($lga, $row, false);
+        $context['wards'][$this->wardKey($row)] = $ward;
+    }
+
+    private function processChunkPollingUnit(array $row, array $scope, array &$context): void
+    {
+        if (!$this->rowInScope($row, $scope, 'polling_units')) {
+            $this->count('polling_units', 'skipped');
+            return;
+        }
+
+        $ward = $this->wardFromContext($context, $row);
+        if (!$ward) {
+            $this->count('polling_units', 'skipped');
+            return;
+        }
+
+        $this->count('polling_units', 'selected');
+        $this->persistPollingUnit($ward, $this->senatorialFromContext($context, $row), $this->federalFromContext($context, $row), $row, false);
+    }
+
+    private function databaseContext(): array
+    {
+        $context = [
+            'country' => Country::query()->where('name', 'Nigeria')->first(),
+            'regions' => [],
+            'states' => [],
+            'senatorial' => [],
+            'federal' => [],
+            'lgas' => [],
+            'wards' => [],
+        ];
+
+        foreach (Region::query()->get() as $region) {
+            $context['regions'][$this->norm($region->name)] = $region;
+        }
+        foreach (State::query()->get() as $state) {
+            $context['states'][$state->inec_state_code ?: $this->norm($state->name)] = $state;
+        }
+        foreach (SenatorialDistrict::query()->with('state')->get() as $district) {
+            $context['senatorial'][($district->state?->inec_state_code ?: $this->norm($district->state?->name)).'|'.$this->norm($district->name)] = $district;
+        }
+        foreach (FederalConstituency::query()->with('state')->get() as $federal) {
+            $context['federal'][($federal->state?->inec_state_code ?: $this->norm($federal->state?->name)).'|'.$this->norm($federal->name)] = $federal;
+        }
+        foreach (LocalGovernmentArea::query()->with('state')->get() as $lga) {
+            $context['lgas'][($lga->state?->inec_state_code ?: $this->norm($lga->state?->name)).'|'.($lga->inec_lga_code ?: $this->norm($lga->name))] = $lga;
+        }
+        foreach (Ward::query()->with('lga.state')->get() as $ward) {
+            $context['wards'][($ward->lga?->state?->inec_state_code ?: $this->norm($ward->lga?->state?->name)).'|'.($ward->lga?->inec_lga_code ?: $this->norm($ward->lga?->name)).'|'.($ward->inec_ward_code ?: $this->norm($ward->name))] = $ward;
+        }
+
+        return $context;
     }
 
     private function provisionContext(string $sourcePath, array $scope, bool $dryRun): array
@@ -622,6 +963,14 @@ class LicensedLocationProvisioningService
 
     private function persistPollingUnit(?Ward $ward, ?SenatorialDistrict $senatorial, ?FederalConstituency $federal, array $row, bool $dryRun): ?PollingUnit
     {
+        $row = $this->sanitizePollingUnitRow($row);
+
+        if (!$this->validPollingUnitRow($row)) {
+            $this->count('polling_units', 'skipped');
+            $this->warn('Skipped an invalid polling unit record during location setup.');
+            return null;
+        }
+
         if ($dryRun) {
             return new PollingUnit([
                 'ward_id' => $ward?->id,
@@ -750,6 +1099,11 @@ class LicensedLocationProvisioningService
 
     private function readCsv(string $sourcePath, string $file): \Generator
     {
+        if ($file === 'polling_units.csv') {
+            yield from $this->readPollingUnitCsv($sourcePath, $file);
+            return;
+        }
+
         $path = $sourcePath.DIRECTORY_SEPARATOR.$file;
         $handle = fopen($path, 'rb');
         if (!$handle) {
@@ -772,6 +1126,99 @@ class LicensedLocationProvisioningService
         }
 
         fclose($handle);
+    }
+
+    private function readPollingUnitCsv(string $sourcePath, string $file): \Generator
+    {
+        $path = $sourcePath.DIRECTORY_SEPARATOR.$file;
+        $handle = fopen($path, 'rb');
+        if (!$handle) {
+            throw new RuntimeException('Unable to read location data package.');
+        }
+
+        $headers = null;
+        while (($line = fgets($handle)) !== false) {
+            $line = trim($line);
+            if ($line === '') {
+                continue;
+            }
+
+            if ($headers === null) {
+                $headers = array_map(fn ($header) => trim((string) $header), str_getcsv($line));
+                continue;
+            }
+
+            $row = $this->parsePollingUnitPhysicalLine($line, $headers);
+            if ($row === null) {
+                $this->count('polling_units', 'skipped');
+                $this->warn('Skipped a malformed polling unit record during location setup.');
+                continue;
+            }
+
+            yield $row;
+        }
+
+        fclose($handle);
+    }
+
+    private function parsePollingUnitPhysicalLine(string $line, array $headers): ?array
+    {
+        $fields = str_getcsv($line);
+
+        if (count($fields) !== 11) {
+            $fields = array_map('trim', explode(',', $line));
+        }
+
+        if (count($fields) < 11) {
+            return null;
+        }
+
+        if (count($fields) > 11) {
+            $fields = array_merge(
+                array_slice($fields, 0, 8),
+                [implode(',', array_slice($fields, 8, -2))],
+                array_slice($fields, -2)
+            );
+        }
+
+        $values = array_map(fn ($value) => $this->cleanPollingUnitValue((string) $value), $fields);
+
+        return array_combine($headers, array_slice($values, 0, count($headers))) ?: null;
+    }
+
+    private function sanitizePollingUnitRow(array $row): array
+    {
+        foreach (['state_code', 'state_name', 'lga_code', 'lga_name', 'ward_code', 'ward_name', 'pu_code', 'inec_full_code', 'name', 'senatorial_district_name', 'federal_constituency_name'] as $key) {
+            $row[$key] = $this->cleanPollingUnitValue((string) ($row[$key] ?? ''));
+        }
+
+        if (mb_strlen($row['name']) > 255) {
+            $row['name'] = rtrim(mb_substr($row['name'], 0, 252)).'...';
+            $this->warn('Truncated an overlong polling unit name during location setup.');
+        }
+
+        return $row;
+    }
+
+    private function validPollingUnitRow(array $row): bool
+    {
+        return ($row['state_code'] !== '' || $row['state_name'] !== '')
+            && ($row['lga_code'] !== '' || $row['lga_name'] !== '')
+            && ($row['ward_code'] !== '' || $row['ward_name'] !== '')
+            && ($row['pu_code'] !== '' || $row['inec_full_code'] !== '')
+            && $row['name'] !== '';
+    }
+
+    private function cleanPollingUnitValue(string $value): string
+    {
+        $value = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]+/u', ' ', $value) ?? $value;
+        $value = str_replace(["\xEF\xBB\xBF", '\\'], ['', ' '], $value);
+        $value = trim($value);
+        $value = trim($value, "\" \t\n\r\0\x0B");
+        $value = preg_replace('/"{2,}/', '"', $value) ?? $value;
+        $value = preg_replace('/\s+/', ' ', $value) ?? $value;
+
+        return trim($value);
     }
 
     private function headers(string $path): array
@@ -861,9 +1308,101 @@ class LicensedLocationProvisioningService
     private function resetSummary(): void
     {
         $this->warnings = [];
-        $this->summary = collect(['regions', 'states', 'senatorial_districts', 'federal_constituencies', 'lgas', 'wards', 'polling_units'])
+        $this->summary = $this->emptySummary();
+    }
+
+    private function emptySummary(): array
+    {
+        return collect(['regions', 'states', 'senatorial_districts', 'federal_constituencies', 'lgas', 'wards', 'polling_units'])
             ->mapWithKeys(fn (string $level) => [$level => ['selected' => 0, 'created' => 0, 'updated' => 0, 'skipped' => 0]])
             ->all();
+    }
+
+    private function mergeSummary(array $left, array $right): array
+    {
+        $merged = $this->emptySummary();
+
+        foreach ($merged as $level => $counts) {
+            foreach ($counts as $type => $value) {
+                $merged[$level][$type] = (int) data_get($left, "{$level}.{$type}", 0) + (int) data_get($right, "{$level}.{$type}", 0);
+            }
+        }
+
+        return $merged;
+    }
+
+    private function summaryCount(array $summary, string $type): int
+    {
+        return array_sum(array_map(fn (array $counts) => (int) ($counts[$type] ?? 0), $summary));
+    }
+
+    private function nextStage(string $stage): ?string
+    {
+        $stages = array_keys(self::CHUNK_STAGES);
+        $index = array_search($stage, $stages, true);
+
+        return $index === false ? null : ($stages[$index + 1] ?? null);
+    }
+
+    private function countStageRows(string $sourcePath): array
+    {
+        $totals = [];
+
+        foreach (self::CHUNK_STAGES as $stage => $file) {
+            $count = 0;
+            foreach ($this->readCsv($sourcePath, $file) as $_) {
+                $count++;
+            }
+            $totals[$stage] = $count;
+        }
+
+        return $totals;
+    }
+
+    private function chunkResponse(LocationProvisioningRun $run, string $nextAction): array
+    {
+        $percent = $run->total_rows ? min(100, (int) floor(($run->processed_rows / $run->total_rows) * 100)) : null;
+
+        return [
+            'ok' => true,
+            'status' => $run->status,
+            'stage' => $run->current_stage,
+            'stage_label' => $this->stageLabel($run->current_stage),
+            'processed' => $run->processed_rows,
+            'total' => $run->total_rows,
+            'percent' => $percent,
+            'summary' => $run->summary ?: $this->emptySummary(),
+            'message' => $run->status === 'completed'
+                ? 'Campaign location setup is complete.'
+                : 'Preparing your campaign structure...',
+            'next_action' => $nextAction,
+        ];
+    }
+
+    private function completeChunkedRun(LocationProvisioningRun $run, LocalLicense $license, array $scope): array
+    {
+        $this->syncLocalLicenseScope($license, $scope, $this->databaseContext());
+
+        $run->update([
+            'status' => 'completed',
+            'current_stage' => null,
+            'completed_at' => now(),
+        ]);
+
+        return $this->chunkResponse($run->fresh(), 'complete');
+    }
+
+    private function stageLabel(?string $stage): string
+    {
+        return match ($stage) {
+            'states' => 'Preparing campaign regions',
+            'senatorial_districts' => 'Preparing campaign districts',
+            'federal_constituencies' => 'Preparing campaign constituencies',
+            'lgas' => 'Preparing local campaign areas',
+            'wards' => 'Preparing campaign wards',
+            'polling_units' => 'Finalizing polling unit coverage',
+            default => 'Finalizing location setup',
+        };
     }
 
     private function startRun(LocalLicense $license, array $scope, bool $dryRun): ?LocationProvisioningRun

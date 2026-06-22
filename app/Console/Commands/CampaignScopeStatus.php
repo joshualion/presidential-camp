@@ -11,7 +11,7 @@ use Illuminate\Console\Command;
 
 class CampaignScopeStatus extends Command
 {
-    protected $signature = 'campaign:scope-status';
+    protected $signature = 'campaign:scope-status {--details : Show detailed internal diagnostics}';
 
     protected $description = 'Show non-sensitive package, module, and licensed scope diagnostics.';
 
@@ -22,10 +22,26 @@ class CampaignScopeStatus extends Command
         LicensedLocationProvisioningService $locationProvisioning,
     ): int
     {
+        $this->line('Campaign Manager package/scope diagnostics');
+        $databaseReachable = SafeDatabase::canConnect();
+
+        if (! $databaseReachable) {
+            $this->line('Database reachable: no');
+            $this->line('Installed lock: '.($installationState->installed() ? 'present' : 'missing'));
+            $this->line('Required tables: not checked; database is unreachable');
+            $this->line('Local license: not checked; database is unreachable');
+            $this->line('Package type: not resolved');
+            $this->line('Scope type: not resolved');
+            $this->line('Location tables: not checked; database is unreachable');
+            $this->line('Latest provisioning run: not checked; database is unreachable');
+
+            return self::SUCCESS;
+        }
+
         $scope = $scopeService->current();
         $enforcement = $licensedScope->enforcementSummary();
 
-        $this->line('Campaign Manager package/scope diagnostics');
+        $this->line('Database reachable: yes');
         $this->line('Deployment mode: '.($scope->deployment_mode ?? 'unknown'));
         $this->line('Installed lock: '.($installationState->installed() ? 'present' : 'missing'));
         $this->line('Required tables: '.$this->requiredTablesStatus());
@@ -39,19 +55,20 @@ class CampaignScopeStatus extends Command
         $this->line('Federal constituency: '.$this->formatBoundary($scope->federal_constituency_id, $scope->federal_constituency_name));
         $this->line('LGA: '.$this->formatBoundary($scope->lga_id, $scope->lga_name));
         $this->line('Dashboard label: '.$scopeService->dashboardLabel());
-        $this->line('Enabled modules: '.($scope->modules ? implode(', ', $scope->modules) : 'none recorded'));
+        $this->line('Licensed feature count: '.count($scope->modules));
+        if ($this->option('details')) {
+            $this->line('Enabled modules: '.($scope->modules ? implode(', ', $scope->modules) : 'none recorded'));
+        }
         $this->line('Read-path enforcement helpers: '.($enforcement['available'] ? 'available' : 'missing'));
         $this->line('Read-path enforcement active: '.($enforcement['active'] ? 'yes' : 'no'));
         $this->line('Detail-route guard helpers: available');
         $this->line('Write payload validation helpers: available');
         $this->line('Dashboard aggregate scoping helpers: available');
-        $this->line('Route audit checklist: docs/phase-2c-scope-enforcement-route-audit.md');
         $this->line('Allowed state id: '.($enforcement['state_id'] ?? 'all/unknown'));
         $this->line('Allowed senatorial district id: '.($enforcement['senatorial_district_id'] ?? 'all/unknown'));
         $this->line('Allowed federal constituency id: '.($enforcement['federal_constituency_id'] ?? 'all/unknown'));
         $this->line('Allowed LGA id: '.($enforcement['lga_id'] ?? 'all/unknown'));
         $this->line('Location tables: '.$this->locationTablesStatus($enforcement['tables'] ?? []));
-        $this->line('Provisioning source: '.$locationProvisioning->defaultSourcePath());
         $this->line('Latest provisioning run: '.$this->latestProvisioningRun($locationProvisioning));
         $this->line('Provisioning preview: php artisan campaign:provision-locations --dry-run');
 
@@ -99,7 +116,7 @@ class CampaignScopeStatus extends Command
             $run->status,
             $run->package_type ?: 'unknown',
             $run->scope_type ?: 'unknown',
-            $run->completed_at?->toDateTimeString() ?: 'not completed'
+            $run->completed_at?->toDateTimeString() ?: (($run->current_stage ? 'stage='.$run->current_stage.' ' : '').'processed='.($run->processed_rows ?? 0).'/'.($run->total_rows ?? 'unknown'))
         ));
     }
 }

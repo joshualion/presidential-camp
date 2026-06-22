@@ -33,8 +33,7 @@ class EnsureCommunityProfileLocationComplete
 
     private function hasRequiredLocation($user): bool
     {
-        return !empty($user->country_id)
-            && !empty($user->region_id)
+        return !empty($user->region_id)
             && !empty($user->state_id)
             && !empty($user->lga_id)
             && !empty($user->ward_id)

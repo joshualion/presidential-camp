@@ -12,6 +12,7 @@ use App\Services\LicensedLocationProvisioningService;
 use App\Services\LocalLicenseService;
 use App\Services\RemoteLicenseClient;
 use Illuminate\Http\Request;
+use Throwable;
 
 class InstallerController extends Controller
 {
@@ -259,17 +260,68 @@ class InstallerController extends Controller
                     ->with('missing_step', $result['missing_step'] ?? null);
             }
 
-            session(['installer_complete.location_provisioning' => $result['location_provisioning'] ?? null]);
-            session()->forget('installer');
-            $this->stateStore->clear();
+            session(['installer.provisioning_started' => true]);
+            $this->stateStore->merge(['provisioning_started' => true]);
 
-            return redirect()->route('install.complete');
+            return redirect()->route('install.run')->with('status', 'Core setup complete. Location setup will continue in short, resumable steps.');
         }
 
         return $this->view('run', [
             'display' => data_get($this->currentState(), 'license_preview') ? $this->localLicenseService->displayPayload(data_get($this->currentState(), 'license_preview')) : null,
             'provisioningPreflight' => $this->provisioningPreflight(),
             'provisioningCopy' => $this->provisioningCopy(data_get($this->currentState(), 'license_preview')),
+            'provisioningStarted' => (bool) data_get($this->currentState(), 'provisioning_started'),
+        ]);
+    }
+
+    public function provisionLocationsStep()
+    {
+        try {
+            $run = $this->locationProvisioning->startOrResumeChunked();
+            $result = $this->locationProvisioning->processNextChunk($run, (int) config('campaign.installer_location_chunk_size', 750));
+
+            return response()->json($result);
+        } catch (Throwable $e) {
+            return response()->json([
+                'ok' => false,
+                'status' => 'failed',
+                'message' => 'Location setup could not continue. Please check server permissions and try again.',
+            ], 422);
+        }
+    }
+
+    public function finishProvisioning()
+    {
+        $run = $this->locationProvisioning->latestRun();
+        if (!$run || $run->status !== 'completed') {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Location setup is still in progress.',
+            ], 409);
+        }
+
+        $result = $this->installerService->finishAfterProvisioning($this->currentState(), [
+            'status' => $run->status,
+            'package_type' => $run->package_type,
+            'deployment_mode' => $run->deployment_mode,
+            'scope_type' => $run->scope_type,
+            'scope_name' => $run->scope_name,
+            'data_profile' => str_contains(str_replace('\\', '/', (string) data_get($run->metadata ?: [], 'source_path')), 'campaign-locations/bootstrap') ? 'bootstrap' : 'full',
+            'summary' => $run->summary ?: [],
+            'warnings' => $run->warnings ?: [],
+        ]);
+
+        if (!$result['ok']) {
+            return response()->json($result, 422);
+        }
+
+        session(['installer_complete.location_provisioning' => $result['location_provisioning'] ?? null]);
+        session()->forget('installer');
+        $this->stateStore->clear();
+
+        return response()->json([
+            'ok' => true,
+            'redirect' => route('install.complete'),
         ]);
     }
 
@@ -423,12 +475,10 @@ class InstallerController extends Controller
         $missing = $this->missingLocationFiles();
 
         return [
-            'source_path' => $this->locationProvisioning->defaultSourcePath(),
-            'files' => $files,
             'missing' => $missing,
             'ok' => $missing === [],
             'message' => $missing === []
-                ? 'Location data files are ready for licensed provisioning.'
+                ? 'Campaign location data package: Ready.'
                 : $this->missingLocationFilesMessage($missing),
         ];
     }
@@ -440,7 +490,7 @@ class InstallerController extends Controller
 
     private function missingLocationFilesMessage(array $missing): string
     {
-        return 'Location data files are missing. Please upload the complete Campaign Manager package or contact support. Missing: '.implode(', ', $missing).'.';
+        return 'Campaign location data package is incomplete. Upload the complete Campaign Manager self-hosted package or contact support.';
     }
 
     private function provisioningCopy(?array $preview): string
@@ -449,13 +499,13 @@ class InstallerController extends Controller
         $scopeName = data_get($preview, 'scope.scope_name', data_get($preview, 'scope_name'));
 
         if ($package === 'presidential') {
-            return 'The full national location dataset will be installed.';
+            return 'National campaign location setup may take a few minutes. Progress is saved automatically, so you can continue if interrupted.';
         }
 
         if ($package === 'governorship') {
             return 'Only your licensed state and related campaign geography will be installed.'.($scopeName ? ' Licensed state: '.$scopeName.'.' : '');
         }
 
-        return 'The installer will now prepare your licensed campaign geography. Only the region, state, districts, constituencies, LGAs, wards, and polling units included in your license will be installed.';
+        return 'The installer will prepare the campaign structure included in your license.';
     }
 }

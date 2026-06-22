@@ -111,7 +111,7 @@ class LocalLicenseService
             'deployment_mode' => data_get($payload, 'license.deployment_mode', data_get($payload, 'deployment_mode', config('campaign.deployment_mode'))),
             'scope_type' => data_get($payload, 'scope.scope_type', data_get($payload, 'scope.type')),
             'scope_name' => $this->scopeName((array) data_get($payload, 'scope', [])),
-            'modules' => collect($this->normalizeModules(data_get($payload, 'modules', [])))->pluck('module_key')->values()->all(),
+            'licensed_features' => collect($this->normalizeModules(data_get($payload, 'modules', [])))->where('enabled', true)->count(),
             'maintenance_expires_at' => data_get($payload, 'license.maintenance_expires_at', data_get($payload, 'maintenance_expires_at')),
             'updates_until' => data_get($payload, 'license.updates_until', data_get($payload, 'updates_until')),
             'activation_limit' => data_get($payload, 'license.activation_limit', data_get($payload, 'activation_limit')),

@@ -31,12 +31,24 @@ Use this checklist before self-hosted release packaging.
 ## Installer, License, and Scope
 
 - [ ] Installer route still loads.
+- [ ] Installer requirements report missing `vendor/autoload.php`, `public/build/manifest.json`, and prepared INEC CSV files with customer-friendly messages.
 - [ ] License screen still loads.
 - [ ] Activation and first superadmin creation still work.
 - [ ] Package-aware dashboards still load.
 - [ ] Package-aware role and location forms still enforce license scope.
 - [ ] Community disabled-by-default behavior still works.
 - [ ] Community enabled behavior still works when licensed and toggled on.
+
+## Release Packaging Readiness
+
+- [ ] Package only from the master `presidential-camp` source tree.
+- [ ] Do not package installed test copies such as `otu` or senatorial smoke-test folders.
+- [ ] Include `vendor` and `public/build`.
+- [ ] Include prepared INEC CSV files under `storage/app/imports/inec/prepared/all`.
+- [ ] Exclude `.env`, `.git`, `node_modules`, `storage/app/installed.lock`, logs, cache files, sessions, compiled views, local uploads, local license data, and old ZIPs.
+- [ ] Preserve writable folder placeholders.
+- [ ] Confirm production document root points to `/public` or uses the shared-hosting bridge.
+- [ ] Confirm production `APP_URL` does not contain `/public`.
 
 ## Verification
 
@@ -51,6 +63,7 @@ Use this checklist before self-hosted release packaging.
 - [ ] `php artisan route:list --path=install`
 - [ ] `php artisan route:list --path=admin/license`
 - [ ] `php artisan campaign:scope-status`
+- [ ] `php artisan campaign:release-check`
 - [ ] `php artisan view:cache`
 - [ ] `php -l` passes on modified PHP/config/test files.
 - [ ] Focused feature tests pass.

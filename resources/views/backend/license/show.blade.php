@@ -58,16 +58,8 @@
                             @endforeach
                         </div>
                         <hr>
-                        <h5>Enabled modules</h5>
-                        @if(empty($currentScope->modules))
-                            <p class="text-muted mb-0">No module records were returned by the portal.</p>
-                        @else
-                            <div class="d-flex flex-wrap">
-                                @foreach($currentScope->modules as $module)
-                                    <span class="badge badge-success mr-2 mb-2">{{ $module }}</span>
-                                @endforeach
-                            </div>
-                        @endif
+                        <h5>Licensed features</h5>
+                        <p class="text-muted mb-0">Licensed package activated. Core campaign features are active for this scope.</p>
                         <hr>
                         <h5>Resolved licensed boundaries</h5>
                         <div class="row">

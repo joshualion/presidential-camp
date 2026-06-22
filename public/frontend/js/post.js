@@ -15,25 +15,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const MAX_IMAGE_SIZE = imageMaxMb * 1024 * 1024;
     const MAX_VIDEO_SIZE = videoMaxMb * 1024 * 1024;
     const modalElement = document.getElementById("postModal");
-    const allowedAudience =
-        modalElement && modalElement.dataset && modalElement.dataset.allowedAudience
-            ? modalElement.dataset.allowedAudience
-            : "pu";
-    const allowedRankValue =
-        modalElement && modalElement.dataset && modalElement.dataset.allowedRank
-            ? Number(modalElement.dataset.allowedRank)
-            : NaN;
-    const allowedRank = Number.isNaN(allowedRankValue) ? undefined : allowedRankValue;
-    const audienceRank = { public: 5, region: 4, state: 3, lga: 2, ward: 1, pu: 0 };
-    const audienceLabels = {
-        public: "Nationwide Audience",
-        region: `${modalElement && modalElement.dataset && modalElement.dataset.regionName ? modalElement.dataset.regionName : "Region"} Audience`,
-        state: `${modalElement && modalElement.dataset && modalElement.dataset.stateName ? modalElement.dataset.stateName : "State"} Audience`,
-        lga: `${modalElement && modalElement.dataset && modalElement.dataset.lgaName ? modalElement.dataset.lgaName : "LGA"} Audience`,
-        ward: `Ward: ${modalElement && modalElement.dataset && modalElement.dataset.wardName ? modalElement.dataset.wardName : ""} Audience`,
-        pu: `PU: ${modalElement && modalElement.dataset && modalElement.dataset.puName ? modalElement.dataset.puName : ""} Audience`,
-    };
-
     const dynamicFormContent = document.getElementById("postContent");
 
     const forms = {
@@ -289,20 +270,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     window.validatePostForm = (form) => {
         if (!form) return { valid: true };
-        const audienceInput = form.querySelector('input[name="audience"]');
-        const selectedAudience = (audienceInput && audienceInput.value) || allowedAudience;
-        const maxRank = typeof allowedRank === "number" ? allowedRank : audienceRank[allowedAudience] || 0;
-        const selectedRank = audienceRank[selectedAudience] || 0;
-        if (selectedRank > maxRank) {
-            showValidationMessage(
-                `You can share up to ${audienceLabels[allowedAudience] || "your allowed audience"}.`,
-                "warning"
-            );
-            if (audienceInput) {
-                audienceInput.value = allowedAudience;
-            }
-            return { valid: false };
-        }
 
         const contentField = form.querySelector('textarea[name="content"]');
         const text = contentField ? contentField.value.trim() : "";

@@ -7,6 +7,7 @@ use App\Models\PollingUnit;
 use App\Models\Region;
 use App\Models\State;
 use App\Models\Ward;
+use App\Models\LocationProvisioningRun;
 use App\Services\LicensedLocationProvisioningService;
 use Illuminate\Support\Facades\Config;
 
@@ -148,4 +149,56 @@ it('skips managed mode without a local license', function () {
 
     expect($result['status'])->toBe('skipped')
         ->and(State::query()->count())->toBe(0);
+});
+
+it('presidential provisioning can run in resumable chunks without duplicates', function () {
+    Config::set('campaign.deployment_mode', 'self_hosted');
+    $source = writeProvisioningFixture();
+    $license = makeProvisioningLicense('presidential', 'national', [
+        'scope_name' => 'National',
+    ]);
+    $service = app(LicensedLocationProvisioningService::class);
+
+    $run = $service->startOrResumeChunked($license, $source);
+    expect($run->status)->toBe('pending');
+
+    do {
+        $result = $service->processNextChunk($run->fresh(), 1);
+        $run = LocationProvisioningRun::query()->find($run->id);
+    } while ($result['status'] !== 'completed');
+
+    $service->processNextChunk($run->fresh(), 1);
+
+    expect($result['next_action'])->toBe('complete')
+        ->and(State::query()->count())->toBe(2)
+        ->and(LocalGovernmentArea::query()->count())->toBe(3)
+        ->and(Ward::query()->count())->toBe(3)
+        ->and(PollingUnit::query()->count())->toBe(3);
+});
+
+it('polling unit parser repairs malformed physical lines and skips invalid rows without crashing', function () {
+    Config::set('campaign.deployment_mode', 'self_hosted');
+    $source = writeProvisioningFixture();
+    file_put_contents($source.'/polling_units.csv', "\n".implode("\n", [
+        'CR,Cross River,CR01,Calabar South,W01,Ward One,PU04,CR-01-W01-PU04,"Name With, Extra, Commas",Cross River South,Calabar South/Akpabuyo/Bakassi',
+        'CR,Cross River,CR01,Calabar South,W01,Ward One,PU05,CR-01-W01-PU05,"Broken \a\""""",Cross River South,Calabar South/Akpabuyo/Bakassi',
+        'CR,Cross River,CR01,Calabar South,W01',
+        'CR,Cross River,CR01,Calabar South,W01,Ward One,PU06,CR-01-W01-PU06,'.str_repeat('Long Name ', 40).',Cross River South,Calabar South/Akpabuyo/Bakassi',
+    ]), FILE_APPEND);
+
+    $license = makeProvisioningLicense('presidential', 'national', [
+        'scope_name' => 'National',
+    ]);
+    $service = app(LicensedLocationProvisioningService::class);
+    $run = $service->startOrResumeChunked($license, $source);
+
+    do {
+        $result = $service->processNextChunk($run->fresh(), 2);
+        $run = LocationProvisioningRun::query()->find($run->id);
+    } while ($result['status'] !== 'completed');
+
+    expect(PollingUnit::query()->where('inec_full_code', 'CR-01-W01-PU04')->value('name'))->toBe('Name With, Extra, Commas')
+        ->and(PollingUnit::query()->where('inec_full_code', 'CR-01-W01-PU05')->value('name'))->toBe('Broken a')
+        ->and(mb_strlen(PollingUnit::query()->where('inec_full_code', 'CR-01-W01-PU06')->value('name')))->toBeLessThanOrEqual(255)
+        ->and($run->summary['polling_units']['skipped'])->toBeGreaterThan(0);
 });

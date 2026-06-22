@@ -200,6 +200,18 @@ test('community redirects users with incomplete voting location profile', functi
     $response->assertRedirect(route('user.profile'));
 });
 
+test('community allows users with complete voting location even when other profile details are incomplete', function () {
+    communityGateLicense(true);
+    SystemSetting::query()->whereKey(1)->update(['frontend_community' => 1]);
+
+    $user = communityGateUser();
+    $user->forceFill(['country_id' => null])->save();
+
+    $response = $this->actingAs($user)->getJson(route('posts.fetch'));
+
+    $response->assertOk();
+});
+
 test('community ajax endpoint returns forbidden json when disabled', function () {
     communityGateLicense(true);
 

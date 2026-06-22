@@ -14,13 +14,10 @@
   </title>
   @vite(['resources/js/app.js'])
 
-  <!-- Google Font: Source Sans Pro -->
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700&display=fallback">
   <!-- Font Awesome -->
   <link rel="stylesheet" href="{{asset('assets/plugins/fontawesome-free/css/all.min.css')}}" />
   <!-- Ionicons -->
-  <!-- <link rel="stylesheet" href="{{asset('assets/plugins/ionicons/ionicons.min.css')}}" /> -->
-  <link rel="stylesheet" href="https://code.ionicframework.com/ionicons/2.0.1/css/ionicons.min.css">
+  <link rel="stylesheet" href="{{asset('assets/plugins/ionicons/ionicons.min.css')}}" />
   <!-- IntelInput Phone -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@18.1.1/build/css/intlTelInput.css">
   <!-- Tempusdominus Bootstrap 4 -->
@@ -47,10 +44,9 @@
   <link rel="stylesheet" href="{{asset('assets/plugins/chart.js/Chart.min.css')}}" />
 
    <!-- DataTables -->
-   <link rel="stylesheet" href="{{asset('assets/plugins/datatables-bs4/css/dataTables.bootstrap4.min.css')}}">
+  <link rel="stylesheet" href="{{asset('assets/plugins/datatables-bs4/css/dataTables.bootstrap4.min.css')}}">
   <link rel="stylesheet" href="{{asset('assets/plugins/datatables-responsive/css/responsive.bootstrap4.min.css')}}">
   <link rel="stylesheet" href="{{asset('assets/plugins/datatables-buttons/css/buttons.bootstrap4.min.css')}}">
-  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
 
   <!-- SweetAlerts -->
   <link rel="stylesheet" href="{{asset('assets/plugins/sweetalert2/sweetalert2.min.css')}}" />
@@ -80,7 +76,7 @@
 <link rel="manifest" href="{{asset('/site.webmanifest')}}">
 
 <!-- Toaster CSS -->
-<link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.css" >
+<link rel="stylesheet" type="text/css" href="{{asset('assets/plugins/toastr/toastr.min.css')}}" >
 
   <style>
 

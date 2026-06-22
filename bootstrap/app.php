@@ -15,6 +15,10 @@ use Symfony\Component\HttpKernel\Exception\HttpException;
 use App\Http\Middleware\Accesslevel;
 use App\Http\Middleware\CheckUserOnboarding;
 
+require_once __DIR__.'/../app/Support/InstallerAppKeyBootstrapper.php';
+
+App\Support\InstallerAppKeyBootstrapper::bootstrap(dirname(__DIR__));
+
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',

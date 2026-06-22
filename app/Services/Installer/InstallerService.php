@@ -5,6 +5,7 @@ namespace App\Services\Installer;
 use App\Models\User;
 use App\Services\InstallationStateService;
 use App\Services\LicensedLocationProvisioningService;
+use App\Services\LocationProvisioningIntegrityService;
 use App\Services\LocalLicenseService;
 use App\Services\RemoteLicenseClient;
 use App\Services\ServerFingerprintService;
@@ -43,6 +44,7 @@ class InstallerService
         private RemoteLicenseClient $remoteLicenseClient,
         private LocalLicenseService $localLicenseService,
         private LicensedLocationProvisioningService $locationProvisioning,
+        private LocationProvisioningIntegrityService $locationIntegrity,
         private ServerFingerprintService $fingerprintService,
         private InstallationStateService $installationState,
     ) {
@@ -110,7 +112,38 @@ class InstallerService
             $localLicense = $this->runStep('local license persistence', fn () => $this->localLicenseService->persistActivation($licenseKey, $activationPayload));
             $this->localLicenseService->log($localLicense, $licenseKey, 'activate', 'success', 'License activated during installation.', $activation);
             $this->runStep('system package sync', fn () => $this->syncPackageSetting($localLicense->package_type));
-            $locationProvisioning = $this->runStep('licensed location provisioning', fn () => $this->locationProvisioning->provision($localLicense->fresh(['scope', 'modules']), false));
+            $run = $this->runStep('location setup start', fn () => $this->locationProvisioning->startOrResumeChunked($localLicense->fresh(['scope', 'modules'])));
+
+            return [
+                'ok' => true,
+                'message' => 'Core setup is complete. Location setup is ready to continue.',
+                'provisioning_run_id' => $run->id,
+            ];
+        } catch (Throwable $e) {
+            return ['ok' => false, 'stage' => 'install', 'message' => $this->cleanMessage($e->getMessage())];
+        }
+    }
+
+    public function finishAfterProvisioning(array $state, array $locationProvisioning): array
+    {
+        $licenseKey = $state['license_key'] ?? null;
+        $admin = $state['admin'] ?? [];
+        $localLicense = \App\Models\LocalLicense::query()->with('scope')->latest('id')->first();
+
+        if (!$localLicense) {
+            return ['ok' => false, 'message' => 'License activation is incomplete. Return to Run Installation and try again.'];
+        }
+
+        if (!$admin || empty($admin['email']) || empty($admin['password']) || empty($admin['name'])) {
+            return ['ok' => false, 'message' => 'Super admin details are missing. Return to the Super Admin step and save them again.'];
+        }
+
+        try {
+            $integrity = $this->locationIntegrity->verifyBeforeInstallLock($localLicense, $locationProvisioning);
+            if (($integrity['ok'] ?? false) !== true) {
+                return ['ok' => false, 'message' => $integrity['message'] ?? 'Campaign location setup is incomplete.'];
+            }
+
             $this->runStep('first super admin creation', fn () => $this->createSuperAdmin($admin));
 
             $this->runStep('install lock write', fn () => $this->installationState->create([
@@ -123,11 +156,11 @@ class InstallerService
 
             return [
                 'ok' => true,
-                'message' => 'Installation completed. '.$this->provisioningMessage($locationProvisioning),
+                'message' => 'Installation completed.',
                 'location_provisioning' => $this->compactProvisioningSummary($locationProvisioning),
             ];
         } catch (Throwable $e) {
-            return ['ok' => false, 'stage' => 'install', 'message' => $this->cleanMessage($e->getMessage())];
+            return ['ok' => false, 'message' => $this->cleanMessage($e->getMessage())];
         }
     }
 

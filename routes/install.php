@@ -16,5 +16,7 @@ Route::middleware(['installer.block_if_installed'])
         Route::match(['get', 'post'], '/license', [InstallerController::class, 'license'])->name('license');
         Route::match(['get', 'post'], '/admin', [InstallerController::class, 'admin'])->name('admin');
         Route::match(['get', 'post'], '/run', [InstallerController::class, 'run'])->name('run');
+        Route::post('/provision-locations/step', [InstallerController::class, 'provisionLocationsStep'])->name('provision.step');
+        Route::post('/provision-locations/finish', [InstallerController::class, 'finishProvisioning'])->name('provision.finish');
         Route::get('/complete', [InstallerController::class, 'complete'])->name('complete');
     });

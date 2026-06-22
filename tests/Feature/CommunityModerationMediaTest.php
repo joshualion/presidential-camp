@@ -332,6 +332,31 @@ test('out of scope specific audience is rejected', function () {
     ])->assertStatus(422);
 });
 
+test('user can post to any populated in-scope audience option', function () {
+    $user = communityModerationUser([
+        'state_id' => 9,
+        'lga_id' => 1,
+        'ward_id' => 1,
+        'polling_unit_id' => 1,
+    ]);
+
+    $response = $this->actingAs($user)->postJson(route('posts.store'), [
+        'content' => 'State audience from dropdown.',
+        'audience_type' => 'specific_scope',
+        'audience_scope_type' => 'state',
+        'audience_scope_id' => 9,
+        'audience' => 'state',
+    ]);
+
+    $response->assertOk();
+
+    $post = Post::query()->where('content', 'State audience from dropdown.')->first();
+
+    expect($post->audience_type)->toBe('specific_scope')
+        ->and($post->audience_scope_type)->toBe('state')
+        ->and($post->audience_scope_id)->toBe(9);
+});
+
 test('post without audience selection defaults to package safe global', function () {
     $poster = communityModerationUser([
         'email' => 'default-global-poster@test.local',

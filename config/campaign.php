@@ -5,6 +5,7 @@ return [
     'installer_enabled' => env('INSTALLER_ENABLED', true),
     'portal_api_base' => rtrim(env('CAMPAIGN_PORTAL_API_BASE', 'https://campaignmanager.ng/api/v2'), '/'),
     'package_type' => env('CAMPAIGN_PACKAGE_TYPE', 'presidential'),
+    'installer_location_chunk_size' => (int) env('INSTALLER_LOCATION_CHUNK_SIZE', 750),
     'community' => [
         'polling' => [
             'notifications' => env('COMMUNITY_NOTIFICATION_POLL_MS', 30000),

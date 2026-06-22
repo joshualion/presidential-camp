@@ -13,6 +13,7 @@ class LocationProvisioningRun extends Model
         'completed_at' => 'datetime',
         'summary' => 'array',
         'warnings' => 'array',
+        'metadata' => 'array',
     ];
 
     public function localLicense()

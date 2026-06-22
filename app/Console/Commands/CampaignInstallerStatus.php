@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Services\DeploymentModeService;
 use App\Services\InstallationStateService;
+use App\Services\LicensedLocationProvisioningService;
 use App\Support\SafeDatabase;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
@@ -16,7 +17,7 @@ class CampaignInstallerStatus extends Command
 
     protected $description = 'Show non-sensitive installer readiness diagnostics.';
 
-    public function handle(DeploymentModeService $deploymentMode, InstallationStateService $installationState): int
+    public function handle(DeploymentModeService $deploymentMode, InstallationStateService $installationState, LicensedLocationProvisioningService $locationProvisioning): int
     {
         $this->line('Campaign Manager installer diagnostics');
         $this->line('App URL: '.config('app.url'));
@@ -30,11 +31,13 @@ class CampaignInstallerStatus extends Command
         $this->line('Installed lock: '.($installationState->installed() ? 'present' : 'missing'));
         $this->line('Activation domain: '.(parse_url((string) config('app.url'), PHP_URL_HOST) ?: 'not detected'));
         $this->line('Storage writable: '.(is_writable(storage_path('app')) ? 'yes' : 'no'));
+        $databaseReachable = SafeDatabase::canConnect();
         $this->line('Database configured: '.$this->databaseConfigured());
-        $this->line('Database reachable: '.(SafeDatabase::canConnect() ? 'yes' : 'no'));
+        $this->line('Database reachable: '.($databaseReachable ? 'yes' : 'no'));
+        $this->line('Latest location setup: '.($databaseReachable ? $this->latestProvisioningRun($locationProvisioning) : 'not checked; database is unreachable'));
 
         foreach (['local_licenses', 'local_license_scopes', 'local_license_modules', 'license_check_logs'] as $table) {
-            $this->line("Table {$table}: ".(SafeDatabase::hasTable($table) ? 'present' : 'missing'));
+            $this->line("Table {$table}: ".($databaseReachable ? (SafeDatabase::hasTable($table) ? 'present' : 'missing') : 'not checked; database is unreachable'));
         }
 
         if ($this->option('check-portal')) {
@@ -68,5 +71,31 @@ class CampaignInstallerStatus extends Command
             && array_key_exists('username', $config)
             ? 'yes'
             : 'no';
+    }
+
+    private function latestProvisioningRun(LicensedLocationProvisioningService $locationProvisioning): string
+    {
+        $run = $locationProvisioning->latestRun();
+        if (!$run) {
+            return 'none recorded';
+        }
+
+        return trim(sprintf(
+            '#%d %s stage=%s processed=%s/%s%s',
+            $run->id,
+            $run->status,
+            $run->current_stage ?: 'complete',
+            $run->processed_rows ?? 0,
+            $run->total_rows ?? 'unknown',
+            $run->error_message ? ' error='.$this->shortError($run->error_message) : ''
+        ));
+    }
+
+    private function shortError(string $message): string
+    {
+        $message = preg_replace('/\s+/', ' ', $message) ?: $message;
+        $message = preg_replace('/SQLSTATE\[[^\]]+\].*/', 'Database write failed during location setup.', $message) ?: $message;
+
+        return mb_strlen($message) > 180 ? mb_substr($message, 0, 177).'...' : $message;
     }
 }
