@@ -13,6 +13,7 @@ use App\Http\Controllers\SearchController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\CampaignNotificationController;
 use App\Http\Controllers\AdminLicenseController;
+use Illuminate\Support\Facades\Auth;
 
 require __DIR__.'/install.php';
 
@@ -266,7 +267,7 @@ Route::middleware([ 'kuyak_eyen_ino', 'eyen_ino_no_way'])->group(function () {
 require __DIR__.'/nationalAdmin.php';
 
 //Require Regional Admin Routes file
-require __DIR__.'/RegionalAdmin.php';
+require __DIR__.'/regionalAdmin.php';
 
 //Require State Admin Routes file
 require __DIR__.'/stateAdmin.php';

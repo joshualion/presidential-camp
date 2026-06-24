@@ -67,6 +67,19 @@ class CampaignReleaseBuild extends Command
             $this->line('Manifest: '.$result['manifest_path']);
             $this->line('Warnings: '.count($result['warnings']));
 
+            if (! empty($result['largest_included_files'])) {
+                $this->line('Largest packaged files:');
+
+                foreach (array_slice($result['largest_included_files'], 0, 5) as $file) {
+                    $this->line(sprintf(
+                        '- %s (%s bytes%s)',
+                        $file['path'],
+                        number_format((int) $file['size']),
+                        $file['hardened'] ? ', hardened copy' : ''
+                    ));
+                }
+            }
+
             foreach ($result['warnings'] as $warning) {
                 $this->warn('- '.$warning['label'].': '.$warning['message']);
             }

@@ -101,6 +101,7 @@ class ReleaseBuildService
             'hardened' => false,
         ];
         $estimatedSize = array_sum(array_column($packageFiles, 'size'));
+        $largestIncludedFiles = $this->largestFiles($packageFiles);
 
         $result = [
             'version' => $version,
@@ -117,6 +118,7 @@ class ReleaseBuildService
             'included_directories' => $this->requiredDirectoriesInPackage($effectiveConfig),
             'excluded_categories' => $this->excludedCategories($files['excluded']),
             'estimated_size_bytes' => $estimatedSize,
+            'largest_included_files' => $largestIncludedFiles,
             'warnings' => array_merge($this->warnings($checks), $signingWarnings),
             'profile_warnings' => $profileChecks['warnings'],
             'manifest' => $manifest,
@@ -225,29 +227,35 @@ class ReleaseBuildService
         $entries = [];
 
         foreach ($files as $file) {
-            $contents = File::get($file['absolute_path']);
             $hardened = false;
+            $entry = [
+                'path' => $file['path'],
+                'source_path' => $file['absolute_path'],
+                'size' => $file['size'],
+                'hardened' => false,
+            ];
 
-            if ($this->shouldHarden($file['path'], $effectiveConfig)) {
-                $contents = $this->hardenPhp($contents);
+            if ($this->shouldHarden($file['path'], $effectiveConfig) && $this->canHarden($file, $effectiveConfig)) {
+                $contents = $this->hardenPhp(File::get($file['absolute_path']));
                 $hardened = true;
+                $entry = [
+                    'path' => $file['path'],
+                    'contents' => $contents,
+                    'size' => strlen($contents),
+                    'hardened' => $hardened,
+                ];
+                unset($contents);
             }
 
-            $entries[$file['path']] = [
-                'path' => $file['path'],
-                'contents' => $contents,
-                'size' => strlen($contents),
-                'hardened' => $hardened,
-            ];
+            $entries[$file['path']] = $entry;
         }
 
         $distributionPath = 'storage/app/license/distribution.json';
         if (File::isFile($this->path($distributionPath)) && !isset($entries[$distributionPath])) {
-            $contents = File::get($this->path($distributionPath));
             $entries[$distributionPath] = [
                 'path' => $distributionPath,
-                'contents' => $contents,
-                'size' => strlen($contents),
+                'source_path' => $this->path($distributionPath),
+                'size' => File::size($this->path($distributionPath)),
                 'hardened' => false,
             ];
         }
@@ -255,6 +263,15 @@ class ReleaseBuildService
         ksort($entries);
 
         return array_values($entries);
+    }
+
+    private function entryHash(array $file): string
+    {
+        if (isset($file['source_path'])) {
+            return hash_file('sha256', $file['source_path']);
+        }
+
+        return hash('sha256', $file['contents']);
     }
 
     private function checksumList(array $packageFiles): array
@@ -266,7 +283,7 @@ class ReleaseBuildService
                 continue;
             }
 
-            $checksums[$file['path']] = hash('sha256', $file['contents']);
+            $checksums[$file['path']] = $this->entryHash($file);
         }
 
         ksort($checksums);
@@ -287,7 +304,7 @@ class ReleaseBuildService
 
         foreach ($packageFiles as $file) {
             if ($this->matchesAny($file['path'], Arr::get($effectiveConfig, 'protected_file_patterns', []))) {
-                $protected[$file['path']] = hash('sha256', $file['contents']);
+                $protected[$file['path']] = $this->entryHash($file);
             }
         }
 
@@ -300,6 +317,14 @@ class ReleaseBuildService
     {
         return str_ends_with($path, '.php')
             && $this->matchesAny($path, Arr::get($effectiveConfig, 'harden_php_patterns', []));
+    }
+
+    private function canHarden(array $file, array $effectiveConfig): bool
+    {
+        $maxBytes = (int) Arr::get($effectiveConfig, 'harden_php_max_bytes', 262144);
+
+        return (int) ($file['size'] ?? 0) > 0
+            && (int) $file['size'] <= $maxBytes;
     }
 
     private function matchesAny(string $path, array $patterns): bool
@@ -343,6 +368,22 @@ class ReleaseBuildService
         return trim($output).PHP_EOL;
     }
 
+    private function largestFiles(array $packageFiles, int $limit = 10): array
+    {
+        $files = array_map(
+            fn (array $file) => [
+                'path' => $file['path'],
+                'size' => (int) ($file['size'] ?? 0),
+                'hardened' => (bool) ($file['hardened'] ?? false),
+            ],
+            $packageFiles
+        );
+
+        usort($files, fn (array $a, array $b) => $b['size'] <=> $a['size']);
+
+        return array_slice($files, 0, $limit);
+    }
+
     private function createZip(string $zipPath, array $files, array $effectiveConfig): void
     {
         if (!class_exists(ZipArchive::class)) {
@@ -363,7 +404,19 @@ class ReleaseBuildService
         }
 
         foreach ($files as $file) {
-            $zip->addFromString($file['path'], $file['contents']);
+            if (isset($file['source_path'])) {
+                $added = $zip->addFile($file['source_path'], $file['path']);
+            } else {
+                $added = $zip->addFromString($file['path'], $file['contents']);
+            }
+
+            if ($added !== true) {
+                $zip->close();
+                File::delete($temporaryZipPath);
+
+                throw new RuntimeException('Unable to add release file to ZIP: '.$file['path']);
+            }
+
             $zip->setCompressionName($file['path'], ZipArchive::CM_STORE);
         }
         $zip->close();
@@ -657,10 +710,26 @@ class ReleaseBuildService
         $patterns = Arr::get($effectiveConfig, 'exclude_patterns', []);
 
         $patterns[] = 'storage/app/imports/inec/prepared/all/*';
+        $patterns[] = 'storage/app/imports/inec/prepared/all/**';
         $patterns[] = 'storage/app/imports/campaign-locations/prepared/all/*';
+        $patterns[] = 'storage/app/imports/campaign-locations/prepared/all/**';
         $patterns[] = 'storage/app/imports/*/prepared/all/*';
+        $patterns[] = 'storage/app/imports/*/prepared/all/**';
         $patterns[] = 'storage/app/imports/*/full/*';
         $patterns[] = 'storage/app/imports/*/full-data/*';
+        $patterns[] = 'storage/app/private/campaign-manager/releases/*.zip';
+        $patterns[] = 'storage/app/private/releases/archive/*.zip';
+        $patterns[] = 'storage/app/private/*';
+        $patterns[] = 'storage/logs/*';
+        $patterns[] = 'storage/logs/**';
+        $patterns[] = '!storage/logs/.gitkeep';
+        $patterns[] = 'node_modules/*';
+        $patterns[] = 'node_modules/**';
+        $patterns[] = 'vendor/.cache/*';
+        $patterns[] = 'vendor/.cache/**';
+        $patterns[] = '.git/*';
+        $patterns[] = '.git/**';
+        $patterns[] = '*.zip';
 
         return $patterns;
     }

@@ -411,6 +411,101 @@ test('release package excludes full location csv folders even when present local
         ->and($names)->toContain('storage/app/imports/campaign-locations/bootstrap/polling_units.csv');
 });
 
+test('release build excludes previous release zip artifacts', function () {
+    [$basePath, $config] = releaseBuildFixture();
+    $config['include_roots'][] = 'builds';
+    $config['include_roots'][] = 'storage/app/private';
+    $config['include_roots'][] = 'public/releases';
+
+    releaseBuildPut($basePath, 'builds/releases/old-full.zip', 'old-release');
+    releaseBuildPut($basePath, 'storage/app/private/campaign-manager/releases/old-full.zip', 'old-release');
+    releaseBuildPut($basePath, 'storage/app/private/releases/archive/old-full.zip', 'old-release');
+    releaseBuildPut($basePath, 'public/releases/old-full.zip', 'old-release');
+
+    $result = releaseBuildService($basePath, $config)->build([
+        'profile' => 'full',
+        'version' => '1.0.0',
+        'output' => $basePath.'/builds/new',
+    ]);
+
+    $names = releaseBuildZipNames($result['zip_path']);
+
+    expect($names)->not->toContain('builds/releases/old-full.zip')
+        ->and($names)->not->toContain('storage/app/private/campaign-manager/releases/old-full.zip')
+        ->and($names)->not->toContain('storage/app/private/releases/archive/old-full.zip')
+        ->and($names)->not->toContain('public/releases/old-full.zip');
+});
+
+test('release build skips excluded large folders', function () {
+    [$basePath, $config] = releaseBuildFixture();
+    $config['include_roots'][] = 'storage/app/imports/inec';
+    $config['include_roots'][] = 'storage/logs';
+    $config['include_roots'][] = 'node_modules';
+    $config['include_roots'][] = 'vendor/.cache';
+    $config['include_roots'][] = '.git';
+
+    releaseBuildPut($basePath, 'storage/app/imports/inec/prepared/all/polling_units.csv', 'full-data');
+    releaseBuildPut($basePath, 'storage/logs/laravel.log', 'log-data');
+    releaseBuildPut($basePath, 'node_modules/example/index.js', 'node-module');
+    releaseBuildPut($basePath, 'vendor/.cache/package/cache.bin', 'cache-data');
+    releaseBuildPut($basePath, '.git/objects/test', 'git-data');
+
+    $result = releaseBuildService($basePath, $config)->build([
+        'profile' => 'full',
+        'version' => '1.0.0',
+        'output' => $basePath.'/builds',
+    ]);
+
+    $names = releaseBuildZipNames($result['zip_path']);
+
+    expect($names)->not->toContain('storage/app/imports/inec/prepared/all/polling_units.csv')
+        ->and($names)->not->toContain('storage/logs/laravel.log')
+        ->and($names)->not->toContain('node_modules/example/index.js')
+        ->and($names)->not->toContain('vendor/.cache/package/cache.bin')
+        ->and($names)->not->toContain('.git/objects/test');
+});
+
+test('checksum generation keeps normal large files disk backed', function () {
+    [$basePath, $config] = releaseBuildFixture();
+    releaseBuildPut($basePath, 'vendor/large-package.dat', str_repeat('x', 1024 * 1024));
+
+    $builder = releaseBuildService($basePath, $config);
+    $files = $builder->collectFiles('full', $config);
+
+    $packageEntries = new ReflectionMethod(ReleaseBuildService::class, 'packageEntries');
+    $packageEntries->setAccessible(true);
+    $entries = $packageEntries->invoke($builder, $files['included'], $config);
+
+    $largeEntry = collect($entries)->firstWhere('path', 'vendor/large-package.dat');
+
+    expect($largeEntry)->not->toHaveKey('contents')
+        ->and($largeEntry)->toHaveKey('source_path')
+        ->and($largeEntry['size'])->toBe(1024 * 1024);
+
+    $checksumList = new ReflectionMethod(ReleaseBuildService::class, 'checksumList');
+    $checksumList->setAccessible(true);
+    $checksums = $checksumList->invoke($builder, $entries);
+
+    expect($checksums['vendor/large-package.dat'])->toBe(hash_file('sha256', $largeEntry['source_path']));
+});
+
+test('release build handles normal large files without loading package contents into result', function () {
+    [$basePath, $config] = releaseBuildFixture();
+    releaseBuildPut($basePath, 'vendor/normal-large-file.bin', str_repeat('L', 2 * 1024 * 1024));
+
+    $result = releaseBuildService($basePath, $config)->build([
+        'profile' => 'full',
+        'version' => '1.0.0',
+        'output' => $basePath.'/builds',
+    ]);
+
+    $names = releaseBuildZipNames($result['zip_path']);
+
+    expect($names)->toContain('vendor/normal-large-file.bin')
+        ->and(collect($result['largest_included_files'])->pluck('path')->all())->toContain('vendor/normal-large-file.bin')
+        ->and($result)->not->toHaveKey('package_files');
+});
+
 test('community profile includes only bootstrap location data', function () {
     [$basePath, $config] = releaseBuildFixture();
 
