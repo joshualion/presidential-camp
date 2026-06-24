@@ -76,7 +76,7 @@ test('release readiness passes with complete package fixture', function () {
 });
 
 test('release readiness detects missing location csv file', function () {
-    $missing = 'storage/app/imports/inec/prepared/all/polling_units.csv';
+    $missing = 'storage/app/imports/campaign-locations/bootstrap/polling_units.csv';
     $service = new ReleaseReadinessService(releaseReadinessFixture([$missing]), config('release'));
 
     $check = releaseReadinessCheck($service->inspect(), 'Required location CSV: '.$missing);

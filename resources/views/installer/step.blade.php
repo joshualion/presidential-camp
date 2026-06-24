@@ -24,7 +24,7 @@
         'states' => 'States',
         'senatorial_districts' => 'Senatorial Districts',
         'federal_constituencies' => 'Federal Constituencies',
-        'lgas' => 'LGAs',
+        'local_government_areas' => 'LGAs',
         'wards' => 'Wards',
         'polling_units' => 'Polling Units',
     ];
@@ -178,12 +178,19 @@
                 </form>
             @elseif($step === 'run')
                 <h2 style="color: #008751;">Run Installation</h2>
-                <p class="lead">This final step prepares your application, activates the license, and sets up campaign locations in short resumable steps.</p>
+                <p class="lead">This step prepares your application, runs migrations, activates the license, and creates the portal provisioning session used by the next step.</p>
+                @if($display)<div class="summary"><div><strong>Package:</strong> {{ $display['package_type'] ?? 'Not provided' }}</div><div><strong>Scope:</strong> {{ $display['scope_type'] ?? '' }} {{ $display['scope_name'] ?? '' }}</div></div>@endif
+                <div class="alert info">After activation, the installer will provision licensed location data from the Campaign Manager portal. Full CSV data is not bundled in this release.</div>
+                <form method="post">@csrf<div class="actions"><a class="btn secondary" href="{{ route('install.admin') }}">Previous</a><button class="btn">Run Installation</button></div></form>
+            @elseif($step === 'provision')
+                <h2 style="color: #008751;">Provision Location Data</h2>
+                <p class="lead">Licensed location data is imported server-side from the Campaign Manager portal in resumable JSON batches.</p>
                 @if($display)<div class="summary"><div><strong>Package:</strong> {{ $display['package_type'] ?? 'Not provided' }}</div><div><strong>Scope:</strong> {{ $display['scope_type'] ?? '' }} {{ $display['scope_name'] ?? '' }}</div></div>@endif
                 <div class="alert info">{{ $provisioningCopy ?? 'The installer will now prepare your licensed campaign geography.' }}</div>
-                @if(!empty($provisioningPreflight))
-                    <div class="alert {{ $provisioningPreflight['ok'] ? 'ok' : 'error' }}">{{ $provisioningPreflight['message'] }}</div>
-                @endif
+                @if(!empty($provisioningDeferred))
+                    <div class="alert warning-note">The Campaign Manager portal could not be reached during installation. Minimal bootstrap setup can continue now. Full location provisioning can be completed later with <strong>php artisan campaign:locations:provision</strong>.</div>
+                    <form method="post">@csrf<div class="actions"><button class="btn">Continue with minimal setup</button></div></form>
+                @else
                 @if(!empty($provisioningStarted))
                     <div class="progress-card" id="provisioning-progress" data-step-url="{{ route('install.provision.step') }}" data-finish-url="{{ route('install.provision.finish') }}">
                         <div class="progress-copy" id="progress-message">Preparing your campaign structure...</div>
@@ -235,7 +242,9 @@
                         })();
                     </script>
                 @else
-                    <form method="post">@csrf<div class="actions"><a class="btn secondary" href="{{ route('install.admin') }}">Previous</a>@if(($provisioningPreflight['ok'] ?? false) === true)<button class="btn">Run Installation</button>@else<button class="btn" disabled>Run Installation</button>@endif</div></form>
+                    <div class="alert warning-note">Location provisioning has not started. Return to Run Installation and try again.</div>
+                    <div class="actions"><a class="btn secondary" href="{{ route('install.run') }}">Back to Run Installation</a></div>
+                @endif
                 @endif
             @elseif($step === 'complete')
                 <h2 style="color: #008751;">Installation Complete</h2>
@@ -247,14 +256,14 @@
                         <div><strong>Deployment mode:</strong> {{ $provisioningSummary['deployment_mode'] ?? 'Not recorded' }}</div>
                         <div><strong>Licensed scope:</strong> {{ $provisioningSummary['scope_type'] ?? '' }} {{ $provisioningSummary['scope_name'] ?? '' }}</div>
                     </div>
-                    <table><thead><tr><th>Location level</th><th>Imported</th><th>Updated</th><th>Total provisioned</th></tr></thead><tbody>
+                    <table><thead><tr><th>Location level</th><th>Imported</th><th>Batches</th><th>Total provisioned</th></tr></thead><tbody>
                         @foreach($provisioningLevels as $key => $label)
                             @php
                                 $counts = data_get($provisioningSummary, 'summary.'.$key, []);
-                                $created = (int) ($counts['created'] ?? 0);
-                                $updated = (int) ($counts['updated'] ?? 0);
+                                $imported = (int) ($counts['imported'] ?? $counts['created'] ?? 0);
+                                $batches = (int) ($counts['batches'] ?? 0);
                             @endphp
-                            <tr><td>{{ $label }}</td><td>{{ $created }}</td><td>{{ $updated }}</td><td>{{ $created + $updated }}</td></tr>
+                            <tr><td>{{ $label }}</td><td>{{ $imported }}</td><td>{{ $batches }}</td><td>{{ $imported }}</td></tr>
                         @endforeach
                     </tbody></table>
                     @if(!empty($provisioningSummary['warnings']))

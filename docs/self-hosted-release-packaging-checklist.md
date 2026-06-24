@@ -23,7 +23,7 @@ Run this checklist from the master source codebase, `presidential-camp`. Do not 
 - [ ] `public`
 - [ ] `resources`
 - [ ] `routes`
-- [ ] `storage/app/imports/inec/prepared/all`
+- [ ] `storage/app/imports/campaign-locations/bootstrap`
 - [ ] `vendor`
 - [ ] `artisan`
 - [ ] `composer.json`
@@ -48,16 +48,16 @@ Run this checklist from the master source codebase, `presidential-camp`. Do not 
 
 These remaining external dependencies do not block basic Laravel installation or core navigation, but they should be replaced or explicitly accepted before an offline-first customer release.
 
-## Required Location Data
+## Required Bootstrap Location Data
 
-Include every file:
+Include only the minimal bootstrap/sample files. Full licensed location data is provisioned from the Campaign Manager portal after activation.
 
-- [ ] `storage/app/imports/inec/prepared/all/states.csv`
-- [ ] `storage/app/imports/inec/prepared/all/senatorial_districts.csv`
-- [ ] `storage/app/imports/inec/prepared/all/federal_constituencies.csv`
-- [ ] `storage/app/imports/inec/prepared/all/local_government_areas.csv`
-- [ ] `storage/app/imports/inec/prepared/all/wards.csv`
-- [ ] `storage/app/imports/inec/prepared/all/polling_units.csv`
+- [ ] `storage/app/imports/campaign-locations/bootstrap/states.csv`
+- [ ] `storage/app/imports/campaign-locations/bootstrap/senatorial_districts.csv`
+- [ ] `storage/app/imports/campaign-locations/bootstrap/federal_constituencies.csv`
+- [ ] `storage/app/imports/campaign-locations/bootstrap/local_government_areas.csv`
+- [ ] `storage/app/imports/campaign-locations/bootstrap/wards.csv`
+- [ ] `storage/app/imports/campaign-locations/bootstrap/polling_units.csv`
 
 ## Include Empty Writable Folder Placeholders
 

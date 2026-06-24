@@ -4,7 +4,7 @@ namespace App\Console\Commands;
 
 use App\Services\DeploymentModeService;
 use App\Services\InstallationStateService;
-use App\Services\LicensedLocationProvisioningService;
+use App\Services\LocationProvisioningImportService;
 use App\Support\SafeDatabase;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
@@ -17,7 +17,7 @@ class CampaignInstallerStatus extends Command
 
     protected $description = 'Show non-sensitive installer readiness diagnostics.';
 
-    public function handle(DeploymentModeService $deploymentMode, InstallationStateService $installationState, LicensedLocationProvisioningService $locationProvisioning): int
+    public function handle(DeploymentModeService $deploymentMode, InstallationStateService $installationState, LocationProvisioningImportService $locationProvisioning): int
     {
         $this->line('Campaign Manager installer diagnostics');
         $this->line('App URL: '.config('app.url'));
@@ -73,7 +73,7 @@ class CampaignInstallerStatus extends Command
             : 'no';
     }
 
-    private function latestProvisioningRun(LicensedLocationProvisioningService $locationProvisioning): string
+    private function latestProvisioningRun(LocationProvisioningImportService $locationProvisioning): string
     {
         $run = $locationProvisioning->latestRun();
         if (!$run) {
@@ -81,12 +81,12 @@ class CampaignInstallerStatus extends Command
         }
 
         return trim(sprintf(
-            '#%d %s stage=%s processed=%s/%s%s',
+            '#%d %s dataset=%s imported=%s/%s%s',
             $run->id,
             $run->status,
-            $run->current_stage ?: 'complete',
-            $run->processed_rows ?? 0,
-            $run->total_rows ?? 'unknown',
+            $run->current_dataset ?: 'complete',
+            $run->imported_records ?? 0,
+            $run->total_records ?? 'unknown',
             $run->error_message ? ' error='.$this->shortError($run->error_message) : ''
         ));
     }

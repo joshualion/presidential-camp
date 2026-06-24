@@ -127,6 +127,16 @@ function releaseBuildZipNames(string $zipPath): array
     return $names;
 }
 
+function releaseBuildZipContents(string $zipPath, string $name): string
+{
+    $zip = new ZipArchive();
+    $zip->open($zipPath);
+    $contents = $zip->getFromName($name);
+    $zip->close();
+
+    return (string) $contents;
+}
+
 afterEach(function () {
     File::deleteDirectory(storage_path('framework/testing/release-build'));
 });
@@ -173,7 +183,7 @@ test('release build excludes sensitive local files and upload artifacts', functi
         ->and($names)->toContain('public/uploads/member_images/.gitkeep');
 });
 
-test('release build includes required csv build manifest docs and vendor autoload', function () {
+test('release build includes bootstrap csv build manifest docs and vendor autoload', function () {
     [$basePath, $config] = releaseBuildFixture();
     $result = releaseBuildService($basePath, $config)->build([
         'profile' => 'full',
@@ -184,16 +194,21 @@ test('release build includes required csv build manifest docs and vendor autoloa
 
     $names = releaseBuildZipNames($result['zip_path']);
 
-    expect($names)->toContain('storage/app/imports/inec/prepared/all/polling_units.csv')
+    expect($names)->toContain('storage/app/imports/campaign-locations/bootstrap/polling_units.csv')
+        ->and($names)->not->toContain('storage/app/imports/inec/prepared/all/polling_units.csv')
         ->and($names)->toContain('public/build/manifest.json')
         ->and($names)->toContain('docs/self-hosted-installation-guide.md')
         ->and($names)->toContain('vendor/autoload.php')
         ->and($names)->toContain('README-SELF-HOSTED.md')
+        ->and($names)->toContain('LICENSE.txt')
+        ->and($names)->toContain('EULA.txt')
+        ->and($names)->toContain('release-manifest.json')
+        ->and($names)->toContain('checksums.txt')
         ->and($names)->toContain('storage/logs/.gitkeep')
         ->and($names)->not->toContain('docs/pre-release-cleanup-checklist.md');
 });
 
-test('manifest contains version channel and checksum fields', function () {
+test('manifest contains version channel checksum protected files and portal provisioning fields', function () {
     [$basePath, $config] = releaseBuildFixture();
     $result = releaseBuildService($basePath, $config)->build([
         'profile' => 'full',
@@ -210,16 +225,140 @@ test('manifest contains version channel and checksum fields', function () {
         ->and($manifest['channel'])->toBe('stable')
         ->and($manifest['checksum_sha256'])->toBe($result['checksum_sha256'])
         ->and($manifest['package_type'])->toBe('universal_core')
-        ->and($manifest['includes_full_location_data'])->toBeTrue()
-        ->and($manifest['includes_bootstrap_location_data'])->toBeFalse()
+        ->and($manifest['includes_full_location_data'])->toBeFalse()
+        ->and($manifest['includes_bootstrap_location_data'])->toBeTrue()
+        ->and($manifest['bundled_location_data'])->toBeFalse()
+        ->and($manifest['portal_location_provisioning'])->toBeTrue()
+        ->and($manifest['deployment_type'])->toBe('self_hosted')
+        ->and($manifest)->toHaveKey('protected_files')
+        ->and($manifest)->toHaveKey('checksums')
+        ->and($manifest['update_entitlement_warning'])->toContain('blocked or flagged')
         ->and($manifest)->toHaveKey('location_data')
         ->and(json_encode($manifest))->not->toContain('advanced_analytics')
         ->and(json_encode($manifest))->not->toContain('bulk_sms')
         ->and(json_encode($manifest))->not->toContain('storage/app/imports/inec/prepared/all');
 });
 
+test('checksums text is generated and included in release zip', function () {
+    [$basePath, $config] = releaseBuildFixture();
+    $result = releaseBuildService($basePath, $config)->build([
+        'profile' => 'full',
+        'version' => '1.0.0',
+        'output' => $basePath.'/builds',
+    ]);
+
+    $checksums = File::get($basePath.'/builds/checksums.txt');
+    $zipChecksums = releaseBuildZipContents($result['zip_path'], 'checksums.txt');
+
+    expect($checksums)->toContain('release-manifest.json')
+        ->and($zipChecksums)->toContain('release-manifest.json')
+        ->and($zipChecksums)->toContain('LICENSE.txt')
+        ->and($zipChecksums)->toContain('EULA.txt');
+});
+
+test('manifest signing works when release key paths are configured', function () {
+    [$basePath, $config] = releaseBuildFixture();
+
+    $result = releaseBuildService($basePath, $config)->build([
+        'profile' => 'full',
+        'version' => '1.0.0',
+        'output' => $basePath.'/builds',
+        'zip' => false,
+    ]);
+
+    $publicKey = File::get($basePath.'/storage/app/release-keys/campaign_release_public.pem');
+
+    expect($result['manifest']['manifest_signature']['algorithm'])->toBe('rsa-sha256')
+        ->and(app(\App\Services\ReleaseManifestSigner::class)->verify($result['manifest'], $publicKey))->toBeTrue()
+        ->and(collect($result['warnings'])->pluck('label')->all())->toContain('Release signing keys');
+});
+
+test('unsigned local build warns but does not crash', function () {
+    [$basePath, $config] = releaseBuildFixture();
+
+    $result = releaseBuildService($basePath, $config)->dryRun([
+        'profile' => 'full',
+        'version' => '1.0.0',
+    ]);
+
+    expect(collect($result['warnings'])->pluck('label')->all())->toContain('Release manifest signing')
+        ->and($result['manifest']['manifest_signature'])->toBeNull();
+});
+
+test('release build fails if keys are invalid', function () {
+    [$basePath, $config] = releaseBuildFixture([], [
+        'storage/app/release-keys/campaign_release_private.pem' => 'invalid-private-key',
+        'storage/app/release-keys/campaign_release_public.pem' => 'invalid-public-key',
+    ]);
+
+    releaseBuildService($basePath, $config)->build([
+        'profile' => 'full',
+        'version' => '1.0.0',
+        'output' => $basePath.'/builds',
+        'zip' => false,
+    ]);
+})->throws(RuntimeException::class, 'Release signing keys are invalid');
+
+test('private release key is excluded from generated zip', function () {
+    [$basePath, $config] = releaseBuildFixture();
+
+    app(\App\Services\ReleaseSigningKeyService::class, [
+        'basePath' => $basePath,
+        'signingConfig' => $config['signing'],
+    ])->generate();
+
+    $result = releaseBuildService($basePath, $config)->build([
+        'profile' => 'full',
+        'version' => '1.0.0',
+        'output' => $basePath.'/builds',
+    ]);
+
+    $names = releaseBuildZipNames($result['zip_path']);
+
+    expect($names)->not->toContain('storage/app/release-keys/campaign_release_private.pem')
+        ->and($names)->not->toContain('storage/app/release-keys/campaign_release_public.pem');
+});
+
+test('distribution watermark support is optional and included only when present', function () {
+    [$basePath, $config] = releaseBuildFixture();
+    $withoutWatermark = releaseBuildService($basePath, $config)->build([
+        'profile' => 'full',
+        'version' => '1.0.0',
+        'output' => $basePath.'/builds/without',
+    ]);
+
+    expect(releaseBuildZipNames($withoutWatermark['zip_path']))->not->toContain('storage/app/license/distribution.json');
+
+    [$watermarkedBasePath, $watermarkedConfig] = releaseBuildFixture([], [
+        'storage/app/license/distribution.json' => json_encode([
+            'download_id' => 'DL-1',
+            'order_number' => 'ORD-1',
+            'license_key_hash' => hash('sha256', 'license'),
+            'release_version' => 'v1.0.1',
+            'package_type' => 'full',
+            'deployment_type' => 'self_hosted',
+            'generated_at' => now()->toIso8601String(),
+        ]),
+    ]);
+    $withWatermark = releaseBuildService($watermarkedBasePath, $watermarkedConfig)->build([
+        'profile' => 'full',
+        'version' => '1.0.0',
+        'output' => $watermarkedBasePath.'/builds/with',
+    ]);
+
+    expect(releaseBuildZipNames($withWatermark['zip_path']))->toContain('storage/app/license/distribution.json');
+});
+
+test('no paid encoder extension is required for release build service', function () {
+    $composer = json_decode(File::get(base_path('composer.json')), true);
+    $requires = array_keys(array_merge($composer['require'] ?? [], $composer['require-dev'] ?? []));
+
+    expect(implode(' ', $requires))->not->toContain('ioncube')
+        ->and(implode(' ', $requires))->not->toContain('sourceguardian');
+});
+
 test('release build refuses when required csv is missing', function () {
-    [$basePath, $config] = releaseBuildFixture(['storage/app/imports/inec/prepared/all/polling_units.csv']);
+    [$basePath, $config] = releaseBuildFixture(['storage/app/imports/campaign-locations/bootstrap/polling_units.csv']);
 
     releaseBuildService($basePath, $config)->dryRun([
         'profile' => 'full',
@@ -236,7 +375,7 @@ test('release build refuses when build manifest is missing', function () {
     ]);
 })->throws(RuntimeException::class);
 
-test('full profile includes complete location data and excludes bootstrap data', function () {
+test('full profile excludes complete location data and includes bootstrap data', function () {
     [$basePath, $config] = releaseBuildFixture();
 
     $result = releaseBuildService($basePath, $config)->build([
@@ -247,8 +386,29 @@ test('full profile includes complete location data and excludes bootstrap data',
 
     $names = releaseBuildZipNames($result['zip_path']);
 
-    expect($names)->toContain('storage/app/imports/inec/prepared/all/polling_units.csv')
-        ->and($names)->not->toContain('storage/app/imports/campaign-locations/bootstrap/polling_units.csv');
+    expect($names)->toContain('storage/app/imports/campaign-locations/bootstrap/polling_units.csv')
+        ->and($names)->not->toContain('storage/app/imports/inec/prepared/all/polling_units.csv');
+});
+
+test('release package excludes full location csv folders even when present locally', function () {
+    [$basePath, $config] = releaseBuildFixture([], [
+        'storage/app/imports/inec/prepared/all/polling_units.csv' => 'full-data',
+        'storage/app/imports/inec/prepared/all/states.csv' => 'full-data',
+        'storage/app/imports/campaign-locations/prepared/all/polling_units.csv' => 'full-data',
+    ]);
+
+    $result = releaseBuildService($basePath, $config)->build([
+        'profile' => 'full',
+        'version' => '1.0.0',
+        'output' => $basePath.'/builds',
+    ]);
+
+    $names = releaseBuildZipNames($result['zip_path']);
+
+    expect($names)->not->toContain('storage/app/imports/inec/prepared/all/polling_units.csv')
+        ->and($names)->not->toContain('storage/app/imports/inec/prepared/all/states.csv')
+        ->and($names)->not->toContain('storage/app/imports/campaign-locations/prepared/all/polling_units.csv')
+        ->and($names)->toContain('storage/app/imports/campaign-locations/bootstrap/polling_units.csv');
 });
 
 test('community profile includes only bootstrap location data', function () {

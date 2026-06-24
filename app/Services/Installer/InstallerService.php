@@ -4,8 +4,9 @@ namespace App\Services\Installer;
 
 use App\Models\User;
 use App\Services\InstallationStateService;
-use App\Services\LicensedLocationProvisioningService;
+use App\Services\LocationProvisioningException;
 use App\Services\LocationProvisioningIntegrityService;
+use App\Services\LocationProvisioningImportService;
 use App\Services\LocalLicenseService;
 use App\Services\RemoteLicenseClient;
 use App\Services\ServerFingerprintService;
@@ -43,7 +44,7 @@ class InstallerService
         private DatabaseSetupService $databaseSetup,
         private RemoteLicenseClient $remoteLicenseClient,
         private LocalLicenseService $localLicenseService,
-        private LicensedLocationProvisioningService $locationProvisioning,
+        private LocationProvisioningImportService $locationProvisioning,
         private LocationProvisioningIntegrityService $locationIntegrity,
         private ServerFingerprintService $fingerprintService,
         private InstallationStateService $installationState,
@@ -112,11 +113,23 @@ class InstallerService
             $localLicense = $this->runStep('local license persistence', fn () => $this->localLicenseService->persistActivation($licenseKey, $activationPayload));
             $this->localLicenseService->log($localLicense, $licenseKey, 'activate', 'success', 'License activated during installation.', $activation);
             $this->runStep('system package sync', fn () => $this->syncPackageSetting($localLicense->package_type));
-            $run = $this->runStep('location setup start', fn () => $this->locationProvisioning->startOrResumeChunked($localLicense->fresh(['scope', 'modules'])));
+            try {
+                $run = $this->locationProvisioning->startOrResume($localLicense->fresh(['scope', 'modules']));
+            } catch (LocationProvisioningException $e) {
+                if ($e->status !== 0) {
+                    throw $e;
+                }
+
+                return [
+                    'ok' => true,
+                    'message' => 'Core setup complete. The Campaign Manager portal was unreachable, so full location provisioning can be completed later with php artisan campaign:locations:provision.',
+                    'location_provisioning_deferred' => $e->getMessage(),
+                ];
+            }
 
             return [
                 'ok' => true,
-                'message' => 'Core setup is complete. Location setup is ready to continue.',
+                'message' => 'Core setup complete. Continue to provision licensed location data.',
                 'provisioning_run_id' => $run->id,
             ];
         } catch (Throwable $e) {
@@ -357,6 +370,7 @@ class InstallerService
             'deployment_mode' => $result['deployment_mode'] ?? null,
             'scope_type' => $result['scope_type'] ?? null,
             'scope_name' => $result['scope_name'] ?? null,
+            'data_profile' => $result['data_profile'] ?? null,
             'summary' => $result['summary'] ?? [],
             'warnings' => $result['warnings'] ?? [],
         ];

@@ -1,0 +1,13 @@
+Campaign Manager End User License Agreement
+
+Campaign Manager is proprietary software owned by Govware Solutions Ltd. It is not open-source software.
+
+This software is licensed, not sold. Use requires valid license activation from the Campaign Manager portal and is limited to the package type, deployment type, scope, and entitlement issued by Govware Solutions Ltd.
+
+Downloading or receiving a release package does not grant resale, redistribution, sublicensing, modification, public sharing, license bypass, activation bypass, or source disclosure rights.
+
+You may not remove or bypass license checks, release integrity checks, update entitlement controls, portal-backed provisioning controls, or any technical measure intended to protect the software and its licensed data.
+
+Unauthorized redistribution, public sharing, license circumvention, or tampering with protected core files is prohibited and may result in termination of access to updates, support, and license services.
+
+Govware Solutions Ltd reserves all rights not expressly granted in a written agreement.

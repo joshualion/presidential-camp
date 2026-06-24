@@ -21,17 +21,12 @@ test('installer run view hides internal location source details', function () {
             'deployment_mode' => 'self_hosted',
         ],
         'display' => ['package_type' => 'presidential', 'scope_name' => 'National'],
-        'provisioningPreflight' => [
-            'ok' => true,
-            'message' => 'Campaign location data package: Ready.',
-            'missing' => [],
-        ],
         'provisioningCopy' => 'National campaign location setup may take a few minutes.',
         'provisioningStarted' => false,
         'errors' => new ViewErrorBag(),
     ])->render();
 
-    expect($html)->toContain('Campaign location data package: Ready.')
+    expect($html)->toContain('Full CSV data is not bundled in this release.')
         ->and($html)->not->toContain('storage/app/imports')
         ->and($html)->not->toContain('polling_units.csv')
         ->and($html)->not->toContain('states.csv')

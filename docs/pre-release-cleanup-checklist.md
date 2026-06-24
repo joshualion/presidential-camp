@@ -44,7 +44,7 @@ Use this checklist before self-hosted release packaging.
 - [ ] Package only from the master `presidential-camp` source tree.
 - [ ] Do not package installed test copies such as `otu` or senatorial smoke-test folders.
 - [ ] Include `vendor` and `public/build`.
-- [ ] Include prepared INEC CSV files under `storage/app/imports/inec/prepared/all`.
+- [ ] Include only bootstrap/sample location CSV files under `storage/app/imports/campaign-locations/bootstrap`; exclude full prepared location data from customer ZIPs.
 - [ ] Exclude `.env`, `.git`, `node_modules`, `storage/app/installed.lock`, logs, cache files, sessions, compiled views, local uploads, local license data, and old ZIPs.
 - [ ] Preserve writable folder placeholders.
 - [ ] Confirm production document root points to `/public` or uses the shared-hosting bridge.

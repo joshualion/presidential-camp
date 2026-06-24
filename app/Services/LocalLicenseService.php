@@ -48,6 +48,49 @@ class LocalLicenseService
         return $this->active() !== null;
     }
 
+    public function updateEntitlementIntegrityState(): array
+    {
+        $status = app(ReleaseIntegrityService::class)->latestStatus();
+
+        if (!$status) {
+            return [
+                'state' => 'unknown',
+                'block_updates' => false,
+                'reason' => 'Integrity status has not been checked yet.',
+            ];
+        }
+
+        if (!$status->manifest_present) {
+            return [
+                'state' => 'manifest_missing',
+                'block_updates' => false,
+                'reason' => 'Release manifest is missing; development/local installs are not blocked.',
+            ];
+        }
+
+        if ($status->manifest_signature_valid === false) {
+            return [
+                'state' => 'signature_invalid',
+                'block_updates' => true,
+                'reason' => 'Release manifest signature is invalid.',
+            ];
+        }
+
+        if ($status->tampered) {
+            return [
+                'state' => 'tampered',
+                'block_updates' => true,
+                'reason' => 'Protected release files do not match the signed manifest.',
+            ];
+        }
+
+        return [
+            'state' => 'clean',
+            'block_updates' => false,
+            'reason' => 'Release integrity status is clean.',
+        ];
+    }
+
     public function persistActivation(string $licenseKey, array $payload): LocalLicense
     {
         return DB::transaction(function () use ($licenseKey, $payload) {

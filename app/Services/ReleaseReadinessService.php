@@ -33,7 +33,7 @@ class ReleaseReadinessService
                 'Required location CSV: '.$file,
                 File::isFile($this->path($file)),
                 true,
-                'The browser installer cannot provision licensed geography without this CSV.'
+                'The release should include only the bootstrap/sample location CSV package.'
             );
         }
 

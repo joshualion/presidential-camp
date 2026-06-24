@@ -3,8 +3,8 @@
 namespace App\Console\Commands;
 
 use App\Services\InstallationStateService;
-use App\Services\LicensedLocationProvisioningService;
 use App\Services\LicensedScopeQueryService;
+use App\Services\LocationProvisioningImportService;
 use App\Services\PackageScopeService;
 use App\Support\SafeDatabase;
 use Illuminate\Console\Command;
@@ -19,7 +19,7 @@ class CampaignScopeStatus extends Command
         PackageScopeService $scopeService,
         InstallationStateService $installationState,
         LicensedScopeQueryService $licensedScope,
-        LicensedLocationProvisioningService $locationProvisioning,
+        LocationProvisioningImportService $locationProvisioning,
     ): int
     {
         $this->line('Campaign Manager package/scope diagnostics');
@@ -70,7 +70,7 @@ class CampaignScopeStatus extends Command
         $this->line('Allowed LGA id: '.($enforcement['lga_id'] ?? 'all/unknown'));
         $this->line('Location tables: '.$this->locationTablesStatus($enforcement['tables'] ?? []));
         $this->line('Latest provisioning run: '.$this->latestProvisioningRun($locationProvisioning));
-        $this->line('Provisioning preview: php artisan campaign:provision-locations --dry-run');
+        $this->line('Portal provisioning retry: php artisan campaign:locations:provision');
 
         return self::SUCCESS;
     }
@@ -102,7 +102,7 @@ class CampaignScopeStatus extends Command
             ->implode(', ');
     }
 
-    private function latestProvisioningRun(LicensedLocationProvisioningService $locationProvisioning): string
+    private function latestProvisioningRun(LocationProvisioningImportService $locationProvisioning): string
     {
         $run = $locationProvisioning->latestRun();
 
@@ -115,8 +115,8 @@ class CampaignScopeStatus extends Command
             $run->id,
             $run->status,
             $run->package_type ?: 'unknown',
-            $run->scope_type ?: 'unknown',
-            $run->completed_at?->toDateTimeString() ?: (($run->current_stage ? 'stage='.$run->current_stage.' ' : '').'processed='.($run->processed_rows ?? 0).'/'.($run->total_rows ?? 'unknown'))
+            $run->release_profile ?: 'unknown',
+            $run->completed_at?->toDateTimeString() ?: (($run->current_dataset ? 'dataset='.$run->current_dataset.' ' : '').'imported='.($run->imported_records ?? 0).'/'.($run->total_records ?? 'unknown'))
         ));
     }
 }

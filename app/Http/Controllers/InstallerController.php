@@ -8,7 +8,7 @@ use App\Services\Installer\InstallerService;
 use App\Services\Installer\InstallerStateStore;
 use App\Services\Installer\RequirementCheckService;
 use App\Services\Installer\StorageSetupService;
-use App\Services\LicensedLocationProvisioningService;
+use App\Services\LocationProvisioningImportService;
 use App\Services\LocalLicenseService;
 use App\Services\RemoteLicenseClient;
 use Illuminate\Http\Request;
@@ -26,6 +26,7 @@ class InstallerController extends Controller
         'license' => 'License',
         'admin' => 'Super Admin',
         'run' => 'Run',
+        'provision' => 'Provision Location Data',
         'complete' => 'Complete',
     ];
 
@@ -38,6 +39,7 @@ class InstallerController extends Controller
         'license' => 'storage',
         'admin' => 'license',
         'run' => 'admin',
+        'provision' => 'run',
     ];
 
     public function __construct(
@@ -49,7 +51,7 @@ class InstallerController extends Controller
         private LocalLicenseService $localLicenseService,
         private InstallerService $installerService,
         private InstallerStateStore $stateStore,
-        private LicensedLocationProvisioningService $locationProvisioning,
+        private LocationProvisioningImportService $locationProvisioning,
     ) {
     }
 
@@ -246,12 +248,6 @@ class InstallerController extends Controller
     public function run(Request $request)
     {
         if ($request->isMethod('post')) {
-            if ($missing = $this->missingLocationFiles()) {
-                return back()
-                    ->withErrors(['install' => $this->missingLocationFilesMessage($missing)])
-                    ->with('missing_step', 'run');
-            }
-
             $result = $this->installerService->run($this->currentState());
 
             if (!$result['ok']) {
@@ -260,25 +256,60 @@ class InstallerController extends Controller
                     ->with('missing_step', $result['missing_step'] ?? null);
             }
 
-            session(['installer.provisioning_started' => true]);
-            $this->stateStore->merge(['provisioning_started' => true]);
+            $deferred = $result['location_provisioning_deferred'] ?? null;
+            session([
+                'installer.provisioning_started' => $deferred === null,
+                'installer.location_provisioning_deferred' => $deferred,
+            ]);
+            $this->stateStore->merge([
+                'provisioning_started' => $deferred === null,
+                'location_provisioning_deferred' => $deferred,
+            ]);
 
-            return redirect()->route('install.run')->with('status', 'Core setup complete. Location setup will continue in short, resumable steps.');
+            return redirect()->route('install.provision')->with('status', $result['message'] ?? 'Core setup complete.');
         }
 
         return $this->view('run', [
             'display' => data_get($this->currentState(), 'license_preview') ? $this->localLicenseService->displayPayload(data_get($this->currentState(), 'license_preview')) : null,
-            'provisioningPreflight' => $this->provisioningPreflight(),
+            'provisioningCopy' => $this->provisioningCopy(data_get($this->currentState(), 'license_preview')),
+        ]);
+    }
+
+    public function provision(Request $request)
+    {
+        if (data_get($this->currentState(), 'location_provisioning_deferred') && $request->isMethod('post')) {
+            $result = $this->installerService->finishAfterProvisioning($this->currentState(), [
+                'status' => 'deferred',
+                'data_profile' => 'deferred',
+                'warnings' => [
+                    'The Campaign Manager portal was unreachable during installation. Complete full location provisioning later with php artisan campaign:locations:provision.',
+                ],
+            ]);
+
+            if (!$result['ok']) {
+                return back()->withErrors(['install' => $result['message']]);
+            }
+
+            session(['installer_complete.location_provisioning' => $result['location_provisioning'] ?? null]);
+            session()->forget('installer');
+            $this->stateStore->clear();
+
+            return redirect()->route('install.complete');
+        }
+
+        return $this->view('provision', [
+            'display' => data_get($this->currentState(), 'license_preview') ? $this->localLicenseService->displayPayload(data_get($this->currentState(), 'license_preview')) : null,
             'provisioningCopy' => $this->provisioningCopy(data_get($this->currentState(), 'license_preview')),
             'provisioningStarted' => (bool) data_get($this->currentState(), 'provisioning_started'),
+            'provisioningDeferred' => data_get($this->currentState(), 'location_provisioning_deferred'),
         ]);
     }
 
     public function provisionLocationsStep()
     {
         try {
-            $run = $this->locationProvisioning->startOrResumeChunked();
-            $result = $this->locationProvisioning->processNextChunk($run, (int) config('campaign.installer_location_chunk_size', 750));
+            $run = $this->locationProvisioning->startOrResume();
+            $result = $this->locationProvisioning->processNextBatch($run, (int) config('campaign.installer_location_batch_size', 500));
 
             return response()->json($result);
         } catch (Throwable $e) {
@@ -303,12 +334,12 @@ class InstallerController extends Controller
         $result = $this->installerService->finishAfterProvisioning($this->currentState(), [
             'status' => $run->status,
             'package_type' => $run->package_type,
-            'deployment_mode' => $run->deployment_mode,
-            'scope_type' => $run->scope_type,
-            'scope_name' => $run->scope_name,
-            'data_profile' => str_contains(str_replace('\\', '/', (string) data_get($run->metadata ?: [], 'source_path')), 'campaign-locations/bootstrap') ? 'bootstrap' : 'full',
+            'deployment_mode' => 'self_hosted',
+            'scope_type' => data_get($run->scope_payload ?: [], 'scope_type'),
+            'scope_name' => data_get($run->scope_payload ?: [], 'scope_name'),
+            'data_profile' => 'portal',
             'summary' => $run->summary ?: [],
-            'warnings' => $run->warnings ?: [],
+            'warnings' => [],
         ]);
 
         if (!$result['ok']) {
@@ -424,7 +455,8 @@ class InstallerController extends Controller
             'database' => $this->hasKeys($state['database'] ?? [], ['DB_CONNECTION', 'DB_HOST', 'DB_PORT', 'DB_DATABASE', 'DB_USERNAME']),
             'license' => !empty($state['license_key']) && !empty($state['license_preview']),
             'admin' => in_array('admin', $completed, true),
-            'run' => false,
+            'run' => (bool) ($state['provisioning_started'] ?? $state['location_provisioning_deferred'] ?? false),
+            'provision' => (bool) ($state['provisioning_started'] ?? $state['location_provisioning_deferred'] ?? false),
             'complete' => false,
             default => false,
         };
@@ -467,30 +499,6 @@ class InstallerController extends Controller
         }
 
         return 'First-run setup should use SESSION_DRIVER=file, CACHE_STORE=file, and QUEUE_CONNECTION=sync. The Environment step will write these safe installer defaults before continuing.';
-    }
-
-    private function provisioningPreflight(): array
-    {
-        $files = $this->locationProvisioning->inspectSource();
-        $missing = $this->missingLocationFiles();
-
-        return [
-            'missing' => $missing,
-            'ok' => $missing === [],
-            'message' => $missing === []
-                ? 'Campaign location data package: Ready.'
-                : $this->missingLocationFilesMessage($missing),
-        ];
-    }
-
-    private function missingLocationFiles(): array
-    {
-        return $this->locationProvisioning->missingSourceFiles();
-    }
-
-    private function missingLocationFilesMessage(array $missing): string
-    {
-        return 'Campaign location data package is incomplete. Upload the complete Campaign Manager self-hosted package or contact support.';
     }
 
     private function provisioningCopy(?array $preview): string

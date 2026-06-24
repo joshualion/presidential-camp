@@ -18,6 +18,8 @@ yarn-error.log
 vite.config.js.timestamp-*.mjs
 /builds
 /storage/app/releases
+/storage/app/release-keys/
+/storage/app/release-keys/*.pem
 /.fleet
 /.idea
 /.vscode

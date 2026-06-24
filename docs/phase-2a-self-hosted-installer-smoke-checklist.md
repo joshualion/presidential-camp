@@ -27,8 +27,8 @@
 - Expected: `/licenses/entitlement` is called first and no activation is consumed.
 - Confirm the step progress UI marks completed/current/pending states and only completed safe steps are clickable.
 - Create the first superadmin.
-- Confirm the Run Installation step shows prepared location CSV preflight status from `storage/app/imports/inec/prepared/all`.
-- Expected: normal customers do not need to run `php artisan campaign:provision-locations`; the browser installer provisions licensed location data.
+- Confirm the Provision Location Data step starts after license activation and does not expose portal batch URLs to the browser.
+- Expected: normal customers do not need to run `php artisan campaign:locations:provision`; the browser installer provisions licensed location data.
 - Run installation.
 - Expected: migrations run, installer-safe seed data is applied, `/licenses/activate` is called, local license tables are populated, licensed location data is provisioned, superadmin is created, and `installed.lock` is written last.
 - Expected: Complete step shows package type, deployment mode, licensed scope, imported/updated counts for regions, states, senatorial districts, federal constituencies, LGAs, wards, polling units, and any warnings.
@@ -157,7 +157,7 @@
 
 ## Scenario N: Provisioning Recovery Command
 - Normal customers should use the browser installer for location provisioning.
-- Use `php artisan campaign:provision-locations --dry-run` or `--force` only for already-installed systems, recovery, or developer/admin maintenance.
+- Use `php artisan campaign:locations:provision` only for already-installed systems, recovery, or developer/admin maintenance.
 
 ## Phase 2B-2: Licensed Read-Path Scope
 - In managed mode with no local license, run `php artisan campaign:scope-status`.

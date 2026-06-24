@@ -1,0 +1,9 @@
+Campaign Manager Proprietary Software License
+
+Campaign Manager is proprietary software owned by Govware Solutions Ltd. It is not open-source software.
+
+Downloading, receiving, installing, or accessing Campaign Manager does not grant any right to resell, redistribute, sublicense, modify, publicly share, publish, reverse engineer, bypass licensing, or otherwise make the software available outside the licensed deployment.
+
+Use of Campaign Manager requires valid license activation from the Campaign Manager portal. Unauthorized redistribution, license circumvention, activation bypass, tampering with protected files, or sharing release packages with unlicensed parties is prohibited.
+
+All rights not expressly granted in a written agreement with Govware Solutions Ltd are reserved.
