@@ -2,13 +2,10 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\Models\SystemSetting;
 use App\Models\User;
-use App\Services\PackageGovernanceService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
 class CredentialUpdateController extends Controller
@@ -90,40 +87,10 @@ class CredentialUpdateController extends Controller
         $profileData->requires_update = false; // Mark update as complete
         $profileData->save();
 
-       
-        $SystemSetting = SystemSetting::find(1);
-        $package = app(PackageGovernanceService::class)->normalize($SystemSetting?->package);
-        //Redirect to Super admins to the loction routes
-        if($profileData->access_level == 'nationaladmin' && $package === PackageGovernanceService::PRESIDENTIAL) {
-            $notification = [
-                'type'=> 'success',
-                'message'=> 'Credentials updated successfully. Please add or upload LGAs, Wards and Polling Units'
-            ];
-    
-            // Redirect to the profile completion step
-        return redirect()->route('nationaladmin.location.lgas')->with($notification);
-
-        }elseif($profileData->access_level == 'stateadmin' && $package === PackageGovernanceService::GOVERNORSHIP) {
-            $notification = [
-                'type'=> 'success',
-                'message'=> 'Credentials updated successfully. Please add or upload LGAs, Wards and Polling Units'
-            ]; // Redirect to the profile completion step
-        return redirect()->route('stateadmin.location.lgas')->with($notification);
-        }elseif($profileData->access_level == 'lgaadmin' && in_array($package, [PackageGovernanceService::GOVERNORSHIP, PackageGovernanceService::CHAIRMANSHIP], true)) {
-            $notification = [
-                'type'=> 'success',
-                'message'=> 'Credentials updated successfully. Please add or upload Wards and polling'
-            ];// Redirect to the profile completion step
-        return redirect()->route('lgaadmin.location.wards')->with($notification);
-        }else{
-            $notification = [
-                'type'=> 'success',
-                'message'=> 'Credentials updated successfully. Please complete your profile.'
-            ];
-    
-        // Redirect to the profile completion step
-        return redirect()->route('complete.profile')->with($notification);
-        }
+        return redirect()->route($profileData->access_level.'.dashboard')->with([
+            'message' => 'Credentials updated successfully.',
+            'alert-type' => 'success',
+        ]);
     }
 
     private function requiresCredentialUpdate(User $user): bool

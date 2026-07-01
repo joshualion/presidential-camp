@@ -37,7 +37,8 @@
 
                 @if($batch->status === 'failed')
                     <div class="alert alert-danger">
-                        Import failed before rows could be processed. Please check the file format and try again.
+                        <strong>Import failed:</strong>
+                        {{ data_get($batch->error_summary, 'message', 'Please check the file format and try again.') }}
                     </div>
                 @elseif($batch->failed_rows > 0 || $batch->skipped_rows > 0)
                     <div class="alert alert-warning">
@@ -77,7 +78,7 @@
                 <a href="{{ route($profileData->access_level.'.members') }}" class="btn btn-default">
                     <i class="fa fa-arrow-left"></i> Back to Members
                 </a>
-                <a href="{{ route($profileData->access_level.'.member.import') }}" class="btn btn-primary">
+                <a href="{{ route($profileData->access_level.'.member.import') }}" class="btn btn-primary text-white">
                     <i class="fa fa-upload"></i> Import Another File
                 </a>
             </div>

@@ -369,7 +369,7 @@ class MembersController extends Controller
         }
 
         $includedLevels = array_slice($accessLevels, $currentLevelIndex);
-        if (!$includeSuperadmin) {
+        if (!$includeSuperadmin && $profileData->access_level !== 'superadmin') {
             $includedLevels = array_values(array_diff($includedLevels, ['superadmin']));
         }
 
@@ -421,17 +421,9 @@ class MembersController extends Controller
 
      public function allMembers($uuid = null)
      {
-
-        if($uuid) {
-            $PuLgaStateRegionCountryUUID = $uuid;
-           }else{
-            //get system Country
-            $Setting= SystemSetting::find(1);
-            $countryName = $Setting->system_country;
-            $country = Country::where('name',  $countryName)->first();
-            $PuLgaStateRegionCountryUUID = $country->uuid;
-           }
-
+         // A missing UUID means "all members within the authenticated user's
+         // scope". Do not silently replace it with a country filter.
+         $PuLgaStateRegionCountryUUID = $uuid;
 
          $profileData = $this->getProfileData();
          $roles   = Role::all();
@@ -444,32 +436,16 @@ class MembersController extends Controller
     // Get base query from filterMemberByAccessLevel
     $membersQuery = $this->filterMemberByAccessLevel();
 
-    // Apply additional filtering if UUID is provided
-        if ($uuid) {
-            if ($pu = PollingUnit::where('uuid', $uuid)->first()) {
-                $membersQuery->where('polling_unit_id', $pu->id);
-            } elseif ($ward = Ward::where('uuid', $uuid)->first()) {
-                $membersQuery->where('ward_id', $ward->id);
-            } elseif ($lga = LocalGovernmentArea::where('uuid', $uuid)->first()) {
-                $membersQuery->where('lga_id', $lga->id);
-            } elseif ($federalConstituency = FederalConstituency::where('uuid', $uuid)->first()) {
-                $membersQuery->where('federal_constituency_id', $federalConstituency->id);
-            } elseif ($senatorialDistrict = SenatorialDistrict::where('uuid', $uuid)->first()) {
-                $membersQuery->where('senatorial_district_id', $senatorialDistrict->id);
-            } elseif ($state = State::where('uuid', $uuid)->first()) {
-                $membersQuery->where('state_id', $state->id);
-            } elseif ($region = Region::where('uuid', $uuid)->first()) {
-                $membersQuery->where('region_id', $region->id);
-        } elseif ($country = Country::where('uuid', $uuid)->first()) {
-            $membersQuery->where('country_id', $country->id);
-        }
-    }
+    // Apply an optional explicit boundary without replacing the actor/package scope.
+    $this->applyLocationScopeFromUuid($membersQuery, $uuid);
 
     // Return datatables response
     return datatables()->eloquent($membersQuery)
         ->filterColumn('name', function ($query, $keyword) {
-            $query->where('firstname', 'like', "%{$keyword}%")
-                ->orWhere('lastname', 'like', "%{$keyword}%");
+            $query->where(function ($nameQuery) use ($keyword) {
+                $nameQuery->where('firstname', 'like', "%{$keyword}%")
+                    ->orWhere('lastname', 'like', "%{$keyword}%");
+            });
         })
         ->addIndexColumn()
         ->addColumn('name', function ($member) {
@@ -581,8 +557,10 @@ class MembersController extends Controller
          return datatables()->eloquent($members)
 
                 ->filterColumn('name', function ($query, $keyword) {
-                    $query->where('firstname', 'like', "%{$keyword}%")
-                        ->orWhere('lastname', 'like', "%{$keyword}%");
+                    $query->where(function ($nameQuery) use ($keyword) {
+                        $nameQuery->where('firstname', 'like', "%{$keyword}%")
+                            ->orWhere('lastname', 'like', "%{$keyword}%");
+                    });
                 })
              ->addIndexColumn() // This will automatically add a serial number column
              ->addColumn('name', function($member) {
@@ -711,8 +689,10 @@ class MembersController extends Controller
          return datatables()->eloquent($members)
 
                 ->filterColumn('name', function ($query, $keyword) {
-                    $query->where('firstname', 'like', "%{$keyword}%")
-                        ->orWhere('lastname', 'like', "%{$keyword}%");
+                    $query->where(function ($nameQuery) use ($keyword) {
+                        $nameQuery->where('firstname', 'like', "%{$keyword}%")
+                            ->orWhere('lastname', 'like', "%{$keyword}%");
+                    });
                 })
              ->addIndexColumn() // This will automatically add a serial number column
              ->addColumn('name', function($member) {
@@ -843,8 +823,10 @@ class MembersController extends Controller
 
          return datatables()->eloquent($members)
              ->filterColumn('name', function ($query, $keyword) {
-                 $query->where('firstname', 'like', "%{$keyword}%")
-                     ->orWhere('lastname', 'like', "%{$keyword}%");
+                    $query->where(function ($nameQuery) use ($keyword) {
+                        $nameQuery->where('firstname', 'like', "%{$keyword}%")
+                            ->orWhere('lastname', 'like', "%{$keyword}%");
+                    });
              })
              ->addIndexColumn()
              ->addColumn('name', function ($member) {
@@ -905,22 +887,27 @@ class MembersController extends Controller
              return;
          }
 
+         $scope = app(LocationScopeService::class);
+
          if ($pu = PollingUnit::where('uuid', $uuid)->first()) {
-             $query->where('polling_unit_id', $pu->id);
+             $scope->applyBoundaryFilter($query, LocationScopeService::POLLING_UNIT, $pu->id, 'users', 'users');
          } elseif ($ward = Ward::where('uuid', $uuid)->first()) {
-             $query->where('ward_id', $ward->id);
+             $scope->applyBoundaryFilter($query, LocationScopeService::WARD, $ward->id, 'users', 'users');
          } elseif ($lga = LocalGovernmentArea::where('uuid', $uuid)->first()) {
-             $query->where('lga_id', $lga->id);
+             $scope->applyBoundaryFilter($query, LocationScopeService::LGA, $lga->id, 'users', 'users');
          } elseif ($federalConstituency = FederalConstituency::where('uuid', $uuid)->first()) {
-             $query->where('federal_constituency_id', $federalConstituency->id);
+             $scope->applyBoundaryFilter($query, LocationScopeService::FEDERAL, $federalConstituency->id, 'users', 'users');
          } elseif ($senatorialDistrict = SenatorialDistrict::where('uuid', $uuid)->first()) {
-             $query->where('senatorial_district_id', $senatorialDistrict->id);
+             $scope->applyBoundaryFilter($query, LocationScopeService::SENATORIAL, $senatorialDistrict->id, 'users', 'users');
          } elseif ($state = State::where('uuid', $uuid)->first()) {
-             $query->where('state_id', $state->id);
+             $scope->applyBoundaryFilter($query, LocationScopeService::STATE, $state->id, 'users', 'users');
          } elseif ($region = Region::where('uuid', $uuid)->first()) {
-             $query->where('region_id', $region->id);
+             $scope->applyBoundaryFilter($query, LocationScopeService::REGION, $region->id, 'users', 'users');
          } elseif ($country = Country::where('uuid', $uuid)->first()) {
              $query->where('country_id', $country->id);
+         } else {
+             // Never turn a malformed or stale scoped link into an unfiltered list.
+             $query->whereRaw('1 = 0');
          }
      }
 
@@ -1031,8 +1018,11 @@ class MembersController extends Controller
          $assignableAccessLevels = $this->assignableAccessLevels($profileData);
          $roles = $this->assignableRoles($profileData);
          $locationForm = $this->locationForms()->context($profileData);
+         $locationOptions = $this->locationForms()->options($profileData);
+         $regions = $locationOptions['regions'];
+         $states = $locationOptions['states'];
 
-         return view('backend.shared.member.import', compact('profileData', 'pageTitle', 'assignableAccessLevels', 'roles', 'locationForm'));
+         return view('backend.shared.member.import', compact('profileData', 'pageTitle', 'assignableAccessLevels', 'roles', 'locationForm', 'regions', 'states'));
      }
 
      public function downloadMemberImportTemplate(MemberImportService $importer)
@@ -1056,10 +1046,15 @@ class MembersController extends Controller
          $profileData = $this->getProfileData();
 
          $validated = $request->validate([
-             'import_file' => 'required|file|mimes:csv,txt|max:5120',
+             'import_file' => 'required|file|mimes:csv,txt,xlsx,xls|max:5120',
+             'region_id' => 'nullable|integer|exists:regions,id',
+             'state_id' => 'nullable|integer|exists:states,id',
+             'access_level' => 'required|string|max:40',
+             'role_id' => 'required|integer|exists:roles,id',
+             'default_password' => 'nullable|string|min:8|max:128',
          ]);
 
-         $batch = $importer->import($profileData, $validated['import_file']);
+         $batch = $importer->import($profileData, $validated['import_file'], $validated);
          $pageTitle = 'Member Import Report';
 
          return view('backend.shared.member.import-result', compact('profileData', 'pageTitle', 'batch'));
@@ -1496,7 +1491,12 @@ class MembersController extends Controller
      public function membersByRegions()
      {
          $profileData = $this->getProfileData();
-         $regions = $this->getRegions();
+         $regions = $this->locationForms()->options($profileData)['regions'];
+         $regions->loadCount(['users as members_count' => function ($query) use ($profileData) {
+             $this->applyProfileScope($query, $profileData);
+             $query->where('access_level', '!=', 'superadmin');
+         }]);
+
          return view('backend.'.$profileData->access_level.'.member.membersByRegion', compact('regions', 'profileData'));
      }
 
@@ -1528,8 +1528,10 @@ class MembersController extends Controller
                             return datatables()->eloquent($members)
 
                             ->filterColumn('name', function ($query, $keyword) {
-                                $query->where('firstname', 'like', "%{$keyword}%")
-                                    ->orWhere('lastname', 'like', "%{$keyword}%");
+                                    $query->where(function ($nameQuery) use ($keyword) {
+                                        $nameQuery->where('firstname', 'like', "%{$keyword}%")
+                                            ->orWhere('lastname', 'like', "%{$keyword}%");
+                                    });
                             })
                 ->addIndexColumn() // This will automatically add a serial number column
                 ->addColumn('name', function($member) {
@@ -1607,39 +1609,27 @@ class MembersController extends Controller
     public function membersByStates($uuid = null)
     {
         $profileData = $this->getProfileData();
-
-        // Initialize $states to avoid undefined variable
-        $states = collect();
+        $states = $this->locationForms()->options($profileData)['states'];
 
         if ($uuid) {
-            // Check if the $uuid belongs to a region first
             $region = Region::where('uuid', $uuid)->first();
 
             if ($region) {
-                // Fetch states by region ID
-                $states = State::where('region_id', $region->id)
-                    ->orderBy('name', 'asc')
-                    ->get();
+                $states = $states->where('region_id', $region->id)->values();
             } else {
-                // If not a region, check if the $uuid belongs to a country
                 $country = Country::where('uuid', $uuid)->first();
 
                 if ($country) {
-                    // Fetch regions that belong to the country
                     $regions = Region::where('country_id', $country->id)->pluck('id');
-
-                    // Fetch states that belong to these regions
-                    $states = State::whereIn('region_id', $regions)
-                        ->orderBy('name', 'asc')
-                        ->get();
+                    $states = $states->whereIn('region_id', $regions)->values();
+                } else {
+                    $states = collect();
                 }
             }
-        } else {
-            // If no UUID is provided, fetch all states
-            $states = State::orderBy('name', 'asc')->get();
         }
 
-        $states->loadCount(['users as members_count' => function ($query) {
+        $states->loadCount(['users as members_count' => function ($query) use ($profileData) {
+            $this->applyProfileScope($query, $profileData);
             $query->where('access_level', '!=', 'superadmin');
         }]);
 
@@ -1671,8 +1661,10 @@ class MembersController extends Controller
           return datatables()->eloquent($members)
 
             ->filterColumn('name', function ($query, $keyword) {
-                    $query->where('firstname', 'like', "%{$keyword}%")
-                    ->orWhere('lastname', 'like', "%{$keyword}%");
+                    $query->where(function ($nameQuery) use ($keyword) {
+                        $nameQuery->where('firstname', 'like', "%{$keyword}%")
+                            ->orWhere('lastname', 'like', "%{$keyword}%");
+                    });
              })
             ->addIndexColumn() // This will automatically add a serial number column
             ->addColumn('name', function($member) {
@@ -1844,8 +1836,10 @@ class MembersController extends Controller
                         return datatables()->eloquent($members)
 
                         ->filterColumn('name', function ($query, $keyword) {
-                                $query->where('firstname', 'like', "%{$keyword}%")
-                                ->orWhere('lastname', 'like', "%{$keyword}%");
+                                $query->where(function ($nameQuery) use ($keyword) {
+                                    $nameQuery->where('firstname', 'like', "%{$keyword}%")
+                                        ->orWhere('lastname', 'like', "%{$keyword}%");
+                                });
                          })
             ->addIndexColumn() // This will automatically add a serial number column
             ->addColumn('name', function($member) {
@@ -2043,8 +2037,10 @@ class MembersController extends Controller
                         return datatables()->eloquent($members)
 
                         ->filterColumn('name', function ($query, $keyword) {
-                                $query->where('firstname', 'like', "%{$keyword}%")
-                                ->orWhere('lastname', 'like', "%{$keyword}%");
+                                $query->where(function ($nameQuery) use ($keyword) {
+                                    $nameQuery->where('firstname', 'like', "%{$keyword}%")
+                                        ->orWhere('lastname', 'like', "%{$keyword}%");
+                                });
                          })
             ->addIndexColumn() // This will automatically add a serial number column
             ->addColumn('name', function($member) {
@@ -2169,8 +2165,10 @@ class MembersController extends Controller
                         return datatables()->eloquent($members)
 
                         ->filterColumn('name', function ($query, $keyword) {
-                                $query->where('firstname', 'like', "%{$keyword}%")
-                                ->orWhere('lastname', 'like', "%{$keyword}%");
+                                $query->where(function ($nameQuery) use ($keyword) {
+                                    $nameQuery->where('firstname', 'like', "%{$keyword}%")
+                                        ->orWhere('lastname', 'like', "%{$keyword}%");
+                                });
                          })
             ->addIndexColumn() // This will automatically add a serial number column
             ->addColumn('name', function($member) {
@@ -2307,8 +2305,10 @@ class MembersController extends Controller
 
         return datatables()->eloquent($members)
             ->filterColumn('name', function ($query, $keyword) {
-                $query->where('firstname', 'like', "%{$keyword}%")
-                    ->orWhere('lastname', 'like', "%{$keyword}%");
+                $query->where(function ($nameQuery) use ($keyword) {
+                    $nameQuery->where('firstname', 'like', "%{$keyword}%")
+                        ->orWhere('lastname', 'like', "%{$keyword}%");
+                });
             })
             ->addIndexColumn()
             ->addColumn('name', fn($member) => $member->firstname . ' ' . $member->lastname)

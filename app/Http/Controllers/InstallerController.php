@@ -202,13 +202,15 @@ class InstallerController extends Controller
                 return back()->withInput()->withErrors(['license_key' => $this->localLicenseService->customerMessage($preview['message'] ?? null, 'License preview failed.')]);
             }
 
+            $previewData = $this->localLicenseService->normalizePortalPayload($preview['data'] ?? []);
+
             session([
                 'installer.license_key' => $data['license_key'],
-                'installer.license_preview' => $preview['data'] ?? [],
+                'installer.license_preview' => $previewData,
             ]);
             $this->stateStore->merge([
                 'license_key' => $data['license_key'],
-                'license_preview' => $preview['data'] ?? [],
+                'license_preview' => $previewData,
             ]);
             $this->completeStep('license');
 
@@ -307,8 +309,21 @@ class InstallerController extends Controller
 
     public function provisionLocationsStep()
     {
+        $licenseKey = data_get($this->currentState(), 'license_key');
+        $license = $licenseKey
+            ? $this->localLicenseService->activatedForLicense($licenseKey)
+            : $this->localLicenseService->current();
+
+        if (!$license?->activation_id) {
+            return response()->json([
+                'ok' => false,
+                'status' => 'failed',
+                'message' => 'License activation is incomplete. Return to Run Installation and retry activation before provisioning locations.',
+            ], 409);
+        }
+
         try {
-            $run = $this->locationProvisioning->startOrResume();
+            $run = $this->locationProvisioning->startOrResume($license);
             $result = $this->locationProvisioning->processNextBatch($run, (int) config('campaign.installer_location_batch_size', 500));
 
             return response()->json($result);

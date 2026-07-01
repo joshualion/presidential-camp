@@ -34,6 +34,20 @@
                   </a>
                 </li>
 
+                <li class="nav-item">
+                  <a href="{{ route('superadmin.members.region') }}" class="nav-link">
+                    <i class="fas fa-globe-africa nav-icon"></i>
+                    <p>Members by Regions</p>
+                  </a>
+                </li>
+
+                <li class="nav-item">
+                  <a href="{{ route('superadmin.members.byState') }}" class="nav-link">
+                    <i class="fas fa-map nav-icon"></i>
+                    <p>Members by States</p>
+                  </a>
+                </li>
+
 
 
                 <li class="nav-item">

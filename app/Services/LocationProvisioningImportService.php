@@ -46,6 +46,10 @@ class LocationProvisioningImportService
             throw new RuntimeException('Location provisioning requires an active local license.');
         }
 
+        if (!$license->activation_id) {
+            throw new RuntimeException('License activation is incomplete. Retry activation before provisioning locations.');
+        }
+
         $run = LocationProvisioningBatch::query()
             ->where('license_key', $license->license_key)
             ->where('activation_id', $license->activation_id)
@@ -179,10 +183,6 @@ class LocationProvisioningImportService
 
     private function createPortalSession(LocalLicense $license, LocationProvisioningBatch $run, int $batchSize): LocationProvisioningBatch
     {
-        if (!$license->activation_id) {
-            throw new RuntimeException('Local license activation ID is missing. Re-run license activation before provisioning locations.');
-        }
-
         $session = $this->client->createSession([
             'license_key' => $license->license_key,
             'activation_id' => $license->activation_id,

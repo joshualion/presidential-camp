@@ -70,7 +70,7 @@ class InstallerService
             ]);
 
             if (($preview['ok'] ?? false) === true) {
-                $licensePreview = $preview['data'] ?? [];
+                $licensePreview = $this->localLicenseService->normalizePortalPayload($preview['data'] ?? []);
             }
         }
 
@@ -95,23 +95,40 @@ class InstallerService
             $this->ensureLocalLicenseTablesExist();
             $this->runStep('installer seed data', fn () => $this->seedCoreData());
 
-            $activation = $this->remoteLicenseClient->activate([
-                'license_key' => $licenseKey,
-                'app_url' => config('app.url'),
-                'domain' => parse_url((string) config('app.url'), PHP_URL_HOST),
-                'server_fingerprint' => $this->fingerprintService->make(),
-                'app_version' => config('app.version') ?? env('APP_VERSION'),
-                'deployment_mode' => 'self_hosted',
-            ]);
+            $localLicense = $this->localLicenseService->activatedForLicense($licenseKey);
 
-            if (($activation['ok'] ?? false) !== true) {
-                $this->localLicenseService->log(null, $licenseKey, 'activate', 'failed', $activation['message'] ?? null, $activation);
-                return ['ok' => false, 'stage' => 'activation', 'message' => $this->localLicenseService->customerMessage($activation['message'] ?? null, 'License activation failed.')];
+            if (!$localLicense) {
+                $activation = $this->remoteLicenseClient->activate([
+                    'license_key' => $licenseKey,
+                    'app_url' => config('app.url'),
+                    'domain' => parse_url((string) config('app.url'), PHP_URL_HOST),
+                    'server_fingerprint' => $this->fingerprintService->make(),
+                    'app_version' => config('app.version') ?? env('APP_VERSION'),
+                    'deployment_mode' => 'self_hosted',
+                ]);
+
+                if (($activation['ok'] ?? false) !== true) {
+                    $this->localLicenseService->log(null, $licenseKey, 'activate', 'failed', $activation['message'] ?? null, $activation);
+                    return ['ok' => false, 'stage' => 'activation', 'message' => $this->localLicenseService->customerMessage($activation['message'] ?? null, 'License activation failed.')];
+                }
+
+                $activationData = $this->localLicenseService->normalizePortalPayload($activation['data'] ?? []);
+                $activationPayload = array_replace_recursive(
+                    $this->localLicenseService->normalizePortalPayload($licensePreview),
+                    $activationData
+                );
+
+                if (!$this->localLicenseService->activationId($activationPayload)) {
+                    $message = 'The portal confirmed activation but did not return an activation reference. Retry activation. If the problem continues, contact support.';
+                    $this->localLicenseService->log(null, $licenseKey, 'activate', 'failed', $message, $activation);
+
+                    return ['ok' => false, 'stage' => 'activation', 'message' => $message];
+                }
+
+                $localLicense = $this->runStep('local license persistence', fn () => $this->localLicenseService->persistActivation($licenseKey, $activationPayload));
+                $this->localLicenseService->log($localLicense, $licenseKey, 'activate', 'success', 'License activated during installation.', $activation);
             }
 
-            $activationPayload = array_replace_recursive($licensePreview, $activation['data'] ?? []);
-            $localLicense = $this->runStep('local license persistence', fn () => $this->localLicenseService->persistActivation($licenseKey, $activationPayload));
-            $this->localLicenseService->log($localLicense, $licenseKey, 'activate', 'success', 'License activated during installation.', $activation);
             $this->runStep('system package sync', fn () => $this->syncPackageSetting($localLicense->package_type));
             try {
                 $run = $this->locationProvisioning->startOrResume($localLicense->fresh(['scope', 'modules']));

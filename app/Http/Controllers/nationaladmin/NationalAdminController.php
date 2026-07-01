@@ -21,6 +21,7 @@ use App\Models\Ward;
 use Illuminate\Support\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\View;
 use Spatie\Permission\Models\Role;
 
@@ -182,11 +183,20 @@ class NationalAdminController extends Controller
         return view('backend.nationaladmin.change_password', compact('profileData'));
     }
 
-    public function nationaladminUpdatePassword()
+    public function nationaladminUpdatePassword(Request $request)
     {
-        return redirect()->route('nationaladmin.change.password')->with([
-            'message' => 'Password update is not implemented in this package.',
-            'alert-type' => 'warning',
+        $validated = $request->validate([
+            'old_password' => ['required', 'current_password'],
+            'new_password' => ['required', 'string', 'min:8', 'confirmed', 'not_in:password'],
+        ]);
+
+        $this->getProfileData()->update([
+            'password' => Hash::make($validated['new_password']),
+        ]);
+
+        return redirect()->route('nationaladmin.dashboard')->with([
+            'message' => 'Password changed successfully.',
+            'alert-type' => 'success',
         ]);
     }
 

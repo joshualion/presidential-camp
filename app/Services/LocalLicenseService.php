@@ -94,9 +94,12 @@ class LocalLicenseService
     public function persistActivation(string $licenseKey, array $payload): LocalLicense
     {
         return DB::transaction(function () use ($licenseKey, $payload) {
+            $payload = $this->normalizePortalPayload($payload);
             $licenseData = data_get($payload, 'license', $payload);
             $scopeData = data_get($payload, 'scope', data_get($licenseData, 'scope', []));
             $modules = data_get($payload, 'modules', data_get($licenseData, 'modules', []));
+            $existing = LocalLicense::query()->where('license_key', $licenseKey)->latest('id')->first();
+            $activationId = $this->activationId($payload) ?? $existing?->activation_id;
 
             $license = LocalLicense::updateOrCreate(
                 ['license_key' => $licenseKey],
@@ -107,7 +110,7 @@ class LocalLicenseService
                     'status' => data_get($licenseData, 'status', data_get($payload, 'status', 'active')),
                     'app_url' => data_get($licenseData, 'app_url', config('app.url')),
                     'domain' => data_get($licenseData, 'domain', parse_url((string) config('app.url'), PHP_URL_HOST)),
-                    'activation_id' => data_get($payload, 'activation.id', data_get($payload, 'activation_id')),
+                    'activation_id' => $activationId,
                     'activated_at' => data_get($payload, 'activated_at', now()),
                     'last_checked_at' => now(),
                     'grace_until' => data_get($licenseData, 'grace_until'),
@@ -147,8 +150,90 @@ class LocalLicenseService
         });
     }
 
+    public function activatedForLicense(string $licenseKey): ?LocalLicense
+    {
+        if (!SafeDatabase::hasTable('local_licenses')) {
+            return null;
+        }
+
+        $license = LocalLicense::with(['scope', 'modules'])
+            ->where('license_key', $licenseKey)
+            ->latest('id')
+            ->first();
+
+        if (!$license) {
+            return null;
+        }
+
+        // v1.0.1 could save the complete portal response while missing the
+        // promoted activation_id column. Repair that record on retry/reload.
+        if (!$license->activation_id && is_array($license->raw_payload)) {
+            $activationId = $this->activationId($license->raw_payload);
+            if ($activationId) {
+                $license->forceFill(['activation_id' => $activationId])->save();
+                $license->refresh();
+            }
+        }
+
+        if (
+            !$license->activation_id
+            || !in_array(strtolower((string) $license->status), ['active', 'valid'], true)
+            || !$license->scope
+        ) {
+            return null;
+        }
+
+        return $license;
+    }
+
+    public function activationId(array $payload): ?string
+    {
+        $payload = $this->normalizePortalPayload($payload);
+
+        foreach ([
+            'activation.id',
+            'activation.activation_id',
+            'activation.reference',
+            'activation.reference_id',
+            'activation.reference_code',
+            'activation.uuid',
+            'activation',
+            'activation_id',
+            'activation_reference',
+            'activation_reference_id',
+            'license.activation_id',
+            'license.activation.id',
+        ] as $key) {
+            $value = data_get($payload, $key);
+            if (is_scalar($value) && trim((string) $value) !== '') {
+                return trim((string) $value);
+            }
+        }
+
+        return null;
+    }
+
+    public function normalizePortalPayload(array $payload): array
+    {
+        // Accept both the original flat contract and Laravel-style { data: ... }
+        // envelopes without discarding useful top-level response metadata.
+        for ($depth = 0; $depth < 3; $depth++) {
+            $nested = $payload['data'] ?? null;
+            if (!is_array($nested)) {
+                break;
+            }
+
+            unset($payload['data']);
+            $payload = array_replace_recursive($payload, $nested);
+        }
+
+        return $payload;
+    }
+
     public function displayPayload(array $payload): array
     {
+        $payload = $this->normalizePortalPayload($payload);
+
         return [
             'package_type' => $this->packageType($payload),
             'deployment_mode' => data_get($payload, 'license.deployment_mode', data_get($payload, 'deployment_mode', config('campaign.deployment_mode'))),
