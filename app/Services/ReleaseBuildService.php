@@ -465,7 +465,9 @@ class ReleaseBuildService
                 'license_activation' => 'included',
                 'location_setup' => 'portal_provisioned_with_bootstrap_samples',
                 'community_forum' => $profile === 'community' ? 'included_as_bootstrap_release' : 'optional_disabled_by_default',
+                'email_notifications' => 'included_with_jurisdiction_targeting_and_delivery_reports',
             ],
+            'release_notes' => Arr::get($effectiveConfig, 'release_notes.'.ltrim($version, 'vV'), []),
             'counts' => [
                 'files_considered' => $files['total_considered'],
                 'files_included' => count($files['included']),

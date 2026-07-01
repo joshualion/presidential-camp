@@ -32,6 +32,18 @@ Run this checklist from the master source codebase, `presidential-camp`. Do not 
 - [ ] `vite.config.js`
 - [ ] `.env.example`
 - [ ] `.env.production.example`
+- [ ] `.htaccess.example`
+- [ ] `docs/self-hosted-installation-guide.md`
+- [ ] `docs/self-hosted-shared-hosting-guide.md`
+
+## v1.0.2 Release Scope
+
+- [ ] Email Notifications controllers, permission settings, audience resolver, job, mail class, models, migration, views, routes, middleware, gate, and sidebar links are included.
+- [ ] Branded email composition, preview, and delivery use the shared template and branding resolver.
+- [ ] Jurisdiction-based recipient targeting and package-aware audience filters are included.
+- [ ] Secure campaign details and recipient delivery reports are included.
+- [ ] Shared-hosting public-directory symbolic-link guidance is included.
+- [ ] `.htaccess.example` is included, while every real or live-server `.htaccess` reference file is excluded.
 
 ## Required Generated Assets
 
@@ -78,6 +90,8 @@ Include only the minimal bootstrap/sample files. Full licensed location data is 
 - [ ] `.git`
 - [ ] `.agents`
 - [ ] `.codex`
+- [ ] all real `.htaccess` files
+- [ ] root `htaccess` live-server reference file
 - [ ] `node_modules`
 - [ ] `tests`
 - [ ] `storage/app/installed.lock`
@@ -95,11 +109,14 @@ Include only the minimal bootstrap/sample files. Full licensed location data is 
 - [ ] `public/uploads/community/videos/*`
 - [ ] `public/uploads/member_images/*`
 - [ ] `public/uploads/product_images/*`
+- [ ] `public/uploads/logo/*`
+- [ ] live client files directly under `public/uploads/system_images/*` (retain only bundled political-party assets)
 - [ ] `public/uploads/system_images/election_result_sheets/*`
 - [ ] `public/uploads/uploads/*`
 - [ ] old build ZIPs
 - [ ] Vite timestamp temp files
 - [ ] local databases and test artifacts
+- [ ] database dumps (`*.sql`, `*.sql.gz`, `*.dump`, `*.sqlite`, `*.sqlite3`, `*.bak`)
 
 Keep `.gitkeep` or equivalent placeholders for empty writable folders.
 
@@ -109,9 +126,9 @@ Run:
 
 ```bash
 php artisan campaign:release-check
-php artisan campaign:build-release full --release-version=1.0.0 --dry-run
-php artisan campaign:build-release community --release-version=1.0.0 --dry-run
-php artisan campaign:build-release all --release-version=1.0.0 --dry-run
+php artisan campaign:build-release full --release-version=1.0.2 --dry-run
+php artisan campaign:build-release community --release-version=1.0.2 --dry-run
+php artisan campaign:build-release all --release-version=1.0.2 --dry-run
 ```
 
 The command must have zero critical failures before a release ZIP is attempted. Warnings about local-only files are acceptable only when the ZIP builder excludes those paths.
@@ -121,20 +138,20 @@ The command must have zero critical failures before a release ZIP is attempted. 
 Build the first local ZIP only after dry-run passes:
 
 ```bash
-php artisan campaign:build-release full --release-version=1.0.0 --force --channel=stable
-php artisan campaign:build-release community --release-version=1.0.0 --force --channel=stable
+php artisan campaign:build-release full --release-version=1.0.2 --force --channel=stable
+php artisan campaign:build-release community --release-version=1.0.2 --force --channel=stable
 ```
 
 Default output goes to `builds/releases/`:
 
-- `campaign-manager-self-hosted-full-data-v{version}.zip`
+- `campaign-manager-self-hosted-portal-provisioned-v{version}.zip`
 - `campaign-manager-community-bootstrap-v{version}.zip`
-- `campaign-manager-self-hosted-full-data-v{version}.json`
+- `campaign-manager-self-hosted-portal-provisioned-v{version}.json`
 - `campaign-manager-community-bootstrap-v{version}.json`
 - `checksums.txt`
 
 The build report includes version, channel, build date, package type, required CSV presence, built asset presence, excluded file summary, warnings, ZIP size, and SHA256 checksum.
 
-Use `--release-version=1.0.0` to override the configured app version, `--output=/path/to/releases` to change the output directory, and `--no-zip` for manifest/report-only validation. Artisan reserves the global `--version` option for framework version output.
+Use `--release-version=1.0.2` to override the configured app version, `--output=/path/to/releases` to change the output directory, and `--no-zip` for manifest/report-only validation. Artisan reserves the global `--version` option for framework version output.
 
 This command does not implement one-click updater, portal release management, or customer download delivery.

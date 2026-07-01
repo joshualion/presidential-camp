@@ -13,6 +13,7 @@ use App\Http\Controllers\SearchController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\CampaignNotificationController;
 use App\Http\Controllers\AdminLicenseController;
+use App\Http\Controllers\EmailNotificationController;
 use Illuminate\Support\Facades\Auth;
 
 require __DIR__.'/install.php';
@@ -214,6 +215,39 @@ Route::middleware(['auth','check_onboarding', 'kuyak_eyen_ino', 'eyen_ino_no_way
     Route::get('/messages/recipients', [\App\Http\Controllers\MessageController::class, 'recipients'])->name('messages.recipients');
     Route::get('/messages/unread-count', [\App\Http\Controllers\MessageController::class, 'unreadCount'])->name('messages.unread-count');
 });
+
+foreach ([
+    'superadmin' => 'superadmin',
+    'nationaladmin' => 'national',
+    'regionaladmin' => 'regional',
+    'stateadmin' => 'state',
+    'senatorialadmin' => 'senatorial',
+    'federaladmin' => 'federal',
+    'lgaadmin' => 'lga',
+    'wardadmin' => 'ward',
+    'puadmin' => 'pu',
+] as $accessLevel => $prefix) {
+    Route::middleware([
+        'auth',
+        'check_onboarding',
+        'kuyak_eyen_ino',
+        'eyen_ino_no_way',
+        'access_level:'.$accessLevel,
+        'email_notifications.enabled',
+    ])
+        ->prefix($prefix.'/email-notifications')
+        ->name($accessLevel.'.email-notifications.')
+        ->group(function () {
+            Route::get('/', [EmailNotificationController::class, 'index'])->name('index');
+            Route::get('/location-options', [EmailNotificationController::class, 'locationOptions'])->name('location-options');
+            Route::get('/create', [EmailNotificationController::class, 'create'])->name('create');
+            Route::post('/audience-preview', [EmailNotificationController::class, 'audiencePreview'])->name('audience-preview');
+            Route::post('/preview', [EmailNotificationController::class, 'preview'])->name('preview');
+            Route::post('/preview/back', [EmailNotificationController::class, 'backToEdit'])->name('preview.back');
+            Route::post('/', [EmailNotificationController::class, 'store'])->name('store');
+            Route::get('/{campaign}', [EmailNotificationController::class, 'show'])->whereUuid('campaign')->name('show');
+        });
+}
 
 foreach ([
     'superadmin' => 'superadmin',

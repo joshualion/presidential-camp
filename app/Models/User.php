@@ -161,6 +161,16 @@ class User extends Authenticatable
         return $this->hasOne(BulkSmsSetting::class, 'user_id');
     }
 
+    public function emailNotificationCampaigns()
+    {
+        return $this->hasMany(EmailNotificationCampaign::class, 'sender_id');
+    }
+
+    public function emailNotificationRecipients()
+    {
+        return $this->hasMany(EmailNotificationRecipient::class, 'user_id');
+    }
+
      // Define the one-to-many relationship between User and Post
      public function posts()
      {

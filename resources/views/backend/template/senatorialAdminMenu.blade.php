@@ -119,6 +119,7 @@
                         <p>Internal Communication</p>
                     </a>
                 </li>
+                @include('backend.template.partials.email-notifications-menu-item')
             </ul>
         </li>
         {{-- / Messaging --}}

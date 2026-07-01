@@ -256,6 +256,8 @@
                     </a>
                   </li>
 
+                  @include('backend.template.partials.email-notifications-menu-item')
+
                 <!-- <li class="nav-item">
                   <a href="#" class="nav-link">
                   <i class="fas fa-envelope-square nav-icon"></i>
@@ -428,7 +430,15 @@
                     <p> Payment Settings</p>
                   </a>
                 </li>
+
                 --}}
+
+                <li class="nav-item">
+                  <a href="{{ route('superadmin.settings.email-notifications.edit') }}" class="nav-link">
+                    <i class="fas fa-envelope-open-text nav-icon"></i>
+                    <p>Email Notification Permissions</p>
+                  </a>
+                </li>
 
                 <li class="nav-item">
                   <a href="{{ url('superadmin/setting/volunteer/group') }}" class="nav-link">

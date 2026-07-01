@@ -245,6 +245,8 @@
                             </a>
                           </li>
 
+                          @include('backend.template.partials.email-notifications-menu-item')
+
                           <!-- <li class="nav-item">
                             <a href="#" class="nav-link">
                             <i class="fas fa-comment-alt nav-icon"></i>

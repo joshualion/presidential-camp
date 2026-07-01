@@ -16,6 +16,7 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ReligionController;
 use App\Http\Controllers\superadmin\SuperAdminController;
 use App\Http\Controllers\superadmin\SystemSettingController;
+use App\Http\Controllers\superadmin\EmailNotificationPermissionController;
 use App\Http\Controllers\RolePermissionController;
 use App\Http\Controllers\VolunteerGroupController;
 use App\Livewire\SuperAdminDashboard;
@@ -115,6 +116,13 @@ Route::middleware(['auth','check_onboarding'])->group(function () {
   //Admin SMTP Setting
   Route::get('/superadmin/settings/smtp', [SystemSettingController::class,'SmtpSettings'])->name('superadmin.settings.smtp')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
   Route::post('/superadmin/settings/smtp/update', [SystemSettingController::class,'UpdateSmtpSettings'])->name('superadmin.settings.smtp.update')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
+
+  Route::get('/superadmin/settings/email-notifications', [EmailNotificationPermissionController::class, 'edit'])
+      ->name('superadmin.settings.email-notifications.edit')
+      ->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
+  Route::put('/superadmin/settings/email-notifications', [EmailNotificationPermissionController::class, 'update'])
+      ->name('superadmin.settings.email-notifications.update')
+      ->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
 
   //Admin Privacy Setting
   Route::get('/superadmin/settings/policy', [SystemSettingController::class,'PrivacySetting'])->name('superadmin.settings.privacy')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);

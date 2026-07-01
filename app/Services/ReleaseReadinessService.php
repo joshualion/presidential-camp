@@ -156,7 +156,7 @@ class ReleaseReadinessService
         $checks = [];
         $patterns = $this->excludePatterns();
 
-        foreach (['.env', 'storage/app/installed.lock', 'public/uploads/community/photos/*', 'public/uploads/community/videos/*', 'public/uploads/member_images/*'] as $pattern) {
+        foreach (['.env', '.htaccess', 'htaccess', '*.sql', 'storage/app/installed.lock', 'public/uploads/community/photos/*', 'public/uploads/community/videos/*', 'public/uploads/member_images/*'] as $pattern) {
             $checks[] = $this->check(
                 'Release exclude rule: '.$pattern,
                 in_array($pattern, $patterns, true),

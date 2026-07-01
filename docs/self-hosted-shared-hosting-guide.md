@@ -13,6 +13,16 @@ Example account layout:
 
 Place the Laravel core in `campaign-manager-core`. Only the bridge files below should live in `public_html`.
 
+## Preferred Symbolic Link
+
+If the host permits symbolic links, point `public_html` directly to the core application's `public` directory:
+
+```text
+/home/account/public_html -> /home/account/campaign-manager-core/public
+```
+
+This preserves Laravel's normal public-directory layout and is preferred over copying files. If symbolic links are unavailable, use the bridge below.
+
 ## public_html/index.php Bridge
 
 Create `public_html/index.php`:
@@ -34,6 +44,8 @@ $app->handleRequest(Illuminate\Http\Request::capture());
 Adjust `$corePath` to the real private core path.
 
 ## public_html/.htaccess
+
+The release ZIP never includes a real `.htaccess`. Use the packaged `.htaccess.example` for a normal public-directory deployment, or create the following generic bridge rule when using `public_html/index.php`:
 
 Create `public_html/.htaccess`:
 

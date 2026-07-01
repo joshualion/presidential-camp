@@ -8,6 +8,8 @@ This package is the universal Campaign Manager core app for licensed self-hosted
 - Point the domain document root directly to the package `public` directory.
 - The production URL should look like `https://clientdomain.com`, not `https://clientdomain.com/public`.
 - On shared hosting, use the bridge sample in `docs/self-hosted-shared-hosting-guide.md` when the core app must live outside `public_html`.
+- Prefer a `public_html` symbolic link to the package `public` directory when the host supports it.
+- Real `.htaccess` files are excluded from customer ZIPs; `.htaccess.example` is the safe optional template.
 
 ## Install
 

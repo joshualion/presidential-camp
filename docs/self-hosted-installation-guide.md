@@ -24,6 +24,33 @@ Never expose these paths through the web server:
 - `vendor`
 - `artisan`
 
+## Shared Hosting Public Symbolic Link
+
+When the hosting panel cannot change the domain document root directly, keep the application core outside `public_html` and point `public_html` to the Laravel `public` directory with a symbolic link.
+
+Example layout:
+
+```text
+/home/account/campaign-manager-core
+/home/account/public_html -> /home/account/campaign-manager-core/public
+```
+
+If SSH access is available and `public_html` does not already exist, the hosting provider may allow:
+
+```bash
+ln -s /home/account/campaign-manager-core/public /home/account/public_html
+```
+
+Do not replace an existing `public_html` directory without first preserving its current files. Some shared hosts prohibit symbolic links; use the bridge approach in `docs/self-hosted-shared-hosting-guide.md` in that case.
+
+The release intentionally excludes real `.htaccess` files and server-specific rewrite references. For Apache hosting, copy the packaged safe template into the public directory only when required:
+
+```bash
+cp .htaccess.example public/.htaccess
+```
+
+The template contains no customer domain, account path, or live-server values.
+
 ## Upload the Package
 
 Upload the full self-hosted ZIP supplied by Campaign Manager support. The package must include:
@@ -33,6 +60,8 @@ Upload the full self-hosted ZIP supplied by Campaign Manager support. The packag
 - `public/build/manifest.json` and compiled frontend assets.
 - Installer routes, controllers, views, migrations, seeders, and config files.
 - `.env.example` and `.env.production.example`.
+- `.htaccess.example` as the safe optional Apache rewrite template.
+- Shared-hosting symbolic-link and bridge guidance.
 - Campaign location data package.
 
 Customers should not need Node.js, npm, Vite, or Composer for a normal install.

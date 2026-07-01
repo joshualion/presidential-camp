@@ -24,6 +24,8 @@ use App\Services\DeploymentModeService;
 use App\Services\InstallationStateService;
 use App\Services\CampaignPackageUiService;
 use App\Support\SafeDatabase;
+use App\Services\EmailNotificationPermissionService;
+use Illuminate\Support\Facades\Gate;
 class AppServiceProvider extends ServiceProvider
 {
     /**
@@ -45,6 +47,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Gate::define('send-email-notifications', fn (User $user) => app(EmailNotificationPermissionService::class)->canSend($user));
+
         if ($this->app->environment('production')) {
             URL::forceScheme('https');
         }
@@ -81,22 +85,36 @@ class AppServiceProvider extends ServiceProvider
             $SystemSetting = SystemSetting::first();
 
             if($smtpSettings && $SystemSetting ){
+                $mailer = strtolower(trim((string) $smtpSettings->mailer)) ?: 'smtp';
+                if (!array_key_exists($mailer, (array) Config::get('mail.mailers', []))) {
+                    $mailer = 'smtp';
+                }
 
-                $data = [
-                    'driver' => $smtpSettings->mailer,
-                    'host' => $smtpSettings->host,
-                    'port' => $smtpSettings->port,
-                    'username' => $smtpSettings->username,
-                    'password' => $smtpSettings->password,
-                    'encryption' => $smtpSettings->encryption,
-                    'from' => [
-                                'address' => $smtpSettings->from_address,
+                Config::set('mail.default', $mailer);
 
-                                'name' => $SystemSetting->system_name,
-                             ]
+                if ($mailer === 'smtp') {
+                    $smtpConfig = (array) Config::get('mail.mailers.smtp', []);
+                    foreach ([
+                        'host' => $smtpSettings->host,
+                        'username' => $smtpSettings->username,
+                        'password' => $smtpSettings->password,
+                        'encryption' => $smtpSettings->encryption,
+                    ] as $key => $value) {
+                        if ($value !== null && trim((string) $value) !== '') {
+                            $smtpConfig[$key] = $value;
+                        }
+                    }
+                    if (is_numeric($smtpSettings->port)) {
+                        $smtpConfig['port'] = (int) $smtpSettings->port;
+                    }
+                    $smtpConfig['transport'] = 'smtp';
+                    Config::set('mail.mailers.smtp', $smtpConfig);
+                }
 
-                    ];
-                    Config::set('mail',$data);
+                if (filter_var($smtpSettings->from_address, FILTER_VALIDATE_EMAIL)) {
+                    Config::set('mail.from.address', $smtpSettings->from_address);
+                }
+                Config::set('mail.from.name', $SystemSetting->system_name ?: config('app.name'));
             }
 
             if ($SystemSetting?->enable_s3_storage) {
