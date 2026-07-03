@@ -6,6 +6,7 @@ use App\Models\LocationProvisioningBatch;
 use App\Models\PollingUnit;
 use App\Models\State;
 use App\Services\LocationProvisioningException;
+use App\Services\LocationProvisioningIntegrityService;
 use App\Services\LocationProvisioningImportService;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Config;
@@ -30,6 +31,8 @@ function portalProvisioningLicense(string $packageType = 'presidential', string 
         'raw_payload' => [
             'scope_type' => $packageType === 'presidential' ? 'national' : 'state',
             'scope_name' => $packageType === 'presidential' ? 'National' : 'Cross River',
+            'state_name' => $packageType === 'presidential' ? null : 'Cross River',
+            'campaign_state_id' => $packageType === 'presidential' ? null : 11,
         ],
     ]);
 
@@ -45,6 +48,7 @@ function portalSessionPayload(array $datasets = LocationProvisioningImportServic
         'package_type' => 'presidential',
         'release_profile' => 'full',
         'datasets' => $datasets,
+        'total_estimated_records' => array_fill_keys($datasets, 1),
         'scope_payload' => ['scope_type' => 'national', 'scope_name' => 'National'],
     ];
 }
@@ -133,6 +137,7 @@ test('successful provisioning session and batch import', function () {
     expect($result['status'])->toBe('completed')
         ->and(State::query()->where('name', 'Cross River')->exists())->toBeTrue()
         ->and(PollingUnit::query()->where('inec_full_code', 'CR-01-W01-PU01')->exists())->toBeTrue()
+        ->and(LocationProvisioningBatch::query()->first()->total_records)->toBe(6)
         ->and(LocationProvisioningBatch::query()->first()->status)->toBe('completed');
 });
 
@@ -207,5 +212,28 @@ test('community profile imports only datasets returned by portal', function () {
 
     expect($result['status'])->toBe('completed')
         ->and($result['summary']['polling_units']['imported'] ?? 0)->toBe(0)
+        ->and($license->scope->fresh()->state_id)->toBe(State::query()->where('name', 'Cross River')->value('id'))
+        ->and($license->scope->fresh()->state_id)->not->toBe(11)
         ->and(PollingUnit::query()->count())->toBe(0);
+});
+
+test('completed scoped provisioning cannot pass integrity with an unresolved local boundary', function () {
+    $license = portalProvisioningLicense('governorship');
+    $summary = [
+        '_available_datasets' => LocationProvisioningImportService::DATASETS,
+        'states' => ['imported' => 1],
+        'senatorial_districts' => ['imported' => 3],
+        'federal_constituencies' => ['imported' => 8],
+        'local_government_areas' => ['imported' => 18],
+        'wards' => ['imported' => 193],
+        'polling_units' => ['imported' => 3281],
+    ];
+
+    $result = app(LocationProvisioningIntegrityService::class)->verifyBeforeInstallLock(
+        $license,
+        ['status' => 'completed', 'data_profile' => 'portal', 'summary' => $summary],
+    );
+
+    expect($result['ok'])->toBeFalse()
+        ->and($result['message'])->toContain('could not resolve the licensed scope');
 });

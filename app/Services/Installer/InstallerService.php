@@ -8,6 +8,8 @@ use App\Services\LocationProvisioningException;
 use App\Services\LocationProvisioningIntegrityService;
 use App\Services\LocationProvisioningImportService;
 use App\Services\LocalLicenseService;
+use App\Services\LocalLicenseScopeReconciliationService;
+use App\Services\PackageGovernanceService;
 use App\Services\RemoteLicenseClient;
 use App\Services\ServerFingerprintService;
 use Illuminate\Support\Facades\Artisan;
@@ -39,11 +41,25 @@ class InstallerService
         'DB_PASSWORD',
     ];
 
+    private const MAIL_KEYS = [
+        'MAIL_MAILER',
+        'MAIL_HOST',
+        'MAIL_PORT',
+        'MAIL_USERNAME',
+        'MAIL_PASSWORD',
+        'MAIL_ENCRYPTION',
+        'MAIL_FROM_ADDRESS',
+        'MAIL_FROM_NAME',
+    ];
+
     public function __construct(
         private EnvironmentWriterService $environmentWriter,
         private DatabaseSetupService $databaseSetup,
+        private InstallerMailSettingsService $mailSettings,
         private RemoteLicenseClient $remoteLicenseClient,
         private LocalLicenseService $localLicenseService,
+        private LocalLicenseScopeReconciliationService $scopeReconciliation,
+        private PackageGovernanceService $packageGovernance,
         private LocationProvisioningImportService $locationProvisioning,
         private LocationProvisioningIntegrityService $locationIntegrity,
         private ServerFingerprintService $fingerprintService,
@@ -55,7 +71,7 @@ class InstallerService
     {
         $environment = $this->environmentFromStateOrFallback($state);
         $database = $this->databaseFromStateOrFallback($state);
-        $mail = $state['mail'] ?? [];
+        $mail = $this->mailFromStateOrFallback($state);
         $licenseKey = $state['license_key'] ?? null;
         $licensePreview = $state['license_preview'] ?? [];
         $admin = $state['admin'] ?? [];
@@ -93,7 +109,7 @@ class InstallerService
 
             $this->runStep('database migrations', fn () => Artisan::call('migrate', ['--force' => true]));
             $this->ensureLocalLicenseTablesExist();
-            $this->runStep('installer seed data', fn () => $this->seedCoreData());
+            $this->runStep('installer seed data', fn () => $this->seedCoreData($mail));
 
             $localLicense = $this->localLicenseService->activatedForLicense($licenseKey);
 
@@ -169,6 +185,12 @@ class InstallerService
         }
 
         try {
+            if (($locationProvisioning['status'] ?? null) === 'completed') {
+                $localLicense = $localLicense->fresh('scope');
+                $this->runStep('licensed scope reconciliation', fn () => $this->scopeReconciliation->reconcile($localLicense));
+                $localLicense = $localLicense->fresh('scope');
+            }
+
             $integrity = $this->locationIntegrity->verifyBeforeInstallLock($localLicense, $locationProvisioning);
             if (($integrity['ok'] ?? false) !== true) {
                 return ['ok' => false, 'message' => $integrity['message'] ?? 'Campaign location setup is incomplete.'];
@@ -267,6 +289,14 @@ class InstallerService
         ], $fromEnv);
     }
 
+    private function mailFromStateOrFallback(array $state): array
+    {
+        return array_replace(
+            $this->environmentWriter->read(self::MAIL_KEYS),
+            $state['mail'] ?? []
+        );
+    }
+
     private function missingRequired(array $values, array $required, array $allowEmpty = []): array
     {
         return array_values(array_filter($required, function (string $key) use ($values, $allowEmpty) {
@@ -298,7 +328,7 @@ class InstallerService
         DB::reconnect();
     }
 
-    private function seedCoreData(): void
+    private function seedCoreData(array $mail): void
     {
         foreach ([
             \Database\Seeders\CountrySeeder::class => 'countries',
@@ -315,7 +345,7 @@ class InstallerService
         }
 
         $this->seedSystemSettings();
-        $this->seedSmtpSettings();
+        $this->mailSettings->persist($mail);
         $this->seedPaymentGateways();
         $this->seedRoles();
         $this->seedPermissions();
@@ -366,7 +396,7 @@ class InstallerService
             return;
         }
 
-        $systemPackage = $packageType === 'lga' ? 'chairmanship' : $packageType;
+        $systemPackage = $this->packageGovernance->normalize($packageType);
         DB::table('system_settings')->updateOrInsert(['id' => 1], ['package' => $systemPackage, 'updated_at' => now()]);
     }
 
@@ -423,7 +453,7 @@ class InstallerService
         }
 
         DB::table('system_settings')->updateOrInsert(['id' => 1], [
-            'package' => env('CAMPAIGN_PACKAGE_TYPE', 'presidential'),
+            'package' => $this->packageGovernance->normalize(env('CAMPAIGN_PACKAGE_TYPE', PackageGovernanceService::PRESIDENTIAL)),
             'logo' => '',
             'favicon'=> 'favicon.png',
             'login_page_background' => '',
@@ -439,25 +469,6 @@ class InstallerService
             'company_phone' => '+1234567890',
             'require_bank_details' => false,
             'activation_code' => '',
-            'updated_at' => now(),
-            'created_at' => now(),
-        ]);
-    }
-
-    private function seedSmtpSettings(): void
-    {
-        if (!Schema::hasTable('s_m_t_p_settings')) {
-            return;
-        }
-
-        DB::table('s_m_t_p_settings')->updateOrInsert(['id' => 1], [
-            'mailer' => 'smtp',
-            'host' => 'smtp.gmail.com',
-            'port' => '587',
-            'username' => 'youremail@gmail.com',
-            'password' => 'your-app-password',
-            'encryption' => 'tls',
-            'from_address' => 'youremail@gmail.com',
             'updated_at' => now(),
             'created_at' => now(),
         ]);

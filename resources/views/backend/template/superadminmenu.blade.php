@@ -1,6 +1,7 @@
 
 @if(Auth::user()->access_level == 'superadmin')
 @php($packageVisibility = $packageVisibility ?? app(\App\Services\PackageVisibilityService::class))
+@php($packageUi = $packageUi ?? app(\App\Services\CampaignPackageUiService::class))
 <nav class="mt-2">
       <ul class="nav nav-pills nav-sidebar flex-column sidebar-nav" data-widget="treeview" role="menu" data-accordion="false">
 
@@ -34,22 +35,24 @@
                   </a>
                 </li>
 
+                @if($packageUi->supportsMemberNavigationLevel('regions'))
                 <li class="nav-item">
                   <a href="{{ route('superadmin.members.region') }}" class="nav-link">
                     <i class="fas fa-globe-africa nav-icon"></i>
                     <p>Members by Regions</p>
                   </a>
                 </li>
+                @endif
 
+                @if($packageUi->supportsMemberNavigationLevel('states'))
                 <li class="nav-item">
                   <a href="{{ route('superadmin.members.byState') }}" class="nav-link">
                     <i class="fas fa-map nav-icon"></i>
                     <p>Members by States</p>
                   </a>
                 </li>
-
-
-
+                @endif
+                @if($packageUi->supportsMemberNavigationLevel('lgas'))
                 <li class="nav-item">
                   <a href="{{ url('superadmin/members/bylga') }}" class="nav-link">
                   <i class="fas fa-user nav-icon"></i>
@@ -408,14 +411,18 @@
                     <p>General Settings</p>
                   </a>
                 </li>
+                @endif
 
+                @if($packageUi->supportsMemberNavigationLevel('wards'))
                 <li class="nav-item">
                   <a href="{{ route('admin.license.show') }}" class="nav-link">
                     <i class="fas fa-certificate nav-icon"></i>
                     <p>License Status</p>
                   </a>
                 </li>
+                @endif
 
+                @if($packageUi->supportsMemberNavigationLevel('polling_units'))
                 <li class="nav-item">
                   <a href="{{ url('superadmin/settings/smtp') }}" class="nav-link">
                   <i class="fas fa-award nav-icon"></i>
@@ -430,6 +437,7 @@
                     <p> Payment Settings</p>
                   </a>
                 </li>
+                @endif
 
                 --}}
 

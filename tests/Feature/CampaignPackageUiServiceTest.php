@@ -49,6 +49,7 @@ test('governorship package returns state labels', function () {
         ->and($ui->geographyDistributionTitle())->toBe('Members Distribution by Local Government')
         ->and($ui->primaryGeographyLabel())->toBe('LGAs')
         ->and($ui->scopeDisplayName())->toBe('Cross River')
+        ->and($ui->memberNavigationLevels())->toBe(['lgas', 'wards', 'polling_units'])
         ->and($ui->supportsChart('region'))->toBeFalse()
         ->and($ui->supportsChart('state'))->toBeFalse();
 });
@@ -102,7 +103,8 @@ test('lga package returns lga and ward labels', function () {
         ->and($ui->electionStatisticsTitle())->toBe('LGA Election Statistics')
         ->and($ui->geographyDistributionTitle())->toBe('Members Distribution by Ward')
         ->and($ui->primaryGeographyLabel())->toBe('Wards')
-        ->and($ui->locationHierarchyLabels())->toBe(['Wards', 'Polling Units']);
+        ->and($ui->locationHierarchyLabels())->toBe(['Wards', 'Polling Units'])
+        ->and($ui->memberNavigationLevels())->toBe(['wards', 'polling_units']);
 });
 
 test('missing local license fallback does not crash', function () {

@@ -39,7 +39,7 @@ class PackageGovernanceService
             'senatorial', 'senatorial_district', 'senatorial district' => self::SENATORIAL,
             'federal', 'federal_constituency', 'federal constituency' => self::FEDERAL,
             'chairmanship', 'lga', 'ward', 'pu', 'local_government', 'local government' => self::CHAIRMANSHIP,
-            'state', 'governorship', 'governor' => self::GOVERNORSHIP,
+            'state', 'governorship', 'governoship', 'governor' => self::GOVERNORSHIP,
             default => self::PRESIDENTIAL,
         };
     }

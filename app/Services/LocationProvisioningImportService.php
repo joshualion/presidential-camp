@@ -20,8 +20,10 @@ class LocationProvisioningImportService
         'polling_units',
     ];
 
-    public function __construct(private LocationProvisioningClient $client)
-    {
+    public function __construct(
+        private LocationProvisioningClient $client,
+        private LocalLicenseScopeReconciliationService $scopeReconciliation,
+    ) {
     }
 
     public function latestRun(): ?LocationProvisioningBatch
@@ -129,6 +131,10 @@ class LocationProvisioningImportService
             $availableDatasets = $this->availableDatasets($batch, $run);
             $nextDataset = $hasMore ? $dataset : $this->nextDataset($dataset, $availableDatasets);
 
+            if (!$nextDataset) {
+                $this->scopeReconciliation->reconcile($license->fresh('scope'));
+            }
+
             $summary = $run->summary ?: $this->emptySummary();
             $summary[$dataset]['imported'] = ($summary[$dataset]['imported'] ?? 0) + $imported;
             $summary[$dataset]['batches'] = ($summary[$dataset]['batches'] ?? 0) + 1;
@@ -204,6 +210,7 @@ class LocationProvisioningImportService
             'scope_payload' => data_get($session, 'scope_payload', $run->scope_payload),
             'current_dataset' => $datasets[0],
             'current_cursor' => 0,
+            'total_records' => $this->sessionTotalRecords($session),
             'status' => 'running',
             'summary' => array_replace_recursive($run->summary ?: $this->emptySummary(), [
                 '_available_datasets' => $datasets,
@@ -215,6 +222,15 @@ class LocationProvisioningImportService
         }
 
         return $run->fresh();
+    }
+
+    private function sessionTotalRecords(array $session): int
+    {
+        $totals = data_get($session, 'total_estimated_records', data_get($session, 'total_records', 0));
+
+        return is_array($totals)
+            ? array_sum(array_map('intval', $totals))
+            : max(0, (int) $totals);
     }
 
     private function importRecords(string $dataset, array $records): int

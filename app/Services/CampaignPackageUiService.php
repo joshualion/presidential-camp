@@ -62,6 +62,23 @@ class CampaignPackageUiService
         return $this->arrayLabel('location_hierarchy_labels', ['Regions', 'States', 'LGAs', 'Wards', 'Polling Units']);
     }
 
+    public function memberNavigationLevels(): array
+    {
+        return match ($this->scopeService->packageType()) {
+            PackageGovernanceService::PRESIDENTIAL => ['regions', 'states', 'lgas', 'wards', 'polling_units'],
+            PackageGovernanceService::GOVERNORSHIP,
+            PackageGovernanceService::SENATORIAL,
+            PackageGovernanceService::FEDERAL => ['lgas', 'wards', 'polling_units'],
+            PackageGovernanceService::CHAIRMANSHIP, 'lga' => ['wards', 'polling_units'],
+            default => ['lgas', 'wards', 'polling_units'],
+        };
+    }
+
+    public function supportsMemberNavigationLevel(string $level): bool
+    {
+        return in_array($level, $this->memberNavigationLevels(), true);
+    }
+
     public function emptyStateMessage(string $context): string
     {
         $context = trim($context) ?: 'data';
@@ -123,6 +140,7 @@ class CampaignPackageUiService
             'primary_geography_label' => $this->primaryGeographyLabel(),
             'secondary_geography_labels' => $this->secondaryGeographyLabels(),
             'location_hierarchy_labels' => $this->locationHierarchyLabels(),
+            'member_navigation_levels' => $this->memberNavigationLevels(),
             'package_display_name' => $this->packageDisplayName(),
             'scope_display_name' => $this->scopeDisplayName(),
             'visible_chart_keys' => $this->visibleChartKeys(),

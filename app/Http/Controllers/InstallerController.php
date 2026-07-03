@@ -157,6 +157,7 @@ class InstallerController extends Controller
             ]);
 
             session(['installer.mail' => $data]);
+            $this->environmentWriter->write($data);
             $this->stateStore->merge(['mail' => $data]);
             $this->completeStep('mail');
 
