@@ -104,7 +104,7 @@ test('national admin profile completion page does not redirect to location setup
     $user = onboardingTestUser('nationaladmin');
 
     $this->actingAs($user)
-        ->get('/complete-profile')
+        ->get('/national/complete-profile')
         ->assertOk()
         ->assertSee('COMPLETE YOUR PROFILE');
 });
@@ -115,7 +115,7 @@ test('national admin can complete profile without creating or selecting location
 
     $this->actingAs($user)
         ->withSession(['_token' => 'test-token'])
-        ->post('/complete-profile', [
+        ->post('/national/complete-profile', [
             '_token' => 'test-token',
             'firstname' => 'National',
             'lastname' => 'ICT',

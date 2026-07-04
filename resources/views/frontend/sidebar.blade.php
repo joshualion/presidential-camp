@@ -118,7 +118,7 @@
             @foreach($userSupportGroups as $group)
             <li class="nav-item small d-flex align-items-center justify-content-between">
                 <a class="nav-link text-dark flex-grow-1 ps-3">{{ $group }}</a>
-                <a class="btn btn-sm " href="{{ route('select.support.group') }}">
+                <a class="btn btn-sm " href="{{ route(auth()->user()->access_level.'.account.select-support-group') }}">
                     <i class="fas fa-edit"></i>
                 </a>
             </li>

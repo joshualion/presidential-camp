@@ -106,6 +106,7 @@
             </ul>
         </li>
         {{-- / Messaging --}}
+        @include('backend.template.partials.announcements-menu-item')
 
         <li class="tab nav-item menu-close">
             <a href="#" class="nav-link">

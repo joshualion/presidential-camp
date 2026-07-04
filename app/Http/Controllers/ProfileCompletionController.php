@@ -15,10 +15,12 @@ use App\Models\SystemSetting;
 use App\Models\Ward;
 use App\Services\CampaignPackageLocationFormService;
 use App\Services\LicensedScopeQueryService;
+use App\Services\LocationSelectionValidationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class ProfileCompletionController extends Controller
@@ -76,7 +78,12 @@ class ProfileCompletionController extends Controller
     $pageTitle = 'Complete Your Profile';
 
     // Fetch additional data required for the profile form
-    $locationOptions = $this->locationForms()->options($profileData);
+    // An incomplete member has no structural assignment yet. Scope the choices
+    // to the installation license until profile completion establishes one.
+    $locationActor = $profileData->access_level === 'user' && !$profileData->polling_unit_id
+        ? null
+        : $profileData;
+    $locationOptions = $this->locationForms()->options($locationActor);
     $locationForm = $this->locationForms()->context($profileData, $profileData, $profileData->access_level);
     $countries = Country::all();
     $regions = $locationOptions['regions'];
@@ -115,7 +122,7 @@ class ProfileCompletionController extends Controller
          $validatedData = $request->validate(array_merge([
             'firstname' => 'required|string|max:255',
             'lastname' => 'required|string|max:255',
-            'email' => 'required|email|max:255',
+            'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($profileData->id)],
             'phone' => 'required|string|max:15|unique:users,phone,' .$profileData->id,
             'validvoter' => 'required|in:yes,no',
             'vin' => 'nullable|string|max:255',
@@ -141,6 +148,13 @@ class ProfileCompletionController extends Controller
             throw ValidationException::withMessages($scopeErrors);
         }
 
+        if ($profileData->access_level === 'user') {
+            $validatedData = array_replace(
+                $validatedData,
+                app(LocationSelectionValidationService::class)->validateMemberSelection($validatedData)
+            );
+        }
+
         $profileData->update([
             'firstname' => $validatedData['firstname'],
             'lastname' => $validatedData['lastname'],
@@ -152,6 +166,8 @@ class ProfileCompletionController extends Controller
             'gender' => $validatedData['gender'],
             'region_id' => $validatedData['region_id'] ?? $profileData->region_id,
             'state_id' => $validatedData['state_id'] ?? $profileData->state_id,
+            'senatorial_district_id' => $validatedData['senatorial_district_id'] ?? $profileData->senatorial_district_id,
+            'federal_constituency_id' => $validatedData['federal_constituency_id'] ?? $profileData->federal_constituency_id,
             'lga_id' => $validatedData['lga_id'] ?? $profileData->lga_id,
             'ward_id' => $validatedData['ward_id'] ?? $profileData->ward_id,
             'polling_unit_id' => $validatedData['polling_unit_id'] ?? $profileData->polling_unit_id,

@@ -201,6 +201,7 @@ $pu = \App\Models\PollingUnit::find($profileData->polling_unit_id);
 
             </li>
             {{-- / Messaging --}}
+            @include('backend.template.partials.announcements-menu-item')
 
 
 

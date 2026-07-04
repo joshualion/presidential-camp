@@ -8,9 +8,11 @@ use App\Models\Message;
 use App\Models\User;
 use App\Services\ScopedMessagingRecipientService;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 
 class MessageController extends Controller
 {
@@ -20,28 +22,29 @@ class MessageController extends Controller
 
     public function conversations(Request $request)
     {
-        $userId = Auth::id();
-        if (!$userId) {
+        $user = Auth::user();
+        if (!$user) {
             return response()->json([]);
         }
 
-        $conversations = Conversation::whereHas('participants', fn ($q) => $q->where('user_id', $userId))
-            ->with(['participants:id,firstname,lastname,username,photo', 'messages' => fn ($q) => $q->latest()->limit(1)])
-            ->withCount([
-                'messages as unread_count' => function ($q) use ($userId) {
-                    $q->whereNull('read_at')->where('sender_id', '!=', $userId);
-                },
-            ])
-            ->latest()
-            ->paginate(10);
+        $visible = $this->recipientService->visibleConversationsFor($user);
+        $perPage = 10;
+        $page = max(1, LengthAwarePaginator::resolveCurrentPage());
+        $conversations = new LengthAwarePaginator(
+            $visible->forPage($page, $perPage)->values(),
+            $visible->count(),
+            $perPage,
+            $page,
+            ['path' => $request->url(), 'query' => $request->query()]
+        );
 
         return response()->json($conversations);
     }
 
     public function messages(Request $request, Conversation $conversation)
     {
-        $userId = Auth::id();
-        if (!$conversation->participants()->where('user_id', $userId)->exists()) {
+        $user = Auth::user();
+        if (!$user || !$this->recipientService->canAccessConversation($user, $conversation)) {
             return response()->json(['message' => 'Forbidden'], 403);
         }
 
@@ -53,7 +56,7 @@ class MessageController extends Controller
         // Mark unread as read for this user
         $conversation->messages()
             ->whereNull('read_at')
-            ->where('sender_id', '!=', $userId)
+            ->where('sender_id', '!=', $user->id)
             ->update(['read_at' => now()]);
 
         return response()->json($messages);
@@ -61,16 +64,20 @@ class MessageController extends Controller
 
     public function startConversation(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'recipient_id' => 'required|exists:users,id',
             'message' => 'required|string',
         ]);
+        $body = $this->validatedBody($validated['message']);
 
         $sender = Auth::user();
-        $recipient = User::findOrFail($request->recipient_id);
+        $recipient = User::findOrFail($validated['recipient_id']);
 
-        [$canStart, $existing] = $this->canInitiate($sender, $recipient);
-        if (!$canStart) {
+        $existing = $this->recipientService->directConversationBetween($sender, $recipient);
+        $allowed = $existing
+            ? $this->recipientService->canContinueConversation($sender, $existing)
+            : $this->recipientService->canInitiateConversation($sender, $recipient);
+        if (!$allowed) {
             return response()->json(['message' => 'Not allowed to start conversation'], 403);
         }
 
@@ -85,8 +92,9 @@ class MessageController extends Controller
 
         $message = $conversation->messages()->create([
             'sender_id' => $sender->id,
-            'body' => $request->message,
+            'body' => $body,
         ]);
+        $conversation->touch();
 
         $this->broadcastMessage($message, [$sender->id, $recipient->id]);
 
@@ -118,8 +126,11 @@ class MessageController extends Controller
         $sender = Auth::user();
         $recipient = User::findOrFail($request->recipient_id);
 
-        [$canStart, $existing] = $this->canInitiate($sender, $recipient);
-        if (!$canStart) {
+        $existing = $this->recipientService->directConversationBetween($sender, $recipient);
+        $allowed = $existing
+            ? $this->recipientService->canContinueConversation($sender, $existing)
+            : $this->recipientService->canInitiateConversation($sender, $recipient);
+        if (!$allowed) {
             return response()->json(['message' => 'Not allowed to start conversation'], 403);
         }
 
@@ -139,19 +150,18 @@ class MessageController extends Controller
 
     public function sendMessage(Request $request, Conversation $conversation)
     {
-        $request->validate(['message' => 'required|string']);
+        $validated = $request->validate(['message' => 'required|string']);
+        $body = $this->validatedBody($validated['message']);
         $sender = Auth::user();
-        if (!$conversation->participants()->where('user_id', $sender->id)->exists()) {
-            return response()->json(['message' => 'Forbidden'], 403);
-        }
-        if (!$this->conversationAllowedForSender($conversation, $sender)) {
+        if (!$sender || !$this->recipientService->canContinueConversation($sender, $conversation)) {
             return response()->json(['message' => 'Conversation is outside your messaging scope.'], 403);
         }
 
         $message = $conversation->messages()->create([
             'sender_id' => $sender->id,
-            'body' => $request->message,
+            'body' => $body,
         ]);
+        $conversation->touch();
 
         $participantIds = $conversation->participants()->pluck('users.id')->toArray();
         $this->broadcastMessage($message, $participantIds);
@@ -161,13 +171,13 @@ class MessageController extends Controller
 
     public function markRead(Conversation $conversation)
     {
-        $userId = Auth::id();
-        if (!$conversation->participants()->where('user_id', $userId)->exists()) {
+        $user = Auth::user();
+        if (!$user || !$this->recipientService->canAccessConversation($user, $conversation)) {
             return response()->json(['message' => 'Forbidden'], 403);
         }
         $conversation->messages()
             ->whereNull('read_at')
-            ->where('sender_id', '!=', $userId)
+            ->where('sender_id', '!=', $user->id)
             ->update(['read_at' => now()]);
 
         return response()->json(['status' => 'ok']);
@@ -176,7 +186,7 @@ class MessageController extends Controller
     public function typing(Request $request, Conversation $conversation)
     {
         $sender = Auth::user();
-        if (!$sender || !$conversation->participants()->where('user_id', $sender->id)->exists()) {
+        if (!$sender || !$this->recipientService->canContinueConversation($sender, $conversation)) {
             return response()->json(['message' => 'Forbidden'], 403);
         }
         $participantIds = $conversation->participants()->pluck('users.id')->toArray();
@@ -195,48 +205,27 @@ class MessageController extends Controller
 
     public function unreadCount()
     {
-        $userId = Auth::id();
-        if (!$userId) {
+        $user = Auth::user();
+        if (!$user) {
             return response()->json(['unread' => 0]);
         }
 
-        $count = Conversation::whereHas('participants', fn ($q) => $q->where('user_id', $userId))
-            ->withCount([
-                'messages as unread_count' => function ($q) use ($userId) {
-                    $q->whereNull('read_at')->where('sender_id', '!=', $userId);
-                },
-            ])
-            ->get()
-            ->sum('unread_count');
+        $count = $this->recipientService->visibleConversationsFor($user)->sum('unread_count');
 
         return response()->json(['unread' => $count]);
     }
 
-    /**
-     * Determine whether sender can initiate with recipient.
-     * Allow same level and defined upward chain.
-     */
-    protected function canInitiate(User $sender, User $recipient): array
+    private function validatedBody(string $message): string
     {
-        // try to find existing direct conversation
-        $existing = Conversation::where('type', 'direct')
-            ->whereHas('participants', fn ($q) => $q->where('user_id', $sender->id))
-            ->whereHas('participants', fn ($q) => $q->where('user_id', $recipient->id))
-            ->first();
+        $body = trim($message);
 
-        if ($this->recipientService->canMessage($sender, $recipient)) {
-            return [true, $existing];
+        if ($body === '') {
+            throw ValidationException::withMessages([
+                'message' => 'The message field must contain visible text.',
+            ]);
         }
 
-        return [false, null];
-    }
-
-    private function conversationAllowedForSender(Conversation $conversation, User $sender): bool
-    {
-        return $conversation->participants()
-            ->where('users.id', '!=', $sender->id)
-            ->get()
-            ->every(fn (User $participant) => $this->recipientService->canReplyInExistingConversation($sender, $participant));
+        return $body;
     }
 
     private function broadcastMessage(Message $message, array $participantIds): void

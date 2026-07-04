@@ -22,17 +22,27 @@
                 <div class="card card-danger">
                     <div class="card-header card-danger">
                         <h3 class="card-title">Announcements</h3>
+                        <div class="card-tools">
+                            <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                                <i class="fas fa-minus"></i>
+                            </button>
+                            <button type="button" class="btn btn-tool" data-card-widget="remove">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
                     </div>
                     <div class="card-body">
                         @forelse($announcements as $note)
-                            <div class="alert alert-secondary mb-2">
-                                <strong>{{ $note->title }}</strong>
-                                <p>{{ $note->message }}</p>
+                            <div class="alert alert-light mb-2">
+                                <strong class="text-dark">{{ $note->title }}</strong>
+                                <p>{{ \Illuminate\Support\Str::limit($note->message, 250) }}</p>
+                                <a href="{{ route('user.notices.show', $note) }}" class="btn btn-sm btn-outline-light">Read full notice</a>
                                 <small class="text-muted">{{ $note->created_at->diffForHumans() }}</small>
                             </div>
                         @empty
                             <p>No announcements at the moment.</p>
                         @endforelse
+                        <a href="{{ route('user.notices') }}" class="btn btn-sm btn-primary mt-2 text-white">Open Notice Board</a>
                     </div>
                 </div>
             </div>
@@ -40,6 +50,7 @@
 
         </div><!-- /.row -->
 
+        @if($votingBlocEnabled)
         <div class="row">
             <!-- My Voting Block -->
             <div class="col-md-6">
@@ -50,7 +61,7 @@
                     <div class="card-body">
                         <div class="text text-success mb-0">
                             <strong>{{ $blockStrength }}</strong> Member(s) in Your Block
-                            <a href="#" class="mt-1 mb-2 gap-2">
+                            <a href="{{ route('user.block') }}" class="mt-1 mb-2 gap-2">
                                 Visit Your Block <i class="fas fa-arrow-circle-right"></i>
                             </a>
                         </div>
@@ -86,10 +97,12 @@
                 </div>
             </div>
         </div>
+        @endif
 
     </div><!-- /.card-body -->
 </div><!-- /.card -->
 
+@if($votingBlocEnabled)
 {{-- Chart.js --}}
 <script src="{{ asset('assets/plugins/chart.js/Chart.min.js') }}"></script>
 
@@ -118,5 +131,6 @@
         }
     });
 </script>
+@endif
 
 @endsection

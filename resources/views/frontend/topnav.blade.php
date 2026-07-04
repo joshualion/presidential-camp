@@ -93,7 +93,7 @@
     };
 
     const fetchUnread = () => {
-        fetch(@json(route('messages.unread-count')), { headers: { 'Accept': 'application/json' }})
+        fetch(@json(route(auth()->user()->access_level.'.messages.unread-count')), { headers: { 'Accept': 'application/json' }})
             .then(res => res.json())
             .then(data => {
                 const c = data?.unread || 0;

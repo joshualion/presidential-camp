@@ -162,9 +162,9 @@
                   }elseif (Auth::user()->access_level==='puadmin'){
                       $url = '/pu/profile';
                   }elseif (Auth::user()->access_level==='user') {
-                      $url = '/member/profile';
+                      $url = '/profile';
                   }else{
-                      $url = '/member/profile';
+                      $url = '/profile';
                   }
               @endphp
 
@@ -231,7 +231,6 @@
 @Include('backend.template.puAdminMenu')
 @endif
 <!-- /Pu admin Menu -->
-
 
 <!-- Member Menu -->
 @if(Auth::user()->access_level == 'user')

@@ -270,6 +270,7 @@
 
             </li>
             {{-- / Messaging --}}
+            @include('backend.template.partials.announcements-menu-item')
 
                {{--  Products Menu --}}
                {{-- <li class="nav-item  menu-close">

@@ -1,23 +1,12 @@
 @php
-use Illuminate\Support\Facades\Auth;
+use App\Services\ScopedMessagingRecipientService;
 
 $userAudience = $userData ? $userData->getAudience() : 'public';
 $coverImage = $userData->cover_image ? url('uploads/member_images/'.$userData->cover_image) : url('uploads/no_image.jpg');
 $profileImage = !empty($userData->photo) ? url('uploads/member_images/'.$userData->photo) : url('uploads/no_image.jpg');
-// Determine if viewer can initiate message (must be same or higher access level)
-$ranks = [
-    'superadmin' => 8,
-    'nationaladmin' => 7,
-    'regionaladmin' => 6,
-    'stateadmin' => 5,
-    'lgaadmin' => 4,
-    'wardadmin' => 3,
-    'puadmin' => 2,
-    'user' => 1,
-];
-$viewerRank = $ranks[$profileData->access_level ?? 'user'] ?? 1;
-$targetRank = $ranks[$userData->access_level ?? 'user'] ?? 1;
-$canMessage = $profileData->id !== $userData->id && $viewerRank >= $targetRank;
+$canMessage = $profileData && $userData
+    ? app(ScopedMessagingRecipientService::class)->canOpenConversationWith($profileData, $userData)
+    : false;
 @endphp
 
 <style>
@@ -155,7 +144,7 @@ $canMessage = $profileData->id !== $userData->id && $viewerRank >= $targetRank;
                         @foreach($userSupportGroups as $group)
                         <li class="d-flex justify-content-between align-items-center">
                             <span>{{ $group }}</span>
-                            <a href="{{ route('select.support.group') }}" class="btn btn-sm btn-default"><i class="fas fa-edit"></i></a>
+                            <a href="{{ route(auth()->user()->access_level.'.account.select-support-group') }}" class="btn btn-sm btn-default"><i class="fas fa-edit"></i></a>
                         </li>
                         @endforeach
                     </ul>
@@ -178,14 +167,14 @@ $canMessage = $profileData->id !== $userData->id && $viewerRank >= $targetRank;
                     <h5 class="card-title"><i class="fas fa-comment me-2"></i> Posts</h5>
                     @php
                         $messageRoutes = [
-                            'conversations' => route('messages.conversations'),
-                            'conversationMessages' => url('/messages/conversations/__CONVERSATION__/messages'),
-                            'conversationSend' => url('/messages/conversations/__CONVERSATION__/messages'),
-                            'conversationTyping' => url('/messages/conversations/__CONVERSATION__/typing'),
-                            'conversationRead' => url('/messages/conversations/__CONVERSATION__/read'),
-                            'recipients' => route('messages.recipients'),
-                            'start' => route('messages.start'),
-                            'ensure' => route('messages.ensure'),
+                            'conversations' => route(auth()->user()->access_level.'.messages.conversations'),
+                            'conversationMessages' => route(auth()->user()->access_level.'.messages.conversation.messages', ['conversation' => '__CONVERSATION__']),
+                            'conversationSend' => route(auth()->user()->access_level.'.messages.conversation.send', ['conversation' => '__CONVERSATION__']),
+                            'conversationTyping' => route(auth()->user()->access_level.'.messages.conversation.typing', ['conversation' => '__CONVERSATION__']),
+                            'conversationRead' => route(auth()->user()->access_level.'.messages.conversation.read', ['conversation' => '__CONVERSATION__']),
+                            'recipients' => route(auth()->user()->access_level.'.messages.recipients'),
+                            'start' => route(auth()->user()->access_level.'.messages.start'),
+                            'ensure' => route(auth()->user()->access_level.'.messages.ensure'),
                             'noImage' => asset('uploads/no_image.jpg'),
                             'memberImageBase' => asset('uploads/member_images'),
                         ];
@@ -305,7 +294,7 @@ $canMessage = $profileData->id !== $userData->id && $viewerRank >= $targetRank;
             }
             btn.disabled = true;
             try {
-                await fetch("{{ url('/messages/start') }}", {
+                await fetch(@json(route(auth()->user()->access_level.'.messages.start')), {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

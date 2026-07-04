@@ -147,7 +147,7 @@ test('profile completion redirects superadmin to dashboard not legacy activation
     ]);
 
     $this->actingAs($user)
-        ->post('/complete-profile', [
+        ->post('/superadmin/complete-profile', [
             'firstname' => 'Cross',
             'lastname' => 'River',
             'email' => 'cross-river-superadmin@example.test',

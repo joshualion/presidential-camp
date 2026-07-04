@@ -13,6 +13,7 @@ use App\Models\SystemSetting;
 use App\Models\User;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 beforeEach(function () {
@@ -59,6 +60,36 @@ function messagingState(int $id, string $name = 'State'): State
         'name' => "{$name} {$id}",
         'region_id' => 1,
     ]);
+}
+
+function messagingPollingUnit(int $stateId = 9): array
+{
+    DB::table('local_government_areas')->insert([
+        'id' => 901,
+        'uuid' => (string) Str::uuid(),
+        'name' => 'Messaging LGA',
+        'state_id' => $stateId,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+    DB::table('wards')->insert([
+        'id' => 902,
+        'uuid' => (string) Str::uuid(),
+        'name' => 'Messaging Ward',
+        'lga_id' => 901,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+    DB::table('polling_units')->insert([
+        'id' => 903,
+        'uuid' => (string) Str::uuid(),
+        'name' => 'Messaging Polling Unit',
+        'ward_id' => 902,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    return ['lga_id' => 901, 'ward_id' => 902, 'polling_unit_id' => 903];
 }
 
 function messagingLicense(int $stateId = 9): void
@@ -121,7 +152,7 @@ test('recipient endpoint returns only in-scope users for self hosted governorshi
 
     $this->withoutMiddleware([CheckUserOnboarding::class, KuyakEyenIno::class, ValidateLicense::class]);
 
-    $response = $this->actingAs($sender)->getJson(route('messages.recipients'));
+    $response = $this->actingAs($sender)->getJson(route($sender->access_level.'.messages.recipients'));
 
     $response->assertOk();
     $payload = collect($response->json('data'))->pluck('options')->flatten(1);
@@ -141,7 +172,7 @@ test('creating conversation with out of scope recipient is rejected', function (
     $this->withoutMiddleware([CheckUserOnboarding::class, KuyakEyenIno::class, ValidateLicense::class]);
 
     $this->actingAs($sender)
-        ->postJson(route('messages.start'), [
+        ->postJson(route($sender->access_level.'.messages.start'), [
             'recipient_id' => $outside->id,
             'message' => 'Hello',
         ])
@@ -157,7 +188,7 @@ test('sender cannot message self', function () {
     $this->withoutMiddleware([CheckUserOnboarding::class, KuyakEyenIno::class, ValidateLicense::class]);
 
     $this->actingAs($sender)
-        ->postJson(route('messages.start'), [
+        ->postJson(route($sender->access_level.'.messages.start'), [
             'recipient_id' => $sender->id,
             'message' => 'Self note',
         ])
@@ -180,7 +211,7 @@ test('message creation succeeds with log broadcast default', function () {
     $this->withoutMiddleware([CheckUserOnboarding::class, KuyakEyenIno::class, ValidateLicense::class]);
 
     $this->actingAs($sender)
-        ->postJson(route('messages.conversation.send', $conversation), ['message' => 'No Reverb required'])
+        ->postJson(route($sender->access_level.'.messages.conversation.send', $conversation), ['message' => 'No Reverb required'])
         ->assertOk();
 
     expect($conversation->messages()->where('body', 'No Reverb required')->exists())->toBeTrue();
@@ -189,9 +220,10 @@ test('message creation succeeds with log broadcast default', function () {
 test('lower level participant can reply to existing higher initiated conversation', function () {
     messagingState(9, 'Cross River');
     messagingLicense(9);
+    $memberLocation = messagingPollingUnit(9);
 
     $higher = messagingUser('higher@test.local', ['access_level' => 'stateadmin', 'state_id' => 9]);
-    $lower = messagingUser('lower@test.local', ['access_level' => 'user', 'state_id' => 9]);
+    $lower = messagingUser('lower@test.local', array_merge(['access_level' => 'user', 'state_id' => 9], $memberLocation));
 
     $conversation = Conversation::query()->create([
         'created_by' => $higher->id,
@@ -202,7 +234,7 @@ test('lower level participant can reply to existing higher initiated conversatio
     $this->withoutMiddleware([CheckUserOnboarding::class, KuyakEyenIno::class, ValidateLicense::class]);
 
     $this->actingAs($lower)
-        ->postJson(route('messages.conversation.send', $conversation), ['message' => 'Reply upward'])
+        ->postJson(route($lower->access_level.'.messages.conversation.send', $conversation), ['message' => 'Reply upward'])
         ->assertOk();
 
     expect($conversation->messages()->where('sender_id', $lower->id)->where('body', 'Reply upward')->exists())->toBeTrue();
@@ -211,14 +243,15 @@ test('lower level participant can reply to existing higher initiated conversatio
 test('lower level user cannot initiate upward conversation', function () {
     messagingState(9, 'Cross River');
     messagingLicense(9);
+    $memberLocation = messagingPollingUnit(9);
 
     $higher = messagingUser('higher-init@test.local', ['access_level' => 'stateadmin', 'state_id' => 9]);
-    $lower = messagingUser('lower-init@test.local', ['access_level' => 'user', 'state_id' => 9]);
+    $lower = messagingUser('lower-init@test.local', array_merge(['access_level' => 'user', 'state_id' => 9], $memberLocation));
 
     $this->withoutMiddleware([CheckUserOnboarding::class, KuyakEyenIno::class, ValidateLicense::class]);
 
     $this->actingAs($lower)
-        ->postJson(route('messages.start'), [
+        ->postJson(route($lower->access_level.'.messages.start'), [
             'recipient_id' => $higher->id,
             'message' => 'Can I start upward?',
         ])
@@ -228,9 +261,10 @@ test('lower level user cannot initiate upward conversation', function () {
 test('unread message count returns count for authenticated participant', function () {
     messagingState(9, 'Cross River');
     messagingLicense(9);
+    $memberLocation = messagingPollingUnit(9);
 
     $sender = messagingUser('unread-sender@test.local', ['access_level' => 'stateadmin', 'state_id' => 9]);
-    $recipient = messagingUser('unread-recipient@test.local', ['access_level' => 'user', 'state_id' => 9]);
+    $recipient = messagingUser('unread-recipient@test.local', array_merge(['access_level' => 'user', 'state_id' => 9], $memberLocation));
 
     $conversation = Conversation::query()->create([
         'created_by' => $sender->id,
@@ -243,7 +277,7 @@ test('unread message count returns count for authenticated participant', functio
     $this->withoutMiddleware([CheckUserOnboarding::class, KuyakEyenIno::class, ValidateLicense::class]);
 
     $this->actingAs($recipient)
-        ->getJson(route('messages.unread-count'))
+        ->getJson(route($recipient->access_level.'.messages.unread-count'))
         ->assertOk()
         ->assertJson(['unread' => 1]);
 });
@@ -257,7 +291,7 @@ test('backend messages route is not blocked when community is disabled', functio
     $this->withoutMiddleware([CheckUserOnboarding::class, KuyakEyenIno::class, ValidateLicense::class]);
 
     $this->actingAs($sender)
-        ->get(route('messages.page'))
+        ->get(route($sender->access_level.'.messages.page'))
         ->assertOk()
         ->assertSee('Internal Communication');
 });
@@ -272,7 +306,7 @@ test('legacy livechat page redirects and ajax endpoints do not expose legacy dat
 
     $this->actingAs($sender)
         ->get(route('superadmin.livechat.send'))
-        ->assertRedirect(route('messages.page'));
+        ->assertRedirect(route($sender->access_level.'.messages.page'));
 
     $this->actingAs($sender)
         ->getJson(route('superadmin.livechat.fetch.messages', ['receiver_id' => 999]))

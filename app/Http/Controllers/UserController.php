@@ -9,10 +9,8 @@ use App\Models\State;
 use App\Models\Region;
 use App\Models\Country;
 use App\Models\AgeGrade;
-use App\Models\Referral;
 use App\Models\Religion;
 use App\Models\PollingUnit;
-use App\Models\Announcement;
 use Illuminate\Http\Request;
 use App\Models\SystemSetting;
 use Illuminate\Support\Facades\DB;
@@ -24,6 +22,15 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\Facades\Validator;
+use App\Services\MemberCapabilityService;
+use App\Services\CampaignPackageLocationFormService;
+use App\Services\LocationSelectionValidationService;
+use App\Services\MemberVotingBlocService;
+use App\Services\AnnouncementAudienceService;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password;
+use Illuminate\Validation\ValidationException;
 
 
 class UserController extends Controller
@@ -77,6 +84,7 @@ class UserController extends Controller
     {
         $pageTitle   = 'Member Dashboard';
         $profileData = $this->getProfileData();
+        $this->requireCapability($profileData, MemberCapabilityService::DASHBOARD);
 
         if ($profileData->access_level !== 'user') {
             abort(403, 'Unauthorized');
@@ -90,49 +98,32 @@ class UserController extends Controller
             $pu = PollingUnit::find($user->polling_unit_id);
         }
 
-        // Count direct referrals
-        $referralsCount = Referral::where('referrer_id', $user->id)->count();
-
-        // Build block strength (referrals + nested)
-        $blockStrength = $this->calculateBlockStrength($user);
-
-        // Referral chart data (eligible vs ineligible voters in their downline)
-        $eligible = User::where('referred_by', $user->id)
-            ->where('validvoter', 'yes')
-            ->count();
-
-        $ineligible = User::where('referred_by', $user->id)
-            ->where('validvoter', 'no')
-            ->count();
+        $votingBlocEnabled = app(MemberCapabilityService::class)->allows($profileData, MemberCapabilityService::VOTING_BLOCK);
+        $bloc = $votingBlocEnabled
+            ? app(MemberVotingBlocService::class)->report($user)
+            : [
+                'direct_count' => 0,
+                'total_count' => 0,
+                'eligible_count' => 0,
+                'ineligible_count' => 0,
+            ];
+        $referralsCount = $bloc['direct_count'];
+        $blockStrength = $bloc['total_count'];
 
         $referralChartData = [
             'labels' => ['Eligible Voters', 'Ineligible Voters'],
             'datasets' => [[
-                'data' => [$eligible, $ineligible],
+                'data' => [$bloc['eligible_count'], $bloc['ineligible_count']],
                 'backgroundColor' => ['#28a745', '#dc3545'],
             ]]
         ];
 
 
-        $announcements = Announcement::where('is_active', true)
-            ->where(function ($q) use ($user) {
-                $q->where('audience', 'public') // everyone sees these
-                ->orWhere(function ($q) use ($user) {
-                    $q->where('audience', 'state')->where('state_id', $user->state_id);
-                })
-                ->orWhere(function ($q) use ($user) {
-                    $q->where('audience', 'lga')->where('lga_id', $user->lga_id);
-                })
-                ->orWhere(function ($q) use ($user) {
-                    $q->where('audience', 'ward')->where('ward_id', $user->ward_id);
-                })
-                ->orWhere(function ($q) use ($user) {
-                    $q->where('audience', 'pu')->where('polling_unit_id', $user->polling_unit_id);
-                });
-            })
-            ->latest()
+        $announcements = app(MemberCapabilityService::class)->allows($profileData, MemberCapabilityService::DASHBOARD_ANNOUNCEMENTS)
+            ? app(AnnouncementAudienceService::class)->visibleToMember($profileData)
             ->take(5)
-            ->get();
+            ->get()
+            : collect();
 
 
         return view(
@@ -145,42 +136,47 @@ class UserController extends Controller
                 'referralsCount',
                 'blockStrength',
                 'referralChartData',
-                'announcements'
+                'announcements',
+                'votingBlocEnabled'
             )
         );
     }
 
-    /**
-     * Recursively calculate block size (referrals + children).
-     */
-    protected function calculateBlockStrength(User $user)
-    {
-        $directReferrals = User::where('referred_by', $user->id)->get();
-        $count = $directReferrals->count();
-
-        foreach ($directReferrals as $ref) {
-            $count += $this->calculateBlockStrength($ref);
-        }
-
-        return $count;
-    }
-
     public function memberReferrals()
     {
-        $user = auth()->user();
+        $profileData = $this->getProfileData();
+        $user = $profileData;
+        $this->requireCapability($profileData, MemberCapabilityService::REFERRALS);
 
-        // Get all referrals linked to this user
-        $referrals = Referral::with('referee')
-            ->where('referrer_id', $user->id)
-            ->get();
+        $referrals = app(MemberVotingBlocService::class)->directReferrals($user);
 
-        return view('backend.user.referrals', compact('user', 'referrals'));
+        return view('backend.user.referrals', compact('profileData', 'user', 'referrals'));
+    }
+
+    public function memberBlock(Request $request)
+    {
+        $profileData = $this->getProfileData();
+        $user = $profileData;
+        $this->requireCapability($profileData, MemberCapabilityService::VOTING_BLOCK);
+        $bloc = app(MemberVotingBlocService::class)->report($user);
+        $perPage = 25;
+        $page = LengthAwarePaginator::resolveCurrentPage();
+        $members = new LengthAwarePaginator(
+            $bloc['members']->forPage($page, $perPage)->values(),
+            $bloc['members']->count(),
+            $perPage,
+            $page,
+            ['path' => $request->url(), 'query' => $request->query()]
+        );
+
+        return view('backend.user.voting-block', compact('profileData', 'user', 'bloc', 'members'));
     }
 
 
     public function memberPuDetails()
 {
     $user = auth()->user();
+    $this->requireCapability($user, MemberCapabilityService::POLLING_UNIT_DETAILS);
 
     if (!$user->polling_unit_id) {
         abort(404, 'Polling Unit not assigned.');
@@ -198,27 +194,31 @@ class UserController extends Controller
 
     public function memberProfile(){
             $profileData = $this->getProfileData();
+            $this->requireCapability($profileData, MemberCapabilityService::PROFILE);
             $pageTitle = 'Profile';
-            $roles = Role::all();  // Assuming a member can have multiple roles
-            $countries = Country::all();
-            $regions = $this->getRegions();
-            $states = State::all();
-            $lgas = LocalGovernmentArea::all();
-            $wards = Ward::all();
-            $pollingUnits = PollingUnit::all();
+            $locationForms = app(CampaignPackageLocationFormService::class);
+            $locationOptions = $locationForms->options($profileData);
+            $locationForm = $locationForms->context($profileData, $profileData, 'user');
+            $regions = $locationOptions['regions'];
+            $states = $locationOptions['states'];
+            $lgas = $locationOptions['lgas'];
+            $wards = $locationOptions['wards'];
+            $pollingUnits = $locationOptions['pollingUnits'];
             $religions = Religion::all();
             $ageGrades = AgeGrade::all();
             $userSupportGroups = $profileData->supportGroups()->pluck('name')->toArray();
 
             return view('backend.'.$profileData->access_level.'.profile', compact(
-                'profileData', 'userSupportGroups', 'pageTitle', 'roles', 'countries',
-                'regions', 'states', 'lgas', 'wards', 'pollingUnits', 'religions', 'ageGrades'
+                'profileData', 'userSupportGroups', 'pageTitle', 'regions', 'states', 'lgas',
+                'wards', 'pollingUnits', 'religions', 'ageGrades', 'locationForm'
             ));
 
     }
 
     public function memberProfileStore(Request $request){
          $profileData = $this->getProfileData();
+         $this->requireCapability($profileData, MemberCapabilityService::PROFILE);
+         $request->merge(app(CampaignPackageLocationFormService::class)->mergeFixedPayload($request->all()));
 
          $requireBank = optional(SystemSetting::first())->require_bank_details;
          $bankRule = $requireBank ? 'required|string|max:255' : 'nullable|string|max:255';
@@ -228,7 +228,7 @@ class UserController extends Controller
          $validatedData = $request->validate([
             'firstname' => 'required|string|max:255',
             'lastname' => 'required|string|max:255',
-            'email' => 'required|email|max:255',
+            'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($profileData->id)],
             'phone' => 'required|string|max:15|unique:users,phone,' .$profileData->id,
             'validvoter' => 'required|in:yes,no',
             'vin' => 'nullable|string|max:255',
@@ -248,6 +248,16 @@ class UserController extends Controller
             'photo' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
         ]);
 
+        foreach (['region_id', 'state_id', 'lga_id', 'ward_id', 'polling_unit_id'] as $field) {
+            if ((int) $validatedData[$field] !== (int) $profileData->{$field}) {
+                throw ValidationException::withMessages([
+                    $field => 'Members cannot change voting location from self-service. Contact an administrator.',
+                ]);
+            }
+        }
+
+        $location = app(LocationSelectionValidationService::class)->validateMemberSelection($validatedData);
+
         $profileData->update([
             'firstname' => $validatedData['firstname'],
             'lastname' => $validatedData['lastname'],
@@ -257,11 +267,13 @@ class UserController extends Controller
             'vin' => $validatedData['vin'],
             'age_grade_id' => $validatedData['age_grade_id'],
             'gender' => $validatedData['gender'],
-            'region_id' => $validatedData['region_id'],
-            'state_id' => $validatedData['state_id'],
-            'lga_id' => $validatedData['lga_id'],
-            'ward_id' => $validatedData['ward_id'],
-            'polling_unit_id' => $validatedData['polling_unit_id'],
+            'region_id' => $location['region_id'],
+            'state_id' => $location['state_id'],
+            'senatorial_district_id' => $location['senatorial_district_id'],
+            'federal_constituency_id' => $location['federal_constituency_id'],
+            'lga_id' => $location['lga_id'],
+            'ward_id' => $location['ward_id'],
+            'polling_unit_id' => $location['polling_unit_id'],
             'religion_id' => $validatedData['religion_id'],
             'bank' => $validatedData['bank'] ?? null,
             'bank_account_number' => $validatedData['bank_account_number'] ?? null,
@@ -296,14 +308,16 @@ class UserController extends Controller
     public function memberChangePassword(){
         $pageTitle = "Change Password";
         $profileData = $this->getProfileData();
+        $this->requireCapability($profileData, MemberCapabilityService::ACCOUNT_SECURITY);
         return view('backend.'.$profileData->access_level.'.change_password', compact('pageTitle','profileData'));
     }
 
     public function memberUpdatePassword(Request $request){
+         $this->requireCapability($this->getProfileData(), MemberCapabilityService::ACCOUNT_SECURITY);
          $validateData = $request->validate([
-            'old_password' => 'required',
-            'new_password' => 'required|confirmed'
-        ]);
+            'old_password' => ['required', 'string'],
+            'new_password' => ['required', 'confirmed', 'different:old_password', Password::min(8)->mixedCase()->letters()->numbers()]
+         ]);
 
         $user = $this->getProfileData();
         $hashedPassword = $user->password;
@@ -336,10 +350,11 @@ class UserController extends Controller
 
     }
 
-    public function memberLogout()
+    private function requireCapability(User $user, string $capability): void
     {
-        Auth::logout();
-        return redirect()->route('login');
+        $service = app(MemberCapabilityService::class);
+
+        abort_unless($service->allows($user, $capability), 403, $service->denialMessage($capability));
     }
 
 

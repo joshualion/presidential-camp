@@ -14,7 +14,9 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\CampaignNotificationController;
 use App\Http\Controllers\AdminLicenseController;
 use App\Http\Controllers\EmailNotificationController;
+use App\Http\Controllers\AnnouncementController;
 use Illuminate\Support\Facades\Auth;
+use App\Services\AccessLevelRouteService;
 
 require __DIR__.'/install.php';
 
@@ -23,18 +25,22 @@ require __DIR__.'/install.php';
 
 
 // Ajax Routes
-Route::post('/get-group-recipients', [AjaxController::class, 'getGroupRecipients'])->name('getGroupRecipients');
+Route::post('/get-group-recipients', [AjaxController::class, 'getGroupRecipients'])
+    ->name('getGroupRecipients')
+    ->middleware(['auth', 'access_level:superadmin,nationaladmin,regionaladmin,stateadmin,senatorialadmin,federaladmin,lgaadmin,wardadmin,puadmin']);
 
-Route::get('/get-regions', [AjaxController::class, 'getRegions'])->name('getRegions');
-Route::post('/get-states', [AjaxController::class, 'ajaxGetStates'])->name('getStates');
-Route::post('/get-lgas', [AjaxController::class, 'ajaxGetLgas'])->name('getLgas');
-Route::post('/get-wards', [AjaxController::class, 'ajaxGetWards'])->name('getWards');
-Route::post('/get-polling-units', [AjaxController::class, 'ajaxGetPollingUnits'])->name('getPollingUnits');
-Route::post('/get-senatorial-districts', [AjaxController::class, 'ajaxGetSenatorialDistricts'])->name('getSenatorialDistricts');
-Route::post('/get-federal-constituencies-by-state', [AjaxController::class, 'ajaxGetFederalConstituenciesByState'])->name('getFederalConstituenciesByState');
-Route::post('/get-federal-constituencies-by-senatorial-district', [AjaxController::class, 'ajaxGetFederalConstituenciesBySenatorialDistrict'])->name('getFederalConstituenciesBySenatorialDistrict');
+Route::get('/get-regions', [AjaxController::class, 'getRegions'])->name('getRegions')->middleware('auth');
+Route::post('/get-states', [AjaxController::class, 'ajaxGetStates'])->name('getStates')->middleware('auth');
+Route::post('/get-lgas', [AjaxController::class, 'ajaxGetLgas'])->name('getLgas')->middleware('auth');
+Route::post('/get-wards', [AjaxController::class, 'ajaxGetWards'])->name('getWards')->middleware('auth');
+Route::post('/get-polling-units', [AjaxController::class, 'ajaxGetPollingUnits'])->name('getPollingUnits')->middleware('auth');
+Route::post('/get-senatorial-districts', [AjaxController::class, 'ajaxGetSenatorialDistricts'])->name('getSenatorialDistricts')->middleware('auth');
+Route::post('/get-federal-constituencies-by-state', [AjaxController::class, 'ajaxGetFederalConstituenciesByState'])->name('getFederalConstituenciesByState')->middleware('auth');
+Route::post('/get-federal-constituencies-by-senatorial-district', [AjaxController::class, 'ajaxGetFederalConstituenciesBySenatorialDistrict'])->name('getFederalConstituenciesBySenatorialDistrict')->middleware('auth');
 
-Route::get('/get-roles-by-access-level/{accessLevel}', [AjaxController::class, 'getRolesByAccessLevel'])->name('ajaxGetRolesByAccessLevel');
+Route::get('/get-roles-by-access-level/{accessLevel}', [AjaxController::class, 'getRolesByAccessLevel'])
+    ->name('ajaxGetRolesByAccessLevel')
+    ->middleware(['auth', 'access_level:superadmin,nationaladmin,regionaladmin,stateadmin,senatorialadmin,federaladmin,lgaadmin,wardadmin,puadmin']);
 
 Route::get('/lga/data', [AjaxController::class, 'getLgaData'])->name('lgas.data')->middleware(['auth']);
 Route::get('/senatorial-district/data', [AjaxController::class, 'getSenatorialDistrictData'])->name('senatorial-districts.data')->middleware(['auth']);
@@ -45,16 +51,32 @@ Route::get('/ward/data', [AjaxController::class, 'getWardData'])->name('wards.da
 Route::get('/pu/data', [AjaxController::class, 'getPUData'])->name('pus.data')->middleware(['auth']);
 
 Route::get('/election/{uuid}/chart-data', [ElectionController::class, 'getElectionResultChartData'])
-    ->name('election.chart.data');
+    ->name('election.chart.data')
+    ->middleware(['auth', 'check_onboarding', 'module.enabled:elections', 'election.report.access']);
 
-Route::middleware(['auth'])->group(function () {
-    Route::get('/notifications', [CampaignNotificationController::class, 'index'])->name('campaign.notifications.index');
-    Route::get('/notifications/unread-count', [CampaignNotificationController::class, 'unreadCount'])->name('campaign.notifications.unread');
-    Route::post('/notifications/{notification}/read', [CampaignNotificationController::class, 'markRead'])->name('campaign.notifications.read');
-    Route::post('/notifications/read-all', [CampaignNotificationController::class, 'readAll'])->name('campaign.notifications.readAll');
-    Route::post('/notifications/{notification}/dismiss', [CampaignNotificationController::class, 'dismiss'])->name('campaign.notifications.dismiss');
-    Route::post('/notifications/clear-read', [CampaignNotificationController::class, 'clearRead'])->name('campaign.notifications.clearRead');
-});
+foreach (AccessLevelRouteService::prefixes() as $accessLevel => $prefix) {
+    Route::middleware([
+        'auth',
+        'access_level:'.$accessLevel,
+        'member.capability:notifications.view',
+    ])->prefix($prefix.'/notifications')
+        ->name($accessLevel.'.campaign.notifications.')
+        ->group(function () {
+            Route::get('/', [CampaignNotificationController::class, 'index'])->name('index');
+            Route::get('/unread-count', [CampaignNotificationController::class, 'unreadCount'])->name('unread');
+            Route::post('/{notification}/read', [CampaignNotificationController::class, 'markRead'])->name('read');
+            Route::post('/read-all', [CampaignNotificationController::class, 'readAll'])->name('readAll');
+            Route::post('/{notification}/dismiss', [CampaignNotificationController::class, 'dismiss'])->name('dismiss');
+            Route::post('/clear-read', [CampaignNotificationController::class, 'clearRead'])->name('clearRead');
+        });
+}
+
+Route::get('/notifications', function (AccessLevelRouteService $accessLevelRoutes) {
+    $route = $accessLevelRoutes->sharedRouteForUser(Auth::user(), 'campaign.notifications.index');
+    abort_unless($route, 403, 'No notification route is configured for this account.');
+
+    return redirect()->route($route);
+})->middleware('auth')->name('campaign.notifications.legacy');
 
 Route::get('/admin/license', [AdminLicenseController::class, 'show'])
     ->name('admin.license.show')
@@ -62,39 +84,53 @@ Route::get('/admin/license', [AdminLicenseController::class, 'show'])
 
 
 
-    // Credential update route
-    Route::get('/update-credentials', [CredentialUpdateController::class, 'showUpdateForm'])
-        ->name('update.credentials')
-        ->middleware(['auth']);
+foreach (AccessLevelRouteService::prefixes() as $accessLevel => $prefix) {
+    Route::middleware(['auth', 'access_level:'.$accessLevel])
+        ->prefix($prefix)
+        ->name($accessLevel.'.account.')
+        ->group(function () {
+            Route::get('/update-credentials', [CredentialUpdateController::class, 'showUpdateForm'])->name('update-credentials');
+            Route::post('/update-credentials', [CredentialUpdateController::class, 'update'])->name('update-credentials.store');
+            Route::get('/complete-profile', [ProfileCompletionController::class, 'showProfileForm'])->name('complete-profile');
+            Route::post('/complete-profile', [ProfileCompletionController::class, 'complete'])->name('complete-profile.store');
+            Route::get('/select-support-group', [ProfileCompletionController::class, 'selectSupportGroup'])->name('select-support-group');
+            Route::post('/store-support-group', [ProfileCompletionController::class, 'storeSupportGroup'])->name('support-group.store');
+        });
+}
 
-    // Process credential update
-    Route::post('/update-credentials', [CredentialUpdateController::class, 'update']) ->name('update.credentials.store')
-    ->middleware(['auth']);
+foreach ([
+    'update-credentials' => 'account.update-credentials',
+    'complete-profile' => 'account.complete-profile',
+    'select-support-group' => 'account.select-support-group',
+] as $legacyPath => $routeSuffix) {
+    Route::get('/'.$legacyPath, function (AccessLevelRouteService $accessLevelRoutes) use ($routeSuffix) {
+        $route = $accessLevelRoutes->sharedRouteForUser(Auth::user(), $routeSuffix);
+        abort_unless($route, 403, 'No account route is configured for this account.');
 
-    // Profile completion route
-    Route::get('/complete-profile', [ProfileCompletionController::class, 'showProfileForm'])
-        ->name('complete.profile')
-        ->middleware(['auth']);
-
-    // Process profile completion
-    Route::post('/complete-profile', [ProfileCompletionController::class, 'complete'])->name('complete.profile.store')
-    ->middleware(['auth']);
-
-    //Handle Volunteer group selection
-    Route::get('/select-support-group', [ProfileCompletionController::class, 'selectSupportGroup'])->name('select.support.group')->middleware('auth');
-    Route::post('/store-support-group', [ProfileCompletionController::class, 'storeSupportGroup'])->name('store.support.group')->middleware('auth');
+        return redirect()->route($route);
+    })->middleware('auth')->name('legacy.'.$legacyPath);
+}
 
   //Export members
  Route::post('/members/export', [MembersController::class, 'exportMembers'])
     ->name('members.export')->middleware(['auth','access_level:superadmin,nationaladmin,regionaladmin,stateadmin,senatorialadmin,federaladmin,lgaadmin,wardadmin,puadmin']);
 
-Route::middleware(['auth', 'check_onboarding'])->group(function () {
+Route::middleware([
+    'auth',
+    'check_onboarding',
+    'module.enabled:elections',
+    'election.report.access',
+    'access_level:superadmin,nationaladmin,regionaladmin,stateadmin,senatorialadmin,federaladmin,lgaadmin,wardadmin',
+])->group(function () {
     Route::post('/election/result-record/{uuid}/verify', [ElectionController::class, 'verifyResult'])
         ->name('election.result.verify');
     Route::post('/election/result-record/{uuid}/dispute', [ElectionController::class, 'markResultDisputed'])
         ->name('election.result.dispute');
     Route::post('/election/result-record/{uuid}/dispute/clear', [ElectionController::class, 'clearResultDispute'])
         ->name('election.result.dispute.clear');
+});
+
+Route::middleware(['auth', 'check_onboarding', 'module.enabled:elections', 'election.report.access'])->group(function () {
     Route::get('/election/result-record/{uuid}/sheet', [ElectionController::class, 'resultSheetView'])
         ->name('election.result.sheet');
     Route::get('/election/{uuid}/report/print', [ElectionController::class, 'printPollingUnitReport'])
@@ -114,26 +150,24 @@ Route::middleware(['auth', 'check_onboarding'])->group(function () {
 
 
 
-//Application Landing Page
-Route::get('/', function () {
-    if (Auth::check()) {
-        $user = Auth::user();
+// Compatibility entry point for framework defaults and older bookmarks.
+// The destination remains the canonical access-level-prefixed dashboard.
+Route::get('/dashboard', function (AccessLevelRouteService $accessLevelRoutes) {
+    $dashboardRoute = $accessLevelRoutes->dashboardRouteForUser(Auth::user());
 
-        $dashboardRoute = match ($user->access_level) {
-            'superadmin' => route('superadmin.dashboard'),
-            'nationaladmin' => route('nationaladmin.dashboard'),
-            'regionaladmin' => route('regionaladmin.dashboard'),
-            'stateadmin' => route('stateadmin.dashboard'),
-            'senatorialadmin' => route('senatorialadmin.dashboard'),
-            'federaladmin' => route('federaladmin.dashboard'),
-            'lgaadmin' => route('lgaadmin.dashboard'),
-            'wardadmin' => route('wardadmin.dashboard'),
-            'puadmin' => route('puadmin.dashboard'),
-            'user' => route('user.dashboard'),
-            // Add more levels here as needed
-            default => route('login'),
-        };
-        return redirect($dashboardRoute);
+    abort_unless($dashboardRoute, 403, 'No dashboard is configured for this account.');
+
+    return redirect()->route($dashboardRoute);
+})->middleware('auth')->name('dashboard');
+
+//Application Landing Page
+Route::get('/', function (AccessLevelRouteService $accessLevelRoutes) {
+    if (Auth::check()) {
+        $dashboardRoute = $accessLevelRoutes->dashboardRouteForUser(Auth::user());
+
+        return $dashboardRoute
+            ? redirect()->route($dashboardRoute)
+            : redirect()->route('login');
     }
     return redirect()->route('login');
 });
@@ -148,7 +182,7 @@ Route::get('/emergency/exit', function () {
 })->name('emergency.exit');
 
 //Front Pages
-Route::middleware(['auth','check_onboarding', 'kuyak_eyen_ino', 'eyen_ino_no_way', 'community.enabled', 'community.profile_complete'])->group(function () {
+Route::middleware(['auth','check_onboarding', 'kuyak_eyen_ino', 'eyen_ino_no_way', 'member.capability:community.use', 'community.enabled', 'community.profile_complete'])->group(function () {
     // comunity pages
     Route::get('/community/feed', [HomeController::class,'index'])->name('timeline');
     Route::get('/community/profile', [HomeController::class,'profileTimeline'])->name('profile.timeline');
@@ -203,18 +237,38 @@ Route::middleware(['auth','check_onboarding', 'kuyak_eyen_ino', 'eyen_ino_no_way
 
 });
 
-Route::middleware(['auth','check_onboarding', 'kuyak_eyen_ino', 'eyen_ino_no_way'])->group(function () {
-    Route::get('/messages', [HomeController::class, 'messagesPage'])->name('messages.page');
-    Route::get('/messages/conversations', [\App\Http\Controllers\MessageController::class, 'conversations'])->name('messages.conversations');
-    Route::get('/messages/conversations/{conversation}/messages', [\App\Http\Controllers\MessageController::class, 'messages'])->name('messages.conversation.messages');
-    Route::post('/messages/start', [\App\Http\Controllers\MessageController::class, 'startConversation'])->name('messages.start');
-    Route::post('/messages/ensure', [\App\Http\Controllers\MessageController::class, 'ensureConversation'])->name('messages.ensure');
-    Route::post('/messages/conversations/{conversation}/messages', [\App\Http\Controllers\MessageController::class, 'sendMessage'])->name('messages.conversation.send');
-    Route::post('/messages/conversations/{conversation}/typing', [\App\Http\Controllers\MessageController::class, 'typing'])->name('messages.conversation.typing');
-    Route::post('/messages/conversations/{conversation}/read', [\App\Http\Controllers\MessageController::class, 'markRead'])->name('messages.conversation.read');
-    Route::get('/messages/recipients', [\App\Http\Controllers\MessageController::class, 'recipients'])->name('messages.recipients');
-    Route::get('/messages/unread-count', [\App\Http\Controllers\MessageController::class, 'unreadCount'])->name('messages.unread-count');
-});
+foreach (AccessLevelRouteService::prefixes() as $accessLevel => $prefix) {
+    Route::middleware([
+        'auth',
+        'check_onboarding',
+        'kuyak_eyen_ino',
+        'eyen_ino_no_way',
+        'access_level:'.$accessLevel,
+        'member.capability:messaging.use',
+    ])->prefix($prefix.'/messages')
+        ->name($accessLevel.'.messages.')
+        ->group(function () {
+            Route::get('/', [HomeController::class, 'messagesPage'])->name('page');
+            Route::get('/conversations', [\App\Http\Controllers\MessageController::class, 'conversations'])->name('conversations');
+            Route::get('/conversations/{conversation}/messages', [\App\Http\Controllers\MessageController::class, 'messages'])->name('conversation.messages');
+            Route::post('/start', [\App\Http\Controllers\MessageController::class, 'startConversation'])->name('start');
+            Route::post('/ensure', [\App\Http\Controllers\MessageController::class, 'ensureConversation'])->name('ensure');
+            Route::post('/conversations/{conversation}/messages', [\App\Http\Controllers\MessageController::class, 'sendMessage'])->name('conversation.send');
+            Route::post('/conversations/{conversation}/typing', [\App\Http\Controllers\MessageController::class, 'typing'])->name('conversation.typing');
+            Route::post('/conversations/{conversation}/read', [\App\Http\Controllers\MessageController::class, 'markRead'])->name('conversation.read');
+            Route::get('/recipients', [\App\Http\Controllers\MessageController::class, 'recipients'])->name('recipients');
+            Route::get('/unread-count', [\App\Http\Controllers\MessageController::class, 'unreadCount'])->name('unread-count');
+        });
+}
+
+// Compatibility redirect for old bookmarks. All generated links use the
+// access-level-prefixed route registered above.
+Route::get('/messages', function (AccessLevelRouteService $accessLevelRoutes) {
+    $route = $accessLevelRoutes->sharedRouteForUser(Auth::user(), 'messages.page');
+    abort_unless($route, 403, 'No messaging route is configured for this account.');
+
+    return redirect()->route($route);
+})->middleware('auth')->name('messages.legacy');
 
 foreach ([
     'superadmin' => 'superadmin',
@@ -259,9 +313,55 @@ foreach ([
     'lgaadmin' => 'lga',
     'wardadmin' => 'ward',
     'puadmin' => 'pu',
-    'user' => '',
 ] as $accessLevel => $prefix) {
-    Route::middleware(['auth', 'access_level:'.$accessLevel])
+    $announcementMiddleware = [
+        'auth',
+        'check_onboarding',
+        'kuyak_eyen_ino',
+        'eyen_ino_no_way',
+        'access_level:'.$accessLevel,
+        'announcement.manager',
+    ];
+
+    Route::middleware($announcementMiddleware)
+        ->prefix($prefix.'/announcements')
+        ->name($accessLevel.'.announcements.')
+        ->group(function () {
+            Route::get('/', [AnnouncementController::class, 'index'])->name('index');
+            Route::get('/create', [AnnouncementController::class, 'create'])->name('create');
+            Route::post('/', [AnnouncementController::class, 'store'])->name('store');
+            Route::get('/{announcement}/edit', [AnnouncementController::class, 'edit'])->name('edit');
+            Route::put('/{announcement}', [AnnouncementController::class, 'update'])->name('update');
+            Route::delete('/{announcement}', [AnnouncementController::class, 'destroy'])->name('destroy');
+        });
+
+    Route::middleware($announcementMiddleware)
+        ->prefix($prefix.'/notices')
+        ->name($accessLevel.'.notices.')
+        ->group(function () {
+            Route::get('/', [AnnouncementController::class, 'noticeIndex'])->name('index');
+            Route::get('/{announcement}', [AnnouncementController::class, 'noticeShow'])->name('show');
+        });
+}
+
+foreach ([
+    'superadmin' => 'superadmin',
+    'nationaladmin' => 'national',
+    'regionaladmin' => 'regional',
+    'stateadmin' => 'state',
+    'senatorialadmin' => 'senatorial',
+    'federaladmin' => 'federal',
+    'lgaadmin' => 'lga',
+    'wardadmin' => 'ward',
+    'puadmin' => 'pu',
+    'user' => 'member',
+] as $accessLevel => $prefix) {
+    $agentMiddleware = ['auth', 'check_onboarding', 'access_level:'.$accessLevel, 'module.enabled:agents'];
+    if ($accessLevel === 'user') {
+        $agentMiddleware[] = 'member.capability:agents.participate';
+    }
+
+    Route::middleware($agentMiddleware)
         ->prefix(trim($prefix.'/agents', '/'))
         ->name($accessLevel.'.agents.')
         ->group(function () {

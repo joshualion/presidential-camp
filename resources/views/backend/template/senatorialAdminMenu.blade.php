@@ -123,6 +123,7 @@
             </ul>
         </li>
         {{-- / Messaging --}}
+        @include('backend.template.partials.announcements-menu-item')
 
         {{-- Locations --}}
         <li class="tab nav-item menu-close">

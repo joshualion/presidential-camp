@@ -4,7 +4,7 @@
 
 @if(Route::has($importRoute))
     <a href="{{ route($importRoute) }}">
-        <button class="btn btn-outline-light">
+        <button class="btn btn-dark text-white">
             <i class="fa fa-upload"></i> Import Members
         </button>
     </a>

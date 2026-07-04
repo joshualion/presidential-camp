@@ -9,6 +9,9 @@
                     <div class="card-header">
                         <h3 class="card-title">My Polling Unit Agent Status</h3>
                         <div class="card-tools">
+                            @if(app(\App\Services\MemberCapabilityService::class)->allows($profileData, \App\Services\MemberCapabilityService::ELECTION_SUBMISSION))
+                                <a href="{{ route('user.elections.workspace') }}" class="btn btn-success btn-sm"><i class="fa fa-vote-yea"></i> Election Workspace</a>
+                            @endif
                             <a href="{{ route($profileData->access_level.'.agents.request') }}" class="btn btn-default btn-sm"><i class="fa fa-paper-plane"></i> Request Agent Status</a>
                         </div>
                     </div>

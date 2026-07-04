@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Services\AccessLevelRouteService;
 use Symfony\Component\HttpFoundation\Response;
 
 class EnsureCommunityProfileLocationComplete
@@ -44,6 +45,8 @@ class EnsureCommunityProfileLocationComplete
     {
         $route = $accessLevel.'.profile';
 
-        return Route::has($route) ? $route : 'complete.profile';
+        return Route::has($route)
+            ? $route
+            : app(AccessLevelRouteService::class)->sharedRouteForUser(request()->user(), 'account.complete-profile');
     }
 }

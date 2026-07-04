@@ -107,7 +107,7 @@ $profileImage = !empty($profileData->photo) ? url('uploads/member_images/'.$prof
                         @foreach($userSupportGroups as $group)
                         <li class="d-flex justify-content-between align-items-center">
                             <span>{{ $group }}</span>
-                            <a href="{{ route('select.support.group') }}" class="btn btn-sm btn-default"><i class="fas fa-edit"></i></a>
+                            <a href="{{ route(auth()->user()->access_level.'.account.select-support-group') }}" class="btn btn-sm btn-default"><i class="fas fa-edit"></i></a>
                         </li>
                         @endforeach
                     </ul>

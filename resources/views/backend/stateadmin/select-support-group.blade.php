@@ -12,7 +12,7 @@
 
                     <!-- /.tab-pane -->
                     <div class="tab-pane active" id="editprofile">
-                        <form action="{{ route('store.support.group') }}" method="POST">
+                        <form action="{{ route($profileData->access_level.'.account.support-group.store') }}" method="POST">
                             @csrf
                     
                             <div class="form-group">

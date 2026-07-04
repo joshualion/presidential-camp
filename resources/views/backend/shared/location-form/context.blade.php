@@ -6,6 +6,7 @@
 @endphp
 
 @if(!empty($fixedLocationInputs))
+    @if(($profileData->access_level ?? null) !== 'user')
     <div class="alert alert-info campaign-location-context">
         <strong>Licensed geography:</strong>
         {{ $fixedLocationMessage ?: 'Fixed licensed geography is applied automatically for this installation.' }}
@@ -17,6 +18,7 @@
             </div>
         @endif
     </div>
+    @endif
 
     @foreach($fixedLocationInputs as $field => $value)
         @if($value !== null && $value !== '')

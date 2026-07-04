@@ -13,9 +13,12 @@ use Spatie\Permission\Models\Role;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Validation\Rule;
+use App\Services\AccessLevelRouteService;
 
 class RegisteredUserController extends Controller
 {
@@ -32,7 +35,7 @@ class RegisteredUserController extends Controller
      *
      * @throws \Illuminate\Validation\ValidationException
      */
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, AccessLevelRouteService $accessLevelRoutes): RedirectResponse
     {
         //Security check 1
         $key = 'register:'.$request->ip();
@@ -64,90 +67,72 @@ class RegisteredUserController extends Controller
             'lastname' => ['required','string'],
             'email'    => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
-            'referral_code' => ['nullable|string|exists:users,referral_code'],
+            'referral_code' => [
+                'nullable',
+                'string',
+                Rule::exists('users', 'referral_code')->where(fn ($query) => $query
+                    ->where('access_level', 'user')
+                    ->where('status', 'active')),
+            ],
         ]);
 
         // Find the role by its Name
-        $role = Role::where('name', 'member')->first();
+        $role = Role::query()->whereIn('name', ['Member', 'member'])->firstOrFail();
         //get the default country id
         $country= SystemSetting::find(1)->system_country;
         $country_id = Country::where('name',$country)->first()->id;
 
 
-        $user = User::create([
-            'country_id' => $country_id,
-            'username' => $request->username,
-            'firstname' => $request->firstname,
-            'lastname' => $request->lastname,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-        ]);
+        $referrer = $request->filled('referral_code')
+            ? User::query()
+                ->where('referral_code', $request->referral_code)
+                ->where('access_level', 'user')
+                ->where('status', 'active')
+                ->first()
+            : null;
 
-        //assign role
-        $user->roles()->attach($role->id);
+        $user = DB::transaction(function () use ($request, $country_id, $role, $referrer) {
+            $user = User::create([
+                'country_id' => $country_id,
+                'username' => $request->username,
+                'firstname' => $request->firstname,
+                'lastname' => $request->lastname,
+                'email' => $request->email,
+                'password' => Hash::make($request->password),
+                'access_level' => 'user',
+                'status' => 'active',
+                'referred_by' => $referrer?->id,
+            ]);
 
-        // Handle referral logic
-        if ($request->filled('referral_code')) {
-            $referrer = User::where('referral_code', $request->referral_code)->first();
+            $user->roles()->attach($role->id);
 
             if ($referrer) {
-                // Mirror relation in referrals table
-                Referral::firstOrCreate([
-                    'referrer_id' => $referrer->id,
-                    'referee_id'  => $user->id, // <-- must match migration column
-                ]);
-
-                // Set parent directly in users table
-                $user->update([
-                    'referred_by' => $referrer->id,
-                ]);
+                Referral::updateOrCreate(
+                    ['referee_id' => $user->id],
+                    [
+                        'referrer_id' => $referrer->id,
+                        'accepted_at' => now(),
+                    ]
+                );
             }
-        }
+
+            return $user;
+        });
 
 
 
         event(new Registered($user));
 
         Auth::login($user);
-
-        $setting = SystemSetting::find(1);
-
-        $url ='';
-        if($setting->frontend_community == 1){
-            $url = '/community/feed';
-        }elseif (Auth::user()->access_level === 'superadmin') {
-            $url = '/superadmin/dashboard';
-        }elseif(Auth::user()->access_level === 'nationaladmin') {
-            $url = '/national/dashboard';
-        }elseif(Auth::user()->access_level === 'regionaladmin') {
-            $url = '/regional/dashboard';
-        }elseif (Auth::user()->access_level==='stateadmin'){
-            $url = '/state/dashboard';
-        }elseif (Auth::user()->access_level==='wardadmin'){
-            $url = '/ward/dashboard';
-        }elseif (Auth::user()->access_level==='puadmin'){
-            $url = '/pu/dashboard';
-        }elseif (Auth::user()->access_level==='user') {
-            $url = '/dashboard';
-        }else{
-            //logout User something has gone wrong
-            Auth::guard('web')->logout();
-            $request->session()->invalidate();
-            $request->session()->regenerateToken();
-            $notification =[
-                'message' => 'Something went wrong, please try again in a few minutes or conatact Admin',
-                'alert-type' => 'error'
-            ];
-
-            return redirect('/login')->with($notification);
-
-        }
+        $request->session()->regenerate();
 
         $notification = [
-            'message' => 'Welcome'.' '.$user->username,
+            'message' => 'Registration successful. Welcome '.$user->username.'. Please complete your profile.',
             'alert-type' => 'success'
         ];
 
-        return redirect($url)->with($notification);
+        return redirect()->route($accessLevelRoutes->sharedRouteForUser($user, 'account.complete-profile'))
+            ->with('success', $notification['message'])
+            ->with($notification);
     }
 }

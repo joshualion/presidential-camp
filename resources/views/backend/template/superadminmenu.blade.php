@@ -59,20 +59,25 @@
                     <p>Members by LGA</p>
                   </a>
                 </li>
+                @endif
 
+                @if($packageUi->supportsMemberNavigationLevel('wards'))
                 <li class="nav-item">
                   <a href="{{ url('superadmin/members/byward') }}" class="nav-link">
                   <i class="fas fa-user nav-icon"></i>
                     <p>Members By Wards</p>
                   </a>
                 </li>
+                @endif
 
+                @if($packageUi->supportsMemberNavigationLevel('polling_units'))
                 <li class="nav-item">
                   <a href="{{ url('superadmin/members/bypu') }}" class="nav-link">
                   <i class="fas fa-user nav-icon"></i>
                     <p>Members By PU</p>
                   </a>
                 </li>
+                @endif
 
               </ul>
   </li>
@@ -253,7 +258,7 @@
               <ul class="nav nav-treeview">
 
                   <li class="nav-item">
-                    <a href="{{ route('messages.page') }}" class="nav-link">
+                    <a href="{{ route($profileData->access_level.'.messages.page') }}" class="nav-link">
                       <i class="fas fa-comments nav-icon"></i>
                       <p>Internal Communication</p>
                     </a>
@@ -278,6 +283,7 @@
 
   </li>
   {{-- / Messaging --}}
+  @include('backend.template.partials.announcements-menu-item')
 
      {{--  Products Menu --}}
      {{-- <li class="nav-item  menu-close">
@@ -413,16 +419,13 @@
                 </li>
                 @endif
 
-                @if($packageUi->supportsMemberNavigationLevel('wards'))
                 <li class="nav-item">
                   <a href="{{ route('admin.license.show') }}" class="nav-link">
                     <i class="fas fa-certificate nav-icon"></i>
                     <p>License Status</p>
                   </a>
                 </li>
-                @endif
 
-                @if($packageUi->supportsMemberNavigationLevel('polling_units'))
                 <li class="nav-item">
                   <a href="{{ url('superadmin/settings/smtp') }}" class="nav-link">
                   <i class="fas fa-award nav-icon"></i>
@@ -437,14 +440,12 @@
                     <p> Payment Settings</p>
                   </a>
                 </li>
-                @endif
-
                 --}}
 
                 <li class="nav-item">
                   <a href="{{ route('superadmin.settings.email-notifications.edit') }}" class="nav-link">
                     <i class="fas fa-envelope-open-text nav-icon"></i>
-                    <p>Email Notification Permissions</p>
+                    <p>Email Notification</p>
                   </a>
                 </li>
 
@@ -487,8 +488,6 @@
                     <p> Religion Settings</p>
                   </a>
                 </li>
-
-          @endif
 
               </ul>
 

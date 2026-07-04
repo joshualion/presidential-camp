@@ -18,7 +18,7 @@
 
                   <!-- /.tab-pane -->
                   <div class="tab-pane active" id="editprofile">
-                    <form class="form-horizontal" method="POST" action="{{route('update.credentials.store') }}" enctype="multipart/form-data">
+                    <form class="form-horizontal" method="POST" action="{{ route($profileData->access_level.'.account.update-credentials.store') }}" enctype="multipart/form-data">
                         @csrf
                         <div class="form-group row">
                             <label for="email" class="col-sm-3 col-form-label">Email</label>

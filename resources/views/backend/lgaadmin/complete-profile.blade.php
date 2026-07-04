@@ -20,7 +20,7 @@
 
                   <!-- /.tab-pane -->
                   <div class="tab-pane active" id="editprofile">
-                  <form class="form-horizontal" id="profileData" method="POST"  action="{{route('complete.profile.store')}}" enctype="multipart/form-data">
+                  <form class="form-horizontal" id="profileData" method="POST" action="{{ route($profileData->access_level.'.account.complete-profile.store') }}" enctype="multipart/form-data">
                             @csrf
 
                             @method('POST')

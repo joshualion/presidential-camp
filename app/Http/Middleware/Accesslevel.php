@@ -4,7 +4,6 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
 
 class Accesslevel
@@ -28,16 +27,7 @@ class Accesslevel
             ->all();
 
         if (!$user || empty($allowedLevels) || !in_array($user->access_level, $allowedLevels, true)) {
-            if ($user) {
-                Auth::guard('web')->logout();
-                $request->session()->invalidate();
-                $request->session()->regenerateToken();
-            }
-
-            return redirect()->route('login')->with([
-                'message' => 'You have been logged out',
-                'alert-type' => 'error',
-            ]);
+            abort(403, 'You are not authorized to access this area.');
         }
 
 

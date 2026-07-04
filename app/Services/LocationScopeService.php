@@ -59,8 +59,12 @@ class LocationScopeService
         $scopeId = $this->getScopeId($user);
         $subject ??= $this->inferSubject($query);
 
-        if ($scopeType === self::NATIONAL || empty($scopeId)) {
+        if ($scopeType === self::NATIONAL) {
             return $this->applyLicensedScope($query, $subject);
+        }
+
+        if (empty($scopeId)) {
+            return $query->whereRaw('1 = 0');
         }
 
         $query = match ($subject) {

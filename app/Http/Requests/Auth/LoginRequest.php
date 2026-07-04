@@ -46,7 +46,11 @@ class LoginRequest extends FormRequest
         // Determine if the login is an email, username, or phone number
         $loginField = filter_var($this->login, FILTER_VALIDATE_EMAIL) ? 'email' : (is_numeric($this->login) ? 'phone' : 'username');
 
-        if (!Auth::attempt([$loginField => $this->login, 'password' => $this->password], $this->boolean('remember'))) {
+        if (!Auth::attempt([
+            $loginField => $this->login,
+            'password' => $this->password,
+            'status' => 'active',
+        ], $this->boolean('remember'))) {
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([

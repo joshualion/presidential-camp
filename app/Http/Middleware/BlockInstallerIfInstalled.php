@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Services\InstallationStateService;
 use App\Services\DeploymentModeService;
+use App\Services\AccessLevelRouteService;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -13,6 +14,7 @@ class BlockInstallerIfInstalled
     public function __construct(
         private InstallationStateService $installationState,
         private DeploymentModeService $deploymentMode,
+        private AccessLevelRouteService $accessLevelRoutes,
     ) {
     }
 
@@ -33,17 +35,6 @@ class BlockInstallerIfInstalled
 
     private function dashboardRoute(): string
     {
-        return match (auth()->user()?->access_level) {
-            'superadmin' => 'superadmin.dashboard',
-            'nationaladmin' => 'nationaladmin.dashboard',
-            'regionaladmin' => 'regionaladmin.dashboard',
-            'stateadmin' => 'stateadmin.dashboard',
-            'senatorialadmin' => 'senatorialadmin.dashboard',
-            'federaladmin' => 'federaladmin.dashboard',
-            'lgaadmin' => 'lgaadmin.dashboard',
-            'wardadmin' => 'wardadmin.dashboard',
-            'puadmin' => 'puadmin.dashboard',
-            default => 'login',
-        };
+        return $this->accessLevelRoutes->dashboardRouteForUser(auth()->user()) ?? 'login';
     }
 }

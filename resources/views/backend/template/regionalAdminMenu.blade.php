@@ -266,6 +266,7 @@ $region = \App\Models\Region::find(Auth::user()->region_id);
 
             </li>
             {{-- / Messaging --}}
+            @include('backend.template.partials.announcements-menu-item')
 
 
 

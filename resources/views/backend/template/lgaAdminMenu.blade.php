@@ -217,6 +217,7 @@ $lga = \App\Models\LocalGovernmentArea::find(Auth::user()->lga_id);
 
             </li>
             {{-- / Messaging --}}
+            @include('backend.template.partials.announcements-menu-item')
 
 
 

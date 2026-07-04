@@ -59,6 +59,7 @@ class SystemSettingController extends Controller
             $request->validate([
                 'enable_s3_storage' => 'boolean',
                 'enable_local_storage'=> 'boolean',
+                'frontend_registration' => 'required|boolean',
                 's3_key' => 'required_if:enable_s3_storage,1',
                 's3_secret' => 'required_if:enable_s3_storage,1',
                 's3_region' => 'required_if:enable_s3_storage,1',

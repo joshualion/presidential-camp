@@ -26,12 +26,14 @@ use App\Services\LicensedScopeQueryService;
 use App\Services\LocationScopeService;
 use App\Services\PackageGovernanceService;
 use App\Services\PollingUnitResultPermissionService;
+use App\Services\ModuleGateService;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Validation\Rule;
 class ElectionController extends Controller
 {
 
-    public function __construct(){
+    public function __construct(ModuleGateService $modules){
+        $modules->requireEnabled('elections');
         $pageTitle = 'Elections';
         View::share('pageTitle', $pageTitle);
     }

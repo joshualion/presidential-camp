@@ -66,8 +66,8 @@
                 ->sum('unread_count');
         }
       @endphp
-      <li class="nav-item" id="backend-message-bell" data-count-url="{{ route('messages.unread-count') }}">
-        <a class="nav-link" href="{{ route('messages.page') }}" role="button" aria-label="Internal Communication">
+      <li class="nav-item" id="backend-message-bell" data-count-url="{{ route(auth()->user()->access_level.'.messages.unread-count') }}">
+        <a class="nav-link" href="{{ route(auth()->user()->access_level.'.messages.page') }}" role="button" aria-label="Internal Communication">
           <i class="far fa-envelope"></i>
           <span class="badge badge-warning navbar-badge {{ $messageUnreadCount > 0 ? '' : 'd-none' }}" data-message-count>
             {{ $messageUnreadCount > 99 ? '99+' : $messageUnreadCount }}
@@ -77,10 +77,10 @@
 
       <li class="nav-item dropdown" id="campaign-notification-bell"
           data-user-id="{{ Auth::id() }}"
-          data-list-url="{{ route('campaign.notifications.index') }}"
-          data-count-url="{{ route('campaign.notifications.unread') }}"
-          data-read-url-template="{{ url('/notifications/__ID__/read') }}"
-          data-read-all-url="{{ route('campaign.notifications.readAll') }}">
+          data-list-url="{{ route(auth()->user()->access_level.'.campaign.notifications.index') }}"
+          data-count-url="{{ route(auth()->user()->access_level.'.campaign.notifications.unread') }}"
+          data-read-url-template="{{ route(auth()->user()->access_level.'.campaign.notifications.read', ['notification' => '__ID__']) }}"
+          data-read-all-url="{{ route(auth()->user()->access_level.'.campaign.notifications.readAll') }}">
         <a class="nav-link" data-toggle="dropdown" href="#" role="button" aria-label="Campaign notifications">
           <i class="far fa-bell"></i>
           <span class="badge badge-danger navbar-badge d-none" data-notification-count>0</span>

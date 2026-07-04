@@ -15,6 +15,12 @@ use Symfony\Component\HttpKernel\Exception\HttpException;
 use App\Http\Middleware\Accesslevel;
 use App\Http\Middleware\CheckUserOnboarding;
 use App\Http\Middleware\EnsureEmailNotificationsEnabled;
+use App\Http\Middleware\EnsureActiveUser;
+use App\Http\Middleware\EnsureModuleEnabled;
+use App\Http\Middleware\EnsureMemberCapability;
+use App\Http\Middleware\EnsurePublicRegistrationEnabled;
+use App\Http\Middleware\EnsureAnnouncementManager;
+use App\Http\Middleware\EnsureElectionReportAccess;
 
 require_once __DIR__.'/../app/Support/InstallerAppKeyBootstrapper.php';
 
@@ -34,6 +40,7 @@ return Application::configure(basePath: dirname(__DIR__))
             UseInstallerSafeDrivers::class,
         ]);
         $middleware->web(append: [
+            EnsureActiveUser::class,
             RedirectIfNotInstalled::class,
         ]);
 
@@ -47,6 +54,11 @@ return Application::configure(basePath: dirname(__DIR__))
                          'community.enabled' => EnsureCommunityEnabled::class,
                          'community.profile_complete' => EnsureCommunityProfileLocationComplete::class,
                          'email_notifications.enabled' => EnsureEmailNotificationsEnabled::class,
+                         'module.enabled' => EnsureModuleEnabled::class,
+            'member.capability' => EnsureMemberCapability::class,
+            'public.registration' => EnsurePublicRegistrationEnabled::class,
+            'announcement.manager' => EnsureAnnouncementManager::class,
+            'election.report.access' => EnsureElectionReportAccess::class,
                         ]);
 
     })

@@ -62,6 +62,9 @@
     @error('frontend_registration')
         <div class="alert alert-danger">{{ $message }}</div>
     @enderror
+    <small class="form-text text-muted">
+        Enabling public registration also activates member referral links, Direct Referrals, and My Voting Bloc. Disabling it hides and blocks those member facilities.
+    </small>
 </div>
 
 

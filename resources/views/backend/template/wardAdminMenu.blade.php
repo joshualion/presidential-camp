@@ -210,6 +210,7 @@ $ward = \App\Models\Ward::find(Auth::user()->ward_id);
 
             </li>
             {{-- / Messaging --}}
+            @include('backend.template.partials.announcements-menu-item')
 
 
 

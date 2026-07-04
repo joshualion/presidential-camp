@@ -8,6 +8,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use App\Support\SafeDatabase;
+use App\Services\AccessLevelRouteService;
 
 class CheckUserOnboarding
 {
@@ -23,22 +24,27 @@ class CheckUserOnboarding
 
         // Step 1: Check if credentials need to be updated
         if ($this->requiresCredentialUpdate($user)) {
-            return redirect()->route('update.credentials');
+            return redirect()->route($this->accountRoute($user, 'account.update-credentials'));
         }
 
 
         // Step 2: Check if profile is incomplete
         if (!$this->isProfileComplete($user)) {
-            return redirect()->route('complete.profile');
+            return redirect()->route($this->accountRoute($user, 'account.complete-profile'));
         }
 
             // Step 3: Check if user belongs to at least one volunteer group
         if ($user->supportGroups()->count() === 0) {
-            return redirect()->route('select.support.group');
+            return redirect()->route($this->accountRoute($user, 'account.select-support-group'));
         }
 
         // Allow access to the next middleware or controller
         return $next($request);
+    }
+
+    private function accountRoute($user, string $route): string
+    {
+        return app(AccessLevelRouteService::class)->sharedRouteForUser($user, $route) ?? 'login';
     }
 
     /**
@@ -70,7 +76,16 @@ class CheckUserOnboarding
         $hasBank = $user->bank && $user->bank_account_number;
 
         $baseComplete = $user->firstname && $user->lastname && $user->phone;
-        $locationComplete = true;
+        $locationComplete = match ($user->access_level) {
+            'regionaladmin' => !empty($user->region_id),
+            'stateadmin' => !empty($user->state_id),
+            'senatorialadmin' => !empty($user->senatorial_district_id),
+            'federaladmin' => !empty($user->federal_constituency_id),
+            'lgaadmin' => !empty($user->lga_id),
+            'wardadmin' => !empty($user->ward_id),
+            'puadmin', 'user' => !empty($user->polling_unit_id),
+            default => true,
+        };
 
         if ($requireBank && $user->access_level !== 'user') {
             if (!$hasBank) {

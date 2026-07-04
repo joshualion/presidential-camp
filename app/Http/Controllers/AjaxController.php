@@ -22,6 +22,7 @@ use Spatie\Permission\Models\Role;
 use App\Services\LocationScopeService;
 use App\Services\StructuralLocationAccessService;
 use App\Services\CampaignPackageRoleService;
+use App\Services\LicensedScopeQueryService;
 
 class AjaxController extends Controller
 {
@@ -37,15 +38,41 @@ class AjaxController extends Controller
         return app(StructuralLocationAccessService::class);
     }
 
+    private function applyLocationOptionScope($query, string $subject): void
+    {
+        $actor = $this->getProfileData();
+
+        // New members do not have a structural polling-unit boundary until
+        // onboarding is complete. Their choices must come from the licensed
+        // installation boundary instead of an as-yet nonexistent user scope.
+        if ($actor?->access_level === 'user' && !$actor->polling_unit_id) {
+            app(LicensedScopeQueryService::class)->applyToSubject($query, $subject);
+
+            return;
+        }
+
+        $this->structuralAccess()->applyScope($query, $actor, $subject);
+    }
+
     private function canDeleteStructuralRecords(): bool
     {
         return $this->structuralAccess()->canCreateOrDelete($this->getProfileData());
     }
 
+    public function getRegions()
+    {
+        $query = Region::query()->orderBy('name');
+        $this->applyLocationOptionScope($query, 'regions');
+
+        return response()->json([
+            'regions' => $query->get(['name', 'id']),
+        ]);
+    }
+
     public function ajaxGetStates(Request $request)
     {
         $query = State::where("region_id", $request->region_id);
-        $this->structuralAccess()->applyScope($query, $this->getProfileData(), 'states');
+        $this->applyLocationOptionScope($query, 'states');
         $state['states'] = $query->get(["name", "id"]);
 
         return response()->json($state);
@@ -55,7 +82,7 @@ class AjaxController extends Controller
     public function ajaxGetLgas(Request $request)
     {
         $query = LocalGovernmentArea::where("state_id", $request->state_id);
-        $this->structuralAccess()->applyScope($query, $this->getProfileData(), 'local_government_areas');
+        $this->applyLocationOptionScope($query, 'local_government_areas');
         $lga['lgas'] = $query->get(["name", "id"]);
         return response()->json($lga);
     }
@@ -63,7 +90,7 @@ class AjaxController extends Controller
     public function ajaxGetWards(Request $request)
     {
         $query = Ward::where("lga_id", $request->lga_id);
-        $this->structuralAccess()->applyScope($query, $this->getProfileData(), 'wards');
+        $this->applyLocationOptionScope($query, 'wards');
         $ward['wards'] = $query->get(["name", "id"]);
         return response()->json($ward);
     }
@@ -71,7 +98,7 @@ class AjaxController extends Controller
     public function ajaxGetPollingUnits(Request $request)
     {
         $query = PollingUnit::where("ward_id", $request->ward_id);
-        $this->structuralAccess()->applyScope($query, $this->getProfileData(), 'polling_units');
+        $this->applyLocationOptionScope($query, 'polling_units');
         $pollingUnit['pollingUnits'] = $query->get(["name", "id"]);
         return response()->json($pollingUnit);
     }
@@ -80,7 +107,7 @@ class AjaxController extends Controller
     {
         $query = SenatorialDistrict::where('state_id', $request->state_id)
             ->orderBy('name');
-        $this->structuralAccess()->applyScope($query, $this->getProfileData(), 'senatorial_districts');
+        $this->applyLocationOptionScope($query, 'senatorial_districts');
         $senatorialDistricts['senatorialDistricts'] = $query->get(['name', 'id']);
 
         return response()->json($senatorialDistricts);
@@ -90,7 +117,7 @@ class AjaxController extends Controller
     {
         $query = FederalConstituency::where('state_id', $request->state_id)
             ->orderBy('name');
-        $this->structuralAccess()->applyScope($query, $this->getProfileData(), 'federal_constituencies');
+        $this->applyLocationOptionScope($query, 'federal_constituencies');
         $federalConstituencies['federalConstituencies'] = $query->get(['name', 'id']);
 
         return response()->json($federalConstituencies);
@@ -100,7 +127,7 @@ class AjaxController extends Controller
     {
         $query = FederalConstituency::where('senatorial_district_id', $request->senatorial_district_id)
             ->orderBy('name');
-        $this->structuralAccess()->applyScope($query, $this->getProfileData(), 'federal_constituencies');
+        $this->applyLocationOptionScope($query, 'federal_constituencies');
         $federalConstituencies['federalConstituencies'] = $query->get(['name', 'id']);
 
         return response()->json($federalConstituencies);

@@ -20,7 +20,10 @@
 
                   <!-- /.tab-pane -->
                   <div class="tab-pane active" id="editprofile">
-                  <form class="form-horizontal" id="profileData" method="POST"  action="{{route('complete.profile.store')}}" enctype="multipart/form-data">
+                  @if (session('success'))
+                      <div class="alert alert-success" role="alert">{{ session('success') }}</div>
+                  @endif
+                  <form class="form-horizontal" id="profileData" method="POST" action="{{ route($profileData->access_level.'.account.complete-profile.store') }}" enctype="multipart/form-data">
                             @csrf
 
                             @method('POST')
@@ -375,97 +378,113 @@
 <!-- Handle Ajax request to states, lgas, wards and PU dropdown select -->
 <script>
     $(document).ready(function() {
-        $('#region-dropdown').on('change', function() {
-            var region_id = this.value;
-            console.log(region_id);
-            $.ajax({
-                url: "{{ route('getStates') }}",
-                type: "POST",
-                data: {
-                    region_id: region_id,
-                    _token: '{{csrf_token()}}'
-                },
-                cache: false,
-                dataType: 'json',
-                success: function(result){
-                  $('#state-dropdown').html('<option value="" disabled selected>Select Voting State</option>');
-                        $.each(result.states, function (key, value) {
-                            $("#state-dropdown").append('<option value="' + value
-                                .id + '">' + value.name + '</option>');
-                        });
+        const csrfToken = '{{ csrf_token() }}';
+        const fixed = window.campaignFixedLocationFields || {};
+        const initial = {
+            region_id: fixed.region_id || @json(old('region_id', $profileData->region_id)),
+            state_id: fixed.state_id || @json(old('state_id', $profileData->state_id)),
+            lga_id: fixed.lga_id || @json(old('lga_id', $profileData->lga_id)),
+            ward_id: fixed.ward_id || @json(old('ward_id', $profileData->ward_id)),
+            polling_unit_id: fixed.polling_unit_id || @json(old('polling_unit_id', $profileData->polling_unit_id)),
+        };
 
-                    $('#lga-dropdown').html('<option value="" disabled selected>Select Voting LGA</option>');
-                }
+        function resetSelect(selector, label) {
+            $(selector).empty().append($('<option>', {
+                value: '',
+                text: label,
+                disabled: true,
+                selected: true
+            }));
+        }
+
+        function fillSelect(selector, label, records, selectedId) {
+            resetSelect(selector, label);
+            $.each(records || [], function (_, record) {
+                $(selector).append($('<option>', {
+                    value: record.id,
+                    text: record.name,
+                    selected: selectedId && String(record.id) === String(selectedId)
+                }));
             });
+        }
+
+        function locationRequest(url, data, onSuccess) {
+            return $.ajax({
+                url: url,
+                type: 'POST',
+                data: Object.assign({_token: csrfToken}, data),
+                cache: false,
+                dataType: 'json'
+            }).done(onSuccess).fail(function (xhr) {
+                console.error('Location options could not be loaded.', xhr.status, xhr.responseText);
+            });
+        }
+
+        function loadStates(regionId, selectedId) {
+            resetSelect('#lga-dropdown', 'Select Voting LGA');
+            resetSelect('#ward-dropdown', 'Select Voting Ward');
+            resetSelect('#pu-dropdown', 'Select Voting Polling Unit');
+
+            return locationRequest("{{ route('getStates') }}", {region_id: regionId}, function (result) {
+                fillSelect('#state-dropdown', 'Select Voting State', result.states, selectedId);
+            });
+        }
+
+        function loadLgas(stateId, selectedId) {
+            resetSelect('#ward-dropdown', 'Select Voting Ward');
+            resetSelect('#pu-dropdown', 'Select Voting Polling Unit');
+
+            return locationRequest("{{ route('getLgas') }}", {state_id: stateId}, function (result) {
+                fillSelect('#lga-dropdown', 'Select Voting LGA', result.lgas, selectedId);
+            });
+        }
+
+        function loadWards(lgaId, selectedId) {
+            resetSelect('#pu-dropdown', 'Select Voting Polling Unit');
+
+            return locationRequest("{{ route('getWards') }}", {lga_id: lgaId}, function (result) {
+                fillSelect('#ward-dropdown', 'Select Voting Ward', result.wards, selectedId);
+            });
+        }
+
+        function loadPollingUnits(wardId, selectedId) {
+            return locationRequest("{{ route('getPollingUnits') }}", {ward_id: wardId}, function (result) {
+                fillSelect('#pu-dropdown', 'Select Voting Polling Unit', result.pollingUnits, selectedId);
+            });
+        }
+
+        $('#region-dropdown').on('change', function() {
+            loadStates(this.value, null);
         });
 
         $('#state-dropdown').on('change', function() {
-            var state_id = this.value;
-            console.log(state_id);
-            $.ajax({
-                url: "{{ route('getLgas') }}",
-                type: "POST",
-                data: {
-                    state_id: state_id,
-                    _token: '{{csrf_token()}}'
-                },
-                cache: false,
-                dataType: 'json',
-                success: function(result){
-                  $('#lga-dropdown').html('<option value="" disabled selected>Select Voting LGA</option>');
-                        $.each(result.lgas, function (key, value) {
-                            $("#lga-dropdown").append('<option value="' + value
-                                .id + '">' + value.name + '</option>');
-                        });
-                    $('#ward-dropdown').html('<option value="" disabled selected>Select Voting Ward</option>');
-                }
-            });
+            loadLgas(this.value, null);
         });
 
         $('#lga-dropdown').on('change', function() {
-            var lga_id = this.value;
-            console.log(lga_id);
-            $.ajax({
-                url: "{{ route('getWards') }}",
-                type: "POST",
-                data: {
-                    lga_id: lga_id,
-                    _token: '{{csrf_token()}}'
-                },
-                cache: false,
-                dataType: 'json',
-                success: function(result){
-                  $('#ward-dropdown').html('<option value="" disabled selected>Select Voting Ward</option>');
-                        $.each(result.wards, function (key, value) {
-                            $("#ward-dropdown").append('<option value="' + value
-                                .id + '">' + value.name + '</option>');
-                        });
-                    $('#pu-dropdown').html('<option value="" disabled selected>Select Voting Polling Units</option>');
-                }
-            });
+            loadWards(this.value, null);
         });
 
         $('#ward-dropdown').on('change', function() {
-            var ward_id = this.value;
-            console.log(ward_id);
-            $.ajax({
-                url: "{{ route('getPollingUnits') }}",
-                type: "POST",
-                data: {
-                    ward_id: ward_id,
-                    _token: '{{csrf_token()}}'
-                },
-                cache: false,
-                dataType: 'json',
-                success: function(result){
-                    $('#pu-dropdown').html('<option value="" disabled selected>Select Voting Polling Units</option>');
-                        $.each(result.pollingUnits, function (key, value) {
-                            $("#pu-dropdown").append('<option value="' + value
-                                .id + '">' + value.name + '</option>');
-                        });
+            loadPollingUnits(this.value, null);
+        });
+
+        // Fixed package geography (for example, a governorship state) does
+        // not emit a change event because its select is hidden and disabled.
+        // Start the cascade explicitly from the deepest known parent.
+        if (initial.state_id) {
+            loadLgas(initial.state_id, initial.lga_id).done(function () {
+                if (initial.lga_id) {
+                    loadWards(initial.lga_id, initial.ward_id).done(function () {
+                        if (initial.ward_id) {
+                            loadPollingUnits(initial.ward_id, initial.polling_unit_id);
+                        }
+                    });
                 }
             });
-        });
+        } else if (initial.region_id) {
+            loadStates(initial.region_id, null);
+        }
     });
 </script>
 

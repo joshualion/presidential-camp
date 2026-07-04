@@ -90,7 +90,7 @@
                   <div class="form-group row">
                         <label for="old_password" class="col-sm-3 col-form-label">Old Password</label>
                         <div class="col-sm-9">
-                          <input type="text" class="form-control @error('old_password') is-invalid @enderror" name="old_password" id="old_password" placeholder="old password" required >
+                          <input type="password" class="form-control @error('old_password') is-invalid @enderror" name="old_password" id="old_password" placeholder="Old password" autocomplete="current-password" required>
                         </div>
                         @error('old_password')
                           <span class="text-danger">{{$message}}</span>
@@ -100,7 +100,7 @@
                   <div class="form-group row">
                         <label for="new_password" class="col-sm-3 col-form-label">New Password</label>
                         <div class="col-sm-9">
-                          <input type="password" class="form-control @error('new_password') is-invalid @enderror" name="new_password" placeholder="New Password" id="new_password" required>
+                          <input type="password" class="form-control @error('new_password') is-invalid @enderror" name="new_password" placeholder="New Password" id="new_password" autocomplete="new-password" minlength="8" required>
                         </div>
                         @error('new_password')
                         <span class="text-danger">{{$message}}</span>
@@ -110,7 +110,7 @@
                       <div class="form-group row">
                         <label for="new_password_confirmation" class="col-sm-3 col-form-label">Confirm Password</label>
                         <div class="col-sm-9">
-                          <input type="password" class="form-control" name="new_password_confirmation" placeholder="Retype New password" id="new_password_confirmation">
+                          <input type="password" class="form-control" name="new_password_confirmation" placeholder="Retype New password" id="new_password_confirmation" autocomplete="new-password" minlength="8" required>
                         </div>
                       </div>
 

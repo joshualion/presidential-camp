@@ -197,7 +197,7 @@ test('community redirects users with incomplete voting location profile', functi
 
     $response = $this->actingAs($user)->get(route('timeline'));
 
-    $response->assertRedirect(route('user.profile'));
+    $response->assertRedirect(route('user.account.complete-profile'));
 });
 
 test('community allows users with complete voting location even when other profile details are incomplete', function () {

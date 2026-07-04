@@ -10,20 +10,15 @@ use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Schema;
-use App\Models\SystemSetting;
-use App\Support\SafeDatabase;
 
 Route::middleware('guest')->group(function () {
 
-    $SystemSetting = SafeDatabase::hasTable('system_settings') ? SystemSetting::first() : null;
+    Route::get('register', [RegisteredUserController::class, 'create'])
+            ->middleware('public.registration')
+            ->name('register');
 
-    if($SystemSetting && $SystemSetting->frontend_registration == 1){
-        Route::get('register', [RegisteredUserController::class, 'create'])
-                ->name('register');
-
-        Route::post('register', [RegisteredUserController::class, 'store']);
-    }
+    Route::post('register', [RegisteredUserController::class, 'store'])
+            ->middleware('public.registration');
 
     Route::get('login', [AuthenticatedSessionController::class, 'create'])
                 ->name('login');

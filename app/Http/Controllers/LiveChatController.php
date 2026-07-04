@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\AccessLevelRouteService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\View;
 
@@ -15,7 +16,7 @@ class LiveChatController extends Controller
     public function index(Request $request)
     {
         return redirect()
-            ->route('messages.page')
+            ->route($this->messagesRoute($request))
             ->with('status', 'Legacy Live Chat now uses Internal Communication.');
     }
     
@@ -24,7 +25,7 @@ class LiveChatController extends Controller
     {
         return response()->json([
             'message' => 'Legacy Live Chat is disabled. Use Internal Communication.',
-            'redirect' => route('messages.page'),
+            'redirect' => route($this->messagesRoute($request)),
         ], 410);
     }
 
@@ -32,8 +33,14 @@ class LiveChatController extends Controller
     {
         return response()->json([
             'message' => 'Legacy Live Chat is disabled. Use Internal Communication.',
-            'redirect' => route('messages.page'),
+            'redirect' => route($this->messagesRoute($request)),
         ], 410);
+    }
+
+    private function messagesRoute(Request $request): string
+    {
+        return app(AccessLevelRouteService::class)
+            ->sharedRouteForUser($request->user(), 'messages.page') ?? 'login';
     }
 
 }

@@ -85,6 +85,85 @@ test('governorship form context fixes licensed state and excludes other states',
         ->and($options['states']->pluck('id')->all())->toBe([$crossRiver->id]);
 });
 
+test('presidential form context exposes all nationally licensed states', function () {
+    $crossRiver = locationFormState(9, 'Cross River', 2);
+    $akwaIbom = locationFormState(10, 'Akwa Ibom', 3);
+    createLocationFormLicense('presidential', 'national', [
+        'scope_name' => 'Nigeria',
+    ]);
+
+    $service = app(CampaignPackageLocationFormService::class);
+    $context = $service->context(locationFormActor());
+    $options = $service->options();
+
+    expect($context['fixed'])->toBe([])
+        ->and($options['states']->pluck('id')->sort()->values()->all())
+        ->toBe([$crossRiver->id, $akwaIbom->id]);
+});
+
+test('profile onboarding options use the licensed boundary before a member has a structural assignment', function () {
+    $crossRiver = locationFormState(9, 'Cross River', 2);
+    locationFormState(10, 'Akwa Ibom', 3);
+    $lga = LocalGovernmentArea::query()->create([
+        'name' => 'Calabar Municipal',
+        'state_id' => $crossRiver->id,
+    ]);
+    $ward = Ward::query()->create(['name' => 'Ward 1', 'lga_id' => $lga->id]);
+    $pollingUnit = PollingUnit::query()->create(['name' => 'PU 1', 'ward_id' => $ward->id]);
+
+    createLocationFormLicense('governorship', 'state', [
+        'state_id' => $crossRiver->id,
+        'state_name' => $crossRiver->name,
+        'scope_name' => $crossRiver->name,
+    ]);
+
+    $options = app(CampaignPackageLocationFormService::class)->options();
+
+    expect($options['states']->pluck('id')->all())->toBe([$crossRiver->id])
+        ->and($options['lgas']->pluck('id')->all())->toBe([$lga->id])
+        ->and($options['wards']->pluck('id')->all())->toBe([$ward->id])
+        ->and($options['pollingUnits']->pluck('id')->all())->toBe([$pollingUnit->id]);
+});
+
+test('profile onboarding ajax cascade uses licensed scope for an unassigned member', function () {
+    $crossRiver = locationFormState(9, 'Cross River', 2);
+    locationFormState(10, 'Akwa Ibom', 3);
+    $lga = LocalGovernmentArea::query()->create([
+        'name' => 'Calabar Municipal',
+        'state_id' => $crossRiver->id,
+    ]);
+    $ward = Ward::query()->create(['name' => 'Ward 1', 'lga_id' => $lga->id]);
+    $pollingUnit = PollingUnit::query()->create(['name' => 'PU 1', 'ward_id' => $ward->id]);
+
+    createLocationFormLicense('governorship', 'state', [
+        'state_id' => $crossRiver->id,
+        'state_name' => $crossRiver->name,
+        'scope_name' => $crossRiver->name,
+    ]);
+
+    $member = locationFormActor('user');
+    $this->actingAs($member)
+        ->postJson(route('getStates'), ['region_id' => $crossRiver->region_id])
+        ->assertOk()
+        ->assertJsonPath('states.0.id', $crossRiver->id)
+        ->assertJsonCount(1, 'states');
+
+    $this->actingAs($member)
+        ->postJson(route('getLgas'), ['state_id' => $crossRiver->id])
+        ->assertOk()
+        ->assertJsonPath('lgas.0.id', $lga->id);
+
+    $this->actingAs($member)
+        ->postJson(route('getWards'), ['lga_id' => $lga->id])
+        ->assertOk()
+        ->assertJsonPath('wards.0.id', $ward->id);
+
+    $this->actingAs($member)
+        ->postJson(route('getPollingUnits'), ['ward_id' => $ward->id])
+        ->assertOk()
+        ->assertJsonPath('pollingUnits.0.id', $pollingUnit->id);
+});
+
 test('senatorial form context fixes district and scopes related lgas', function () {
     $state = locationFormState(9, 'Cross River', 2);
     $district = SenatorialDistrict::query()->create([
@@ -160,7 +239,7 @@ test('federal constituency form context fixes constituency and scopes related lg
         ->and($options['lgas']->pluck('id')->all())->toBe([$inside->id]);
 });
 
-test('lga form context fixes lga and exposes only wards and polling units inside it', function () {
+test('chairmanship form context fixes lga and exposes only wards and polling units inside it', function () {
     $state = locationFormState(9, 'Cross River', 2);
     $lga = LocalGovernmentArea::query()->create([
         'name' => 'Calabar Municipal',
@@ -174,7 +253,7 @@ test('lga form context fixes lga and exposes only wards and polling units inside
     Ward::query()->create(['name' => 'Ward 2', 'lga_id' => $otherLga->id]);
     $pollingUnit = PollingUnit::query()->create(['name' => 'PU 1', 'ward_id' => $ward->id]);
 
-    createLocationFormLicense('lga', 'lga', [
+    createLocationFormLicense('chairmanship', 'lga', [
         'state_id' => $state->id,
         'lga_id' => $lga->id,
         'lga_name' => $lga->name,
