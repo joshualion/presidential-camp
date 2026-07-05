@@ -2,8 +2,6 @@
 
 
 use App\Http\Controllers\AjaxController;
-use App\Http\Controllers\BulksmsController;
-use App\Http\Controllers\BulkSmsSettingController;
 use App\Http\Controllers\ChartsController;
 use App\Http\Controllers\DashboardStatsController;
 use App\Http\Controllers\ElectionController;
@@ -229,12 +227,5 @@ Route::post('/lga/vote/update/{uuid}', [ElectionController::class, 'updateVote']
 Route::delete('/lga/vote/delete/{uuid}', [ElectionController::class, 'deleteVote'])->name('lgaadmin.vote.delete')->middleware('access_level:lgaadmin');
 
 
-// Bulksms Settings Routes
-Route::get('/lga/bulksms/setting', [BulkSmsSettingController::class, 'index'])->name('lgaadmin.bulksms.setting')->middleware('access_level:lgaadmin');
-Route::post('/lga/bulksms/setting/store', [BulkSmsSettingController::class, 'store'])->name('lgaadmin.bulksms.setting.store')->middleware('access_level:lgaadmin');
-Route::post('/lga/bulksms/setting/update/', [BulkSmsSettingController::class, 'update'])->name('lgaadmin.bulksms.setting.update')->middleware('access_level:lgaadmin');
-// Send Bulksms Routes
-Route::get('/lga/bulksms/send', [BulksmsController::class, 'index'])->name('lgaadmin.bulksms.send')->middleware('access_level:lgaadmin');
-Route::post('/lga/bulksms/send/sms', [BulkSmsController::class, 'sendsms'])->name('lgaadmin.bulksms.send.sms')->middleware('access_level:lgaadmin');
 
 });

@@ -156,9 +156,9 @@ class User extends Authenticatable
         return $this->belongsTo(AgeGrade::class);
     }
 
-    public function bulkSmsSetting()
+    public function smsWallet()
     {
-        return $this->hasOne(BulkSmsSetting::class, 'user_id');
+        return $this->hasOne(SmsWallet::class);
     }
 
     public function emailNotificationCampaigns()

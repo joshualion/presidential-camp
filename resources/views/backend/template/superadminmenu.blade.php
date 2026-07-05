@@ -426,6 +426,15 @@
                   </a>
                 </li>
 
+                @if(app(\App\Services\ModuleGateService::class)->enabled('sms'))
+                <li class="nav-item">
+                  <a href="{{ route('superadmin.sms.settings.index') }}" class="nav-link">
+                    <i class="fas fa-sms nav-icon"></i>
+                    <p>Portal SMS Settings</p>
+                  </a>
+                </li>
+                @endif
+
                 <li class="nav-item">
                   <a href="{{ url('superadmin/settings/smtp') }}" class="nav-link">
                   <i class="fas fa-award nav-icon"></i>

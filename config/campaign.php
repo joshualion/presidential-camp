@@ -7,6 +7,9 @@ return [
     'package_type' => env('CAMPAIGN_PACKAGE_TYPE', 'presidential'),
     'installer_location_chunk_size' => (int) env('INSTALLER_LOCATION_CHUNK_SIZE', 750),
     'installer_location_batch_size' => (int) env('INSTALLER_LOCATION_BATCH_SIZE', 500),
+    'modules' => [
+        'sms' => (bool) env('CAMPAIGN_MODULE_SMS', false),
+    ],
     'community' => [
         'polling' => [
             'notifications' => env('COMMUNITY_NOTIFICATION_POLL_MS', 30000),

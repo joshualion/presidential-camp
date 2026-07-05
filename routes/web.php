@@ -15,6 +15,10 @@ use App\Http\Controllers\CampaignNotificationController;
 use App\Http\Controllers\AdminLicenseController;
 use App\Http\Controllers\EmailNotificationController;
 use App\Http\Controllers\AnnouncementController;
+use App\Http\Controllers\SmsController;
+use App\Http\Controllers\SmsComposeController;
+use App\Http\Controllers\SmsReportController;
+use App\Http\Controllers\SmsSettingsController;
 use Illuminate\Support\Facades\Auth;
 use App\Services\AccessLevelRouteService;
 
@@ -389,6 +393,35 @@ foreach ([
             Route::post('/{uuid}/revoke', [PollingUnitAgentController::class, 'revoke'])->name('revoke');
             Route::post('/{uuid}/reactivate', [PollingUnitAgentController::class, 'reactivate'])->name('reactivate');
             Route::get('/{uuid}/document/{type}', [PollingUnitAgentController::class, 'document'])->name('document');
+        });
+}
+
+Route::middleware(['auth', 'access_level:superadmin', 'module.enabled:sms'])
+    ->prefix('superadmin/sms/settings')->name('superadmin.sms.settings.')->group(function () {
+        Route::get('/', [SmsSettingsController::class, 'index'])->name('index');
+        Route::put('/', [SmsSettingsController::class, 'update'])->name('update');
+        Route::post('/test', [SmsSettingsController::class, 'test'])->name('test');
+    });
+
+foreach (AccessLevelRouteService::prefixes() as $accessLevel => $prefix) {
+    Route::middleware(['auth', 'access_level:'.$accessLevel, 'module.enabled:sms'])
+        ->prefix($prefix.'/sms')->name($accessLevel.'.sms.')->group(function () {
+            Route::get('/', [SmsComposeController::class, 'dashboard'])->middleware('sms.access:sms.view')->name('dashboard');
+            Route::get('/compose', [SmsComposeController::class, 'create'])->middleware('sms.access:sms.compose')->name('compose');
+            Route::post('/compose/estimate', [SmsComposeController::class, 'estimate'])->middleware('sms.access:sms.compose')->name('compose.estimate');
+            Route::post('/compose/send', [SmsComposeController::class, 'send'])->middleware('sms.access:sms.send')->name('compose.send');
+            Route::get('/compose/locations/{type}', [SmsComposeController::class, 'locations'])->middleware('sms.access:sms.compose')->name('compose.locations');
+            Route::get('/wallet', [SmsController::class, 'wallet'])->middleware('sms.access:sms.wallet.view')->name('wallet');
+            Route::get('/organization-wallet', [SmsController::class, 'organizationWallet'])->middleware('sms.access:sms.organization_wallet.view')->name('organization-wallet');
+            Route::post('/topups', [SmsController::class, 'initiateTopup'])->middleware('sms.access:sms.wallet.topup')->name('topups.store');
+            Route::post('/credit-requests', [SmsController::class, 'createCreditRequest'])->middleware('sms.access:sms.credit.request')->name('credit-requests.store');
+            Route::post('/transfers', [SmsController::class, 'transfer'])->middleware('sms.access:sms.wallet.transfer')->name('transfers.store');
+            Route::post('/allocations/sync', [SmsController::class, 'syncAllocations'])->middleware('sms.access:sms.wallet.transfer')->name('allocations.sync');
+            Route::get('/sender-ids', [SmsController::class, 'senderIds'])->middleware('sms.access:sms.view')->name('sender-ids');
+            Route::post('/sender-ids', [SmsController::class, 'requestSenderId'])->middleware('sms.access:sms.sender_id.request')->name('sender-ids.store');
+            Route::get('/reports', [SmsReportController::class, 'index'])->middleware('sms.access:sms.reports')->name('batches');
+            Route::get('/reports/{batch}', [SmsReportController::class, 'show'])->middleware('sms.access:sms.reports')->name('batches.show');
+            Route::post('/reports/{batch}/sync', [SmsReportController::class, 'sync'])->middleware('sms.access:sms.reports')->name('batches.sync');
         });
 }
 

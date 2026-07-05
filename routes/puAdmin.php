@@ -2,8 +2,6 @@
 
 
 use App\Http\Controllers\AjaxController;
-use App\Http\Controllers\BulksmsController;
-use App\Http\Controllers\BulkSmsSettingController;
 use App\Http\Controllers\ChartsController;
 use App\Http\Controllers\DashboardStatsController;
 use App\Http\Controllers\ElectionController;
@@ -222,12 +220,5 @@ Route::post('/pu/vote/update/{uuid}', [ElectionController::class, 'updateVote'])
 Route::delete('/pu/vote/delete/{uuid}', [ElectionController::class, 'deleteVote'])->name('puadmin.vote.delete')->middleware('access_level:puadmin');
 
 
-// Bulksms Settings Routes
-Route::get('/pu/bulksms/setting', [BulkSmsSettingController::class, 'index'])->name('puadmin.bulksms.setting')->middleware('access_level:puadmin');
-Route::post('/pu/bulksms/setting/store', [BulkSmsSettingController::class, 'store'])->name('puadmin.bulksms.setting.store')->middleware('access_level:puadmin');
-Route::post('/pu/bulksms/setting/update/', [BulkSmsSettingController::class, 'update'])->name('puadmin.bulksms.setting.update')->middleware('access_level:puadmin');
-// Send Bulksms Routes
-Route::get('/pu/bulksms/send', [BulksmsController::class, 'index'])->name('puadmin.bulksms.send')->middleware('access_level:puadmin');
-Route::post('/pu/bulksms/send/sms', [BulkSmsController::class, 'sendsms'])->name('puadmin.bulksms.send.sms')->middleware('access_level:puadmin');
 
 });

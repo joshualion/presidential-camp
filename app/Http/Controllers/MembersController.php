@@ -8,7 +8,7 @@ use App\Models\Country;
 use App\Models\FederalConstituency;
 use App\Models\LocalGovernmentArea;
 use App\Models\PollingUnit;
-use App\Models\PollingUnitAgentAssignment;
+//use App\Models\PollingUnitAgentAssignment;
 use App\Models\Region;
 use App\Models\Religion;
 use App\Models\SenatorialDistrict;
@@ -2187,7 +2187,7 @@ class MembersController extends Controller
             ->addColumn('Voter_status', function($member) {
                 return ucfirst($member->validVoter);
             })
-            
+
             ->addColumn('action', function($member) {
                 $profileData = $this->getProfileData();
 

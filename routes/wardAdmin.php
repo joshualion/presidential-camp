@@ -2,8 +2,6 @@
 
 
 use App\Http\Controllers\AjaxController;
-use App\Http\Controllers\BulksmsController;
-use App\Http\Controllers\BulkSmsSettingController;
 use App\Http\Controllers\ChartsController;
 use App\Http\Controllers\DashboardStatsController;
 use App\Http\Controllers\ElectionController;
@@ -227,12 +225,5 @@ Route::post('/ward/vote/update/{uuid}', [ElectionController::class, 'updateVote'
 Route::delete('/ward/vote/delete/{uuid}', [ElectionController::class, 'deleteVote'])->name('wardadmin.vote.delete')->middleware('access_level:wardadmin');
 
 
-// Bulksms Settings Routes
-Route::get('/ward/bulksms/setting', [BulkSmsSettingController::class, 'index'])->name('wardadmin.bulksms.setting')->middleware('access_level:wardadmin');
-Route::post('/ward/bulksms/setting/store', [BulkSmsSettingController::class, 'store'])->name('wardadmin.bulksms.setting.store')->middleware('access_level:wardadmin');
-Route::post('/ward/bulksms/setting/update/', [BulkSmsSettingController::class, 'update'])->name('wardadmin.bulksms.setting.update')->middleware('access_level:wardadmin');
-// Send Bulksms Routes
-Route::get('/ward/bulksms/send', [BulksmsController::class, 'index'])->name('wardadmin.bulksms.send')->middleware('access_level:wardadmin');
-Route::post('/ward/bulksms/send/sms', [BulkSmsController::class, 'sendsms'])->name('wardadmin.bulksms.send.sms')->middleware('access_level:wardadmin');
 
 });

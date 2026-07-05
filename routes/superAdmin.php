@@ -2,8 +2,6 @@
 
 use App\Http\Controllers\AgeGradeController;
 use App\Http\Controllers\AjaxController;
-use App\Http\Controllers\BulksmsController;
-use App\Http\Controllers\BulkSmsSettingController;
 use App\Http\Controllers\ChartsController;
 use App\Http\Controllers\DashboardStatsController;
 use App\Http\Controllers\ElectionController;
@@ -375,13 +373,6 @@ Route::delete('/superadmin/vote/delete/{uuid}', [ElectionController::class, 'del
 Route::get('/superadmin/incident/add', [ElectionController::class, 'addIncident'])->name('superadmin.incident.add')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
 Route::post('/superadmin/incident/store', [ElectionController::class, 'storeIcident'])->name('superadmin.incident.store')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
 
-  // Bulksms Settings Routes
-  Route::get('/superadmin/bulksms/setting', [BulkSmsSettingController::class, 'index'])->name('superadmin.bulksms.setting')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
-  Route::post('/superadmin/bulksms/setting/store', [BulkSmsSettingController::class, 'store'])->name('superadmin.bulksms.setting.store')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
-  Route::post('/superadmin/bulksms/setting/update/', [BulkSmsSettingController::class, 'update'])->name('superadmin.bulksms.setting.update')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
-  // Send Bulksms Routes
-  Route::get('/superadmin/bulksms/send', [BulksmsController::class, 'index'])->name('superadmin.bulksms.send')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
-  Route::post('/superadmin/bulksms/send/sms', [BulksmsController::class, 'sendsms'])->name('superadmin.bulksms.send.sms')->middleware(middleware: 'access_level:superadmin');
 
 
   // Live Chat Application

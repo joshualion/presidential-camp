@@ -21,6 +21,7 @@ use App\Http\Middleware\EnsureMemberCapability;
 use App\Http\Middleware\EnsurePublicRegistrationEnabled;
 use App\Http\Middleware\EnsureAnnouncementManager;
 use App\Http\Middleware\EnsureElectionReportAccess;
+use App\Http\Middleware\EnsureSmsAccess;
 
 require_once __DIR__.'/../app/Support/InstallerAppKeyBootstrapper.php';
 
@@ -59,6 +60,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'public.registration' => EnsurePublicRegistrationEnabled::class,
             'announcement.manager' => EnsureAnnouncementManager::class,
             'election.report.access' => EnsureElectionReportAccess::class,
+            'sms.access' => EnsureSmsAccess::class,
                         ]);
 
     })

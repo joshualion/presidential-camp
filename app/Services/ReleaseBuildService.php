@@ -32,7 +32,10 @@ class ReleaseBuildService
         $dryRun = (bool) ($options['dry_run'] ?? false);
         $zipEnabled = (bool) ($options['zip'] ?? true);
         $profile = $this->profile((string) ($options['profile'] ?? 'full'));
-        $version = $this->cleanSegment($options['version'] ?? Arr::get($this->releaseConfig, 'identity.version', '0.0.0'));
+        $version = $this->cleanSegment(ltrim(
+            (string) ($options['version'] ?? Arr::get($this->releaseConfig, 'identity.version', '0.0.0')),
+            'vV'
+        ));
         $channel = $this->cleanSegment($options['channel'] ?? Arr::get($this->releaseConfig, 'identity.channel', 'self-hosted'));
         $effectiveConfig = $this->profileConfig($profile);
         $profileConfig = Arr::get($effectiveConfig, "profiles.{$profile}", []);
@@ -555,6 +558,14 @@ class ReleaseBuildService
         }
 
         $includedPaths = collect($files['included'])->pluck('path')->all();
+        $excludedRequiredFiles = collect(Arr::get($effectiveConfig, 'required_files', []))
+            ->reject(fn (string $path) => in_array($this->normalize($path), $includedPaths, true))
+            ->values()
+            ->all();
+
+        if ($excludedRequiredFiles !== []) {
+            $failures[] = 'Required release files are excluded from the selected profile: '.implode(', ', $excludedRequiredFiles).'.';
+        }
 
         if ($profile === 'community') {
             $fullDataIncluded = collect($includedPaths)->contains(fn (string $path) => str_starts_with($path, 'storage/app/imports/inec/prepared/all/')

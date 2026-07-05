@@ -10,7 +10,7 @@ class CampaignReleaseBuild extends Command
 {
     protected $signature = 'campaign:release-build
         {--type=full : Release type: full, community-bootstrap, or all}
-        {--release-version= : Release version override, for example v1.0.2}
+        {--release-version= : Release version override, for example v1.0.3}
         {--dry-run : Validate and show what would be packaged without writing a ZIP}
         {--force : Build the ZIP artifact}
         {--channel=stable : Release channel label}
