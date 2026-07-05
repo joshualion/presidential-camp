@@ -219,17 +219,7 @@
         </div>
     </div>
 
-
-
-
-
-
-
-
-
-
-
-
+    @include('backend.shared.member.polling-unit-field')
 
 
             <!-- /.col -->

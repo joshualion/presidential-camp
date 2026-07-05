@@ -16,6 +16,7 @@ use App\Models\State;
 use App\Models\SystemSetting;
 use App\Models\Ward;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\View;
 use Illuminate\Database\Eloquent\Builder;
@@ -1070,7 +1071,8 @@ class MembersController extends Controller
              'lastname' => 'required|string',
              'email' => 'required|email|unique:users,email',
              'password' => 'required|confirmed|min:6',
-             'access_level' => 'required',
+             'access_level' => 'required|string',
+             'roles' => 'nullable|integer|exists:roles,id',
              'gender' => 'required|in:male,female',
          ] + $this->boundaryValidationRules());
 
@@ -1081,11 +1083,7 @@ class MembersController extends Controller
         $requiresUpdate = true;
     }
 
-         if(empty($request->roles)){
-             $access_level = 'user';
-         }else{
-             $access_level = $request->access_level;
-         }
+         $access_level = $request->access_level;
 
          $requestedAccessRank = $this->accessLevelRank($access_level);
          $profileAccessRank = $this->accessLevelRank($profileData->access_level);
@@ -1102,6 +1100,16 @@ class MembersController extends Controller
 
          if ($profileAccessRank > $requestedAccessRank) {
              return redirect()->back()->with($this->unauthorizedMemberAccessNotification('assign this access level to'));
+         }
+
+         $role = $request->filled('roles')
+             ? Role::find($request->integer('roles'))
+             : $this->packageRoles()->rolesForAccessLevel($profileData, $access_level)->first();
+
+         if (!$role || !$this->canAssignRole($profileData, $role, $access_level)) {
+             throw ValidationException::withMessages([
+                 'roles' => 'Select a role that belongs to the requested access level and campaign package.',
+             ]);
          }
 
          $request->validate($this->memberLocationRules($access_level, 'pu_id'));
@@ -1121,55 +1129,31 @@ class MembersController extends Controller
              'polling_unit_id' => $request->pu_id,
          ]);
 
-         $user = User::create([
-             'uuid' => Str::uuid()->toString(),
-             'username' => $request->username,
-             'firstname' => $request->firstname,
-             'lastname' => $request->lastname,
-             'email' => $request->email,
-             'password' => Hash::make($request->password),
-             'access_level' => $access_level,
-             'gender' => $request->gender,
-             'country_id' => $request->country_id,
-             'region_id' => $request->region_id,
-             'state_id' => $request->state_id,
-             'senatorial_district_id' => $boundaryAssignments['senatorial_district_id'],
-             'federal_constituency_id' => $boundaryAssignments['federal_constituency_id'],
-             'lga_id' => $request->lga_id,
-             'ward_id' => $request->ward_id,
-             'polling_unit_id'=> $request->pu_id,
-             'requires_update' => $requiresUpdate, // ✅ here’s the key!
-         ]);
+         $user = DB::transaction(function () use ($request, $access_level, $boundaryAssignments, $requiresUpdate, $role) {
+             $user = User::create([
+                 'uuid' => Str::uuid()->toString(),
+                 'username' => $request->username,
+                 'firstname' => $request->firstname,
+                 'lastname' => $request->lastname,
+                 'email' => $request->email,
+                 'password' => Hash::make($request->password),
+                 'access_level' => $access_level,
+                 'gender' => $request->gender,
+                 'country_id' => $request->country_id,
+                 'region_id' => $request->region_id,
+                 'state_id' => $request->state_id,
+                 'senatorial_district_id' => $boundaryAssignments['senatorial_district_id'],
+                 'federal_constituency_id' => $boundaryAssignments['federal_constituency_id'],
+                 'lga_id' => $request->lga_id,
+                 'ward_id' => $request->ward_id,
+                 'polling_unit_id' => $request->pu_id,
+                 'requires_update' => $requiresUpdate,
+             ]);
 
-         // Assign Role
-         if ($request->has('roles') && !empty($request->roles)) {
-             // Assuming you're passing only one role ID (you can adjust this for multiple roles if needed)
-             $roleId = $request->roles; // Make sure $request->roles contains the correct role ID
+             $user->syncRoles([$role->name]);
 
-         // Find the role by its ID
-         $role = Role::find($roleId);
-
-             if ($role && $this->canAssignRole($profileData, $role, $access_level)) {
-                 // Sync the role to the member using its name
-                 $user->syncRoles([$role->name]);
-             } else {
-                 // Handle the case where the role is not found
-                 $notification = [
-                     'message' => 'Invalid role selected.',
-                     'alert-type' => 'error'
-                 ];
-
-                 throw ValidationException::withMessages([
-                     'roles' => 'The selected role is not available for this access level or campaign package.',
-                 ]);
-             }
-             } else {
-                 $defaultRole = $this->packageRoles()->defaultRole($profileData);
-
-                 if ($defaultRole) {
-                     $user->syncRoles([$defaultRole->name]);
-                 }
-             }
+             return $user;
+         });
 
          $notification = [
              'message' => 'Member Added Successfully',
@@ -2366,4 +2350,3 @@ class MembersController extends Controller
     }
 
 }
-
