@@ -5,7 +5,7 @@ return [
         'name' => 'Campaign Manager Core',
         'package' => 'campaign-manager-core',
         'channel' => env('RELEASE_CHANNEL', 'self-hosted'),
-        'version' => env('APP_VERSION', '1.0.4'),
+        'version' => env('APP_VERSION', '1.0.5'),
         'build_date' => env('RELEASE_BUILD_DATE', null),
         'minimum_php' => '8.2.0',
     ],
@@ -47,6 +47,9 @@ return [
             'Portal SMS endpoint resolution now supports the contract operation keys used by wallet, sender ID, batch, allocation, top-up, and credit-request APIs.',
             'Release-facing role, license, community, email, and SMS screens no longer expose internal implementation notices.',
             'Campaign audience and election scope labels now use package-neutral Campaignwide wording or the resolved licensed campaign scope instead of Nationwide defaults.',
+        ],
+        '1.0.5' => [
+            'SMS wallet transaction and audit polymorphic indexes now install on MySQL servers with a 1000-byte maximum index-key limit.',
         ],
     ],
 

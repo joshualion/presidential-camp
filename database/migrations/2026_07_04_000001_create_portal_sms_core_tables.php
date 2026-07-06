@@ -53,7 +53,7 @@ return new class extends Migration
             $table->decimal('reserved_after', 18, 6)->default(0);
             $table->string('external_reference')->nullable();
             $table->string('idempotency_key')->nullable()->unique();
-            $table->string('related_type')->nullable();
+            $table->string('related_type', 191)->nullable();
             $table->unsignedBigInteger('related_id')->nullable();
             $table->text('description')->nullable();
             $table->json('metadata')->nullable();
@@ -226,7 +226,7 @@ return new class extends Migration
             $table->id();
             $table->string('event', 80)->index();
             $table->foreignId('actor_id')->nullable()->constrained('users')->nullOnDelete();
-            $table->string('auditable_type')->nullable();
+            $table->string('auditable_type', 191)->nullable();
             $table->unsignedBigInteger('auditable_id')->nullable();
             $table->text('description')->nullable();
             $table->json('metadata')->nullable();
