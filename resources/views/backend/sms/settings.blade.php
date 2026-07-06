@@ -1,7 +1,6 @@
 @extends('backend.template.backend-master')
 @section('content')
 <section class="content"><div class="container-fluid">
-    <div class="alert alert-info">This application is a thin SMS client. Provider credentials and the financial master wallet remain in Campaign Manager Portal.</div>
     <div class="row"><div class="col-lg-8"><div class="card card-primary"><div class="card-header"><h3 class="card-title">Portal connection</h3></div><div class="card-body">
         <form method="POST" action="{{ route('superadmin.sms.settings.update') }}">@csrf @method('PUT')
             @foreach($errors->all() as $error)<div class="alert alert-danger">{{ $error }}</div>@endforeach

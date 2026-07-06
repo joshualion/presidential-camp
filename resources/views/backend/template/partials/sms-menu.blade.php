@@ -6,7 +6,7 @@
 @endphp
 @if($smsConfigured && $smsAccess->allows($profileData, 'sms.view'))
 <nav class="mt-2"><ul class="nav nav-pills nav-sidebar flex-column sidebar-nav" data-widget="treeview" role="menu">
-    <li class="nav-item {{ request()->routeIs($smsRoutePrefix.'*') ? 'menu-open' : '' }}"><a href="#" class="nav-link"><i class="nav-icon fas fa-sms"></i><p>SMS <i class="right fas fa-angle-left"></i></p></a><ul class="nav nav-treeview">
+    <li class="nav-item {{ request()->routeIs($smsRoutePrefix.'*') ? 'menu-open' : '' }}"><a href="#" class="nav-link"><i class="nav-icon fas fa-sms"></i><p>BulkSMS <i class="right fas fa-angle-left"></i></p></a><ul class="nav nav-treeview">
         <li class="nav-item"><a class="nav-link" href="{{ route($smsRoutePrefix.'dashboard') }}"><i class="far fa-circle nav-icon"></i><p>SMS Dashboard</p></a></li>
         @if($smsAccess->allows($profileData, 'sms.compose'))<li class="nav-item"><a class="nav-link" href="{{ route($smsRoutePrefix.'compose') }}"><i class="far fa-circle nav-icon"></i><p>Compose SMS</p></a></li>@endif
         @if($smsAccess->allows($profileData, 'sms.wallet.view'))<li class="nav-item"><a class="nav-link" href="{{ route($smsRoutePrefix.'wallet') }}"><i class="far fa-circle nav-icon"></i><p>My SMS Wallet</p></a></li>@endif

@@ -16,7 +16,6 @@
               </div>
               <!-- /.card-header -->
               <div class="card-body">
-              @include('backend.shared.rbac.package-notice')
 
               <!-- form start -->
               <form class="form" action="{{route($profileData->access_level.'.settings.role.store')}}" method="POST">

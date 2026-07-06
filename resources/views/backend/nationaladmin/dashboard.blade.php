@@ -114,7 +114,7 @@
             <h3 class="card-title">{{ $packageUi->geographyDistributionTitle() }}</h3>
           </div>
           <div class="card-body">
-            <p class="mb-0 text-muted">{{ $packageUi->emptyStateMessage('package-aware geography chart data') }}</p>
+            <p class="mb-0 text-muted">{{ $packageUi->emptyStateMessage('geography data') }}</p>
           </div>
         </div>
     </div>

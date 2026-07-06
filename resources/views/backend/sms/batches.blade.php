@@ -1,7 +1,7 @@
 @extends('backend.template.backend-master')
 @section('content')
 <section class="content"><div class="container-fluid">
-<div class="card"><div class="card-header"><h3 class="card-title">SMS batch history</h3><a class="btn btn-sm btn-primary float-right" href="{{ route($profileData->access_level.'.sms.compose') }}">Compose SMS</a></div><div class="card-body table-responsive">
+<div class="card"><div class="card-header"><h3 class="card-title">SMS batch history</h3><a class="btn btn-sm btn-primary float-right text-white" href="{{ route($profileData->access_level.'.sms.compose') }}">Compose SMS</a></div><div class="card-body table-responsive">
 <p class="text-muted">Delivery and billing are reported separately. Failed delivery does not itself establish refund eligibility.</p>
 <table class="table table-bordered table-striped table-sm"><thead><tr><th>Created</th><th>Sent by</th><th>Sender / route</th><th>Audience</th><th>Delivery</th><th>Billing</th><th>Wallet</th><th>Status</th><th></th></tr></thead><tbody>
 @forelse($batches as $batch)<tr>

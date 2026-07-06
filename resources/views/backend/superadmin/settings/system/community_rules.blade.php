@@ -45,7 +45,7 @@
                min="1" max="10"
                value="{{ old('community_image_max_mb', $SystemSetting->community_image_max_mb ?? $SystemSetting->community_attachment_max_mb ?? 5) }}">
         <input type="hidden" name="community_attachment_max_mb" value="{{ old('community_image_max_mb', $SystemSetting->community_image_max_mb ?? $SystemSetting->community_attachment_max_mb ?? 5) }}">
-        <small class="text-muted">Self-hosted-safe image uploads are capped at 10MB. Recommended default is 5MB.</small>
+        <small class="text-muted">Maximum image upload size is 10MB.</small>
     </div>
 </div>
 
@@ -55,7 +55,7 @@
         <input type="number" class="form-control" id="community_video_max_mb" name="community_video_max_mb"
                min="1" max="20"
                value="{{ old('community_video_max_mb', $SystemSetting->community_video_max_mb ?? 20) }}">
-        <small class="text-muted">Video upload is disabled by default. Keep videos off on shared hosting unless upload limits and storage are configured.</small>
+        <small class="text-muted">Video uploads require compatible server upload limits and storage.</small>
     </div>
 </div>
 

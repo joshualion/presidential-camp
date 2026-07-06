@@ -344,7 +344,7 @@ class ElectionReportService
             LocationScopeService::LGA => optional($user->lga)->name ?? 'LGA Scope',
             LocationScopeService::WARD => optional($user->ward)->name ?? 'Ward Scope',
             LocationScopeService::POLLING_UNIT => optional($user->pollingUnit)->name ?? 'Polling Unit Scope',
-            default => 'National Scope',
+            default => app(CampaignPackageUiService::class)->dashboardScopeTitle(),
         };
     }
 

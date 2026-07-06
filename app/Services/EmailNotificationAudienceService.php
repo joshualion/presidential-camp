@@ -111,7 +111,7 @@ class EmailNotificationAudienceService
         $sender->loadMissing(['region', 'state', 'senatorialDistrict', 'federalConstituency', 'lga', 'ward', 'pollingUnit']);
 
         return match ($sender->access_level) {
-            'superadmin', 'nationaladmin' => 'Nationwide',
+            'superadmin', 'nationaladmin' => 'Campaignwide',
             'regionaladmin' => $this->withSuffix($sender->region?->name, 'Region'),
             'stateadmin' => $this->withSuffix($sender->state?->name, 'State'),
             'senatorialadmin' => $this->withSuffix($sender->senatorialDistrict?->name, 'Senatorial District'),

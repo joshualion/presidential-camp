@@ -238,7 +238,6 @@
 @endif
 <!-- /Member Menu -->
 
-@include('backend.template.partials.sms-menu')
 
 
 </div>

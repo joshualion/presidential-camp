@@ -767,7 +767,7 @@ class LocationDashboardMetricsService
             LocationScopeService::LGA => optional($user?->lga)->name ?? 'LGA',
             LocationScopeService::WARD => optional($user?->ward)->name ?? 'Ward',
             LocationScopeService::POLLING_UNIT => optional($user?->pollingUnit)->name ?? 'Polling Unit',
-            default => 'National Scope',
+            default => app(CampaignPackageUiService::class)->dashboardScopeTitle(),
         };
     }
 

@@ -17,7 +17,6 @@
                 </div>
                 <!-- /.card-header -->
                 <div class="card-body">
-                    @include('backend.shared.rbac.package-notice')
                     <table id="myroles" class="table table-bordered table-striped">
                     <thead>
                     <tr>
@@ -140,6 +139,5 @@ $(document).ready(function() {
 
 
 @endsection
-
 
 

@@ -15,7 +15,7 @@
                 <div class="card-header">
                     <h3 class="card-title">
                         @if($profileData->access_level == 'superadmin' || $profileData->access_level == 'nationaladmin')
-                        Nationwide Votes By PU
+                        Campaignwide Votes By PU
                     @elseif($profileData->access_level == 'regionaladmin')
                         Regional Votes By PU for {{ $profileData->region->name ?? 'Your Region' }}
                     @elseif($profileData->access_level == 'stateadmin')
@@ -168,5 +168,4 @@
 
 
 @endsection
-
 

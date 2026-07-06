@@ -83,7 +83,7 @@ class CampaignPackageUiService
     {
         $context = trim($context) ?: 'data';
 
-        return "No {$context} is available for this licensed campaign scope yet.";
+        return "No {$context} is available yet.";
     }
 
     public function packageDisplayName(): string

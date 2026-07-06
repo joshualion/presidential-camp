@@ -221,6 +221,7 @@ $state = \App\Models\State::find(Auth::user()->state_id);
 
             </li>
             {{-- / Messaging --}}
+            @include('backend.template.partials.sms-menu')
             @include('backend.template.partials.announcements-menu-item')
 
 

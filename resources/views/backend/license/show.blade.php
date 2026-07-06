@@ -13,37 +13,14 @@
                     @endif
                     @if(!$license)
                         <div class="alert alert-warning">No active local license was found. Please contact support or rerun the installer/reset procedure.</div>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <div class="text-muted small">Deployment mode</div>
-                                <div class="font-weight-bold">{{ $currentScope->deployment_mode ?: 'Not resolved' }}</div>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <div class="text-muted small">Fallback package</div>
-                                <div class="font-weight-bold">{{ $currentScope->package_type ?: 'Not resolved' }}</div>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <div class="text-muted small">Dashboard label</div>
-                                <div class="font-weight-bold">{{ $scopeService->dashboardLabel() }}</div>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <div class="text-muted small">Scope helper</div>
-                                <div class="font-weight-bold">{{ $currentScope->fallback_used ? 'Fallback mode' : 'Local license mode' }}</div>
-                            </div>
-                        </div>
                     @else
-                        <div class="alert alert-success">This installation was activated during setup. The installer/local license record is the activation source for this deployment.</div>
                         <div class="row">
                             @foreach([
                                 'License key' => $maskedKey,
                                 'Status' => $license->status,
-                                'Activation source' => 'Installer / local license',
-                                'Deployment mode' => $currentScope->deployment_mode,
                                 'Package type' => $currentScope->package_type,
                                 'Scope type' => $currentScope->scope_type,
                                 'Scope name' => $currentScope->scope_name,
-                                'Dashboard label' => $scopeService->dashboardLabel(),
-                                'Scope helper display' => $scopeService->display(),
                                 'Maintenance expiry' => optional($license->maintenance_expires_at)->toDayDateTimeString(),
                                 'Updates until' => optional($license->updates_until)->toDayDateTimeString(),
                                 'Activated at' => optional($license->activated_at)->toDayDateTimeString(),
@@ -57,9 +34,6 @@
                                 </div>
                             @endforeach
                         </div>
-                        <hr>
-                        <h5>Licensed features</h5>
-                        <p class="text-muted mb-0">Licensed package activated. Core campaign features are active for this scope.</p>
                         <hr>
                         <h5>Resolved licensed boundaries</h5>
                         <div class="row">

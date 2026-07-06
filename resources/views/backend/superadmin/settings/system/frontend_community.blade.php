@@ -3,15 +3,6 @@
     $communityAvailable = $communityRealtime->moduleAvailable();
 @endphp
 
-<div class="alert {{ $communityAvailable ? 'alert-info' : 'alert-warning' }} py-2">
-    <strong>Community Forum:</strong>
-    {{ $communityRealtime->statusMessage() }}
-    <div class="small mt-1">
-        Current update mode: <strong>{{ $communityRealtime->modeLabel() }}</strong>.
-        Community Forum is disabled by default for self-hosted releases; enable it only when members should access the social/community frontend.
-    </div>
-</div>
-
 <div class="form-group row">
     <label for="frontend_community" class="col-sm-3 col-form-label">Community Forum</label>
     <div class="col-sm-9">

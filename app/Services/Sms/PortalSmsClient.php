@@ -96,7 +96,8 @@ class PortalSmsClient
 
     private function operation(string $method, string $operation, array $payload = [], array $parameters = [], ?string $idempotencyKey = null): array
     {
-        $template = config('portal_sms.endpoints.'.$operation);
+        $endpoints = config('portal_sms.endpoints', []);
+        $template = is_array($endpoints) ? ($endpoints[$operation] ?? null) : null;
         if (!is_string($template) || $template === '') {
             return $this->error('portal_contract_unsupported', 'The installed portal contract does not expose this SMS operation.', 501, ['operation' => $operation], $idempotencyKey);
         }

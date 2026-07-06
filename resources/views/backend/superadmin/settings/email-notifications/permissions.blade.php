@@ -10,7 +10,7 @@
                 @method('PUT')
                 <div class="card-body">
                     @if(session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
-                    <p class="text-muted">Enable sending by access level. Recipient visibility remains restricted to each sender's administrative jurisdiction and the licensed package scope. Super Admin is always enabled at this permission layer; the package-wide messaging module gate still applies.</p>
+                    <p class="text-muted">Choose which access levels can send email notifications.</p>
                     <table class="table table-bordered">
                         <thead><tr><th>Access level</th><th style="width: 160px">Can send email</th></tr></thead>
                         <tbody>
