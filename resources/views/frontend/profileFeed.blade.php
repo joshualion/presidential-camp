@@ -7,6 +7,16 @@ $coverImage = $profileData->cover_image ? url('uploads/member_images/'.$profileD
 $profileImage = !empty($profileData->photo) ? url('uploads/member_images/'.$profileData->photo) : url('uploads/no_image.jpg');
 @endphp
 
+<style>
+    .community-profile-stat-card .card-title {
+        color: {{ $SystemSetting->dark_theme_color ?? '#008751' }} !important;
+    }
+
+    .community-profile-stat-card .card-text {
+        color: #212529 !important;
+    }
+</style>
+
 <!-- Cover Image -->
 <div class="cover-image position-relative" style="background-image: url({{ $coverImage }});">
     <button class="btn btn-primary position-absolute bottom-0 end-0 m-3 update-cover-btn" data-bs-toggle="modal" data-bs-target="#updateCoverModal" title="Change Cover Photo">
@@ -40,7 +50,7 @@ $profileImage = !empty($profileData->photo) ? url('uploads/member_images/'.$prof
 <div class="container mt-4">
     <div class="row">
         <div class="col-md-4 mb-4">
-            <div class="card shadow-sm">
+            <div class="card shadow-sm community-profile-stat-card">
                 <div class="card-body">
                     <h5 class="card-title"><i class="fas fa-tachometer-alt me-2"></i>Dashboard</h5>
                     <p class="card-text">Backend</p>
@@ -51,7 +61,7 @@ $profileImage = !empty($profileData->photo) ? url('uploads/member_images/'.$prof
             </div>
         </div>
         <div class="col-md-4 mb-4">
-            <div class="card shadow-sm">
+            <div class="card shadow-sm community-profile-stat-card">
                 <div class="card-body">
                     <h5 class="card-title"><i class="fas fa-users me-2"></i>Followers</h5>
                     <p class="card-text">{{ number_format($followersCount) }} Followers</p>
@@ -62,7 +72,7 @@ $profileImage = !empty($profileData->photo) ? url('uploads/member_images/'.$prof
             </div>
         </div>
         <div class="col-md-4 mb-4">
-            <div class="card shadow-sm">
+            <div class="card shadow-sm community-profile-stat-card">
                 <div class="card-body">
                     <h5 class="card-title"><i class="fas fa-biking me-2"></i>Following</h5>
                     <p class="card-text">{{ number_format($followingCount) }} Following</p>

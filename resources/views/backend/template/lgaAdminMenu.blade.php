@@ -254,23 +254,6 @@ $lga = \App\Models\LocalGovernmentArea::find(Auth::user()->lga_id);
 
 
 
-            {{-- Settings --}}
-            <li class="tab nav-item menu-close">
-                        <a href="#" class="nav-link">
-                          <i class="nav-icon fas fa-cogs"></i>
-                          <p>
-                            Settings
-                            <i class="right fas fa-angle-left"></i>
-                          </p>
-                        </a>
-                        <ul class="nav nav-treeview">
-
-                        </ul>
-
-            </li>
-
-
-
             {{-- Profile Menu --}}
             <li class="tab nav-item menu-close">
                         <a href="#" class="nav-link">

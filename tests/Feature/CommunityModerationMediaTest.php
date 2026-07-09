@@ -411,6 +411,7 @@ test('support group audience is visible only to group members', function () {
     $poster->supportGroups()->sync([$group->id]);
     $member->supportGroups()->sync([$group->id]);
     $nonMember->supportGroups()->sync([SupportGroup::query()->firstOrCreate(['name' => 'Other Group'])->id]);
+    $nonMember->following()->attach($poster->id);
 
     $this->actingAs($poster)->postJson(route('posts.store'), [
         'content' => 'Group-only post.',
@@ -423,6 +424,42 @@ test('support group audience is visible only to group members', function () {
 
     expect(collect($this->actingAs($nonMember)->getJson(route('posts.fetch'))->json('data'))->pluck('content'))
         ->not->toContain('Group-only post.');
+});
+
+test('viewer sees geographically out of scope posts from authors they follow', function () {
+    $poster = communityModerationUser([
+        'email' => 'followed-poster@test.local',
+        'state_id' => 9,
+        'lga_id' => 1,
+        'ward_id' => 1,
+        'polling_unit_id' => 1,
+    ]);
+    $follower = communityModerationUser([
+        'email' => 'following-viewer@test.local',
+        'state_id' => 9,
+        'lga_id' => 3,
+        'ward_id' => 3,
+        'polling_unit_id' => 3,
+    ]);
+    $unconnectedViewer = communityModerationUser([
+        'email' => 'unconnected-viewer@test.local',
+        'state_id' => 9,
+        'lga_id' => 3,
+        'ward_id' => 3,
+        'polling_unit_id' => 3,
+    ]);
+
+    $follower->following()->attach($poster->id);
+
+    $this->actingAs($poster)->postJson(route('posts.store'), [
+        'content' => 'Follow-visible PU post.',
+        'audience_type' => 'own_scope',
+    ])->assertOk();
+
+    expect(collect($this->actingAs($follower)->getJson(route('posts.fetch'))->json('data'))->pluck('content'))
+        ->toContain('Follow-visible PU post.')
+        ->and(collect($this->actingAs($unconnectedViewer)->getJson(route('posts.fetch'))->json('data'))->pluck('content'))
+        ->not->toContain('Follow-visible PU post.');
 });
 
 test('polling unit own scope post is visible only in that polling unit', function () {

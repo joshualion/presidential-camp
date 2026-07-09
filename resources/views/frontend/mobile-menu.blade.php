@@ -68,10 +68,13 @@
         <span id="mobile-message-badge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none" style="font-size: 0.65rem;">0</span>
       </button>
 
-      <!-- Menu Item 5: Logout (Replaced Explore with Logout) -->
-      <button class="btn btn-link text-muted shadow" style="background-color: {{ $SystemSetting->dark_theme_color ?? '#008751' }}; width: 35px; height: 35px;" title="Logout" onclick="location.href='{{route($profileData->access_level.'.logout')}}'">
-        <i class="fas fa-sign-out-alt fa-lg" style="font-size: 1.2rem; color: #f9f9f9;"></i>
-      </button>
+      <!-- Menu Item 5: Logout -->
+      <form method="POST" action="{{ route('logout') }}" class="m-0">
+        @csrf
+        <button type="submit" class="btn btn-link text-muted shadow" style="background-color: {{ $SystemSetting->dark_theme_color ?? '#008751' }}; width: 35px; height: 35px;" title="Logout">
+          <i class="fas fa-sign-out-alt fa-lg" style="font-size: 1.2rem; color: #f9f9f9;"></i>
+        </button>
+      </form>
     </div>
   </div>
 <!-- End of Mobile Menu -->

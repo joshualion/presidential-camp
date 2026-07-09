@@ -6,6 +6,8 @@ use App\Http\Controllers\MemberElectionController;
 use App\Services\MemberCapabilityService;
 use Illuminate\Support\Facades\Route;
 
+
+
 Route::prefix('member')
     ->middleware(['auth', 'access_level:user', 'check_onboarding'])
     ->group(function () {

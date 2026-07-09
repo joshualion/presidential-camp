@@ -188,13 +188,19 @@ class CommunityAudienceService
         }
 
         if (!$this->hasAudienceColumns()) {
-            return $query->where(function (Builder $legacy) use ($viewer) {
-                $this->applyLegacyVisibility($legacy, $viewer);
+            return $query->where(function (Builder $visibility) use ($viewer) {
+                $visibility->where('user_id', $viewer->id)
+                    ->orWhere(function (Builder $legacy) use ($viewer) {
+                        $this->applyLegacyVisibility($legacy, $viewer);
+                    });
+
+                $this->applyFollowedAuthorVisibility($visibility, $viewer);
             });
         }
 
         return $query->where(function (Builder $visibility) use ($viewer) {
-            $visibility->where('audience_type', self::TYPE_GLOBAL)
+            $visibility->where('user_id', $viewer->id)
+                ->orWhere('audience_type', self::TYPE_GLOBAL)
                 ->orWhere(function (Builder $scoped) use ($viewer) {
                     $scoped->whereIn('audience_type', [self::TYPE_OWN_SCOPE, self::TYPE_SPECIFIC_SCOPE])
                         ->where(function (Builder $scopeQuery) use ($viewer) {
@@ -206,13 +212,15 @@ class CommunityAudienceService
                     $this->applyLegacyVisibility($legacy, $viewer);
                 });
 
-        if (SafeDatabase::hasTable('support_groups') && SafeDatabase::hasTable('user_support_group') && $viewer->supportGroups()->exists()) {
+            if (SafeDatabase::hasTable('support_groups') && SafeDatabase::hasTable('user_support_group') && $viewer->supportGroups()->exists()) {
                 $groupIds = $viewer->supportGroups()->pluck('support_groups.id');
                 $visibility->orWhere(function (Builder $groups) use ($groupIds) {
                     $groups->where('audience_type', self::TYPE_SUPPORT_GROUP)
                         ->whereIn('audience_group_id', $groupIds);
                 });
             }
+
+            $this->applyFollowedAuthorVisibility($visibility, $viewer, true);
         });
     }
 
@@ -348,6 +356,28 @@ class CommunityAudienceService
                         $scope->where('audience', $audience)->where($postColumn, $id);
                     });
                 }
+            }
+        });
+    }
+
+    private function applyFollowedAuthorVisibility(Builder $query, User $viewer, bool $protectSupportGroups = false): void
+    {
+        if (!SafeDatabase::hasTable('followers')) {
+            return;
+        }
+
+        $query->orWhere(function (Builder $followedPosts) use ($viewer, $protectSupportGroups) {
+            $followedPosts->whereIn('user_id', function ($following) use ($viewer) {
+                $following->select('user_id')
+                    ->from('followers')
+                    ->where('follower_id', $viewer->id);
+            });
+
+            if ($protectSupportGroups) {
+                $followedPosts->where(function (Builder $audience) {
+                    $audience->whereNull('audience_type')
+                        ->orWhere('audience_type', '!=', self::TYPE_SUPPORT_GROUP);
+                });
             }
         });
     }

@@ -180,10 +180,12 @@
                     <span id="desktop-message-badge" class="micro-badge bg-danger d-none">0</span>
                 </a>
 
-                <a href="{{ route($profileData->access_level.'.logout') }}"
-                   class="micro-icon" title="Logout">
-                    <i class="fas fa-power-off"></i>
-                </a>
+                <form method="POST" action="{{ route('logout') }}" class="m-0">
+                    @csrf
+                    <button type="submit" class="micro-icon border-0" title="Logout">
+                        <i class="fas fa-power-off"></i>
+                    </button>
+                </form>
 
             </div>
         </div>

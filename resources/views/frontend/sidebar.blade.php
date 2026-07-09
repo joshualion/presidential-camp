@@ -46,9 +46,12 @@
 
     <!-- Logout Icon -->
     <li class="nav-item">
-        <a class="nav-link p-1 rounded-circle d-flex justify-content-center align-items-center shadow" href="{{route($profileData->access_level.'.logout')}}" title="Logout" style="background-color:  {{ $SystemSetting->dark_theme_color ?? '#008751' }}; width: 17.5px; height: 17.5px;">
-            <i class="fas fa-power-off" style="font-size: 0.6rem; color:#f9f9f9;"></i>
-        </a>
+        <form method="POST" action="{{ route('logout') }}" class="m-0">
+            @csrf
+            <button type="submit" class="nav-link p-1 rounded-circle d-flex justify-content-center align-items-center shadow border-0" title="Logout" style="background-color:  {{ $SystemSetting->dark_theme_color ?? '#008751' }}; width: 17.5px; height: 17.5px;">
+                <i class="fas fa-power-off" style="font-size: 0.6rem; color:#f9f9f9;"></i>
+            </button>
+        </form>
     </li>
 </ul>
 @endmobile()

@@ -1,6 +1,31 @@
 @php
     $communityRealtime = app(\App\Services\CommunityRealtimeService::class);
     $communityMediaPolicy = app(\App\Services\CommunityModerationService::class)->mediaPolicy();
+    $messageRoutes = [
+        'messagesConversations' => null,
+        'messagesConversationMessages' => null,
+        'messagesConversationSend' => null,
+        'messagesConversationTyping' => null,
+        'messagesConversationRead' => null,
+        'messagesRecipients' => null,
+        'messagesStart' => null,
+        'messagesEnsure' => null,
+        'messagesUnreadCount' => null,
+    ];
+
+    if ($messageRoutePrefix = auth()->user()?->access_level) {
+        $messageRoutes = [
+            'messagesConversations' => route($messageRoutePrefix.'.messages.conversations'),
+            'messagesConversationMessages' => route($messageRoutePrefix.'.messages.conversation.messages', ['conversation' => '__CONVERSATION__']),
+            'messagesConversationSend' => route($messageRoutePrefix.'.messages.conversation.send', ['conversation' => '__CONVERSATION__']),
+            'messagesConversationTyping' => route($messageRoutePrefix.'.messages.conversation.typing', ['conversation' => '__CONVERSATION__']),
+            'messagesConversationRead' => route($messageRoutePrefix.'.messages.conversation.read', ['conversation' => '__CONVERSATION__']),
+            'messagesRecipients' => route($messageRoutePrefix.'.messages.recipients'),
+            'messagesStart' => route($messageRoutePrefix.'.messages.start'),
+            'messagesEnsure' => route($messageRoutePrefix.'.messages.ensure'),
+            'messagesUnreadCount' => route($messageRoutePrefix.'.messages.unread-count'),
+        ];
+    }
 
     $campaignManagerBootstrap = [
         'baseUrl' => url('/'),
@@ -33,15 +58,7 @@
             'notificationsIndex' => route('notifications.index'),
             'notificationsMarkRead' => route('notifications.markRead'),
             'notificationsMarkAllRead' => route('notifications.markAllRead'),
-            'messagesConversations' => route(auth()->user()->access_level.'.messages.conversations'),
-            'messagesConversationMessages' => route(auth()->user()->access_level.'.messages.conversation.messages', ['conversation' => '__CONVERSATION__']),
-            'messagesConversationSend' => route(auth()->user()->access_level.'.messages.conversation.send', ['conversation' => '__CONVERSATION__']),
-            'messagesConversationTyping' => route(auth()->user()->access_level.'.messages.conversation.typing', ['conversation' => '__CONVERSATION__']),
-            'messagesConversationRead' => route(auth()->user()->access_level.'.messages.conversation.read', ['conversation' => '__CONVERSATION__']),
-            'messagesRecipients' => route(auth()->user()->access_level.'.messages.recipients'),
-            'messagesStart' => route(auth()->user()->access_level.'.messages.start'),
-            'messagesEnsure' => route(auth()->user()->access_level.'.messages.ensure'),
-            'messagesUnreadCount' => route(auth()->user()->access_level.'.messages.unread-count'),
+            ...$messageRoutes,
         ],
         'media' => [
             'noImage' => asset('uploads/no_image.jpg'),
