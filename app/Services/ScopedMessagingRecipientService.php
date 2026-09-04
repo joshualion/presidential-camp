@@ -97,7 +97,7 @@ class ScopedMessagingRecipientService
      */
     public function canContinueConversation(User $sender, Conversation $conversation): bool
     {
-        $conversation->loadMissing('participants:id,access_level');
+        $conversation->loadMissing('participants:id,access_level,region_id,state_id,senatorial_district_id,federal_constituency_id,lga_id,ward_id,polling_unit_id,status');
 
         if (!$conversation->participants->contains(fn (User $user) => (int) $user->getKey() === (int) $sender->getKey())) {
             return false;
@@ -182,7 +182,7 @@ class ScopedMessagingRecipientService
         return Conversation::query()
             ->whereHas('participants', fn (Builder $query) => $query->where('users.id', $user->getKey()))
             ->with([
-                'participants:id,firstname,lastname,username,photo,access_level',
+                'participants:id,firstname,lastname,username,photo,access_level,region_id,state_id,senatorial_district_id,federal_constituency_id,lga_id,ward_id,polling_unit_id,status',
                 'messages' => fn ($query) => $query->latest()->limit(1),
             ])
             ->withCount([

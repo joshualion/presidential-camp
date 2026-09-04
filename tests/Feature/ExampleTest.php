@@ -1,7 +1,7 @@
 <?php
 
-it('returns a successful response', function () {
+it('redirects guests from the root entry point to login after installation', function () {
     $response = $this->get('/');
 
-    $response->assertStatus(200);
+    $response->assertRedirect(route('login', absolute: false));
 });

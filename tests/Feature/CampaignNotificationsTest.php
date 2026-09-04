@@ -184,13 +184,13 @@ test('read mark all dismiss and ownership checks are user scoped', function () {
     CampaignNotificationRecipient::create(['notification_id' => $notification->id, 'user_id' => $otherUser->id]);
 
     $this->actingAs($user)
-        ->getJson('/notifications/unread-count')
+        ->getJson(route('stateadmin.campaign.notifications.unread'))
         ->assertOk()
         ->assertJson(['unread' => 1]);
 
     $this->actingAs($user)
         ->withSession(['_token' => 'test-token'])
-        ->postJson("/notifications/{$notification->id}/read", ['_token' => 'test-token'])
+        ->postJson(route('stateadmin.campaign.notifications.read', $notification), ['_token' => 'test-token'])
         ->assertOk()
         ->assertJson(['unread_count' => 0]);
 
@@ -199,7 +199,7 @@ test('read mark all dismiss and ownership checks are user scoped', function () {
 
     $this->actingAs($user)
         ->withSession(['_token' => 'test-token'])
-        ->postJson("/notifications/{$notification->id}/dismiss", ['_token' => 'test-token'])
+        ->postJson(route('stateadmin.campaign.notifications.dismiss', $notification), ['_token' => 'test-token'])
         ->assertOk();
 
     expect(CampaignNotificationRecipient::where('user_id', $user->id)->first()->dismissed_at)->not->toBeNull()
@@ -218,7 +218,7 @@ test('read mark all dismiss and ownership checks are user scoped', function () {
 
     $this->actingAs($user)
         ->withSession(['_token' => 'test-token'])
-        ->postJson("/notifications/{$otherNotification->id}/read", ['_token' => 'test-token'])
+        ->postJson(route('stateadmin.campaign.notifications.read', $otherNotification), ['_token' => 'test-token'])
         ->assertNotFound();
 });
 
@@ -254,7 +254,7 @@ test('expired notifications do not appear in count or unread list and duplicates
     expect(CampaignNotificationRecipient::where('notification_id', $active->id)->where('user_id', $user->id)->count())->toBe(1);
 
     $this->actingAs($user)
-        ->getJson('/notifications?unread=1')
+        ->getJson(route('stateadmin.campaign.notifications.index', ['unread' => 1]))
         ->assertOk()
         ->assertJsonCount(1, 'data')
         ->assertJsonPath('data.0.title', 'Active')

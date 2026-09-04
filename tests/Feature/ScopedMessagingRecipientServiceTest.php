@@ -31,7 +31,7 @@ beforeEach(function () {
         'system_name' => 'Campaign Manager',
         'system_country' => 'Nigeria',
         'frontend_community' => 0,
-        'frontend_registration' => 0,
+        'frontend_registration' => 1,
         'require_bank_details' => 0,
         'enable_local_storage' => 1,
         'enable_s3_storage' => 0,

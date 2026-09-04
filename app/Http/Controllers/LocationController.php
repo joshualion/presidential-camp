@@ -23,6 +23,7 @@ use Illuminate\Support\Facades\View;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use App\Services\LicensedScopeQueryService;
 use App\Services\StructuralLocationAccessService;
@@ -562,8 +563,9 @@ class LocationController extends Controller
         $lgas = $this->structuralAccess()
             ->applyScope(LocalGovernmentArea::query(), $profileData, 'local_government_areas')
             ->get();
+        $quickstartOrderUrl = $this->quickstartOrderUrl();
 
-        return view('backend.'.$profileData->access_level.'.lga.lgas', compact('profileData', 'lgas'));
+        return view('backend.'.$profileData->access_level.'.lga.lgas', compact('profileData', 'lgas', 'quickstartOrderUrl'));
     }
 
     public function addLocalGovernment(){
@@ -574,8 +576,17 @@ class LocationController extends Controller
             ->applyScope(State::query(), $profileData, 'states')
             ->orderBy('name', 'ASC')
             ->get();
+        $senatorialDistricts = $this->structuralAccess()
+            ->applyScope(SenatorialDistrict::query(), $profileData, 'senatorial_districts')
+            ->orderBy('name', 'ASC')
+            ->get();
+        $federalConstituencies = $this->structuralAccess()
+            ->applyScope(FederalConstituency::query(), $profileData, 'federal_constituencies')
+            ->orderBy('name', 'ASC')
+            ->get();
+        $quickstartOrderUrl = $this->quickstartOrderUrl();
 
-        return view('backend.'.$profileData->access_level.'.lga.add-lga', compact('profileData', 'states'));
+        return view('backend.'.$profileData->access_level.'.lga.add-lga', compact('profileData', 'states', 'senatorialDistricts', 'federalConstituencies', 'quickstartOrderUrl'));
 
 
     }
@@ -585,9 +596,23 @@ class LocationController extends Controller
     {
         $request->validate([
             'name' => 'required',
-            'state' => 'required',
+            'state' => ['required', 'integer', 'exists:states,id'],
+            'senatorial_district_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('senatorial_districts', 'id')->where('state_id', $request->input('state')),
+            ],
+            'federal_constituency_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('federal_constituencies', 'id')->where('state_id', $request->input('state')),
+            ],
         ]);
-        $this->validateLicensedPayload(['state_id' => $request->state]);
+        $this->validateLicensedPayload([
+            'state_id' => $request->state,
+            'senatorial_district_id' => $request->senatorial_district_id,
+            'federal_constituency_id' => $request->federal_constituency_id,
+        ]);
 
         $profileData = $this->getProfileData(); // Get the profile data
         $this->superAdminOnly();
@@ -596,6 +621,8 @@ class LocationController extends Controller
             $lga = LocalGovernmentArea::create([
                 'name' => $request->name,
                 'state_id' => $request->state,
+                'senatorial_district_id' => $request->senatorial_district_id,
+                'federal_constituency_id' => $request->federal_constituency_id,
                 'user_id' => $profileData->id,
             ]);
 
@@ -618,14 +645,26 @@ class LocationController extends Controller
         $states = $profileData->access_level === 'superadmin'
             ? $this->structuralAccess()->applyScope(State::query(), $profileData, 'states')->orderBy('name', 'ASC')->get()
             : State::where('id', $lga->state_id)->get();
-        return view('backend.'.$profileData->access_level.'.lga.edit-lga', compact('profileData', 'lga', 'states'));
+        $senatorialDistricts = $this->structuralAccess()->applyScope(SenatorialDistrict::query(), $profileData, 'senatorial_districts')->orderBy('name', 'ASC')->get();
+        $federalConstituencies = $this->structuralAccess()->applyScope(FederalConstituency::query(), $profileData, 'federal_constituencies')->orderBy('name', 'ASC')->get();
+        return view('backend.'.$profileData->access_level.'.lga.edit-lga', compact('profileData', 'lga', 'states', 'senatorialDistricts', 'federalConstituencies'));
     }
 
     public function updateLocalGovernment(Request $request, $uuid)
     {
         $request->validate([
             'name' => 'required',
-            'state_id' => 'required',
+            'state_id' => ['required', 'integer', 'exists:states,id'],
+            'senatorial_district_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('senatorial_districts', 'id')->where('state_id', $request->input('state_id')),
+            ],
+            'federal_constituency_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('federal_constituencies', 'id')->where('state_id', $request->input('state_id')),
+            ],
         ]);
 
         $profileData = $this->getProfileData();
@@ -634,6 +673,8 @@ class LocationController extends Controller
         $this->licensedScope()->abortIfLgaNotAllowed($lga->id);
         $this->validateLicensedPayload([
             'state_id' => $request->state_id,
+            'senatorial_district_id' => $request->senatorial_district_id,
+            'federal_constituency_id' => $request->federal_constituency_id,
             'lga_id' => $lga->id,
         ]);
         $lgaData = $profileData->access_level === 'superadmin'
@@ -684,7 +725,8 @@ class LocationController extends Controller
     {
         $profileData = $this->getProfileData();
         $this->superAdminOnly();
-        return view('backend.'.$profileData->access_level.'.lga.import-lga', compact('profileData'));
+        $quickstartOrderUrl = $this->quickstartOrderUrl();
+        return view('backend.'.$profileData->access_level.'.lga.import-lga', compact('profileData', 'quickstartOrderUrl'));
     }
  // For Export
     public function exportLgas()
@@ -730,6 +772,26 @@ class LocationController extends Controller
             'message' => $message,
             'alert-type' => $alertType
         ]);
+    }
+
+    private function quickstartOrderUrl(): string
+    {
+        $settings = SystemSetting::query()->first();
+        $base = rtrim((string) config('campaign.portal_web_base', 'https://campaignmanager.ng'), '/');
+        $query = [
+            'service' => 'quickstart_geography',
+            'package' => $this->portalQuickstartPackageType($settings?->package),
+            'scope_type' => $settings?->campaign_scope_type,
+        ];
+
+        $query = array_filter($query, fn ($value) => $value !== null && $value !== '');
+
+        return $base.'/order/campaign-manager'.($query ? '?'.http_build_query($query) : '');
+    }
+
+    private function portalQuickstartPackageType(?string $packageType): ?string
+    {
+        return $packageType === 'chairmanship' ? 'lga' : $packageType;
     }
 
 

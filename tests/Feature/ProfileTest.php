@@ -1,85 +1,24 @@
 <?php
 
 use App\Models\User;
+use App\Services\AccessLevelRouteService;
+use Illuminate\Support\Facades\Route;
 
-test('profile page is displayed', function () {
-    $user = User::factory()->create();
+test('generic breeze profile endpoint is not part of campaign manager routing', function () {
+    expect(Route::has('profile.edit'))->toBeFalse()
+        ->and(Route::has('profile.update'))->toBeFalse()
+        ->and(Route::has('profile.destroy'))->toBeFalse();
 
-    $response = $this
-        ->actingAs($user)
-        ->get('/profile');
-
-    $response->assertOk();
+    $this->actingAs(User::factory()->create(['access_level' => 'user']))
+        ->get('/profile')
+        ->assertNotFound();
 });
 
-test('profile information can be updated', function () {
-    $user = User::factory()->create();
+test('member account profile uses the access-level prefixed route contract', function () {
+    $routes = app(AccessLevelRouteService::class);
+    $user = User::factory()->create(['access_level' => 'user', 'requires_update' => false]);
 
-    $response = $this
-        ->actingAs($user)
-        ->patch('/profile', [
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
-
-    $response
-        ->assertSessionHasNoErrors()
-        ->assertRedirect('/profile');
-
-    $user->refresh();
-
-    $this->assertSame('Test User', $user->name);
-    $this->assertSame('test@example.com', $user->email);
-    $this->assertNull($user->email_verified_at);
-});
-
-test('email verification status is unchanged when the email address is unchanged', function () {
-    $user = User::factory()->create();
-
-    $response = $this
-        ->actingAs($user)
-        ->patch('/profile', [
-            'name' => 'Test User',
-            'email' => $user->email,
-        ]);
-
-    $response
-        ->assertSessionHasNoErrors()
-        ->assertRedirect('/profile');
-
-    $this->assertNotNull($user->refresh()->email_verified_at);
-});
-
-test('user can delete their account', function () {
-    $user = User::factory()->create();
-
-    $response = $this
-        ->actingAs($user)
-        ->delete('/profile', [
-            'password' => 'password',
-        ]);
-
-    $response
-        ->assertSessionHasNoErrors()
-        ->assertRedirect('/');
-
-    $this->assertGuest();
-    $this->assertNull($user->fresh());
-});
-
-test('correct password must be provided to delete account', function () {
-    $user = User::factory()->create();
-
-    $response = $this
-        ->actingAs($user)
-        ->from('/profile')
-        ->delete('/profile', [
-            'password' => 'wrong-password',
-        ]);
-
-    $response
-        ->assertSessionHasErrorsIn('userDeletion', 'password')
-        ->assertRedirect('/profile');
-
-    $this->assertNotNull($user->fresh());
+    expect($routes->sharedRouteForUser($user, 'profile'))->toBe('user.profile')
+        ->and(Route::getRoutes()->getByName('user.profile')->uri())->toBe('member/profile')
+        ->and(Route::getRoutes()->getByName('user.profile.store')->uri())->toBe('member/profile/store');
 });

@@ -12,8 +12,19 @@
                         <div class="alert alert-warning">{{ $errors->first() }}</div>
                     @endif
                     @if(!$license)
-                        <div class="alert alert-warning">No active local license was found. Please contact support or rerun the installer/reset procedure.</div>
+                        <div class="alert alert-success">Community installation is active. No commercial license is required for normal Campaign Manager operation.</div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <div class="text-muted small">Package type</div>
+                                <div class="font-weight-bold">{{ $currentScope->package_type ?: 'Not configured' }}</div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="text-muted small">Campaign scope</div>
+                                <div class="font-weight-bold">{{ trim(($currentScope->scope_type ?? '').' '.($currentScope->scope_name ?? '')) ?: 'Not configured' }}</div>
+                            </div>
+                        </div>
                     @else
+                        <div class="alert alert-success">This installation was activated during setup.</div>
                         <div class="row">
                             @foreach([
                                 'License key' => $maskedKey,
@@ -55,3 +66,4 @@
         </div>
     </section>
 @endsection
+

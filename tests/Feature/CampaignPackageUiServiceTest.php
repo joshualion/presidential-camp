@@ -114,5 +114,6 @@ test('missing local license fallback does not crash', function () {
 
     expect($ui->dashboardTitle())->toBe('National Campaign Dashboard')
         ->and($ui->statisticsTitle())->toBe('National Statistics')
-        ->and($ui->emptyStateMessage('chart data'))->toBe('No chart data is available for this licensed campaign scope yet.');
+        ->and($ui->emptyStateMessage('chart data'))->toBe('No chart data is available yet.');
 });
+

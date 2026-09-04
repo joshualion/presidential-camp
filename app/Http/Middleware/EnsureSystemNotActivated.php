@@ -31,7 +31,7 @@ class EnsureSystemNotActivated
         if ($this->deploymentMode->isSelfHosted() && $this->installationState->installed()) {
             return redirect()
                 ->route('admin.license.show')
-                ->withErrors(['license' => 'No active local license was found. Please contact support or rerun the installer/reset procedure.']);
+                ->with('status', 'Community installations do not require commercial license activation.');
         }
 
         if (!SafeDatabase::hasTable('system_settings')) {

@@ -34,16 +34,7 @@ class ValidateLicense
         }
 
         if ($this->deploymentMode->isSelfHosted() && $this->installationState->installed()) {
-            if (Auth::check() && Auth::user()->access_level === 'superadmin') {
-                return redirect()
-                    ->route('admin.license.show')
-                    ->withErrors(['license' => 'No active local license was found. Please contact support or rerun the installer/reset procedure.']);
-            }
-
-            Auth::logout();
-            $request->session()->invalidate();
-            $request->session()->regenerateToken();
-            abort(403, 'No active local license was found. Please contact support.');
+            return $next($request);
         }
 
         // Allow localhost during development

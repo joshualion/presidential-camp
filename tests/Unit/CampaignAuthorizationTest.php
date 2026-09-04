@@ -53,6 +53,11 @@ class TestableElectionController extends ElectionController
 {
     public bool $scopeAllowsPollingUnit = false;
 
+    public function __construct()
+    {
+        // This test double exercises protected authorization helpers only.
+    }
+
     public function allowsElectionCreation(User $user): bool
     {
         return $this->canCreateElections($user);

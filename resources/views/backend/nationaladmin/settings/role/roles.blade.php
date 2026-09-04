@@ -17,6 +17,9 @@
                 </div>
                 <!-- /.card-header -->
                 <div class="card-body">
+                    @if(!empty($rbacPackageMode))
+                        <p class="text-muted mb-3">Showing roles available for {{ $rbacPackageDisplay ?? 'this campaign package' }}{{ !empty($rbacScopeDisplay) ? ' - '.$rbacScopeDisplay : '' }}.</p>
+                    @endif
                     <table id="myroles" class="table table-bordered table-striped">
                     <thead>
                     <tr>

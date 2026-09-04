@@ -4,11 +4,18 @@ namespace App\Http\Controllers;
 
 use App\Services\Installer\DatabaseSetupService;
 use App\Services\Installer\EnvironmentWriterService;
+use App\Services\Installer\CampaignGeographyDirectoryClient;
 use App\Services\Installer\InstallerService;
 use App\Services\Installer\InstallerStateStore;
 use App\Services\Installer\RequirementCheckService;
+use App\Services\CampaignInstallationSettingsService;
 use App\Services\Installer\StorageSetupService;
 use App\Services\LocationProvisioningImportService;
+use App\Models\FederalConstituency;
+use App\Models\LocalGovernmentArea;
+use App\Models\SenatorialDistrict;
+use App\Models\State;
+use Illuminate\Support\Facades\Schema;
 use App\Services\LocalLicenseService;
 use App\Services\RemoteLicenseClient;
 use Illuminate\Http\Request;
@@ -23,11 +30,21 @@ class InstallerController extends Controller
         'database' => 'Database',
         'mail' => 'Mail',
         'storage' => 'Storage',
-        'license' => 'License',
+        'campaign_scope' => 'Campaign Scope',
+        'campaign_geography' => 'Relevant Geography',
+        'campaign_identity' => 'Campaign Identity',
+        'geography_setup' => 'Geography Setup',
         'admin' => 'Super Admin',
         'run' => 'Run',
         'provision' => 'Provision Location Data',
         'complete' => 'Complete',
+    ];
+
+    private array $stepGroups = [
+        'Technical Setup' => ['welcome', 'requirements', 'environment', 'database', 'mail', 'storage'],
+        'Campaign Setup' => ['campaign_scope', 'campaign_geography', 'campaign_identity'],
+        'Administrator' => ['admin'],
+        'Geography Setup' => ['geography_setup', 'run', 'provision', 'complete'],
     ];
 
     private array $previousSteps = [
@@ -36,22 +53,26 @@ class InstallerController extends Controller
         'database' => 'environment',
         'mail' => 'database',
         'storage' => 'mail',
-        'license' => 'storage',
-        'admin' => 'license',
+        'campaign_scope' => 'storage',
+        'campaign_geography' => 'campaign_scope',
+        'campaign_identity' => 'campaign_geography',
+        'geography_setup' => 'campaign_identity',
+        'admin' => 'geography_setup',
         'run' => 'admin',
         'provision' => 'run',
     ];
-
     public function __construct(
         private RequirementCheckService $requirements,
         private EnvironmentWriterService $environmentWriter,
         private DatabaseSetupService $databaseSetup,
         private StorageSetupService $storageSetup,
         private RemoteLicenseClient $remoteLicenseClient,
+        private CampaignGeographyDirectoryClient $geographyDirectory,
         private LocalLicenseService $localLicenseService,
         private InstallerService $installerService,
         private InstallerStateStore $stateStore,
         private LocationProvisioningImportService $locationProvisioning,
+        private CampaignInstallationSettingsService $campaignInstallationSettings,
     ) {
     }
 
@@ -175,21 +196,135 @@ class InstallerController extends Controller
             session(['installer.storage' => $result]);
             $this->stateStore->merge(['storage' => $result]);
             $this->completeStep('storage');
-            return redirect()->route('install.license');
+            return redirect()->route('install.campaign_scope');
         }
 
         return $this->view('storage', ['storageResult' => $result]);
     }
 
-    public function license(Request $request)
+    public function campaignScope(Request $request)
     {
         if ($request->isMethod('post')) {
             $data = $request->validate([
-                'license_key' => ['required', 'string', 'max:255'],
+                'package_type' => ['required', 'string'],
             ]);
 
+            $packageType = $data['package_type'];
+            $option = $this->campaignInstallationSettings->option($packageType);
+            if (!$option) {
+                return back()->withInput()->withErrors(['package_type' => 'Choose a supported campaign scope.']);
+            }
+
+            $scope = [
+                'package_type' => $packageType,
+                'scope_type' => $option['scope_type'],
+                'scope_name' => $option['default_scope_name'],
+            ];
+
+            session(['installer.campaign_scope' => $scope]);
+            $this->stateStore->merge([
+                'campaign_scope' => $scope,
+                'campaign_geography' => [],
+            ]);
+            $this->completeStep('campaign_scope');
+
+            return redirect()->route('install.campaign_geography')->with('status', 'Campaign scope saved.');
+        }
+
+        return $this->view('campaign_scope', [
+            'scopeOptions' => $this->campaignInstallationSettings->options(),
+        ]);
+    }
+
+    public function campaignGeography(Request $request)
+    {
+        $state = $this->currentState();
+        $campaignScope = $state['campaign_scope'] ?? [];
+        $packageType = $campaignScope['package_type'] ?? null;
+        $option = $packageType ? $this->campaignInstallationSettings->option($packageType) : null;
+
+        if (!$option) {
+            return redirect()->route('install.campaign_scope')->withErrors(['campaign_scope' => 'Choose a campaign scope before selecting geography.']);
+        }
+
+        if ($request->isMethod('post')) {
+            $data = $request->validate([
+                'state_id' => ['nullable', 'integer'],
+                'senatorial_district_id' => ['nullable', 'integer'],
+                'federal_constituency_id' => ['nullable', 'integer'],
+                'lga_id' => ['nullable', 'integer'],
+                'scope_name' => ['nullable', 'string', 'max:160'],
+            ]);
+
+            $resolved = $this->resolveCampaignGeography($option['scope_type'], $data);
+            if (!$resolved['ok']) {
+                return back()->withInput()->withErrors(['campaign_geography' => $resolved['message']]);
+            }
+
+            session(['installer.campaign_geography' => $resolved['data']]);
+            $this->stateStore->merge(['campaign_geography' => $resolved['data']]);
+            $this->completeStep('campaign_geography');
+
+            return redirect()->route('install.campaign_identity')->with('status', 'Campaign geography saved.');
+        }
+
+        return $this->view('campaign_geography', array_merge($this->geographyOptions($option['scope_type']), [
+            'campaignScope' => $campaignScope,
+            'scopeOption' => $option,
+        ]));
+    }
+
+    public function campaignIdentity(Request $request)
+    {
+        if ($request->isMethod('post')) {
+            $data = $request->validate([
+                'system_name' => ['required', 'string', 'max:160'],
+                'campaign_slogan' => ['nullable', 'string', 'max:255'],
+            ]);
+
+            session(['installer.campaign_identity' => $data]);
+            $this->stateStore->merge(['campaign_identity' => $data]);
+            $this->completeStep('campaign_identity');
+
+            return redirect()->route('install.geography_setup')->with('status', 'Campaign identity saved.');
+        }
+
+        return $this->view('campaign_identity');
+    }
+
+    public function geographySetup(Request $request)
+    {
+        if ($request->isMethod('post')) {
+            $data = $request->validate([
+                'method' => ['required', 'in:manual,quickstart'],
+                'license_key' => ['nullable', 'string', 'max:255'],
+            ]);
+
+            if ($data['method'] === 'manual') {
+                session([
+                    'installer.geography_setup' => ['method' => 'manual'],
+                    'installer.license_key' => null,
+                    'installer.license_preview' => [],
+                    'installer.community_install' => true,
+                ]);
+                $this->stateStore->merge([
+                    'geography_setup' => ['method' => 'manual'],
+                    'license_key' => null,
+                    'license_preview' => [],
+                    'community_install' => true,
+                ]);
+                $this->completeStep('geography_setup');
+
+                return redirect()->route('install.admin')->with('status', 'Manual geography setup selected. No key or portal connection is required.');
+            }
+
+            $licenseKey = trim((string) ($data['license_key'] ?? ''));
+            if ($licenseKey === '') {
+                return back()->withInput()->withErrors(['license_key' => 'Enter a QuickStart Provisioning Key or choose manual geography setup.']);
+            }
+
             $payload = [
-                'license_key' => $data['license_key'],
+                'license_key' => $licenseKey,
                 'app_url' => config('app.url'),
                 'domain' => parse_url((string) config('app.url'), PHP_URL_HOST),
                 'app_version' => config('app.version') ?? env('APP_VERSION'),
@@ -197,31 +332,48 @@ class InstallerController extends Controller
             ];
 
             $preview = $this->remoteLicenseClient->preview($payload);
-            $this->localLicenseService->log(null, $data['license_key'], 'preview', ($preview['ok'] ?? false) ? 'success' : 'failed', $preview['message'] ?? null, $preview);
+            $this->localLicenseService->log(null, $licenseKey, 'preview', ($preview['ok'] ?? false) ? 'success' : 'failed', $preview['message'] ?? null, $preview);
 
             if (($preview['ok'] ?? false) !== true) {
-                return back()->withInput()->withErrors(['license_key' => $this->localLicenseService->customerMessage($preview['message'] ?? null, 'License preview failed.')]);
+                return back()->withInput()->withErrors(['license_key' => $this->localLicenseService->customerMessage($preview['message'] ?? null, 'QuickStart provisioning key preview failed.')]);
             }
 
             $previewData = $this->localLicenseService->normalizePortalPayload($preview['data'] ?? []);
 
             session([
-                'installer.license_key' => $data['license_key'],
+                'installer.geography_setup' => ['method' => 'quickstart'],
+                'installer.license_key' => $licenseKey,
                 'installer.license_preview' => $previewData,
+                'installer.community_install' => false,
             ]);
             $this->stateStore->merge([
-                'license_key' => $data['license_key'],
+                'geography_setup' => ['method' => 'quickstart'],
+                'license_key' => $licenseKey,
                 'license_preview' => $previewData,
+                'community_install' => false,
             ]);
-            $this->completeStep('license');
+            $this->completeStep('geography_setup');
 
-            return redirect()->route('install.admin')->with('status', 'License entitlement confirmed. Final activation will happen during installation.');
+            return redirect()->route('install.admin')->with('status', 'QuickStart provisioning key confirmed. Final activation and provisioning will happen during installation.');
         }
 
-        return $this->view('license', [
+        return $this->view('geography_setup', [
             'preview' => data_get($this->currentState(), 'license_preview'),
             'display' => data_get($this->currentState(), 'license_preview') ? $this->localLicenseService->displayPayload(data_get($this->currentState(), 'license_preview')) : null,
+            'geographySummary' => $this->geographySummary(),
+            'quickstartOrderUrl' => $this->quickstartOrderUrl(),
         ]);
+    }
+
+    public function license(Request $request)
+    {
+        if ($request->isMethod('post') && !$request->has('method')) {
+            $request->merge([
+                'method' => trim((string) $request->input('license_key')) === '' ? 'manual' : 'quickstart',
+            ]);
+        }
+
+        return $this->geographySetup($request);
     }
 
     public function admin(Request $request)
@@ -257,6 +409,14 @@ class InstallerController extends Controller
                 return back()
                     ->withErrors(['install' => $result['message']])
                     ->with('missing_step', $result['missing_step'] ?? null);
+            }
+
+            if (($result['installation_complete'] ?? false) === true) {
+                session(['installer_complete.location_provisioning' => $result['location_provisioning'] ?? null]);
+                session()->forget('installer');
+                $this->stateStore->clear();
+
+                return redirect()->route('install.complete')->with('status', $result['message'] ?? 'Community setup complete.');
             }
 
             $deferred = $result['location_provisioning_deferred'] ?? null;
@@ -319,7 +479,7 @@ class InstallerController extends Controller
             return response()->json([
                 'ok' => false,
                 'status' => 'failed',
-                'message' => 'License activation is incomplete. Return to Run Installation and retry activation before provisioning locations.',
+                'message' => 'QuickStart provisioning activation is incomplete. Return to Run Installation and retry before provisioning locations.',
             ], 409);
         }
 
@@ -379,6 +539,201 @@ class InstallerController extends Controller
         ]);
     }
 
+
+    private function geographyOptions(string $scopeType): array
+    {
+        try {
+            $states = $this->geographyDirectory->states();
+            return [
+                'states' => $states,
+                'senatorialDistricts' => $scopeType === 'senatorial_district' ? $this->directoryChildren($states, 'senatorialDistricts') : collect(),
+                'federalConstituencies' => $scopeType === 'federal_constituency' ? $this->directoryChildren($states, 'federalConstituencies') : collect(),
+                'lgas' => $scopeType === 'lga' ? $this->directoryChildren($states, 'lgas') : collect(),
+                'directoryError' => null,
+                'directorySource' => 'portal',
+            ];
+        } catch (Throwable $e) {
+            $local = [
+                'states' => $this->tableExists('states') ? State::query()->orderBy('name')->get(['id', 'name']) : collect(),
+                'senatorialDistricts' => $this->tableExists('senatorial_districts') ? SenatorialDistrict::query()->orderBy('name')->get(['id', 'state_id', 'name']) : collect(),
+                'federalConstituencies' => $this->tableExists('federal_constituencies') ? FederalConstituency::query()->orderBy('name')->get(['id', 'state_id', 'name']) : collect(),
+                'lgas' => $this->tableExists('local_government_areas') ? LocalGovernmentArea::query()->orderBy('name')->get(['id', 'state_id', 'name']) : collect(),
+                'directoryError' => $e->getMessage(),
+                'directorySource' => 'local',
+            ];
+
+            return $local;
+        }
+
+        return [
+            'states' => $this->tableExists('states') ? State::query()->orderBy('name')->get(['id', 'name']) : collect(),
+            'senatorialDistricts' => $this->tableExists('senatorial_districts') ? SenatorialDistrict::query()->orderBy('name')->get(['id', 'state_id', 'name']) : collect(),
+            'federalConstituencies' => $this->tableExists('federal_constituencies') ? FederalConstituency::query()->orderBy('name')->get(['id', 'state_id', 'name']) : collect(),
+            'lgas' => $this->tableExists('local_government_areas') ? LocalGovernmentArea::query()->orderBy('name')->get(['id', 'state_id', 'name']) : collect(),
+            'directoryError' => null,
+            'directorySource' => 'local',
+        ];
+    }
+
+    private function directoryChildren($states, string $method)
+    {
+        return collect($states)->flatMap(function ($state) use ($method) {
+            return $this->geographyDirectory->{$method}($state->id)
+                ->map(fn ($item) => tap($item, fn ($row) => $row->state_id = (int) $state->id));
+        })->values();
+    }
+
+    private function resolveCampaignGeography(string $scopeType, array $data): array
+    {
+        if ($scopeType === 'national') {
+            return ['ok' => true, 'data' => ['country_name' => 'Nigeria', 'scope_name' => 'Nigeria', 'state_id' => null, 'senatorial_district_id' => null, 'federal_constituency_id' => null, 'lga_id' => null]];
+        }
+
+        if (!$this->tableExists('states') || State::query()->count() === 0) {
+            $scopeName = trim((string) ($data['scope_name'] ?? ''));
+            if ($scopeName === '') {
+                return $this->resolveCampaignGeographyFromDirectory($scopeType, $data);
+            }
+
+            return ['ok' => true, 'data' => ['scope_name' => $scopeName, 'state_id' => null, 'senatorial_district_id' => null, 'federal_constituency_id' => null, 'lga_id' => null]];
+        }
+
+        $state = State::query()->find($data['state_id'] ?? null);
+        if (!$state) {
+            return $this->resolveCampaignGeographyFromDirectory($scopeType, $data);
+        }
+
+        $result = ['scope_name' => $state->name, 'state_id' => $state->id, 'senatorial_district_id' => null, 'federal_constituency_id' => null, 'lga_id' => null];
+
+        if ($scopeType === 'state') {
+            return ['ok' => true, 'data' => $result];
+        }
+
+        if ($scopeType === 'senatorial_district') {
+            $district = $this->tableExists('senatorial_districts') ? SenatorialDistrict::query()->whereKey($data['senatorial_district_id'] ?? null)->where('state_id', $state->id)->first() : null;
+            if (!$district) {
+                return $this->resolveCampaignGeographyFromDirectory($scopeType, $data);
+            }
+
+            $result['scope_name'] = $district->name;
+            $result['senatorial_district_id'] = $district->id;
+            return ['ok' => true, 'data' => $result];
+        }
+
+        if ($scopeType === 'federal_constituency') {
+            $constituency = $this->tableExists('federal_constituencies') ? FederalConstituency::query()->whereKey($data['federal_constituency_id'] ?? null)->where('state_id', $state->id)->first() : null;
+            if (!$constituency) {
+                return $this->resolveCampaignGeographyFromDirectory($scopeType, $data);
+            }
+
+            $result['scope_name'] = $constituency->name;
+            $result['federal_constituency_id'] = $constituency->id;
+            return ['ok' => true, 'data' => $result];
+        }
+
+        if ($scopeType === 'lga') {
+            $lga = $this->tableExists('local_government_areas') ? LocalGovernmentArea::query()->whereKey($data['lga_id'] ?? null)->where('state_id', $state->id)->first() : null;
+            if (!$lga) {
+                return $this->resolveCampaignGeographyFromDirectory($scopeType, $data);
+            }
+
+            $result['scope_name'] = $lga->name;
+            $result['lga_id'] = $lga->id;
+            return ['ok' => true, 'data' => $result];
+        }
+
+        return ['ok' => false, 'message' => 'Choose a supported campaign scope.'];
+    }
+
+    private function resolveCampaignGeographyFromDirectory(string $scopeType, array $data): array
+    {
+        $stateId = $data['state_id'] ?? null;
+        if (!$stateId) {
+            return ['ok' => false, 'message' => 'Choose the state for this campaign scope.'];
+        }
+
+        try {
+            $state = $this->geographyDirectory->states()->firstWhere('id', (int) $stateId);
+            if (!$state) {
+                return ['ok' => false, 'message' => 'Choose a valid state from the Campaign Manager geography directory.'];
+            }
+
+            $result = [
+                'scope_name' => $state->name,
+                'state_name' => $state->name,
+                'state_id' => null,
+                'portal_state_id' => (int) $state->id,
+                'senatorial_district_id' => null,
+                'federal_constituency_id' => null,
+                'lga_id' => null,
+            ];
+
+            if ($scopeType === 'state') {
+                return ['ok' => true, 'data' => $result];
+            }
+
+            if ($scopeType === 'senatorial_district') {
+                $district = $this->geographyDirectory->senatorialDistricts($state->id)->firstWhere('id', (int) ($data['senatorial_district_id'] ?? 0));
+                if (!$district) {
+                    return ['ok' => false, 'message' => 'Choose a senatorial district that belongs to the selected state.'];
+                }
+
+                $result['scope_name'] = $district->name;
+                $result['senatorial_district_name'] = $district->name;
+                $result['portal_senatorial_district_id'] = (int) $district->id;
+                return ['ok' => true, 'data' => $result];
+            }
+
+            if ($scopeType === 'federal_constituency') {
+                $constituency = $this->geographyDirectory->federalConstituencies($state->id)->firstWhere('id', (int) ($data['federal_constituency_id'] ?? 0));
+                if (!$constituency) {
+                    return ['ok' => false, 'message' => 'Choose a federal constituency that belongs to the selected state.'];
+                }
+
+                $result['scope_name'] = $constituency->name;
+                $result['federal_constituency_name'] = $constituency->name;
+                $result['portal_federal_constituency_id'] = (int) $constituency->id;
+                return ['ok' => true, 'data' => $result];
+            }
+
+            if ($scopeType === 'lga') {
+                $lga = $this->geographyDirectory->lgas($state->id)->firstWhere('id', (int) ($data['lga_id'] ?? 0));
+                if (!$lga) {
+                    return ['ok' => false, 'message' => 'Choose an LGA that belongs to the selected state.'];
+                }
+
+                $result['scope_name'] = $lga->name;
+                $result['lga_name'] = $lga->name;
+                $result['portal_lga_id'] = (int) $lga->id;
+                return ['ok' => true, 'data' => $result];
+            }
+        } catch (Throwable $e) {
+            return ['ok' => false, 'message' => $e->getMessage()];
+        }
+
+        return ['ok' => false, 'message' => 'Choose a supported campaign scope.'];
+    }
+
+    private function tableExists(string $table): bool
+    {
+        try {
+            return Schema::hasTable($table);
+        } catch (Throwable) {
+            return false;
+        }
+    }
+
+    private function campaignSummary(): array
+    {
+        $state = $this->currentState();
+
+        return [
+            'scope' => $state['campaign_scope'] ?? [],
+            'geography' => $state['campaign_geography'] ?? [],
+            'identity' => $state['campaign_identity'] ?? [],
+            'setup' => $state['geography_setup'] ?? [],
+        ];
+    }
     private function view(string $step, array $data = [])
     {
         if (request()->isMethod('get') && $redirect = $this->guardStep($step)) {
@@ -390,12 +745,71 @@ class InstallerController extends Controller
         return view('installer.step', array_merge($data, [
             'step' => $step,
             'steps' => $this->steps,
+            'stepGroups' => $this->stepGroups,
             'state' => $state,
             'previousStep' => $this->previousSteps[$step] ?? null,
             'completedSteps' => $this->completedSteps($state),
             'clickableSteps' => $this->clickableSteps($state),
             'welcomeMeta' => $this->welcomeMeta(),
         ]));
+    }
+
+    private function geographySummary(): array
+    {
+        $state = $this->currentState();
+        $scopeType = data_get($state, 'campaign_scope.scope_type', 'national');
+        $geography = $state['campaign_geography'] ?? [];
+
+        try {
+            return $this->geographyDirectory->summary($scopeType, $geography);
+        } catch (Throwable $e) {
+            return [
+                'ok' => false,
+                'scope_name' => $geography['scope_name'] ?? $geography['state_name'] ?? 'selected campaign geography',
+                'counts' => [],
+                'message' => 'The geography summary is temporarily unavailable. Manual setup can continue; QuickStart provisioning requires Portal connectivity.',
+                'detail' => $e->getMessage(),
+            ];
+        }
+    }
+
+    private function quickstartOrderUrl(): string
+    {
+        $state = $this->currentState();
+        $scope = $state['campaign_scope'] ?? [];
+        $geography = $state['campaign_geography'] ?? [];
+        $scopeType = $scope['scope_type'] ?? null;
+        $base = rtrim((string) config('campaign.portal_web_base', 'https://campaignmanager.ng'), '/');
+        $query = [
+            'service' => 'quickstart_geography',
+            'package' => $this->portalPackageType($scope['package_type'] ?? null),
+            'scope_type' => $scopeType,
+        ];
+
+        if (in_array($scopeType, ['state', 'senatorial_district', 'federal_constituency', 'lga'], true)) {
+            $query['campaign_state_id'] = $geography['portal_state_id'] ?? null;
+        }
+
+        if ($scopeType === 'senatorial_district') {
+            $query['campaign_senatorial_district_id'] = $geography['portal_senatorial_district_id'] ?? null;
+        }
+
+        if ($scopeType === 'federal_constituency') {
+            $query['campaign_federal_constituency_id'] = $geography['portal_federal_constituency_id'] ?? null;
+        }
+
+        if ($scopeType === 'lga') {
+            $query['campaign_lga_id'] = $geography['portal_lga_id'] ?? null;
+        }
+
+        $query = array_filter($query, fn ($value) => $value !== null && $value !== '');
+
+        return $base.'/order/campaign-manager'.($query ? '?'.http_build_query($query) : '');
+    }
+
+    private function portalPackageType(?string $packageType): ?string
+    {
+        return $packageType === 'chairmanship' ? 'lga' : $packageType;
     }
 
     private function currentState(): array
@@ -469,9 +883,12 @@ class InstallerController extends Controller
             'requirements', 'mail', 'storage' => in_array($step, $completed, true),
             'environment' => $this->hasKeys($state['environment'] ?? [], ['APP_NAME', 'APP_URL', 'APP_ENV', 'APP_DEBUG', 'APP_TIMEZONE', 'DEPLOYMENT_MODE']),
             'database' => $this->hasKeys($state['database'] ?? [], ['DB_CONNECTION', 'DB_HOST', 'DB_PORT', 'DB_DATABASE', 'DB_USERNAME']),
-            'license' => !empty($state['license_key']) && !empty($state['license_preview']),
+            'campaign_scope' => !empty($state['campaign_scope']['package_type']) && !empty($state['campaign_scope']['scope_type']),
+            'campaign_geography' => $this->campaignInstallationSettings->completeGeography($state['campaign_scope'] ?? [], $state['campaign_geography'] ?? []),
+            'campaign_identity' => !empty($state['campaign_identity']['system_name']),
+            'geography_setup' => ($state['geography_setup']['method'] ?? null) === 'manual' || (($state['geography_setup']['method'] ?? null) === 'quickstart' && !empty($state['license_key']) && !empty($state['license_preview'])),
             'admin' => in_array('admin', $completed, true),
-            'run' => (bool) ($state['provisioning_started'] ?? $state['location_provisioning_deferred'] ?? false),
+            'run' => (bool) ($state['installation_complete'] ?? $state['provisioning_started'] ?? $state['location_provisioning_deferred'] ?? false),
             'provision' => (bool) ($state['provisioning_started'] ?? $state['location_provisioning_deferred'] ?? false),
             'complete' => false,
             default => false,
@@ -533,3 +950,4 @@ class InstallerController extends Controller
         return 'The installer will prepare the campaign structure included in your license.';
     }
 }
+

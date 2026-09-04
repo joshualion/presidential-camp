@@ -396,6 +396,20 @@ foreach ([
         });
 }
 
+Route::middleware(['auth', 'access_level:superadmin'])
+    ->prefix('superadmin/bulksms')->name('superadmin.bulksms.')->group(function () {
+        Route::get('/send', function () {
+            abort_if(app(\App\Services\ModuleGateService::class)->disabled('sms'), 403, 'Bulk SMS is not available in this build.');
+
+            return redirect()->route('superadmin.sms.compose');
+        })->name('send');
+        Route::get('/setting', function () {
+            abort_if(app(\App\Services\ModuleGateService::class)->disabled('sms'), 403, 'SMS settings are not available in this build.');
+
+            return redirect()->route('superadmin.sms.settings.index');
+        })->name('setting');
+    });
+
 Route::middleware(['auth', 'access_level:superadmin', 'module.enabled:sms'])
     ->prefix('superadmin/sms/settings')->name('superadmin.sms.settings.')->group(function () {
         Route::get('/', [SmsSettingsController::class, 'index'])->name('index');

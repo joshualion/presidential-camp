@@ -36,4 +36,4 @@ Thank you for considering contributing to the Campaign Manager! Please follow th
 
 ## License
 
-Campaign Manager is a proprietary software licensed under the Diginet Tech Africa Limited license. Unauthorized distribution or modification is strictly prohibited. For licensing inquiries, please contact info@diginettechnologies.com
+Campaign Manager is a proprietary software licensed under the Govware Solutions Limited license. Unauthorized distribution or modification is strictly prohibited. For licensing inquiries, please contact info@diginettechnologies.com

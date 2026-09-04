@@ -61,6 +61,16 @@ return [
         'public_key_id' => env('RELEASE_SIGNING_PUBLIC_KEY_ID', 'campaign-manager-release-v1'),
     ],
 
+    'github' => [
+        'repository' => env('CAMPAIGN_RELEASE_GITHUB_REPO', 'joshualion/Campaign-Manager'),
+        'allowed_repositories' => array_filter(array_map(
+            'trim',
+            explode(',', env('CAMPAIGN_RELEASE_ALLOWED_GITHUB_REPOS', 'joshualion/Campaign-Manager'))
+        )),
+        'last_released_version' => env('CAMPAIGN_RELEASE_LAST_VERSION', '1.0.6'),
+        'version_state_path' => env('CAMPAIGN_RELEASE_VERSION_STATE_PATH', 'release-state.json'),
+    ],
+
     'protected_file_patterns' => [
         'app/Services/*License*.php',
         'app/Services/*Activation*.php',
@@ -76,6 +86,7 @@ return [
         'app/Console/Commands/Campaign*License*.php',
         'app/Console/Commands/Campaign*Provision*.php',
         'app/Console/Commands/CampaignLocationsProvision.php',
+        'app/Console/Commands/CampaignRelease.php',
         'app/Console/Commands/CampaignIntegrityCheck.php',
         'config/campaign.php',
         'config/release.php',
@@ -97,6 +108,7 @@ return [
         'app/Console/Commands/Campaign*License*.php',
         'app/Console/Commands/Campaign*Provision*.php',
         'app/Console/Commands/CampaignLocationsProvision.php',
+        'app/Console/Commands/CampaignRelease.php',
     ],
 
     'harden_php_max_bytes' => 262144,
@@ -104,6 +116,34 @@ return [
     'default_output' => 'builds/releases',
 
     'profiles' => [
+        'standard' => [
+            'label' => 'Campaign Manager',
+            'filename' => 'campaign-manager.zip',
+            'manifest_filename' => 'campaign-manager-v{version}.json',
+            'includes_full_location_data' => false,
+            'includes_bootstrap_location_data' => true,
+            'automatic_location_provisioning' => false,
+            'location_data_roots' => [
+                'storage/app/imports/campaign-locations/bootstrap',
+            ],
+            'required_location_csvs' => [
+                'storage/app/imports/campaign-locations/bootstrap/states.csv',
+                'storage/app/imports/campaign-locations/bootstrap/senatorial_districts.csv',
+                'storage/app/imports/campaign-locations/bootstrap/federal_constituencies.csv',
+                'storage/app/imports/campaign-locations/bootstrap/local_government_areas.csv',
+                'storage/app/imports/campaign-locations/bootstrap/wards.csv',
+                'storage/app/imports/campaign-locations/bootstrap/polling_units.csv',
+            ],
+            'expected_location_records' => [
+                'regions' => 6,
+                'states' => 37,
+                'senatorial_districts' => 109,
+                'federal_constituencies' => 360,
+                'lgas' => 774,
+                'wards' => 8809,
+                'polling_units' => 176846,
+            ],
+        ],
         'full' => [
             'label' => 'Campaign Manager Self-Hosted Portal Provisioned',
             'filename' => 'campaign-manager-self-hosted-portal-provisioned-v{version}.zip',
@@ -168,6 +208,7 @@ return [
         'composer.lock',
         'vendor/autoload.php',
         'public/index.php',
+        'public/.htaccess',
         '.htaccess.example',
         'public/build/manifest.json',
         '.env.example',
@@ -256,6 +297,9 @@ return [
         'app/Support/SmsMoney.php',
         'app/Services/PackageGovernanceService.php',
         'app/Services/LocalLicenseScopeReconciliationService.php',
+        'app/Services/GitHubReleasePublisher.php',
+        'app/Services/ReleaseVersionState.php',
+        'app/Console/Commands/CampaignRelease.php',
         'app/Providers/AppServiceProvider.php',
         'bootstrap/app.php',
         'config/mail.php',
@@ -399,6 +443,7 @@ return [
         '!docs/self-hosted-shared-hosting-guide.md',
         '!docs/member-product-contract.md',
         '.htaccess',
+        '!public/.htaccess',
         'htaccess',
         'node_modules',
         'tests',

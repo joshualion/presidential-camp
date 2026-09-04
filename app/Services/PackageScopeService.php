@@ -11,6 +11,7 @@ use App\Models\SystemSetting;
 use App\Models\Ward;
 use App\Support\CurrentPackageScope;
 use App\Support\SafeDatabase;
+use Illuminate\Support\Facades\Schema;
 
 class PackageScopeService
 {
@@ -44,9 +45,39 @@ class PackageScopeService
             );
         }
 
+        $settings = $this->systemSettings();
+        if ($settings) {
+            $package = $this->normalizePackage($settings->package ?? null);
+            $scopeType = $this->settingColumn('campaign_scope_type')
+                ? ($settings->campaign_scope_type ?: $this->scopeTypeForPackage($package))
+                : $this->scopeTypeForPackage($package);
+
+            return new CurrentPackageScope(
+                deployment_mode: $this->deploymentMode->mode(),
+                package_type: $package,
+                scope_type: $scopeType,
+                scope_name: $this->settingColumn('campaign_scope_name')
+                    ? ($settings->campaign_scope_name ?: $this->defaultScopeName($scopeType))
+                    : $this->defaultScopeName($scopeType),
+                state_id: $this->settingColumn('campaign_state_id') ? $settings->campaign_state_id : null,
+                state_name: null,
+                senatorial_district_id: $this->settingColumn('campaign_senatorial_district_id') ? $settings->campaign_senatorial_district_id : null,
+                senatorial_district_name: null,
+                federal_constituency_id: $this->settingColumn('campaign_federal_constituency_id') ? $settings->campaign_federal_constituency_id : null,
+                federal_constituency_name: null,
+                lga_id: $this->settingColumn('campaign_lga_id') ? $settings->campaign_lga_id : null,
+                lga_name: null,
+                modules: [],
+                fallback_used: false,
+                license_status: null,
+            );
+        }
+
+        $fallbackPackage = $this->fallbackPackage();
+
         return new CurrentPackageScope(
             deployment_mode: $this->deploymentMode->mode(),
-            package_type: $this->fallbackPackage(),
+            package_type: $fallbackPackage,
             scope_type: null,
             scope_name: null,
             state_id: null,
@@ -202,7 +233,7 @@ class PackageScopeService
 
     public function allowsState(?int $stateId): bool
     {
-        if (!$this->hasLocalLicense() || !$stateId) {
+        if (!$this->hasCampaignScope() || !$stateId) {
             return true;
         }
 
@@ -220,7 +251,7 @@ class PackageScopeService
 
     public function allowsSenatorialDistrict(?int $id): bool
     {
-        if (!$this->hasLocalLicense() || !$id) {
+        if (!$this->hasCampaignScope() || !$id) {
             return true;
         }
 
@@ -238,7 +269,7 @@ class PackageScopeService
 
     public function allowsFederalConstituency(?int $id): bool
     {
-        if (!$this->hasLocalLicense() || !$id) {
+        if (!$this->hasCampaignScope() || !$id) {
             return true;
         }
 
@@ -256,7 +287,7 @@ class PackageScopeService
 
     public function allowsLga(?int $id): bool
     {
-        if (!$this->hasLocalLicense() || !$id) {
+        if (!$this->hasCampaignScope() || !$id) {
             return true;
         }
 
@@ -274,7 +305,7 @@ class PackageScopeService
 
     public function allowsWard(?int $id): bool
     {
-        if (!$this->hasLocalLicense() || !$id || !SafeDatabase::hasTable('wards')) {
+        if (!$this->hasCampaignScope() || !$id || !SafeDatabase::hasTable('wards')) {
             return true;
         }
 
@@ -285,7 +316,7 @@ class PackageScopeService
 
     public function allowsPollingUnit(?int $id): bool
     {
-        if (!$this->hasLocalLicense() || !$id || !SafeDatabase::hasTable('polling_units')) {
+        if (!$this->hasCampaignScope() || !$id || !SafeDatabase::hasTable('polling_units')) {
             return true;
         }
 
@@ -315,6 +346,11 @@ class PackageScopeService
         return $this->localLicense() !== null;
     }
 
+    public function hasCampaignScope(): bool
+    {
+        return filled($this->current()->scope_type);
+    }
+
     public function fallbackUsed(): bool
     {
         return $this->current()->fallback_used;
@@ -322,8 +358,8 @@ class PackageScopeService
 
     private function fallbackPackage(): string
     {
-        if (SafeDatabase::hasTable('system_settings')) {
-            return $this->normalizePackage(SystemSetting::query()->value('package'));
+        if ($settings = $this->systemSettings()) {
+            return $this->normalizePackage($settings->package);
         }
 
         return $this->normalizePackage(env('CAMPAIGN_PACKAGE_TYPE', PackageGovernanceService::PRESIDENTIAL));
@@ -332,6 +368,42 @@ class PackageScopeService
     private function normalizePackage(?string $package): string
     {
         return app(PackageGovernanceService::class)->normalize($package);
+    }
+
+    private function systemSettings(): ?SystemSetting
+    {
+        return SafeDatabase::hasTable('system_settings')
+            ? SystemSetting::query()->first()
+            : null;
+    }
+
+    private function settingColumn(string $column): bool
+    {
+        return SafeDatabase::hasTable('system_settings') && Schema::hasColumn('system_settings', $column);
+    }
+
+    private function scopeTypeForPackage(?string $package): string
+    {
+        return match ($this->normalizePackage($package)) {
+            PackageGovernanceService::PRESIDENTIAL => 'national',
+            PackageGovernanceService::GOVERNORSHIP => 'state',
+            PackageGovernanceService::SENATORIAL => 'senatorial_district',
+            PackageGovernanceService::FEDERAL => 'federal_constituency',
+            PackageGovernanceService::CHAIRMANSHIP => 'lga',
+            default => 'national',
+        };
+    }
+
+    private function defaultScopeName(?string $scopeType): ?string
+    {
+        return match ($scopeType) {
+            'national' => 'National',
+            'state' => 'Selected State',
+            'senatorial_district' => 'Selected Senatorial District',
+            'federal_constituency' => 'Selected Federal Constituency',
+            'lga' => 'Selected LGA',
+            default => null,
+        };
     }
 
     private function relatedStateId(string $modelClass, ?int $id): ?int
@@ -363,3 +435,4 @@ class PackageScopeService
         return (int) $modelClass::query()->whereKey($id)->value($column) === (int) $expected;
     }
 }
+

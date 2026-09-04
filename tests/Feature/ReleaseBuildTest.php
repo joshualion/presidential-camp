@@ -2,6 +2,10 @@
 
 use App\Services\ReleaseBuildService;
 use App\Services\ReleaseReadinessService;
+use App\Services\GitHubReleasePublisher;
+use App\Services\ReleaseVersionState;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 
@@ -18,6 +22,7 @@ function releaseBuildFixture(array $omit = [], array $extraFiles = []): array
         'wards' => 1,
         'polling_units' => 1,
     ];
+    $config['profiles']['standard']['expected_location_records'] = $fixtureCounts;
     $config['profiles']['full']['expected_location_records'] = $fixtureCounts;
     $config['profiles']['community']['expected_location_records'] = $fixtureCounts;
 
@@ -89,6 +94,10 @@ function releaseBuildEnvExample(): string
         'QUEUE_CONNECTION=sync',
         'CACHE_STORE=file',
         'SESSION_DRIVER=file',
+        'CAMPAIGN_RELEASE_GITHUB_REPO=joshualion/Campaign-Manager',
+        'CAMPAIGN_RELEASE_ALLOWED_GITHUB_REPOS=joshualion/Campaign-Manager',
+        'CAMPAIGN_RELEASE_LAST_VERSION=1.0.6',
+        'CAMPAIGN_RELEASE_VERSION_STATE_PATH=storage/app/release-state.json',
     ]);
 }
 
@@ -197,6 +206,7 @@ test('release build includes bootstrap csv build manifest docs and vendor autolo
     expect($names)->toContain('storage/app/imports/campaign-locations/bootstrap/polling_units.csv')
         ->and($names)->not->toContain('storage/app/imports/inec/prepared/all/polling_units.csv')
         ->and($names)->toContain('public/build/manifest.json')
+        ->and($names)->toContain('public/.htaccess')
         ->and($names)->toContain('docs/self-hosted-installation-guide.md')
         ->and($names)->toContain('vendor/autoload.php')
         ->and($names)->toContain('README-SELF-HOSTED.md')
@@ -524,6 +534,229 @@ test('community profile includes only bootstrap location data', function () {
         ->and($manifest['includes_full_location_data'])->toBeFalse()
         ->and($manifest['includes_bootstrap_location_data'])->toBeTrue()
         ->and($manifest['automatic_location_provisioning'])->toBeFalse();
+});
+
+test('standard release profile builds one campaign manager zip', function () {
+    [$basePath, $config] = releaseBuildFixture();
+
+    $result = releaseBuildService($basePath, $config)->build([
+        'profile' => 'standard',
+        'version' => '1.0.6',
+        'channel' => 'stable',
+        'output' => $basePath.'/builds',
+    ]);
+
+    $names = releaseBuildZipNames($result['zip_path']);
+    $manifest = json_decode(File::get($result['manifest_path']), true);
+
+    expect(basename($result['zip_path']))->toBe('campaign-manager.zip')
+        ->and($manifest['version'])->toBe('1.0.6')
+        ->and($manifest['profile'])->toBe('standard')
+        ->and($manifest['licensed_features_controlled_by_activation'])->toBeFalse()
+        ->and($manifest['features']['license_activation'])->toBe('not_required_for_core_operation')
+        ->and($manifest['features']['location_setup'])->toBe('manual_or_quickstart_geography_provisioning')
+        ->and($manifest['includes_vendor'])->toBeTrue()
+        ->and($manifest['includes_built_assets'])->toBeTrue()
+        ->and($names)->toContain('vendor/autoload.php')
+        ->and($names)->toContain('public/build/manifest.json')
+        ->and($names)->toContain('release-manifest.json')
+        ->and($names)->toContain('checksums.txt');
+});
+
+test('campaign release build only creates standard zip without publishing', function () {
+    [$basePath, $config] = releaseBuildFixture();
+    Config::set('release', array_merge($config, [
+        'identity' => array_merge($config['identity'], ['version' => '1.0.5']),
+        'github' => [
+            'repository' => 'joshualion/Campaign-Manager',
+            'allowed_repositories' => ['joshualion/Campaign-Manager'],
+            'last_released_version' => '1.0.6',
+            'version_state_path' => $basePath.'/storage/app/release-state.json',
+        ],
+    ]));
+
+    $publisher = \Mockery::mock(GitHubReleasePublisher::class);
+    $publisher->shouldReceive('assertRepositoryAllowed')->once()->with('joshualion/Campaign-Manager', false);
+    $publisher->shouldNotReceive('publish');
+    app()->instance(GitHubReleasePublisher::class, $publisher);
+
+    $exit = Artisan::call('campaign:release', [
+        '--build-only' => true,
+        '--version-bump' => 'patch',
+        '--output' => $basePath.'/builds',
+    ]);
+    $output = Artisan::output();
+
+    expect($exit)->toBe(0)
+        ->and($output)->toContain('Current version: v1.0.6')
+        ->and($output)->toContain('New version: v1.0.7')
+        ->and($output)->toContain('GitHub release repository: joshualion/Campaign-Manager')
+        ->and($output)->toContain('Build-only complete')
+        ->and(File::isFile($basePath.'/builds/campaign-manager.zip'))->toBeTrue()
+        ->and(File::isFile($basePath.'/storage/app/release-state.json'))->toBeFalse();
+});
+
+test('campaign release refuses unapproved github repository target', function () {
+    [$basePath, $config] = releaseBuildFixture();
+    Config::set('release', array_merge($config, [
+        'identity' => array_merge($config['identity'], ['version' => '1.0.5']),
+        'github' => [
+            'repository' => 'private-owner/private-core',
+            'allowed_repositories' => ['joshualion/Campaign-Manager'],
+            'last_released_version' => '1.0.6',
+            'version_state_path' => $basePath.'/storage/app/release-state.json',
+        ],
+    ]));
+
+    $exit = Artisan::call('campaign:release', [
+        '--build-only' => true,
+        '--version-bump' => 'patch',
+        '--output' => $basePath.'/builds',
+    ]);
+    $output = Artisan::output();
+
+    expect($exit)->toBe(1)
+        ->and($output)->toContain('is not approved')
+        ->and(File::isFile($basePath.'/builds/campaign-manager.zip'))->toBeFalse();
+});
+
+test('campaign release publishes with explicit gh repo when confirmed', function () {
+    [$basePath, $config] = releaseBuildFixture();
+    Config::set('release', array_merge($config, [
+        'identity' => array_merge($config['identity'], ['version' => '1.0.5']),
+        'github' => [
+            'repository' => 'joshualion/Campaign-Manager',
+            'allowed_repositories' => ['joshualion/Campaign-Manager'],
+            'last_released_version' => '1.0.6',
+            'version_state_path' => $basePath.'/storage/app/release-state.json',
+        ],
+    ]));
+
+    $publisher = \Mockery::mock(GitHubReleasePublisher::class);
+    $publisher->shouldReceive('assertRepositoryAllowed')->once()->with('joshualion/Campaign-Manager', false);
+    $publisher->shouldReceive('publish')
+        ->once()
+        ->withArgs(fn (string $repository, string $tag, string $zipPath, string $title, mixed $notes, bool $allowUnapproved) =>
+            $repository === 'joshualion/Campaign-Manager'
+            && $tag === 'v1.1.0'
+            && basename($zipPath) === 'campaign-manager.zip'
+            && $title === 'Campaign Manager v1.1.0'
+            && $allowUnapproved === false
+        )
+        ->andReturn([
+            'repository' => 'joshualion/Campaign-Manager',
+            'tag' => 'v1.1.0',
+            'asset' => 'campaign-manager.zip',
+            'output' => '',
+        ]);
+    app()->instance(GitHubReleasePublisher::class, $publisher);
+
+    $this->artisan('campaign:release', [
+        '--version-bump' => 'minor',
+        '--output' => $basePath.'/builds',
+    ])
+        ->expectsConfirmation('Publish v1.1.0 to joshualion/Campaign-Manager using GitHub CLI?', 'yes')
+        ->assertExitCode(0);
+
+    $state = json_decode(File::get($basePath.'/storage/app/release-state.json'), true);
+
+    expect($state['last_released_version'])->toBe('1.1.0')
+        ->and($state['repository'])->toBe('joshualion/Campaign-Manager')
+        ->and($state['tag'])->toBe('v1.1.0')
+        ->and($state['asset'])->toBe('campaign-manager.zip');
+});
+
+test('campaign release state file overrides configured fallback version', function () {
+    [$basePath, $config] = releaseBuildFixture();
+    releaseBuildPut($basePath, 'storage/app/release-state.json', json_encode([
+        'last_released_version' => '2.0.0',
+        'repository' => 'joshualion/Campaign-Manager',
+        'tag' => 'v2.0.0',
+        'asset' => 'campaign-manager.zip',
+    ]));
+
+    Config::set('release', array_merge($config, [
+        'identity' => array_merge($config['identity'], ['version' => '1.0.5']),
+        'github' => [
+            'repository' => 'joshualion/Campaign-Manager',
+            'allowed_repositories' => ['joshualion/Campaign-Manager'],
+            'last_released_version' => '1.0.6',
+            'version_state_path' => $basePath.'/storage/app/release-state.json',
+        ],
+    ]));
+
+    $publisher = \Mockery::mock(GitHubReleasePublisher::class);
+    $publisher->shouldReceive('assertRepositoryAllowed')->once()->with('joshualion/Campaign-Manager', false);
+    $publisher->shouldNotReceive('publish');
+    app()->instance(GitHubReleasePublisher::class, $publisher);
+
+    $exit = Artisan::call('campaign:release', [
+        '--build-only' => true,
+        '--version-bump' => 'patch',
+        '--output' => $basePath.'/builds',
+    ]);
+    $output = Artisan::output();
+
+    expect($exit)->toBe(0)
+        ->and($output)->toContain('Current version: v2.0.0')
+        ->and($output)->toContain('New version: v2.0.1');
+});
+
+test('failed github publication does not advance release version state', function () {
+    [$basePath, $config] = releaseBuildFixture();
+    Config::set('release', array_merge($config, [
+        'identity' => array_merge($config['identity'], ['version' => '1.0.5']),
+        'github' => [
+            'repository' => 'joshualion/Campaign-Manager',
+            'allowed_repositories' => ['joshualion/Campaign-Manager'],
+            'last_released_version' => '1.0.6',
+            'version_state_path' => $basePath.'/storage/app/release-state.json',
+        ],
+    ]));
+
+    $publisher = \Mockery::mock(GitHubReleasePublisher::class);
+    $publisher->shouldReceive('assertRepositoryAllowed')->once()->with('joshualion/Campaign-Manager', false);
+    $publisher->shouldReceive('publish')->once()->andThrow(new RuntimeException('GitHub CLI failed.'));
+    app()->instance(GitHubReleasePublisher::class, $publisher);
+
+    $this->artisan('campaign:release', [
+        '--version-bump' => 'patch',
+        '--output' => $basePath.'/builds',
+    ])
+        ->expectsConfirmation('Publish v1.0.7 to joshualion/Campaign-Manager using GitHub CLI?', 'yes')
+        ->assertExitCode(1);
+
+    expect(File::isFile($basePath.'/storage/app/release-state.json'))->toBeFalse();
+});
+
+test('explicit release version still overrides version bump target', function () {
+    [$basePath, $config] = releaseBuildFixture();
+    Config::set('release', array_merge($config, [
+        'identity' => array_merge($config['identity'], ['version' => '1.0.5']),
+        'github' => [
+            'repository' => 'joshualion/Campaign-Manager',
+            'allowed_repositories' => ['joshualion/Campaign-Manager'],
+            'last_released_version' => '1.0.6',
+            'version_state_path' => $basePath.'/storage/app/release-state.json',
+        ],
+    ]));
+
+    $publisher = \Mockery::mock(GitHubReleasePublisher::class);
+    $publisher->shouldReceive('assertRepositoryAllowed')->once()->with('joshualion/Campaign-Manager', false);
+    $publisher->shouldNotReceive('publish');
+    app()->instance(GitHubReleasePublisher::class, $publisher);
+
+    $exit = Artisan::call('campaign:release', [
+        '--build-only' => true,
+        '--release-version' => 'v1.2.3',
+        '--version-bump' => 'major',
+        '--output' => $basePath.'/builds',
+    ]);
+    $output = Artisan::output();
+
+    expect($exit)->toBe(0)
+        ->and($output)->toContain('Current version: v1.0.6')
+        ->and($output)->toContain('New version: v1.2.3');
 });
 
 test('optional output path works', function () {

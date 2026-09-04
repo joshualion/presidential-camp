@@ -3,6 +3,7 @@
 namespace App\Services\Installer;
 
 use App\Models\User;
+use App\Services\CampaignInstallationSettingsService;
 use App\Services\InstallationStateService;
 use App\Services\LocationProvisioningException;
 use App\Services\LocationProvisioningIntegrityService;
@@ -64,6 +65,8 @@ class InstallerService
         private LocationProvisioningIntegrityService $locationIntegrity,
         private ServerFingerprintService $fingerprintService,
         private InstallationStateService $installationState,
+        private CampaignInstallationSettingsService $campaignInstallationSettings,
+        private BaseCampaignGeographyBootstrapper $baseGeographyBootstrapper,
     ) {
     }
 
@@ -72,8 +75,10 @@ class InstallerService
         $environment = $this->environmentFromStateOrFallback($state);
         $database = $this->databaseFromStateOrFallback($state);
         $mail = $this->mailFromStateOrFallback($state);
-        $licenseKey = $state['license_key'] ?? null;
+        $licenseKey = trim((string) ($state['license_key'] ?? ''));
+        $licenseKey = $licenseKey !== '' ? $licenseKey : null;
         $licensePreview = $state['license_preview'] ?? [];
+        $communityInstall = $licenseKey === null;
         $admin = $state['admin'] ?? [];
 
         if ($licenseKey && !$licensePreview) {
@@ -90,7 +95,7 @@ class InstallerService
             }
         }
 
-        $stateError = $this->validateInstallerState($environment, $database, $licenseKey, $licensePreview, $admin);
+        $stateError = $this->validateInstallerState($environment, $database, $licenseKey, $licensePreview, $admin, $state);
         if ($stateError) {
             return array_merge(['ok' => false, 'stage' => 'validation'], $stateError);
         }
@@ -111,6 +116,52 @@ class InstallerService
             $this->ensureLocalLicenseTablesExist();
             $this->runStep('installer seed data', fn () => $this->seedCoreData($mail));
 
+            $campaignScope = $this->campaignScopeFromState($state, $environment);
+            $campaignGeography = $state['campaign_geography'] ?? [];
+            $campaignIdentity = $state['campaign_identity'] ?? [];
+            $baseGeography = $this->runStep(
+                'base campaign geography bootstrap',
+                fn () => $this->baseGeographyBootstrapper->bootstrap($campaignScope, $campaignGeography)
+            );
+            $this->runStep('community installation sync', fn () => $this->campaignInstallationSettings->persist($campaignScope, $baseGeography, $campaignIdentity));
+
+            if ($communityInstall) {
+                $packageType = $campaignScope['package_type'];
+                $scopeType = $campaignScope['scope_type'];
+                $scopeName = $baseGeography['scope_name'] ?? $campaignScope['scope_name'] ?? $this->campaignInstallationSettings->defaultScopeName($scopeType);
+
+                $this->runStep('first super admin creation', fn () => $this->createSuperAdmin($admin));
+
+                $locationProvisioning = [
+                    'status' => 'skipped',
+                    'package_type' => $packageType,
+                    'deployment_mode' => 'self_hosted',
+                    'scope_type' => $scopeType,
+                    'scope_name' => $scopeName,
+                    'data_profile' => 'manual',
+                    'summary' => [],
+                    'warnings' => ['Community installation completed without paid QuickStart geography provisioning. Configure geography manually or provision later when a provisioning entitlement is available.'],
+                ];
+
+                $this->runStep('install lock write', fn () => $this->installationState->create([
+                    'installation_mode' => 'community',
+                    'source' => 'local',
+                    'remote_validation_required' => false,
+                    'deployment_mode' => 'self_hosted',
+                    'package_type' => $packageType,
+                    'scope_type' => $scopeType,
+                    'license_key' => null,
+                    'location_provisioning' => $this->compactProvisioningSummary($locationProvisioning),
+                ]));
+
+                return [
+                    'ok' => true,
+                    'message' => 'Community setup complete. Sign in with the super admin account and configure geography manually.',
+                    'installation_complete' => true,
+                    'location_provisioning' => $this->compactProvisioningSummary($locationProvisioning),
+                ];
+            }
+
             $localLicense = $this->localLicenseService->activatedForLicense($licenseKey);
 
             if (!$localLicense) {
@@ -125,7 +176,7 @@ class InstallerService
 
                 if (($activation['ok'] ?? false) !== true) {
                     $this->localLicenseService->log(null, $licenseKey, 'activate', 'failed', $activation['message'] ?? null, $activation);
-                    return ['ok' => false, 'stage' => 'activation', 'message' => $this->localLicenseService->customerMessage($activation['message'] ?? null, 'License activation failed.')];
+                    return ['ok' => false, 'stage' => 'activation', 'message' => $this->localLicenseService->customerMessage($activation['message'] ?? null, 'QuickStart provisioning key activation failed.')];
                 }
 
                 $activationData = $this->localLicenseService->normalizePortalPayload($activation['data'] ?? []);
@@ -162,7 +213,7 @@ class InstallerService
 
             return [
                 'ok' => true,
-                'message' => 'Core setup complete. Continue to provision licensed location data.',
+                'message' => 'Core setup complete. Continue to provision QuickStart geography data.',
                 'provisioning_run_id' => $run->id,
             ];
         } catch (Throwable $e) {
@@ -177,7 +228,7 @@ class InstallerService
         $localLicense = \App\Models\LocalLicense::query()->with('scope')->latest('id')->first();
 
         if (!$localLicense) {
-            return ['ok' => false, 'message' => 'License activation is incomplete. Return to Run Installation and try again.'];
+            return ['ok' => false, 'message' => 'QuickStart provisioning activation is incomplete. Return to Run Installation and try again.'];
         }
 
         if (!$admin || empty($admin['email']) || empty($admin['password']) || empty($admin['name'])) {
@@ -216,7 +267,7 @@ class InstallerService
         }
     }
 
-    private function validateInstallerState(array $environment, array $database, ?string $licenseKey, array $licensePreview, array $admin): ?array
+    private function validateInstallerState(array $environment, array $database, ?string $licenseKey, array $licensePreview, array $admin, array $state): ?array
     {
         if ($missing = $this->missingRequired($environment, self::ENVIRONMENT_KEYS)) {
             return [
@@ -232,10 +283,41 @@ class InstallerService
             ];
         }
 
-        if (!$licenseKey || !$licensePreview) {
+        $campaignScope = $state['campaign_scope'] ?? [];
+        if (empty($campaignScope['package_type']) || empty($campaignScope['scope_type'])) {
             return [
-                'missing_step' => 'license',
-                'message' => 'License preview is missing. Return to the License step and preview the license again before running installation.',
+                'missing_step' => 'campaign_scope',
+                'message' => 'Campaign scope is missing. Return to Campaign Scope and save again.',
+            ];
+        }
+
+        if (!$this->campaignInstallationSettings->completeGeography($campaignScope, $state['campaign_geography'] ?? [])) {
+            return [
+                'missing_step' => 'campaign_geography',
+                'message' => 'Campaign geography is incomplete. Return to Relevant Geography and save again.',
+            ];
+        }
+
+        $campaignIdentity = $state['campaign_identity'] ?? [];
+        if (empty($campaignIdentity['system_name'])) {
+            return [
+                'missing_step' => 'campaign_identity',
+                'message' => 'Campaign identity is missing. Return to Campaign Identity and save again.',
+            ];
+        }
+
+        $geographySetup = $state['geography_setup']['method'] ?? null;
+        if (!in_array($geographySetup, ['manual', 'quickstart'], true)) {
+            return [
+                'missing_step' => 'geography_setup',
+                'message' => 'Geography setup method is missing. Return to Geography Setup and choose manual setup or QuickStart provisioning.',
+            ];
+        }
+
+        if ($licenseKey && !$licensePreview) {
+            return [
+                'missing_step' => 'geography_setup',
+                'message' => 'QuickStart preview is missing. Return to Geography Setup and preview the provisioning key again before running installation.',
             ];
         }
 
@@ -332,6 +414,7 @@ class InstallerService
     {
         foreach ([
             \Database\Seeders\CountrySeeder::class => 'countries',
+            \Database\Seeders\RegionSeeder::class => 'regions',
             \Database\Seeders\AgeGradeTableSeeder::class => 'age_grades',
             \Database\Seeders\SupportGroupSeeder::class => 'support_groups',
             \Database\Seeders\ReligionTableSeeder::class => 'religions',
@@ -400,6 +483,74 @@ class InstallerService
         DB::table('system_settings')->updateOrInsert(['id' => 1], ['package' => $systemPackage, 'updated_at' => now()]);
     }
 
+    private function syncCommunityInstallationSetting(string $packageType, string $scopeType, ?string $scopeName): void
+    {
+        if (!Schema::hasTable('system_settings')) {
+            return;
+        }
+
+        $values = [
+            'package' => $this->packageGovernance->normalize($packageType),
+            'updated_at' => now(),
+        ];
+
+        foreach ([
+            'installation_mode' => 'community',
+            'campaign_scope_type' => $scopeType,
+            'campaign_scope_name' => $scopeName,
+        ] as $column => $value) {
+            if (Schema::hasColumn('system_settings', $column)) {
+                $values[$column] = $value;
+            }
+        }
+
+        DB::table('system_settings')->updateOrInsert(['id' => 1], $values);
+    }
+
+    private function campaignScopeFromState(array $state, array $environment): array
+    {
+        $packageType = $this->communityPackageType($state, $environment);
+        $scopeType = $state['campaign_scope']['scope_type'] ?? $this->campaignInstallationSettings->scopeTypeForPackage($packageType);
+
+        return [
+            'package_type' => $packageType,
+            'scope_type' => $scopeType,
+            'scope_name' => $state['campaign_scope']['scope_name'] ?? $this->campaignInstallationSettings->defaultScopeName($scopeType),
+        ];
+    }
+    private function communityPackageType(array $state, array $environment): string
+    {
+        return $this->packageGovernance->normalize(
+            $state['campaign_scope']['package_type']
+                ?? $state['package_type']
+                ?? $environment['CAMPAIGN_PACKAGE_TYPE']
+                ?? env('CAMPAIGN_PACKAGE_TYPE', PackageGovernanceService::PRESIDENTIAL)
+        );
+    }
+
+    private function scopeTypeForPackage(?string $packageType): string
+    {
+        return match ($this->packageGovernance->normalize($packageType)) {
+            PackageGovernanceService::PRESIDENTIAL => 'national',
+            PackageGovernanceService::GOVERNORSHIP => 'state',
+            PackageGovernanceService::SENATORIAL => 'senatorial_district',
+            PackageGovernanceService::FEDERAL => 'federal_constituency',
+            PackageGovernanceService::CHAIRMANSHIP => 'lga',
+            default => 'national',
+        };
+    }
+
+    private function defaultScopeName(?string $scopeType): ?string
+    {
+        return match ($scopeType) {
+            'national' => 'National',
+            'state' => 'Selected State',
+            'senatorial_district' => 'Selected Senatorial District',
+            'federal_constituency' => 'Selected Federal Constituency',
+            'lga' => 'Selected LGA',
+            default => null,
+        };
+    }
     private function ensureLocalLicenseTablesExist(): void
     {
         foreach (['local_licenses', 'local_license_scopes', 'local_license_modules', 'license_check_logs'] as $table) {
@@ -452,8 +603,9 @@ class InstallerService
             return;
         }
 
-        DB::table('system_settings')->updateOrInsert(['id' => 1], [
-            'package' => $this->packageGovernance->normalize(env('CAMPAIGN_PACKAGE_TYPE', PackageGovernanceService::PRESIDENTIAL)),
+        $packageType = $this->packageGovernance->normalize(env('CAMPAIGN_PACKAGE_TYPE', PackageGovernanceService::PRESIDENTIAL));
+        $values = [
+            'package' => $packageType,
             'logo' => '',
             'favicon'=> 'favicon.png',
             'login_page_background' => '',
@@ -471,7 +623,19 @@ class InstallerService
             'activation_code' => '',
             'updated_at' => now(),
             'created_at' => now(),
-        ]);
+        ];
+
+        if (Schema::hasColumn('system_settings', 'installation_mode')) {
+            $values['installation_mode'] = 'community';
+        }
+
+        if (Schema::hasColumn('system_settings', 'campaign_scope_type')) {
+            $scopeType = $this->scopeTypeForPackage($packageType);
+            $values['campaign_scope_type'] = $scopeType;
+            $values['campaign_scope_name'] = $this->defaultScopeName($scopeType);
+        }
+
+        DB::table('system_settings')->updateOrInsert(['id' => 1], $values);
     }
 
     private function seedPaymentGateways(): void
@@ -600,3 +764,5 @@ class InstallerService
         return $this->localLicenseService->customerMessage($message, 'Installation failed.');
     }
 }
+
+

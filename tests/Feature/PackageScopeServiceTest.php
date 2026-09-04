@@ -59,7 +59,7 @@ test('self hosted without local license does not crash', function () {
 
     expect($scope->deployment_mode)->toBe('self_hosted')
         ->and($scope->fallback_used)->toBeTrue()
-        ->and(app(ModuleGateService::class)->enabled('anything'))->toBeFalse();
+        ->and(app(ModuleGateService::class)->enabled('elections'))->toBeTrue();
 });
 
 test('activation payload module map preserves disabled modules', function () {
@@ -87,3 +87,4 @@ test('activation payload module map preserves disabled modules', function () {
         ->and(app(ModuleGateService::class)->disabled('finance'))->toBeTrue()
         ->and(app(PackageScopeService::class)->packageType())->toBe('lga');
 });
+

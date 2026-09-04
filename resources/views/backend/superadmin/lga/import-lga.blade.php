@@ -18,6 +18,10 @@
               </div>
               <!-- /.card-header -->
               <div class="card-body">
+              <div class="alert alert-info">
+                Imported LGAs are added to your campaign geography but are not automatically mapped to Senatorial Districts and Federal Constituencies. Manual Add LGA lets administrators map each LGA correctly while creating it. For complete electoral geography with all relationships automatically configured, use QuickStart Geography Provisioning.
+                <a href="{{ $quickstartOrderUrl }}" target="_blank" rel="noopener" class="btn btn-sm btn-success ml-2">Configure with QuickStart</a>
+              </div>
 
               <!-- form start -->
               <form action="{{ route($profileData->access_level.'.location.lga.importLgas') }}" method="POST" enctype="multipart/form-data">

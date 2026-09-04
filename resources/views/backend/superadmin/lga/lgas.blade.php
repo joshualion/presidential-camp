@@ -10,12 +10,16 @@
                 <div class="card-header">
                     <h3 class="card-title">All Local Government Areas - <span class="badge badge-light">{{number_format($lgas->count(),0)}}</span></h3>
                     <div class="card-tools">
-                        <a href="{{ route('nationaladmin.location.lga.add') }}"><button class="btn btn-default"> <i class="fa fa-plus-square"></i> Add local Government Area</button></a>
+                        <a href="{{ route($profileData->access_level.'.location.lga.add') }}"><button class="btn btn-default"> <i class="fa fa-plus-square"></i> Add local Government Area</button></a>
                         <a href="{{route($profileData->access_level.'.location.lga.import')}}"><button class="btn btn-dark"> <i class="fa fa-file-excel"></i> Import LGAs</button></a>
                     </div>
                 </div>
                 <!-- /.card-header -->
                 <div class="card-body">
+                    <div class="alert alert-info">
+                        Manual Add LGA lets you map each LGA to its State, Senatorial District, and Federal Constituency. Imported LGAs are added to your campaign geography but are not automatically mapped to Senatorial Districts and Federal Constituencies. For complete electoral geography with all relationships automatically configured, use QuickStart Geography Provisioning.
+                        <a href="{{ $quickstartOrderUrl ?? rtrim((string) config('campaign.portal_web_base', 'https://campaignmanager.ng'), '/').'/order/campaign-manager?service=quickstart_geography' }}" target="_blank" rel="noopener" class="btn btn-sm btn-success ml-2">Configure with QuickStart</a>
+                    </div>
                     <table id="mylgas" class="table table-bordered table-striped">
                     <thead>
                     <tr>
@@ -132,7 +136,6 @@
 
 
 @endsection
-
 
 
 

@@ -22,7 +22,7 @@ class LicensedScopeQueryService
     {
         try {
             return $this->scopeService->isSelfHosted()
-                && $this->scopeService->hasLocalLicense()
+                && $this->scopeService->hasCampaignScope()
                 && !$this->isNationalScope();
         } catch (Throwable) {
             return false;
@@ -201,7 +201,7 @@ class LicensedScopeQueryService
             $allowed = $this->scopeService->{$check['method']}((int) $payload[$key]);
 
             if (!$allowed) {
-                $errors[$key] = 'The selected '.$check['label'].' is outside the licensed campaign scope.';
+                $errors[$key] = 'The selected '.$check['label'].' is outside the configured campaign scope.';
             }
         }
 
@@ -543,7 +543,7 @@ class LicensedScopeQueryService
 
     private function abortUnless(bool $allowed): void
     {
-        abort_unless(!$this->applies() || $allowed, 403, 'This record is outside the licensed campaign scope.');
+        abort_unless(!$this->applies() || $allowed, 403, 'This record is outside the configured campaign scope.');
     }
 
     private function recordIsAllowed(Model $record, string $subject): bool

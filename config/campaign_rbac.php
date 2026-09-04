@@ -50,7 +50,6 @@ return [
             'members.view',
             'members.create',
             'members.edit',
-            'members.delete',
             'agents.view',
             'agents.approve',
             'settings.technical',

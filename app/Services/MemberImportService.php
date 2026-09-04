@@ -177,7 +177,9 @@ class MemberImportService
         $phone = $this->normalizePhone($row['phone'] ?? '');
         $suppliedEmail = strtolower($this->clean($row['email'] ?? ''));
         $gender = strtolower($this->clean($row['gender'] ?? ''));
-        $accessLevel = $context['access_level'] ?? strtolower($this->clean($row['access_level'] ?? 'user'));
+        $rowAccessLevel = strtolower($this->clean($row['access_level'] ?? ''));
+        $rowRoleName = $this->clean($row['role'] ?? '');
+        $accessLevel = $context['access_level'] ?? ($rowAccessLevel ?: 'user');
         $role = $context['role'] ?? $this->resolveRole($actor, $accessLevel, $row['role'] ?? null);
 
         if ($firstname === '') {
@@ -195,8 +197,14 @@ class MemberImportService
         if ($accessLevel === 'superadmin' || !$this->roles->canAssignAccessLevel($actor, $accessLevel)) {
             $errors[] = 'The selected access level is not available to this administrator.';
         }
+        if (isset($context['access_level']) && $rowAccessLevel !== '' && $rowAccessLevel !== $accessLevel) {
+            $errors[] = 'The row access level does not match the selected batch access level.';
+        }
         if (!$role || !$this->roles->canAssignRole($actor, $role, $accessLevel)) {
             $errors[] = 'The selected role is not valid for the batch access level.';
+        }
+        if (isset($context['role']) && $rowRoleName !== '' && $role && strcasecmp($rowRoleName, $role->name) !== 0) {
+            $errors[] = 'The row role does not match the selected batch role.';
         }
 
         foreach (['email' => $suppliedEmail, 'phone' => $phone] as $field => $value) {

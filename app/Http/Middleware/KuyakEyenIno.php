@@ -29,7 +29,7 @@ class KuyakEyenIno
         }
 
         if ($this->deploymentMode->isSelfHosted() && $this->installationState->installed()) {
-            return $this->handleLocalLicenseMissing($request);
+            return $next($request);
         }
         
         try {

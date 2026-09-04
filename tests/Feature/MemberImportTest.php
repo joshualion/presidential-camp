@@ -119,11 +119,13 @@ test('authorized admin can access import page and download csv template', functi
 
 test('valid csv imports a scoped member and records report counts', function () {
     $locations = memberImportLocations();
-    memberImportRole();
+    $role = memberImportRole();
     memberImportSettings();
     $actor = memberImportActor(['access_level' => 'nationaladmin']);
 
     $response = $this->withoutMiddleware()->actingAs($actor)->post(route('nationaladmin.member.import.store'), [
+        'access_level' => 'user',
+        'role_id' => $role->id,
         'import_file' => memberImportFile([[
             'firstname' => 'Ada',
             'lastname' => 'Nwosu',

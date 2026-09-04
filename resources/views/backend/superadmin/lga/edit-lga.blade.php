@@ -41,7 +41,37 @@
                                             </option>
                                         @endforeach
                                     </select>
-                                    @error('state')
+                                    @error('state_id')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+
+                            <div class="form-group row">
+                                <label for="senatorial_district_id" class="col-sm-3 col-form-label">Senatorial District</label>
+                                <div class="col-sm-5">
+                                    <select class="form-control @error('senatorial_district_id') is-invalid @enderror" name="senatorial_district_id" id="senatorial_district_id" data-boundary="state">
+                                        <option value="">Select Senatorial District</option>
+                                        @foreach ($senatorialDistricts as $district)
+                                            <option value="{{ $district->id }}" data-state-id="{{ $district->state_id }}" {{ old('senatorial_district_id', $lga->senatorial_district_id) == $district->id ? 'selected' : '' }}>{{ $district->name }}</option>
+                                        @endforeach
+                                    </select>
+                                    @error('senatorial_district_id')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+
+                            <div class="form-group row">
+                                <label for="federal_constituency_id" class="col-sm-3 col-form-label">Federal Constituency</label>
+                                <div class="col-sm-5">
+                                    <select class="form-control @error('federal_constituency_id') is-invalid @enderror" name="federal_constituency_id" id="federal_constituency_id" data-boundary="state">
+                                        <option value="">Select Federal Constituency</option>
+                                        @foreach ($federalConstituencies as $constituency)
+                                            <option value="{{ $constituency->id }}" data-state-id="{{ $constituency->state_id }}" {{ old('federal_constituency_id', $lga->federal_constituency_id) == $constituency->id ? 'selected' : '' }}>{{ $constituency->name }}</option>
+                                        @endforeach
+                                    </select>
+                                    @error('federal_constituency_id')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                 </div>
@@ -59,6 +89,23 @@
                                 </div>
                             </div>
                         </form>
+                        <script>
+                            (function () {
+                                const state = document.getElementById('state');
+                                const selects = document.querySelectorAll('select[data-boundary="state"]');
+                                function filter() {
+                                    selects.forEach(function (select) {
+                                        Array.from(select.options).forEach(function (option) {
+                                            if (!option.value) return;
+                                            option.hidden = state.value && option.dataset.stateId !== state.value;
+                                        });
+                                        if (select.selectedOptions[0] && select.selectedOptions[0].hidden) select.value = '';
+                                    });
+                                }
+                                state && state.addEventListener('change', filter);
+                                filter();
+                            })();
+                        </script>
 
 
 
@@ -81,7 +128,6 @@
 
 
 @endsection
-
 
 
 

@@ -25,10 +25,10 @@ class ModuleGateService
 
         if (!$this->scope->hasLocalLicense()) {
             if (in_array($moduleKey, self::DISABLED_BY_DEFAULT_MODULES, true)) {
-                return (bool) $configured;
+                return $this->scope->isSelfHosted() && $configured === true;
             }
 
-            return $this->scope->isManaged() || !$this->scope->isSelfHosted();
+            return true;
         }
 
         $explicitState = $this->scope->localLicenseHasModule($moduleKey);
@@ -41,7 +41,7 @@ class ModuleGateService
         }
 
         if (in_array($moduleKey, self::DISABLED_BY_DEFAULT_MODULES, true)) {
-            return (bool) $configured;
+            return $configured === true;
         }
 
         return in_array($moduleKey, array_map([$this, 'normalize'], $this->scope->enabledModules()), true);
@@ -54,7 +54,7 @@ class ModuleGateService
 
     public function requireEnabled(string $moduleKey): void
     {
-        abort_if($this->disabled($moduleKey), 403, 'This module is not enabled for the current license.');
+        abort_if($this->disabled($moduleKey), 403, 'This module is not enabled for the current installation.');
     }
 
     private function normalize(string $moduleKey): string
@@ -62,3 +62,5 @@ class ModuleGateService
         return strtolower(trim(str_replace(['-', ' '], '_', $moduleKey)));
     }
 }
+
+

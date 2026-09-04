@@ -187,6 +187,34 @@ class LocationProvisioningImportService
         return $result;
     }
 
+    public function bootstrapBaseRecords(array $recordsByDataset): array
+    {
+        foreach ($recordsByDataset['countries'] ?? [] as $record) {
+            $this->countryId((string) data_get($record, 'name', 'Nigeria'));
+        }
+
+        foreach ($recordsByDataset['regions'] ?? [] as $record) {
+            $countryId = $this->countryId((string) data_get($record, 'country_name', 'Nigeria'));
+            $this->regionId($countryId, (string) data_get($record, 'name', data_get($record, 'region_name', 'Unknown Region')));
+        }
+
+        foreach (self::DATASETS as $dataset) {
+            foreach ($recordsByDataset[$dataset] ?? [] as $record) {
+                match ($dataset) {
+                    'states' => $this->importState($record),
+                    'senatorial_districts' => $this->importSenatorialDistrict($record),
+                    'federal_constituencies' => $this->importFederalConstituency($record),
+                    'local_government_areas' => $this->importLga($record),
+                    'wards' => $this->importWard($record),
+                    'polling_units' => $this->importPollingUnit($record),
+                    default => null,
+                };
+            }
+        }
+
+        return $this->resolveBootstrapIds($recordsByDataset);
+    }
+
     private function createPortalSession(LocalLicense $license, LocationProvisioningBatch $run, int $batchSize): LocationProvisioningBatch
     {
         $session = $this->client->createSession([
@@ -222,6 +250,43 @@ class LocationProvisioningImportService
         }
 
         return $run->fresh();
+    }
+
+    private function resolveBootstrapIds(array $recordsByDataset): array
+    {
+        $ids = [];
+        $state = $recordsByDataset['states'][0] ?? null;
+
+        if ($state) {
+            $stateCode = $this->value($state, ['state_code', 'inec_state_code', 'code']);
+            $stateName = $this->name($state);
+            $stateQuery = DB::table('states');
+            $stateCode ? $stateQuery->where('inec_state_code', $stateCode) : $stateQuery->where('name', $stateName);
+            $ids['state_id'] = (int) $stateQuery->value('id');
+        }
+
+        if (! empty($ids['state_id']) && $district = ($recordsByDataset['senatorial_districts'][0] ?? null)) {
+            $ids['senatorial_district_id'] = (int) DB::table('senatorial_districts')
+                ->where('state_id', $ids['state_id'])
+                ->where('normalized_name', $this->normalized($this->name($district)))
+                ->value('id');
+        }
+
+        if (! empty($ids['state_id']) && $constituency = ($recordsByDataset['federal_constituencies'][0] ?? null)) {
+            $ids['federal_constituency_id'] = (int) DB::table('federal_constituencies')
+                ->where('state_id', $ids['state_id'])
+                ->where('normalized_name', $this->normalized($this->name($constituency)))
+                ->value('id');
+        }
+
+        if (! empty($ids['state_id']) && $lga = ($recordsByDataset['local_government_areas'][0] ?? null)) {
+            $lgaCode = $this->value($lga, ['lga_code', 'inec_lga_code', 'code']);
+            $lgaQuery = DB::table('local_government_areas')->where('state_id', $ids['state_id']);
+            $lgaCode ? $lgaQuery->where('inec_lga_code', $lgaCode) : $lgaQuery->where('name', $this->name($lga));
+            $ids['lga_id'] = (int) $lgaQuery->value('id');
+        }
+
+        return array_filter($ids);
     }
 
     private function sessionTotalRecords(array $session): int

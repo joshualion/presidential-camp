@@ -455,7 +455,7 @@ class ReleaseBuildService
             'includes_vendor' => File::isFile($this->path('vendor/autoload.php')),
             'includes_built_assets' => File::isFile($this->path('public/build/manifest.json')),
             'deployment_mode' => 'self_hosted',
-            'licensed_features_controlled_by_activation' => true,
+            'licensed_features_controlled_by_activation' => false,
             'automatic_location_provisioning' => (bool) Arr::get($profileConfig, 'automatic_location_provisioning', false),
             'requirements' => [
                 'php' => '^8.2',
@@ -465,8 +465,8 @@ class ReleaseBuildService
             ],
             'features' => [
                 'browser_installer' => 'included',
-                'license_activation' => 'included',
-                'location_setup' => 'portal_provisioned_with_bootstrap_samples',
+                'license_activation' => 'not_required_for_core_operation',
+                'location_setup' => 'manual_or_quickstart_geography_provisioning',
                 'community_forum' => $profile === 'community' ? 'included_as_bootstrap_release' : 'optional_disabled_by_default',
                 'email_notifications' => 'included_with_jurisdiction_targeting_and_delivery_reports',
             ],
@@ -494,8 +494,7 @@ class ReleaseBuildService
                 'Point the domain document root to the public directory.',
                 'Copy .env.example to .env and enter database/app URL values.',
                 'Open the browser installer.',
-                'Activate the license.',
-                'Provision licensed geography.',
+                'Choose manual geography configuration or optional QuickStart Geography Provisioning.',
                 'Create the first superadmin.',
             ],
             'excluded_local_files_summary' => $this->customerExcludedSummary($files['excluded']),
@@ -522,8 +521,8 @@ class ReleaseBuildService
     {
         $profile = strtolower(trim($profile));
 
-        if (!in_array($profile, ['full', 'community'], true)) {
-            throw new RuntimeException('Unsupported release profile. Use full, community, or all.');
+        if (!in_array($profile, ['standard', 'full', 'community'], true)) {
+            throw new RuntimeException('Unsupported release profile. Use standard, full, community, or all.');
         }
 
         return $profile;

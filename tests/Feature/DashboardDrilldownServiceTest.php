@@ -66,7 +66,7 @@ test('governorship install cannot open another state dashboard', function () {
     ]);
 
     app(DashboardDrilldownService::class)->state($locations['otherState']->uuid);
-})->throws(HttpException::class, 'This record is outside the licensed campaign scope.');
+})->throws(HttpException::class, 'This record is outside the configured campaign scope.');
 
 test('missing dashboard uuid returns controlled not found', function () {
     app(DashboardDrilldownService::class)->state('00000000-0000-4000-8000-000000000000');
@@ -86,7 +86,7 @@ test('lga license cannot open another lga dashboard', function () {
     ]);
 
     app(DashboardDrilldownService::class)->lga($locations['otherLga']->uuid);
-})->throws(HttpException::class, 'This record is outside the licensed campaign scope.');
+})->throws(HttpException::class, 'This record is outside the configured campaign scope.');
 
 test('ward and polling unit drilldowns support lga relationship alias', function () {
     config(['campaign.deployment_mode' => 'managed']);
@@ -117,3 +117,4 @@ test('managed mode leaves drilldown guards as no op', function () {
 
     expect($state->is($locations['otherState']))->toBeTrue();
 });
+
