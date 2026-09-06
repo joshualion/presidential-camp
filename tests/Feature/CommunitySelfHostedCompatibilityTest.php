@@ -9,7 +9,6 @@ use App\Models\SupportGroup;
 use App\Models\SystemSetting;
 use App\Models\User;
 use App\Services\Installer\DatabaseSetupService;
-use App\Services\Installer\EnvironmentWriterService;
 use App\Services\Installer\InstallerService;
 use App\Services\Installer\InstallerStateStore;
 use App\Services\InstallationStateService;
@@ -211,6 +210,58 @@ test('installed community core reaches guarded superadmin and manual geography r
     $this->actingAs($user)->get(route('superadmin.location.regions'))->assertOk();
 
     expect(LocalLicense::query()->count())->toBe(0);
+});
+
+test('quickstart local entitlement remains usable without activation reference', function () {
+    $payload = [
+        'license' => [
+            'license_key' => 'QS-GEO-NATIONAL',
+            'entitlement_type' => 'quickstart_geography',
+            'service_type' => 'quickstart_geography',
+            'status' => 'active',
+            'deployment_mode' => 'self_hosted',
+            'release_profile' => 'community',
+            'provisioning_type' => 'quickstart_geography',
+            'activation_required' => false,
+            'package_type' => 'presidential',
+        ],
+        'scope' => [
+            'scope_type' => 'national',
+            'scope_name' => 'National',
+        ],
+        'modules' => [['module_key' => 'members', 'enabled' => true]],
+    ];
+
+    $service = app(\App\Services\LocalLicenseService::class);
+    $license = $service->persistActivation('QS-GEO-NATIONAL', $payload);
+
+    expect($license->activation_id)->toBeNull()
+        ->and($service->activationRequired($payload))->toBeFalse()
+        ->and($service->activatedForLicense('QS-GEO-NATIONAL'))->not->toBeNull();
+});
+
+test('legacy local entitlement without activation reference remains incomplete', function () {
+    $payload = [
+        'license' => [
+            'license_key' => 'LEGACY-NO-ACTIVATION',
+            'status' => 'active',
+            'deployment_mode' => 'self_hosted',
+            'package_type' => 'presidential',
+            'activation_required' => true,
+        ],
+        'scope' => [
+            'scope_type' => 'national',
+            'scope_name' => 'National',
+        ],
+        'modules' => [['module_key' => 'members', 'enabled' => true]],
+    ];
+
+    $service = app(\App\Services\LocalLicenseService::class);
+    $license = $service->persistActivation('LEGACY-NO-ACTIVATION', $payload);
+
+    expect($license->activation_id)->toBeNull()
+        ->and($service->activationRequired($payload))->toBeTrue()
+        ->and($service->activatedForLicense('LEGACY-NO-ACTIVATION'))->toBeNull();
 });
 
 test('campaign scope resolves from local system settings without license records', function () {

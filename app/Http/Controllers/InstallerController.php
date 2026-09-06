@@ -354,7 +354,7 @@ class InstallerController extends Controller
             ]);
             $this->completeStep('geography_setup');
 
-            return redirect()->route('install.admin')->with('status', 'QuickStart provisioning key confirmed. Final activation and provisioning will happen during installation.');
+            return redirect()->route('install.admin')->with('status', 'QuickStart provisioning key confirmed. Geography provisioning will happen during installation.');
         }
 
         return $this->view('geography_setup', [
@@ -475,11 +475,19 @@ class InstallerController extends Controller
             ? $this->localLicenseService->activatedForLicense($licenseKey)
             : $this->localLicenseService->current();
 
-        if (!$license?->activation_id) {
+        if (!$license) {
             return response()->json([
                 'ok' => false,
                 'status' => 'failed',
-                'message' => 'QuickStart provisioning activation is incomplete. Return to Run Installation and retry before provisioning locations.',
+                'message' => 'QuickStart provisioning setup is incomplete. Return to Run Installation and retry before provisioning locations.',
+            ], 409);
+        }
+
+        if ($this->localLicenseService->activationRequired($license->raw_payload ?: []) && !$license->activation_id) {
+            return response()->json([
+                'ok' => false,
+                'status' => 'failed',
+                'message' => 'Legacy licence activation is incomplete. Return to Run Installation and retry activation before provisioning locations.',
             ], 409);
         }
 
@@ -603,7 +611,15 @@ class InstallerController extends Controller
             return $this->resolveCampaignGeographyFromDirectory($scopeType, $data);
         }
 
-        $result = ['scope_name' => $state->name, 'state_id' => $state->id, 'senatorial_district_id' => null, 'federal_constituency_id' => null, 'lga_id' => null];
+        $result = [
+            'scope_name' => $state->name,
+            'state_name' => $state->name,
+            'state_code' => $state->inec_state_code ?? null,
+            'state_id' => $state->id,
+            'senatorial_district_id' => null,
+            'federal_constituency_id' => null,
+            'lga_id' => null,
+        ];
 
         if ($scopeType === 'state') {
             return ['ok' => true, 'data' => $result];
@@ -617,6 +633,8 @@ class InstallerController extends Controller
 
             $result['scope_name'] = $district->name;
             $result['senatorial_district_id'] = $district->id;
+            $result['senatorial_district_name'] = $district->name;
+            $result['senatorial_district_code'] = $district->inec_senatorial_district_code ?? null;
             return ['ok' => true, 'data' => $result];
         }
 
@@ -628,6 +646,8 @@ class InstallerController extends Controller
 
             $result['scope_name'] = $constituency->name;
             $result['federal_constituency_id'] = $constituency->id;
+            $result['federal_constituency_name'] = $constituency->name;
+            $result['federal_constituency_code'] = $constituency->inec_federal_constituency_code ?? null;
             return ['ok' => true, 'data' => $result];
         }
 
@@ -639,6 +659,8 @@ class InstallerController extends Controller
 
             $result['scope_name'] = $lga->name;
             $result['lga_id'] = $lga->id;
+            $result['lga_name'] = $lga->name;
+            $result['lga_code'] = $lga->inec_lga_code ?? null;
             return ['ok' => true, 'data' => $result];
         }
 
@@ -661,6 +683,7 @@ class InstallerController extends Controller
             $result = [
                 'scope_name' => $state->name,
                 'state_name' => $state->name,
+                'state_code' => $this->directoryCode($state),
                 'state_id' => null,
                 'portal_state_id' => (int) $state->id,
                 'senatorial_district_id' => null,
@@ -680,6 +703,7 @@ class InstallerController extends Controller
 
                 $result['scope_name'] = $district->name;
                 $result['senatorial_district_name'] = $district->name;
+                $result['senatorial_district_code'] = $this->directoryCode($district);
                 $result['portal_senatorial_district_id'] = (int) $district->id;
                 return ['ok' => true, 'data' => $result];
             }
@@ -692,6 +716,7 @@ class InstallerController extends Controller
 
                 $result['scope_name'] = $constituency->name;
                 $result['federal_constituency_name'] = $constituency->name;
+                $result['federal_constituency_code'] = $this->directoryCode($constituency);
                 $result['portal_federal_constituency_id'] = (int) $constituency->id;
                 return ['ok' => true, 'data' => $result];
             }
@@ -704,6 +729,7 @@ class InstallerController extends Controller
 
                 $result['scope_name'] = $lga->name;
                 $result['lga_name'] = $lga->name;
+                $result['lga_code'] = $this->directoryCode($lga);
                 $result['portal_lga_id'] = (int) $lga->id;
                 return ['ok' => true, 'data' => $result];
             }
@@ -712,6 +738,13 @@ class InstallerController extends Controller
         }
 
         return ['ok' => false, 'message' => 'Choose a supported campaign scope.'];
+    }
+
+    private function directoryCode(object $item): ?string
+    {
+        $code = $item->inec_code ?? $item->code ?? null;
+
+        return $code !== null && trim((string) $code) !== '' ? trim((string) $code) : null;
     }
 
     private function tableExists(string $table): bool
@@ -944,10 +977,10 @@ class InstallerController extends Controller
         }
 
         if ($package === 'governorship') {
-            return 'Only your licensed state and related campaign geography will be installed.'.($scopeName ? ' Licensed state: '.$scopeName.'.' : '');
+            return 'Only the selected state and related campaign geography will be installed.'.($scopeName ? ' Selected state: '.$scopeName.'.' : '');
         }
 
-        return 'The installer will prepare the campaign structure included in your license.';
+        return 'The installer will prepare the campaign geography included with your provisioning key.';
     }
 }
 

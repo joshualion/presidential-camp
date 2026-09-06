@@ -21,6 +21,8 @@ class ReleaseSigningKeyService
 
         $privatePath = $this->privateKeyPath();
         $publicPath = $this->publicKeyPath();
+        File::ensureDirectoryExists(dirname($privatePath));
+        File::ensureDirectoryExists(dirname($publicPath));
         $privateExists = File::isFile($privatePath);
         $publicExists = File::isFile($publicPath);
 

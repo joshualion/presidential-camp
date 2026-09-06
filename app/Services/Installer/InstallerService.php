@@ -162,38 +162,58 @@ class InstallerService
                 ];
             }
 
+            $scopeError = $this->quickStartScopeError($state, $licensePreview);
+            if ($scopeError) {
+                return ['ok' => false, 'stage' => 'geography_setup', 'message' => $scopeError];
+            }
+
+            $activationRequired = $this->localLicenseService->activationRequired($licensePreview);
             $localLicense = $this->localLicenseService->activatedForLicense($licenseKey);
 
             if (!$localLicense) {
-                $activation = $this->remoteLicenseClient->activate([
-                    'license_key' => $licenseKey,
-                    'app_url' => config('app.url'),
-                    'domain' => parse_url((string) config('app.url'), PHP_URL_HOST),
-                    'server_fingerprint' => $this->fingerprintService->make(),
-                    'app_version' => config('app.version') ?? env('APP_VERSION'),
-                    'deployment_mode' => 'self_hosted',
-                ]);
+                if (!$activationRequired) {
+                    $activationPayload = $this->localLicenseService->normalizePortalPayload($licensePreview);
+                    $localLicense = $this->runStep('QuickStart provisioning key persistence', fn () => $this->localLicenseService->persistActivation($licenseKey, $activationPayload));
+                    $this->localLicenseService->log($localLicense, $licenseKey, 'quickstart_entitlement', 'success', 'QuickStart provisioning key validated during installation.', ['data' => $activationPayload]);
+                } else {
+                    $activation = $this->remoteLicenseClient->activate([
+                        'license_key' => $licenseKey,
+                        'app_url' => config('app.url'),
+                        'domain' => parse_url((string) config('app.url'), PHP_URL_HOST),
+                        'server_fingerprint' => $this->fingerprintService->make(),
+                        'app_version' => config('app.version') ?? env('APP_VERSION'),
+                        'deployment_mode' => 'self_hosted',
+                    ]);
 
-                if (($activation['ok'] ?? false) !== true) {
-                    $this->localLicenseService->log(null, $licenseKey, 'activate', 'failed', $activation['message'] ?? null, $activation);
-                    return ['ok' => false, 'stage' => 'activation', 'message' => $this->localLicenseService->customerMessage($activation['message'] ?? null, 'QuickStart provisioning key activation failed.')];
+                    if (($activation['ok'] ?? false) !== true) {
+                        $this->localLicenseService->log(null, $licenseKey, 'activate', 'failed', $activation['message'] ?? null, $activation);
+                        return ['ok' => false, 'stage' => 'activation', 'message' => $this->localLicenseService->customerMessage($activation['message'] ?? null, 'Activation failed for this legacy self-hosted licence.')];
+                    }
+
+                    $activationData = $this->localLicenseService->normalizePortalPayload($activation['data'] ?? []);
+                    $activationPayload = array_replace_recursive(
+                        $this->localLicenseService->normalizePortalPayload($licensePreview),
+                        $activationData
+                    );
+
+                    $activationRequired = $this->localLicenseService->activationRequired($activationPayload);
+                    if ($activationRequired && !$this->localLicenseService->activationId($activationPayload)) {
+                        $message = 'The portal confirmed activation but did not return an activation reference. Retry activation. If the problem continues, contact support.';
+                        $this->localLicenseService->log(null, $licenseKey, 'activate', 'failed', $message, $activation);
+
+                        return ['ok' => false, 'stage' => 'activation', 'message' => $message];
+                    }
+
+                    $localLicense = $this->runStep('local license persistence', fn () => $this->localLicenseService->persistActivation($licenseKey, $activationPayload));
+                    $this->localLicenseService->log(
+                        $localLicense,
+                        $licenseKey,
+                        $activationRequired ? 'activate' : 'quickstart_entitlement',
+                        'success',
+                        $activationRequired ? 'License activated during installation.' : 'QuickStart provisioning key validated during installation.',
+                        $activation
+                    );
                 }
-
-                $activationData = $this->localLicenseService->normalizePortalPayload($activation['data'] ?? []);
-                $activationPayload = array_replace_recursive(
-                    $this->localLicenseService->normalizePortalPayload($licensePreview),
-                    $activationData
-                );
-
-                if (!$this->localLicenseService->activationId($activationPayload)) {
-                    $message = 'The portal confirmed activation but did not return an activation reference. Retry activation. If the problem continues, contact support.';
-                    $this->localLicenseService->log(null, $licenseKey, 'activate', 'failed', $message, $activation);
-
-                    return ['ok' => false, 'stage' => 'activation', 'message' => $message];
-                }
-
-                $localLicense = $this->runStep('local license persistence', fn () => $this->localLicenseService->persistActivation($licenseKey, $activationPayload));
-                $this->localLicenseService->log($localLicense, $licenseKey, 'activate', 'success', 'License activated during installation.', $activation);
             }
 
             $this->runStep('system package sync', fn () => $this->syncPackageSetting($localLicense->package_type));
@@ -228,7 +248,7 @@ class InstallerService
         $localLicense = \App\Models\LocalLicense::query()->with('scope')->latest('id')->first();
 
         if (!$localLicense) {
-            return ['ok' => false, 'message' => 'QuickStart provisioning activation is incomplete. Return to Run Installation and try again.'];
+            return ['ok' => false, 'message' => 'QuickStart provisioning setup is incomplete. Return to Run Installation and try again.'];
         }
 
         if (!$admin || empty($admin['email']) || empty($admin['password']) || empty($admin['name'])) {
@@ -240,6 +260,7 @@ class InstallerService
                 $localLicense = $localLicense->fresh('scope');
                 $this->runStep('licensed scope reconciliation', fn () => $this->scopeReconciliation->reconcile($localLicense));
                 $localLicense = $localLicense->fresh('scope');
+                $this->runStep('campaign scope settings reconciliation', fn () => $this->campaignInstallationSettings->syncFromLocalLicense($localLicense));
             }
 
             $integrity = $this->locationIntegrity->verifyBeforeInstallLock($localLicense, $locationProvisioning);
@@ -349,6 +370,74 @@ class InstallerService
             'APP_TIMEZONE' => config('app.timezone'),
             'DEPLOYMENT_MODE' => config('campaign.deployment_mode'),
         ], $fromEnv), fn ($value) => $value !== null && $value !== '');
+    }
+
+    private function quickStartScopeError(array $state, array $licensePreview): ?string
+    {
+        $payload = $this->localLicenseService->normalizePortalPayload($licensePreview);
+        if (!$this->localLicenseService->isQuickStartProvisioning($payload)) {
+            return null;
+        }
+
+        $campaignScope = $state['campaign_scope'] ?? [];
+        $campaignGeography = $state['campaign_geography'] ?? [];
+        $expectedPackage = isset($campaignScope['package_type']) ? $this->packageGovernance->normalize($campaignScope['package_type']) : null;
+        $actualPackageValue = $this->localLicenseService->packageType($payload);
+        $actualPackage = $actualPackageValue ? $this->packageGovernance->normalize($actualPackageValue) : null;
+
+        if ($expectedPackage && $actualPackage && $expectedPackage !== $actualPackage) {
+            return 'QuickStart provisioning key does not match the campaign scope selected in the installer.';
+        }
+
+        $expectedScopeType = $campaignScope['scope_type'] ?? null;
+        $actualScopeType = data_get($payload, 'scope.scope_type', data_get($payload, 'scope.type'));
+        if ($expectedScopeType && $actualScopeType && $expectedScopeType !== $actualScopeType) {
+            return 'QuickStart provisioning key does not match the campaign geography selected in the installer.';
+        }
+
+        foreach ($this->quickStartBoundaryPairs($expectedScopeType) as [$previewKey, $installerKey, $previewNameKey, $installerNameKey]) {
+            $expectedId = $campaignGeography[$installerKey] ?? null;
+            $actualId = data_get($payload, 'scope.'.$previewKey);
+
+            if ($expectedId && $actualId && (string) $expectedId !== (string) $actualId) {
+                return 'QuickStart provisioning key does not match the campaign geography selected in the installer.';
+            }
+
+            $expectedName = $campaignGeography[$installerNameKey] ?? null;
+            $actualName = data_get($payload, 'scope.'.$previewNameKey);
+            if (!$expectedId && !$actualId && $expectedName && $actualName && $this->normal($expectedName) !== $this->normal($actualName)) {
+                return 'QuickStart provisioning key does not match the campaign geography selected in the installer.';
+            }
+        }
+
+        return null;
+    }
+
+    private function quickStartBoundaryPairs(?string $scopeType): array
+    {
+        $state = ['campaign_state_id', 'portal_state_id', 'state_name', 'state_name'];
+
+        return match ($scopeType) {
+            'state' => [$state],
+            'senatorial_district' => [
+                $state,
+                ['campaign_senatorial_district_id', 'portal_senatorial_district_id', 'senatorial_district_name', 'senatorial_district_name'],
+            ],
+            'federal_constituency' => [
+                $state,
+                ['campaign_federal_constituency_id', 'portal_federal_constituency_id', 'federal_constituency_name', 'federal_constituency_name'],
+            ],
+            'lga' => [
+                $state,
+                ['campaign_lga_id', 'portal_lga_id', 'lga_name', 'lga_name'],
+            ],
+            default => [],
+        };
+    }
+
+    private function normal(?string $value): string
+    {
+        return str((string) $value)->lower()->replaceMatches('/[^a-z0-9]+/', ' ')->squish()->toString();
     }
 
     private function databaseFromStateOrFallback(array $state): array
@@ -585,7 +674,7 @@ class InstallerService
             $parts[] = str_replace('_', ' ', $key).': '.$total.' provisioned';
         }
 
-        return 'Licensed location data provisioned for '.($result['scope_name'] ?? 'the licensed scope').' ('.implode(', ', $parts).').';
+        return 'Campaign geography provisioned for '.($result['scope_name'] ?? 'the selected scope').' ('.implode(', ', $parts).').';
     }
 
     private function runStep(string $stage, callable $callback): mixed

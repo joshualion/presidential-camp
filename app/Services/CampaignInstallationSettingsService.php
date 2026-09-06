@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\LocalLicense;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -130,5 +131,28 @@ class CampaignInstallationSettingsService
         }
 
         DB::table('system_settings')->updateOrInsert(['id' => 1], $values + ['created_at' => now()]);
+    }
+
+    public function syncFromLocalLicense(LocalLicense $license): void
+    {
+        $scope = $license->scope;
+        if (!$scope) {
+            return;
+        }
+
+        $this->persist(
+            [
+                'package_type' => $license->package_type,
+                'scope_type' => $scope->scope_type,
+                'scope_name' => $scope->scope_name,
+            ],
+            [
+                'scope_name' => $scope->scope_name,
+                'state_id' => $scope->state_id,
+                'senatorial_district_id' => $scope->senatorial_district_id,
+                'federal_constituency_id' => $scope->federal_constituency_id,
+                'lga_id' => $scope->lga_id,
+            ]
+        );
     }
 }

@@ -102,30 +102,30 @@ function phase2FakePortalDirectory(): void
 
     Http::fake([
         'https://portal.test/api/campaign-locations/states' => Http::response([
-            ['id' => 10, 'name' => 'Cross River'],
-            ['id' => 25, 'name' => 'Lagos'],
+            ['id' => 10, 'name' => 'Cross River', 'code' => 'CR', 'inec_code' => '9'],
+            ['id' => 25, 'name' => 'Lagos', 'code' => 'LA', 'inec_code' => '25'],
         ]),
         'https://portal.test/api/campaign-locations/states/10/senatorial-districts' => Http::response([
-            ['id' => 101, 'name' => 'Cross River South'],
-            ['id' => 102, 'name' => 'Cross River Central'],
-            ['id' => 103, 'name' => 'Cross River North'],
+            ['id' => 101, 'name' => 'Cross River South', 'code' => 'CR-SD-S', 'inec_code' => '9-1'],
+            ['id' => 102, 'name' => 'Cross River Central', 'code' => 'CR-SD-C', 'inec_code' => '9-2'],
+            ['id' => 103, 'name' => 'Cross River North', 'code' => 'CR-SD-N', 'inec_code' => '9-3'],
         ]),
         'https://portal.test/api/campaign-locations/states/25/senatorial-districts' => Http::response([
-            ['id' => 251, 'name' => 'Lagos West'],
+            ['id' => 251, 'name' => 'Lagos West', 'code' => 'LA-SD-W', 'inec_code' => '25-1'],
         ]),
         'https://portal.test/api/campaign-locations/states/10/federal-constituencies' => Http::response([
-            ['id' => 201, 'name' => 'Calabar Municipal/Odukpani'],
-            ['id' => 202, 'name' => 'Bakassi/Akpabuyo/Calabar South'],
+            ['id' => 201, 'name' => 'Calabar Municipal/Odukpani', 'code' => 'CR-FC-CAL', 'inec_code' => '9-01'],
+            ['id' => 202, 'name' => 'Bakassi/Akpabuyo/Calabar South', 'code' => 'CR-FC-BAK', 'inec_code' => '9-02'],
         ]),
         'https://portal.test/api/campaign-locations/states/25/federal-constituencies' => Http::response([
-            ['id' => 252, 'name' => 'Ikeja'],
+            ['id' => 252, 'name' => 'Ikeja', 'code' => 'LA-FC-IKE', 'inec_code' => '25-01'],
         ]),
         'https://portal.test/api/campaign-locations/states/10/lgas' => Http::response([
-            ['id' => 301, 'name' => 'Calabar Municipal'],
-            ['id' => 302, 'name' => 'Odukpani'],
+            ['id' => 301, 'name' => 'Calabar Municipal', 'code' => 'CR-LGA-CAL', 'inec_code' => '9-01'],
+            ['id' => 302, 'name' => 'Odukpani', 'code' => 'CR-LGA-ODU', 'inec_code' => '9-02'],
         ]),
         'https://portal.test/api/campaign-locations/states/25/lgas' => Http::response([
-            ['id' => 253, 'name' => 'Ikeja'],
+            ['id' => 253, 'name' => 'Ikeja', 'code' => 'LA-LGA-IKE', 'inec_code' => '25-01'],
         ]),
         'https://portal.test/api/campaign-locations/summary*' => Http::response([
             'scope_type' => 'state',
@@ -259,6 +259,10 @@ test('portal directory state selection bootstraps governorship state locally', f
     $settings = SystemSetting::query()->first();
 
     expect($state->name)->toBe('Cross River')
+        ->and($campaignGeography['state_id'])->toBeNull()
+        ->and($campaignGeography['portal_state_id'])->toBe(10)
+        ->and($campaignGeography['state_code'])->toBe('9')
+        ->and($state->inec_state_code)->toBe('9')
         ->and($state->region->name)->toBe('South South')
         ->and($settings->campaign_state_id)->toBe($state->id)
         ->and($settings->campaign_scope_name)->toBe('Cross River')
@@ -279,6 +283,14 @@ test('portal directory senatorial selection bootstraps state and district locall
     $settings = SystemSetting::query()->first();
 
     expect($district->name)->toBe('Cross River South')
+        ->and($campaignGeography['state_id'])->toBeNull()
+        ->and($campaignGeography['senatorial_district_id'])->toBeNull()
+        ->and($campaignGeography['portal_state_id'])->toBe(10)
+        ->and($campaignGeography['portal_senatorial_district_id'])->toBe(101)
+        ->and($campaignGeography['state_code'])->toBe('9')
+        ->and($campaignGeography['senatorial_district_code'])->toBe('9-1')
+        ->and($district->state->inec_state_code)->toBe('9')
+        ->and($district->inec_senatorial_district_code)->toBe('9-1')
         ->and($district->state->name)->toBe('Cross River')
         ->and($district->state->region->name)->toBe('South South')
         ->and($settings->campaign_state_id)->toBe($district->state_id)
@@ -298,6 +310,14 @@ test('portal directory federal selection bootstraps state and constituency local
     $constituency = FederalConstituency::query()->with('state.region')->find($local['federal_constituency_id']);
 
     expect($constituency->name)->toBe('Calabar Municipal/Odukpani')
+        ->and($campaignGeography['state_id'])->toBeNull()
+        ->and($campaignGeography['federal_constituency_id'])->toBeNull()
+        ->and($campaignGeography['portal_state_id'])->toBe(10)
+        ->and($campaignGeography['portal_federal_constituency_id'])->toBe(201)
+        ->and($campaignGeography['state_code'])->toBe('9')
+        ->and($campaignGeography['federal_constituency_code'])->toBe('9-01')
+        ->and($constituency->state->inec_state_code)->toBe('9')
+        ->and($constituency->inec_federal_constituency_code)->toBe('9-01')
         ->and($constituency->state->name)->toBe('Cross River')
         ->and($constituency->state->region->name)->toBe('South South')
         ->and(SystemSetting::query()->first()->campaign_federal_constituency_id)->toBe($constituency->id);
@@ -316,6 +336,14 @@ test('portal directory chairmanship selection bootstraps state and lga locally',
     $lga = LocalGovernmentArea::query()->with('state.region')->find($local['lga_id']);
 
     expect($lga->name)->toBe('Calabar Municipal')
+        ->and($campaignGeography['state_id'])->toBeNull()
+        ->and($campaignGeography['lga_id'])->toBeNull()
+        ->and($campaignGeography['portal_state_id'])->toBe(10)
+        ->and($campaignGeography['portal_lga_id'])->toBe(301)
+        ->and($campaignGeography['state_code'])->toBe('9')
+        ->and($campaignGeography['lga_code'])->toBe('9-01')
+        ->and($lga->state->inec_state_code)->toBe('9')
+        ->and($lga->inec_lga_code)->toBe('9-01')
         ->and($lga->state->name)->toBe('Cross River')
         ->and($lga->state->region->name)->toBe('South South')
         ->and(SystemSetting::query()->first()->campaign_lga_id)->toBe($lga->id);

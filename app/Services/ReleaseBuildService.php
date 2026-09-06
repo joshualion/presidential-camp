@@ -113,6 +113,7 @@ class ReleaseBuildService
             'filename' => $filename,
             'zip_path' => $zipPath,
             'manifest_path' => $this->manifestPath($zipPath, $zipEnabled, $version, $profileConfig),
+            'release_notes_path' => $outputDirectory.DIRECTORY_SEPARATOR.'campaign-manager-v'.$version.'-notes.md',
             'dry_run' => $dryRun,
             'zip_enabled' => $zipEnabled,
             'total_files_considered' => $files['total_considered'],
@@ -146,6 +147,7 @@ class ReleaseBuildService
 
         File::put($result['manifest_path'], $this->json($result['manifest']));
         File::put($outputDirectory.DIRECTORY_SEPARATOR.'checksums.txt', $checksumsText);
+        File::put($result['release_notes_path'], $this->releaseNotesMarkdown($version, $result['manifest']['release_notes'] ?? []));
 
         return $result;
     }
@@ -470,7 +472,7 @@ class ReleaseBuildService
                 'community_forum' => $profile === 'community' ? 'included_as_bootstrap_release' : 'optional_disabled_by_default',
                 'email_notifications' => 'included_with_jurisdiction_targeting_and_delivery_reports',
             ],
-            'release_notes' => Arr::get($effectiveConfig, 'release_notes.'.ltrim($version, 'vV'), []),
+            'release_notes' => $this->configuredReleaseNotes($effectiveConfig, $version),
             'counts' => [
                 'files_considered' => $files['total_considered'],
                 'files_included' => count($files['included']),
@@ -807,6 +809,29 @@ class ReleaseBuildService
     private function cleanSegment(string $segment): string
     {
         return preg_replace('/[^A-Za-z0-9._-]+/', '-', $segment) ?: 'release';
+    }
+
+    private function configuredReleaseNotes(array $effectiveConfig, string $version): array
+    {
+        $notes = Arr::get($effectiveConfig, 'release_notes', []);
+
+        return array_values($notes[ltrim($version, 'vV')] ?? []);
+    }
+
+    private function releaseNotesMarkdown(string $version, array $notes): string
+    {
+        $body = '# Campaign Manager v'.$version.PHP_EOL.PHP_EOL;
+
+        if ($notes === []) {
+            return $body.'No release notes were configured for this release.'.PHP_EOL;
+        }
+
+        $body .= '## Fixed'.PHP_EOL;
+        foreach ($notes as $line) {
+            $body .= '- '.trim((string) $line).PHP_EOL;
+        }
+
+        return $body;
     }
 
     private function json(array $payload): string

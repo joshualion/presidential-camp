@@ -175,8 +175,10 @@ class LocalLicenseService
             }
         }
 
+        $activationRequired = $this->activationRequired($license->raw_payload ?: []);
+
         if (
-            !$license->activation_id
+            ($activationRequired && !$license->activation_id)
             || !in_array(strtolower((string) $license->status), ['active', 'valid'], true)
             || !$license->scope
         ) {
@@ -184,6 +186,27 @@ class LocalLicenseService
         }
 
         return $license;
+    }
+
+    public function activationRequired(array $payload): bool
+    {
+        $payload = $this->normalizePortalPayload($payload);
+        $value = data_get($payload, 'license.activation_required', data_get($payload, 'activation_required'));
+
+        if ($value === null) {
+            return true;
+        }
+
+        return filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? (bool) $value;
+    }
+
+    public function isQuickStartProvisioning(array $payload): bool
+    {
+        $payload = $this->normalizePortalPayload($payload);
+        $entitlementType = data_get($payload, 'license.entitlement_type', data_get($payload, 'entitlement_type'));
+        $provisioningType = data_get($payload, 'license.provisioning_type', data_get($payload, 'provisioning_type'));
+
+        return $entitlementType === 'quickstart_geography' || $provisioningType === 'quickstart_geography';
     }
 
     public function activationId(array $payload): ?string

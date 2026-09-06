@@ -249,6 +249,27 @@ test('manifest contains version channel checksum protected files and portal prov
         ->and(json_encode($manifest))->not->toContain('storage/app/imports/inec/prepared/all');
 });
 
+test('release build writes markdown release notes for configured version', function () {
+    [$basePath, $config] = releaseBuildFixture();
+    $config['release_notes']['1.0.8'] = [
+        'QuickStart installation no longer incorrectly requires a legacy activation reference when the provisioning entitlement has activation_required=false.',
+        'QuickStart now proceeds directly to geography provisioning after entitlement validation.',
+        'New Community/QuickStart users no longer receive legacy software-activation errors in this path.',
+    ];
+
+    $result = releaseBuildService($basePath, $config)->build([
+        'profile' => 'standard',
+        'version' => '1.0.8',
+        'channel' => 'stable',
+        'output' => $basePath.'/builds',
+    ]);
+
+    expect(File::isFile($result['release_notes_path']))->toBeTrue()
+        ->and(File::get($result['release_notes_path']))->toContain('# Campaign Manager v1.0.8')
+        ->and(File::get($result['release_notes_path']))->toContain('## Fixed')
+        ->and(File::get($result['release_notes_path']))->toContain('QuickStart installation no longer incorrectly requires a legacy activation reference');
+});
+
 test('checksums text is generated and included in release zip', function () {
     [$basePath, $config] = releaseBuildFixture();
     $result = releaseBuildService($basePath, $config)->build([

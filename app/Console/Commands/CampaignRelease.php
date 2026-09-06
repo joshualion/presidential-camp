@@ -6,6 +6,7 @@ use App\Services\GitHubReleasePublisher;
 use App\Services\ReleaseBuildService;
 use App\Services\ReleaseVersionState;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\File;
 use RuntimeException;
 
 class CampaignRelease extends Command
@@ -68,6 +69,7 @@ class CampaignRelease extends Command
 
         $this->line('ZIP: '.$result['zip_path']);
         $this->line('Manifest/report: '.$result['manifest_path']);
+        $this->line('Release notes: '.$result['release_notes_path']);
         $this->line('SHA256: '.$result['checksum_sha256']);
         $this->line('Vendor bundled: '.($result['manifest']['includes_vendor'] ? 'yes' : 'no'));
         $this->line('Compiled assets bundled: '.($result['manifest']['includes_built_assets'] ? 'yes' : 'no'));
@@ -90,7 +92,7 @@ class CampaignRelease extends Command
                 'v'.$version,
                 $result['zip_path'],
                 'Campaign Manager v'.$version,
-                $this->releaseNotes($version),
+                $this->releaseNotesFromBuild($result['release_notes_path'] ?? null, $version),
                 $allowUnapproved
             );
         } catch (RuntimeException $exception) {
@@ -145,7 +147,8 @@ class CampaignRelease extends Command
 
     private function releaseNotes(string $version): ?string
     {
-        $notes = config('release.release_notes.'.$version, []);
+        $configured = config('release.release_notes', []);
+        $notes = $configured[ltrim($version, 'vV')] ?? [];
 
         if ($notes === []) {
             return null;
@@ -154,5 +157,14 @@ class CampaignRelease extends Command
         return collect($notes)
             ->map(fn (string $line) => '- '.$line)
             ->implode(PHP_EOL);
+    }
+
+    private function releaseNotesFromBuild(?string $path, string $version): ?string
+    {
+        if ($path && File::isFile($path)) {
+            return File::get($path);
+        }
+
+        return $this->releaseNotes($version);
     }
 }

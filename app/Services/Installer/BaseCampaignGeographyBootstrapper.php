@@ -33,7 +33,7 @@ class BaseCampaignGeographyBootstrapper
             }
 
             $stateName = (string) ($campaignGeography['state_name'] ?? $campaignGeography['scope_name'] ?? '');
-            $stateCode = $this->stateCode($stateName);
+            $stateCode = $this->code($campaignGeography, 'state_code');
             $stateRegion = $this->stateRegion($stateName);
 
             $records = [
@@ -41,6 +41,7 @@ class BaseCampaignGeographyBootstrapper
                     'country_name' => 'Nigeria',
                     'region_name' => $stateRegion,
                     'state_code' => $stateCode,
+                    'inec_state_code' => $stateCode,
                     'name' => $stateName,
                 ]],
             ];
@@ -49,6 +50,8 @@ class BaseCampaignGeographyBootstrapper
                 $records['senatorial_districts'] = [[
                     'state_code' => $stateCode,
                     'state_name' => $stateName,
+                    'senatorial_district_code' => $this->code($campaignGeography, 'senatorial_district_code'),
+                    'inec_senatorial_district_code' => $this->code($campaignGeography, 'senatorial_district_code'),
                     'name' => $campaignGeography['senatorial_district_name'] ?? $campaignGeography['scope_name'],
                 ]];
             }
@@ -57,6 +60,8 @@ class BaseCampaignGeographyBootstrapper
                 $records['federal_constituencies'] = [[
                     'state_code' => $stateCode,
                     'state_name' => $stateName,
+                    'federal_constituency_code' => $this->code($campaignGeography, 'federal_constituency_code'),
+                    'inec_federal_constituency_code' => $this->code($campaignGeography, 'federal_constituency_code'),
                     'name' => $campaignGeography['federal_constituency_name'] ?? $campaignGeography['scope_name'],
                 ]];
             }
@@ -65,6 +70,8 @@ class BaseCampaignGeographyBootstrapper
                 $records['local_government_areas'] = [[
                     'state_code' => $stateCode,
                     'state_name' => $stateName,
+                    'lga_code' => $this->code($campaignGeography, 'lga_code'),
+                    'inec_lga_code' => $this->code($campaignGeography, 'lga_code'),
                     'name' => $campaignGeography['lga_name'] ?? $campaignGeography['scope_name'],
                 ]];
             }
@@ -91,9 +98,11 @@ class BaseCampaignGeographyBootstrapper
         return $this->stateRegions()[$stateName] ?? 'Unknown Region';
     }
 
-    private function stateCode(string $stateName): ?string
+    private function code(array $campaignGeography, string $key): ?string
     {
-        return null;
+        $value = $campaignGeography[$key] ?? null;
+
+        return $value !== null && trim((string) $value) !== '' ? trim((string) $value) : null;
     }
 
     private function stateRegions(): array

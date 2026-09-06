@@ -43,18 +43,30 @@ class CampaignGeographyDirectoryClient
         try {
             $response = Http::timeout(15)
                 ->acceptJson()
-                ->get(config('campaign.portal_directory_base').'/campaign-locations/summary', $query);
+                ->get(
+                    config('campaign.portal_directory_base') . '/campaign-locations/summary',
+                    $query
+                );
         } catch (ConnectionException $e) {
-            throw new RuntimeException('Unable to reach the Campaign Manager geography directory. Check the connection and retry.', 0, $e);
+            throw new RuntimeException(
+                'Unable to reach the Campaign Manager geography directory. Check the connection and retry.',
+                0,
+                $e
+            );
         }
 
         if (! $response->successful()) {
-            throw new RuntimeException('The Campaign Manager geography summary is temporarily unavailable.');
+            throw new RuntimeException(
+                'The Campaign Manager geography summary is temporarily unavailable.'
+            );
         }
 
         $payload = $response->json();
+
         if (! is_array($payload)) {
-            throw new RuntimeException('The Campaign Manager geography summary response was invalid.');
+            throw new RuntimeException(
+                'The Campaign Manager geography summary response was invalid.'
+            );
         }
 
         $validator = Validator::make($payload, [
@@ -65,13 +77,19 @@ class CampaignGeographyDirectoryClient
         ]);
 
         if ($validator->fails()) {
-            throw new RuntimeException('The Campaign Manager geography summary response was invalid.');
+            throw new RuntimeException(
+                'The Campaign Manager geography summary response was invalid.'
+            );
         }
 
         return [
             'ok' => true,
             'scope_type' => (string) $payload['scope_type'],
-            'scope_name' => (string) ($payload['scope_name'] ?? $geography['scope_name'] ?? 'selected campaign geography'),
+            'scope_name' => (string) (
+                $payload['scope_name']
+                ?? $geography['scope_name']
+                ?? 'selected campaign geography'
+            ),
             'counts' => $payload['counts'],
         ];
     }
@@ -81,24 +99,45 @@ class CampaignGeographyDirectoryClient
         try {
             $response = Http::timeout(15)
                 ->acceptJson()
-                ->get(config('campaign.portal_directory_base').$path);
+                ->get(config('campaign.portal_directory_base') . $path);
         } catch (ConnectionException $e) {
-            throw new RuntimeException('Unable to reach the Campaign Manager geography directory. Check the connection and retry.', 0, $e);
+            throw new RuntimeException(
+                'Unable to reach the Campaign Manager geography directory. Check the connection and retry.',
+                0,
+                $e
+            );
         }
 
         if (! $response->successful()) {
-            throw new RuntimeException('The Campaign Manager geography directory is unavailable. Check the connection and retry.');
+            throw new RuntimeException(
+                'The Campaign Manager geography directory is unavailable. Check the connection and retry.'
+            );
         }
 
         $body = $response->json();
         $items = is_array($body) ? $body : [];
 
         return collect($items)
-            ->map(fn ($item) => (object) [
-                'id' => data_get($item, 'id'),
-                'name' => trim((string) data_get($item, 'name')),
-            ])
-            ->filter(fn (object $item) => $item->id !== null && $item->name !== '')
+            ->map(function ($item) {
+                $code = data_get($item, 'code');
+                $inecCode = data_get($item, 'inec_code');
+
+                return (object) [
+                    'id' => data_get($item, 'id'),
+                    'name' => trim((string) data_get($item, 'name')),
+                    'code' => $code !== null && $code !== ''
+                        ? (string) $code
+                        : null,
+                    'inec_code' => $inecCode !== null && $inecCode !== ''
+                        ? (string) $inecCode
+                        : null,
+                ];
+            })
+            ->filter(
+                fn (object $item) =>
+                    $item->id !== null
+                    && $item->name !== ''
+            )
             ->values();
     }
 }

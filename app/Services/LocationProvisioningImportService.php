@@ -23,6 +23,8 @@ class LocationProvisioningImportService
     public function __construct(
         private LocationProvisioningClient $client,
         private LocalLicenseScopeReconciliationService $scopeReconciliation,
+        private LocalLicenseService $licenses,
+        private CampaignInstallationSettingsService $installationSettings,
     ) {
     }
 
@@ -48,14 +50,20 @@ class LocationProvisioningImportService
             throw new RuntimeException('Location provisioning requires an active local license.');
         }
 
-        if (!$license->activation_id) {
+        $activationRequired = $this->licenses->activationRequired($license->raw_payload ?: []);
+        if ($activationRequired && !$license->activation_id) {
             throw new RuntimeException('License activation is incomplete. Retry activation before provisioning locations.');
         }
 
-        $run = LocationProvisioningBatch::query()
+        $runQuery = LocationProvisioningBatch::query()
             ->where('license_key', $license->license_key)
-            ->where('activation_id', $license->activation_id)
-            ->whereIn('status', ['pending', 'running', 'failed'])
+            ->whereIn('status', ['pending', 'running', 'failed']);
+
+        $license->activation_id
+            ? $runQuery->where('activation_id', $license->activation_id)
+            : $runQuery->whereNull('activation_id');
+
+        $run = $runQuery
             ->latest('id')
             ->first();
 
@@ -133,6 +141,7 @@ class LocationProvisioningImportService
 
             if (!$nextDataset) {
                 $this->scopeReconciliation->reconcile($license->fresh('scope'));
+                $this->installationSettings->syncFromLocalLicense($license->fresh('scope'));
             }
 
             $summary = $run->summary ?: $this->emptySummary();
@@ -217,12 +226,17 @@ class LocationProvisioningImportService
 
     private function createPortalSession(LocalLicense $license, LocationProvisioningBatch $run, int $batchSize): LocationProvisioningBatch
     {
-        $session = $this->client->createSession([
+        $payload = [
             'license_key' => $license->license_key,
-            'activation_id' => $license->activation_id,
             'deployment_mode' => 'self_hosted',
             'batch_size' => $batchSize,
-        ]);
+        ];
+
+        if ($license->activation_id) {
+            $payload['activation_id'] = $license->activation_id;
+        }
+
+        $session = $this->client->createSession($payload);
 
         $datasets = $this->normalizeDatasets(data_get($session, 'datasets', self::DATASETS));
         if ($datasets === []) {
@@ -327,18 +341,23 @@ class LocationProvisioningImportService
         $regionId = $this->regionId($countryId, (string) data_get($row, 'region_name', 'Unknown Region'));
         $code = $this->value($row, ['state_code', 'inec_state_code', 'code']);
         $name = $this->name($row);
+        $id = null;
 
-        DB::table('states')->updateOrInsert(
-            $code ? ['inec_state_code' => $code] : ['name' => $name],
-            [
-                'uuid' => $this->existingUuid('states', $code ? ['inec_state_code' => $code] : ['name' => $name]),
-                'name' => $name,
-                'inec_state_code' => $code,
-                'region_id' => $regionId,
-                'updated_at' => now(),
-                'created_at' => now(),
-            ]
-        );
+        if ($code) {
+            $id = $this->idByColumn('states', 'inec_state_code', $code)
+                ?: $this->sameNameNullCodeId('states', 'inec_state_code', $name);
+        }
+
+        $where = $id ? ['id' => $id] : ($code ? ['inec_state_code' => $code] : ['name' => $name]);
+
+        DB::table('states')->updateOrInsert($where, [
+            'uuid' => $this->existingUuid('states', $where),
+            'name' => $name,
+            'inec_state_code' => $code,
+            'region_id' => $regionId,
+            'updated_at' => now(),
+            'created_at' => now(),
+        ]);
     }
 
     private function importSenatorialDistrict(array $row): void
@@ -346,16 +365,22 @@ class LocationProvisioningImportService
         $stateId = $this->stateId($row);
         $name = $this->name($row);
         $normalized = $this->normalized($name);
+        $code = $this->value($row, ['senatorial_district_code', 'inec_senatorial_district_code', 'inec_code', 'code']);
+        $id = $this->codedBoundaryId('senatorial_districts', 'inec_senatorial_district_code', $stateId, $code, $name);
+        $where = $id ? ['id' => $id] : ['state_id' => $stateId, 'normalized_name' => $normalized];
+        $values = [
+            'uuid' => $this->existingUuid('senatorial_districts', $where),
+            'name' => $name,
+            'normalized_name' => $normalized,
+            'updated_at' => now(),
+            'created_at' => now(),
+        ];
 
-        DB::table('senatorial_districts')->updateOrInsert(
-            ['state_id' => $stateId, 'normalized_name' => $normalized],
-            [
-                'uuid' => $this->existingUuid('senatorial_districts', ['state_id' => $stateId, 'normalized_name' => $normalized]),
-                'name' => $name,
-                'updated_at' => now(),
-                'created_at' => now(),
-            ]
-        );
+        if ($code && Schema::hasColumn('senatorial_districts', 'inec_senatorial_district_code')) {
+            $values['inec_senatorial_district_code'] = $code;
+        }
+
+        DB::table('senatorial_districts')->updateOrInsert($where, $values);
     }
 
     private function importFederalConstituency(array $row): void
@@ -364,17 +389,23 @@ class LocationProvisioningImportService
         $name = $this->name($row);
         $normalized = $this->normalized($name);
         $senatorialId = $this->senatorialId($row, false);
+        $code = $this->value($row, ['federal_constituency_code', 'inec_federal_constituency_code', 'inec_code', 'code']);
+        $id = $this->codedBoundaryId('federal_constituencies', 'inec_federal_constituency_code', $stateId, $code, $name);
+        $where = $id ? ['id' => $id] : ['state_id' => $stateId, 'normalized_name' => $normalized];
+        $values = [
+            'uuid' => $this->existingUuid('federal_constituencies', $where),
+            'senatorial_district_id' => $senatorialId,
+            'name' => $name,
+            'normalized_name' => $normalized,
+            'updated_at' => now(),
+            'created_at' => now(),
+        ];
 
-        DB::table('federal_constituencies')->updateOrInsert(
-            ['state_id' => $stateId, 'normalized_name' => $normalized],
-            [
-                'uuid' => $this->existingUuid('federal_constituencies', ['state_id' => $stateId, 'normalized_name' => $normalized]),
-                'senatorial_district_id' => $senatorialId,
-                'name' => $name,
-                'updated_at' => now(),
-                'created_at' => now(),
-            ]
-        );
+        if ($code && Schema::hasColumn('federal_constituencies', 'inec_federal_constituency_code')) {
+            $values['inec_federal_constituency_code'] = $code;
+        }
+
+        DB::table('federal_constituencies')->updateOrInsert($where, $values);
     }
 
     private function importLga(array $row): void
@@ -382,19 +413,21 @@ class LocationProvisioningImportService
         $stateId = $this->stateId($row);
         $code = $this->value($row, ['lga_code', 'inec_lga_code', 'code']);
         $name = $this->name($row);
+        $id = $code
+            ? $this->idByScopedColumn('local_government_areas', 'inec_lga_code', $code, 'state_id', $stateId)
+                ?: $this->sameNameNullCodeId('local_government_areas', 'inec_lga_code', $name, 'state_id', $stateId)
+            : null;
+        $where = $id ? ['id' => $id] : ($code ? ['state_id' => $stateId, 'inec_lga_code' => $code] : ['state_id' => $stateId, 'name' => $name]);
 
-        DB::table('local_government_areas')->updateOrInsert(
-            $code ? ['state_id' => $stateId, 'inec_lga_code' => $code] : ['state_id' => $stateId, 'name' => $name],
-            [
-                'uuid' => $this->existingUuid('local_government_areas', $code ? ['state_id' => $stateId, 'inec_lga_code' => $code] : ['state_id' => $stateId, 'name' => $name]),
-                'name' => $name,
-                'inec_lga_code' => $code,
-                'senatorial_district_id' => $this->senatorialId($row, false),
-                'federal_constituency_id' => $this->federalId($row, false),
-                'updated_at' => now(),
-                'created_at' => now(),
-            ]
-        );
+        DB::table('local_government_areas')->updateOrInsert($where, [
+            'uuid' => $this->existingUuid('local_government_areas', $where),
+            'name' => $name,
+            'inec_lga_code' => $code,
+            'senatorial_district_id' => $this->senatorialId($row, false),
+            'federal_constituency_id' => $this->federalId($row, false),
+            'updated_at' => now(),
+            'created_at' => now(),
+        ]);
     }
 
     private function importWard(array $row): void
@@ -517,14 +550,17 @@ class LocationProvisioningImportService
     private function senatorialId(array $row, bool $required = true): ?int
     {
         $name = $this->value($row, ['senatorial_district_name', 'senatorial_name']);
+        $code = $this->value($row, ['senatorial_district_code', 'inec_senatorial_district_code']);
         if (!$name) {
             return $required ? throw new RuntimeException('Missing senatorial district name in portal batch.') : null;
         }
 
-        $id = DB::table('senatorial_districts')
-            ->where('state_id', $this->stateId($row))
-            ->where('normalized_name', $this->normalized($name))
-            ->value('id');
+        $stateId = $this->stateId($row);
+        $id = $this->codedBoundaryId('senatorial_districts', 'inec_senatorial_district_code', $stateId, $code, $name)
+            ?: DB::table('senatorial_districts')
+                ->where('state_id', $stateId)
+                ->where('normalized_name', $this->normalized($name))
+                ->value('id');
 
         return $id ? (int) $id : null;
     }
@@ -532,14 +568,71 @@ class LocationProvisioningImportService
     private function federalId(array $row, bool $required = true): ?int
     {
         $name = $this->value($row, ['federal_constituency_name', 'federal_name']);
+        $code = $this->value($row, ['federal_constituency_code', 'inec_federal_constituency_code']);
         if (!$name) {
             return $required ? throw new RuntimeException('Missing federal constituency name in portal batch.') : null;
         }
 
-        $id = DB::table('federal_constituencies')
-            ->where('state_id', $this->stateId($row))
-            ->where('normalized_name', $this->normalized($name))
+        $stateId = $this->stateId($row);
+        $id = $this->codedBoundaryId('federal_constituencies', 'inec_federal_constituency_code', $stateId, $code, $name)
+            ?: DB::table('federal_constituencies')
+                ->where('state_id', $stateId)
+                ->where('normalized_name', $this->normalized($name))
+                ->value('id');
+
+        return $id ? (int) $id : null;
+    }
+
+    private function codedBoundaryId(string $table, string $codeColumn, int $stateId, ?string $code, string $name): ?int
+    {
+        if (!$code || !Schema::hasColumn($table, $codeColumn)) {
+            return null;
+        }
+
+        return $this->idByScopedColumn($table, $codeColumn, $code, 'state_id', $stateId)
+            ?: $this->sameNameNullCodeId($table, $codeColumn, $name, 'state_id', $stateId);
+    }
+
+    private function idByColumn(string $table, string $column, string $value): ?int
+    {
+        if (!Schema::hasColumn($table, $column)) {
+            return null;
+        }
+
+        $id = DB::table($table)->where($column, $value)->value('id');
+
+        return $id ? (int) $id : null;
+    }
+
+    private function idByScopedColumn(string $table, string $column, string $value, string $scopeColumn, int $scopeValue): ?int
+    {
+        if (!Schema::hasColumn($table, $column)) {
+            return null;
+        }
+
+        $id = DB::table($table)
+            ->where($scopeColumn, $scopeValue)
+            ->where($column, $value)
             ->value('id');
+
+        return $id ? (int) $id : null;
+    }
+
+    private function sameNameNullCodeId(string $table, string $codeColumn, string $name, ?string $scopeColumn = null, ?int $scopeValue = null): ?int
+    {
+        if (!Schema::hasColumn($table, $codeColumn)) {
+            return null;
+        }
+
+        $query = DB::table($table)
+            ->whereNull($codeColumn)
+            ->whereRaw('LOWER(TRIM(name)) = ?', [mb_strtolower(trim($name))]);
+
+        if ($scopeColumn && $scopeValue) {
+            $query->where($scopeColumn, $scopeValue);
+        }
+
+        $id = $query->orderBy('id')->value('id');
 
         return $id ? (int) $id : null;
     }
@@ -596,7 +689,7 @@ class LocationProvisioningImportService
             'next_action' => $nextAction,
             'message' => $run->status === 'completed'
                 ? 'Location provisioning completed.'
-                : 'Provisioning licensed location data from the Campaign Manager portal.',
+                : 'Provisioning campaign geography from the Campaign Manager portal.',
             'stage_label' => $run->current_dataset ? Str::headline($run->current_dataset) : 'Complete',
             'percent' => $percent,
             'imported_records' => (int) $run->imported_records,
