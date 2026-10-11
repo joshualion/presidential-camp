@@ -85,12 +85,7 @@ class ReleaseSigningKeyService
         $status = $this->status();
 
         if (!$status['private_exists'] && !$status['public_exists']) {
-            $generated = $this->generate(false);
-
-            return array_merge($generated['status'], [
-                'generated' => true,
-                'message' => 'Release signing keys were generated for this build.',
-            ]);
+            throw new RuntimeException('Release signing keys are not configured. Provision the approved release key pair before building; builds never generate a new signing identity automatically.');
         }
 
         if (!$status['valid']) {
@@ -286,3 +281,4 @@ class ReleaseSigningKeyService
         return $errors ? implode(' ', array_unique($errors)) : '';
     }
 }
+

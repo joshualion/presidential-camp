@@ -70,6 +70,7 @@ class ReleaseIntegrityService
 
         $protectedFilesValid = $details === [];
         $signatureInvalid = $signatureValid === false;
+        $signatureMissing = $signatureValid === null;
         $tampered = $signatureInvalid || !$protectedFilesValid;
 
         return $this->finish([
@@ -82,9 +83,10 @@ class ReleaseIntegrityService
             'update_entitlement_state' => match (true) {
                 $signatureInvalid => 'signature_invalid',
                 !$protectedFilesValid => 'tampered',
+                $signatureMissing => 'signature_missing',
                 default => 'clean',
             },
-            'message' => $tampered ? 'Release integrity check found protected file issues.' : 'Release integrity check passed.',
+            'message' => $tampered ? 'Release integrity check found protected file issues.' : ($signatureMissing ? 'Release authenticity cannot be verified: the manifest is unsigned.' : 'Release integrity check passed.'),
         ], $persist);
     }
 
@@ -121,3 +123,4 @@ class ReleaseIntegrityService
         return rtrim($this->basePath, DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR.str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $relativePath);
     }
 }
+
