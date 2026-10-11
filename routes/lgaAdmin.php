@@ -29,20 +29,20 @@ Route::middleware(['auth','check_onboarding'])->group(function () {
     /*Regional Admin Ajax Routes */
 
 //Gender Distribution
-Route::get('/lga/member/distribution/gender', [LgaAdminController::class, 'lgaadminGenderDistribution'])->name('lgaadmin.member.distribution.gender')->middleware('access_level:lgaadmin');
+Route::get('/lga/member/distribution/gender', [ChartsController::class, 'NationalGenderDistribution'])->name('lgaadmin.member.distribution.gender')->middleware('access_level:lgaadmin');
 
 // Age Distribution
-Route::get('/lga/member/distribution/age', [LgaAdminController::class, 'lgaadminAgeDistribution'])->name('lgaadmin.member.distribution.age')->middleware('access_level:lgaadmin');
+Route::get('/lga/member/distribution/age', [ChartsController::class, 'NationalAgeDistribution'])->name('lgaadmin.member.distribution.age')->middleware('access_level:lgaadmin');
 
 // Region Distribution
-Route::get('/lga/member/distribution/region', [LgaAdminController::class, 'lgaadminRegionDistribution'])->name('lgaadmin.member.distribution.region')->middleware('access_level:lgaadmin');
+Route::get('/lga/member/distribution/region', [ChartsController::class, 'NationalRegionDistribution'])->name('lgaadmin.member.distribution.region')->middleware('access_level:lgaadmin');
 /*End Super Admin Ajax Routes */
 // Religion Distribution
-Route::get('/lga/member/distribution/religion', [LgaAdminController::class, 'lgaadminReligionDistribution'])->name('lgaadmin.member.distribution.religion')->middleware('access_level:lgaadmin');
+Route::get('/lga/member/distribution/religion', [ChartsController::class, 'NationalReligionDistribution'])->name('lgaadmin.member.distribution.religion')->middleware('access_level:lgaadmin');
 // Valid Voter Distribution
-Route::get('/lga/member/distribution/voter', [LgaAdminController::class, 'lgaadminVoterDistribution'])->name('lgaadmin.member.distribution.voter')->middleware('access_level:lgaadmin');
+Route::get('/lga/member/distribution/voter', [ChartsController::class, 'NationalVoterDistribution'])->name('lgaadmin.member.distribution.voter')->middleware('access_level:lgaadmin');
 // State Distribution
-Route::get('/lga/member/distribution/state', [LgaAdminController::class, 'lgaadminStateDistribution'])->name('lgaadmin.member.distribution.state')->middleware('access_level:lgaadmin');
+Route::get('/lga/member/distribution/state', [ChartsController::class, 'NationalStateDistribution'])->name('lgaadmin.member.distribution.state')->middleware('access_level:lgaadmin');
 
 
 //Member Management
@@ -229,3 +229,4 @@ Route::delete('/lga/vote/delete/{uuid}', [ElectionController::class, 'deleteVote
 
 
 });
+

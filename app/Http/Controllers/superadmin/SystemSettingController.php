@@ -345,7 +345,6 @@ class SystemSettingController extends Controller
         Log::info('Sending activation request to licensing server', [
             'url' => 'https://campaignmanager.ng/api/validate',
             'data' => [
-                'activation_code' => $activationCode,
                 'package' =>  $systemPackage,
                 'domain' => $originDomain,
             ]
@@ -353,7 +352,7 @@ class SystemSettingController extends Controller
         
 
         if ($response->successful() && $response->json('valid')) {
-            Log::info('License Server Response:', $response->json()); // Debugging
+            Log::info('License activation completed', ['status' => $response->status()]);
             $apiToken = $response->json('api_token'); // Get token from response
         
             DB::table('system_settings')->update([
@@ -377,9 +376,8 @@ class SystemSettingController extends Controller
             // Log failure details
             Log::warning('License Activation Failed', [
                 'ip' => $clientIP,
-                'activation_code' => $activationCode,
                 'domain' => $originDomain,
-                'error' => $response->json('message', 'Unknown error'),
+                'status' => $response->status(),
             ]);
 
             return back()->with([
@@ -412,3 +410,4 @@ class SystemSettingController extends Controller
 
 
 }
+

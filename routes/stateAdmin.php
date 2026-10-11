@@ -29,20 +29,20 @@ Route::middleware(['auth','check_onboarding'])->group(function () {
     /*Regional Admin Ajax Routes */
 
 //Gender Distribution
-Route::get('/state/member/distribution/gender', [StateAdminController::class, 'stateadminGenderDistribution'])->name('stateadmin.member.distribution.gender')->middleware('access_level:stateadmin');
+Route::get('/state/member/distribution/gender', [ChartsController::class, 'NationalGenderDistribution'])->name('stateadmin.member.distribution.gender')->middleware('access_level:stateadmin');
 
 // Age Distribution
-Route::get('/state/member/distribution/age', [StateAdminController::class, 'stateadminAgeDistribution'])->name('stateadmin.member.distribution.age')->middleware('access_level:stateadmin');
+Route::get('/state/member/distribution/age', [ChartsController::class, 'NationalAgeDistribution'])->name('stateadmin.member.distribution.age')->middleware('access_level:stateadmin');
 
 // Region Distribution
-Route::get('/state/member/distribution/region', [StateAdminController::class, 'stateadminRegionDistribution'])->name('stateadmin.member.distribution.region')->middleware('access_level:stateadmin');
+Route::get('/state/member/distribution/region', [ChartsController::class, 'NationalRegionDistribution'])->name('stateadmin.member.distribution.region')->middleware('access_level:stateadmin');
 /*End Super Admin Ajax Routes */
 // Religion Distribution
-Route::get('/state/member/distribution/religion', [StateAdminController::class, 'stateadminReligionDistribution'])->name('stateadmin.member.distribution.religion')->middleware('access_level:stateadmin');
+Route::get('/state/member/distribution/religion', [ChartsController::class, 'NationalReligionDistribution'])->name('stateadmin.member.distribution.religion')->middleware('access_level:stateadmin');
 // Valid Voter Distribution
-Route::get('/state/member/distribution/voter', [StateAdminController::class, 'stateadminVoterDistribution'])->name('stateadmin.member.distribution.voter')->middleware('access_level:stateadmin');
+Route::get('/state/member/distribution/voter', [ChartsController::class, 'NationalVoterDistribution'])->name('stateadmin.member.distribution.voter')->middleware('access_level:stateadmin');
 // State Distribution
-Route::get('/state/member/distribution/state', [StateAdminController::class, 'stateadminStateDistribution'])->name('stateadmin.member.distribution.state')->middleware('access_level:stateadmin');
+Route::get('/state/member/distribution/state', [ChartsController::class, 'NationalStateDistribution'])->name('stateadmin.member.distribution.state')->middleware('access_level:stateadmin');
 
 
 //Member Management
@@ -259,3 +259,4 @@ Route::delete('/state/vote/delete/{uuid}', [ElectionController::class, 'deleteVo
 
 
 });
+

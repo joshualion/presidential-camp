@@ -184,6 +184,16 @@ class HomeController extends Controller
         return response()->json(['followers' => $followers]);
     }
 
+    public function getFollowers()
+    {
+        return $this->followersOf(Auth::user());
+    }
+
+    public function getFollowing()
+    {
+        return $this->followingOf(Auth::user());
+    }
+
     public function followingOf(User $user)
     {
         $following = $user->following()
@@ -492,11 +502,11 @@ public function fetchPosts(Request $request)
 {
     // Get the audience, page, and last_post_timestamp parameters from the request
     $lastPostTimestamp = $request->input('last_post_timestamp'); // Timestamp of the latest post in the feed
-    $perPage = $request->input('per_page', 10); // Number of posts per page
+    $perPage = min(max((int) $request->input('per_page', 10), 1), 50);
     $userId = Auth::id();
 
     // Initialize the query builder for posts
-    $query = Post::with('user')->withCount('comments')->withCount('likedBy as likes_count');
+    $query = Post::with('user:id,firstname,lastname,username,photo')->withCount('comments')->withCount('likedBy as likes_count');
 
     // Get profile data for filtering
     $profileData = $this->getProfileData();
@@ -543,9 +553,9 @@ public function fetchPosts(Request $request)
             return response()->json([]);
         }
 
-        $perPage = (int) $request->input('per_page', 10);
+        $perPage = min(max((int) $request->input('per_page', 10), 1), 50);
 
-        $posts = Post::with('user')
+        $posts = Post::with('user:id,firstname,lastname,username,photo')
             ->withCount('comments')
             ->withCount('likedBy as likes_count')
             ->where('user_id', $userId)
@@ -602,10 +612,10 @@ public function fetchPosts(Request $request)
     public function viewUserProfilePost(Request $request, $username)
     {
         $me = Auth::id();
-        $perPage = (int) $request->input('per_page', 10);
+        $perPage = min(max((int) $request->input('per_page', 10), 1), 50);
         $userData = User::where('username', $username)->firstOrFail();
 
-        $posts = Post::with('user')
+        $posts = Post::with('user:id,firstname,lastname,username,photo')
             ->withCount('comments')
             ->withCount('likedBy as likes_count')
             ->where('user_id', $userData->id);
@@ -1006,3 +1016,4 @@ public function fetchPosts(Request $request)
         $query->whereIn('user_id', $authorQuery);
     }
 }
+

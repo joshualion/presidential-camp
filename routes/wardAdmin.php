@@ -27,20 +27,20 @@ Route::middleware(['auth','check_onboarding'])->group(function () {
     /*Regional Admin Ajax Routes */
 
 //Gender Distribution
-Route::get('/ward/member/distribution/gender', [WardAdminController::class, 'wardadminGenderDistribution'])->name('wardadmin.member.distribution.gender')->middleware('access_level:wardadmin');
+Route::get('/ward/member/distribution/gender', [ChartsController::class, 'NationalGenderDistribution'])->name('wardadmin.member.distribution.gender')->middleware('access_level:wardadmin');
 
 // Age Distribution
-Route::get('/ward/member/distribution/age', [WardAdminController::class, 'wardadminAgeDistribution'])->name('wardadmin.member.distribution.age')->middleware('access_level:wardadmin');
+Route::get('/ward/member/distribution/age', [ChartsController::class, 'NationalAgeDistribution'])->name('wardadmin.member.distribution.age')->middleware('access_level:wardadmin');
 
 // Region Distribution
-Route::get('/ward/member/distribution/region', [WardAdminController::class, 'wardadminRegionDistribution'])->name('wardadmin.member.distribution.region')->middleware('access_level:wardadmin');
+Route::get('/ward/member/distribution/region', [ChartsController::class, 'NationalRegionDistribution'])->name('wardadmin.member.distribution.region')->middleware('access_level:wardadmin');
 /*End Super Admin Ajax Routes */
 // Religion Distribution
-Route::get('/ward/member/distribution/religion', [WardAdminController::class, 'wardadminReligionDistribution'])->name('wardadmin.member.distribution.religion')->middleware('access_level:wardadmin');
+Route::get('/ward/member/distribution/religion', [ChartsController::class, 'NationalReligionDistribution'])->name('wardadmin.member.distribution.religion')->middleware('access_level:wardadmin');
 // Valid Voter Distribution
-Route::get('/ward/member/distribution/voter', [WardAdminController::class, 'wardadminVoterDistribution'])->name('wardadmin.member.distribution.voter')->middleware('access_level:wardadmin');
+Route::get('/ward/member/distribution/voter', [ChartsController::class, 'NationalVoterDistribution'])->name('wardadmin.member.distribution.voter')->middleware('access_level:wardadmin');
 // State Distribution
-Route::get('/ward/member/distribution/state', [WardAdminController::class, 'wardadminStateDistribution'])->name('wardadmin.member.distribution.state')->middleware('access_level:wardadmin');
+Route::get('/ward/member/distribution/state', [ChartsController::class, 'NationalStateDistribution'])->name('wardadmin.member.distribution.state')->middleware('access_level:wardadmin');
 
 
 //Member Management
@@ -227,3 +227,4 @@ Route::delete('/ward/vote/delete/{uuid}', [ElectionController::class, 'deleteVot
 
 
 });
+

@@ -392,11 +392,11 @@ test('geography setup summary appears before manual and quickstart choice', func
         ->assertOk()
         ->assertSee('Selected campaign geography')
         ->assertSee('Configure Geography Manually')
-        ->assertSee('QuickStart Geography Provisioning')
+        ->assertSee('Populate Campaign Locations Automatically')
         ->getContent();
 
     expect(strpos($html, 'Selected campaign geography'))->toBeLessThan(strpos($html, 'Configure Geography Manually'))
-        ->and(strpos($html, 'Selected campaign geography'))->toBeLessThan(strpos($html, 'QuickStart Geography Provisioning'));
+        ->and(strpos($html, 'Selected campaign geography'))->toBeLessThan(strpos($html, 'Populate Campaign Locations Automatically'));
 });
 
 test('geography summary remains visible for manual and quickstart options', function () {
@@ -412,7 +412,7 @@ test('geography summary remains visible for manual and quickstart options', func
         ->assertSee('Wards')
         ->assertSee('Polling Units')
         ->assertSee('Configure Geography Manually')
-        ->assertSee('QuickStart Geography Provisioning');
+        ->assertSee('Populate Campaign Locations Automatically');
 });
 
 test('presidential geography setup requests national aggregate counts', function () {
@@ -513,8 +513,8 @@ test('quickstart key field and purchase link are scoped to quickstart selection'
     $this->get(route('install.geography_setup'))
         ->assertOk()
         ->assertSee('id="quickstart-key"', false)
-        ->assertSee('QuickStart Provisioning Key')
-        ->assertSee('Get QuickStart Provisioning Key')
+        ->assertSee('Geography Provisioning Code')
+        ->assertSee('Buy a Geography Provisioning Code')
         ->assertSee('target="_blank"', false)
         ->assertSee('rel="noopener"', false)
         ->assertSee('https://portal.test/order/campaign-manager?service=quickstart_geography&amp;package=senatorial&amp;scope_type=senatorial_district&amp;campaign_state_id=10&amp;campaign_senatorial_district_id=101', false);
@@ -672,3 +672,4 @@ test('legacy license route remains compatible with geography setup branch', func
 
     expect(app(InstallerStateStore::class)->all()['geography_setup']['method'])->toBe('manual');
 });
+

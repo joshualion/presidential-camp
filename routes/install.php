@@ -3,10 +3,12 @@
 use App\Http\Controllers\InstallerController;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware(['installer.block_if_installed'])
+Route::middleware(['installer.block_if_installed', 'installer.owner'])
     ->prefix('install')
     ->name('install.')
     ->group(function () {
+        Route::get('/access', [\App\Http\Controllers\InstallerAccessController::class, 'index'])->name('access');
+        Route::post('/access', [\App\Http\Controllers\InstallerAccessController::class, 'verify'])->middleware('throttle:5,1')->name('access.verify');
         Route::get('/', [InstallerController::class, 'welcome'])->name('welcome');
         Route::match(['get', 'post'], '/requirements', [InstallerController::class, 'requirements'])->name('requirements');
         Route::match(['get', 'post'], '/environment', [InstallerController::class, 'environment'])->name('environment');
@@ -25,3 +27,4 @@ Route::middleware(['installer.block_if_installed'])
         Route::post('/provision-locations/finish', [InstallerController::class, 'finishProvisioning'])->name('provision.finish');
         Route::get('/complete', [InstallerController::class, 'complete'])->name('complete');
     });
+
