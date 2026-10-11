@@ -1,0 +1,62 @@
+name: Prepare private release candidate
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Approved candidate version, without v (no automatic bump)'
+        required: true
+        type: string
+permissions:
+  contents: read
+jobs:
+  prepare:
+    environment: release-preparation
+    runs-on: ubuntu-latest
+    env:
+      APP_ENV: testing
+      APP_URL: http://localhost
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ':memory:'
+      CANDIDATE_VERSION: '${{ inputs.version }}'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, xml, curl, zip, gd, bcmath, intl, pdo_sqlite, pdo_mysql
+          tools: composer:v2
+          coverage: none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Validate explicit version
+        run: php -r 'if (!preg_match("/^\d+\.\d+\.\d+$/D", getenv("CANDIDATE_VERSION"))) { exit(1); }'
+      - run: composer install --prefer-dist --no-interaction
+      - run: composer audit --locked --no-interaction
+      - run: npm ci && npm run build && npm audit --omit=dev
+      - run: cp .env.example .env && php artisan key:generate --force && php artisan test --log-junit test-results.xml
+      - name: Install production-only dependencies
+        run: composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction
+      - name: Build signed private candidate
+        env:
+          CAMPAIGN_RELEASE_PRIVATE_KEY: '${{ secrets.CAMPAIGN_RELEASE_PRIVATE_KEY }}'
+          CAMPAIGN_RELEASE_PRIVATE_KEY_PATH: '${{ runner.temp }}/campaign-release-private.pem'
+          CAMPAIGN_RELEASE_PUBLIC_KEY_PATH: config/release-public.pem
+        run: php scripts/prepare-release.php
+      - uses: actions/upload-artifact@v4
+        with:
+          name: campaign-manager-candidate-${{ inputs.version }}
+          path: |
+            builds/candidate/campaign-manager.zip
+            builds/candidate/release-manifest.json
+            builds/candidate/campaign-manager.zip.sha256
+            builds/candidate/*-notes.md
+            test-results.xml
+          if-no-files-found: error
+          retention-days: 14
+      - name: Remove signing material
+        if: always()
+        run: rm -f "$RUNNER_TEMP/campaign-release-private.pem"

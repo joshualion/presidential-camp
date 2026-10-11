@@ -246,6 +246,10 @@ class ReleaseBuildService
         $entries = [];
 
         foreach ($files as $file) {
+            $prefix = file_get_contents($file['absolute_path'], false, null, 0, 128);
+            if (is_string($prefix) && str_starts_with($prefix, 'version https://git-lfs.github.com/spec/v1')) {
+                throw new RuntimeException('Unresolved Git LFS object in package: '.$file['path'].'. Materialize release assets before building.');
+            }
             $hardened = false;
             $entry = [
                 'path' => $file['path'],

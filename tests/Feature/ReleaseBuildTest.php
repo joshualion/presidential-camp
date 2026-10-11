@@ -815,3 +815,16 @@ test('completed external manifest signature covers the finished archive hash', f
     expect($signer->verify($manifest, null, $signing))->toBeFalse();
 });
 
+
+
+test('release packaging rejects unresolved Git LFS assets', function () {
+    [$path, $config] = releaseBuildFixture([], [
+        'public/images/geography.png' => "version https://git-lfs.github.com/spec/v1\noid sha256:".str_repeat('0', 64)."\nsize 12345\n",
+    ]);
+    try {
+        expect(fn () => releaseBuildService($path, $config)->dryRun(['profile' => 'standard']))
+            ->toThrow(RuntimeException::class, 'Unresolved Git LFS object');
+    } finally {
+        File::deleteDirectory($path);
+    }
+});
