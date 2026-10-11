@@ -24,7 +24,7 @@ class CommentController extends Controller
             return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 401);
         }
         if (!app(CommunityModerationService::class)->canCreateComment($actor)
-            || !app(CommunityModerationService::class)->postInActorScope($actor, $post)) {
+            || !$this->canViewPost($actor, $post)) {
             return response()->json(['status' => 'error', 'message' => 'You are not allowed to comment on this post.'], 403);
         }
 
@@ -82,7 +82,7 @@ class CommentController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'comment' => $comment->load('user'), // Load the user relationship
+            'comment' => $comment->load('user:id,firstname,lastname,username,photo'), // Load the user relationship
         ]);
     }
 
@@ -90,12 +90,12 @@ class CommentController extends Controller
     public function index(Post $post)
     {
         $actor = Auth::user();
-        if (!$actor || !app(CommunityModerationService::class)->postInActorScope($actor, $post)) {
+        if (!$actor || !$this->canViewPost($actor, $post)) {
             return response()->json(['status' => 'error', 'message' => 'Post is outside your community scope.'], 403);
         }
 
         $comments = $post->comments()
-            ->with('user', 'replies.user') // Load user and replies
+            ->with('user:id,firstname,lastname,username,photo', 'replies.user:id,firstname,lastname,username,photo') // Load user and replies
             ->whereNull('parent_id') // Only top-level comments
             ->latest()
             ->get();
@@ -107,6 +107,14 @@ class CommentController extends Controller
     }
 
     // Delete a comment
+    private function canViewPost(\App\Models\User $actor, Post $post): bool
+    {
+        $query = Post::query()->whereKey($post->id);
+        app(\App\Services\CommunityAudienceService::class)->applyVisibility($query, $actor);
+
+        return $query->exists() && app(CommunityModerationService::class)->postInActorScope($actor, $post);
+    }
+
     public function destroy(Comment $comment)
     {
         $actor = Auth::user();
@@ -138,7 +146,7 @@ class CommentController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'comment' => $comment->load('user'),
+            'comment' => $comment->load('user:id,firstname,lastname,username,photo'),
         ]);
     }
 
@@ -192,3 +200,4 @@ class CommentController extends Controller
         return (int) ($settings->community_comment_max_length ?? 750);
     }
 }
+

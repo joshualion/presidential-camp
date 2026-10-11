@@ -3,6 +3,7 @@
 return [
     'deployment_mode' => env('DEPLOYMENT_MODE', 'managed'),
     'installer_enabled' => env('INSTALLER_ENABLED', true),
+    'installer_access_token' => env('INSTALLER_ACCESS_TOKEN'),
     'portal_api_base' => rtrim(env('CAMPAIGN_PORTAL_API_BASE', 'https://campaignmanager.ng/api/v2'), '/'),
     'portal_directory_base' => rtrim(env('CAMPAIGN_PORTAL_DIRECTORY_BASE', 'https://campaignmanager.ng/api'), '/'),
     'portal_web_base' => rtrim(env('CAMPAIGN_PORTAL_WEB_BASE', 'https://campaignmanager.ng'), '/'),
@@ -26,3 +27,4 @@ return [
         ],
     ],
 ];
+

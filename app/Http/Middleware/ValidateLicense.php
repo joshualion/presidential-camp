@@ -78,7 +78,6 @@ class ValidateLicense
             // Log response for debugging
             Log::info('License validation response', [
                 'status' => $response->status(),
-                'body' => $response->json(),
             ]);
 
             if (!$response->successful() || !$response->json('valid')) {
@@ -94,3 +93,4 @@ class ValidateLicense
         return $next($request);
     }
 }
+

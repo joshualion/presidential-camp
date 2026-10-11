@@ -304,14 +304,8 @@ export default {
       }
 
       try {
-        this.postsChannel = window.Echo.private('posts').listen('.NewPostCreated', ({ post }) => {
-          this.injectPost({
-            ...post,
-            likes: post.likes_count ?? post.likes ?? 0,
-            comments_count: post.comments_count ?? (post.comments ? post.comments.length : 0),
-            liked_by_me: post.liked_by_me ?? false,
-            liker_names: post.liker_names ?? [],
-          });
+        this.postsChannel = window.Echo.private('posts').listen('.NewPostCreated', () => {
+          this.refreshLatestPosts();
         });
         this.channelName = this.postsChannel?.name ?? 'private-posts';
         this.bindEchoConnectionEvents();

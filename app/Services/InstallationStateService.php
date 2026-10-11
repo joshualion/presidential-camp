@@ -40,7 +40,7 @@ class InstallationStateService
             'deployment_mode' => config('campaign.deployment_mode'),
         ], $metadata);
 
-        File::put($this->lockPath(), json_encode($metadata, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+        File::replace($this->lockPath(), json_encode($metadata, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR), 0600);
     }
 
     public function remove(): bool
@@ -68,3 +68,4 @@ class InstallationStateService
         return config('app.version') ?? env('APP_VERSION');
     }
 }
+

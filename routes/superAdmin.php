@@ -20,6 +20,16 @@ use App\Http\Controllers\VolunteerGroupController;
 use App\Livewire\SuperAdminDashboard;
 use Illuminate\Support\Facades\Route;
 
+Route::middleware(['auth', 'access_level:superadmin'])->group(function () {
+    Route::get('/superadmin/updates', [\App\Http\Controllers\OfficialUpdateController::class, 'index'])->name('superadmin.updates');
+    Route::post('/superadmin/deployment/register', [\App\Http\Controllers\DeploymentRegistrationController::class, 'register'])->middleware('throttle:3,60')->name('superadmin.deployment.register');
+    Route::post('/superadmin/deployment/sync', [\App\Http\Controllers\DeploymentRegistrationController::class, 'sync'])->middleware('throttle:6,1')->name('superadmin.deployment.sync');
+    Route::post('/superadmin/deployment/preferences', [\App\Http\Controllers\DeploymentRegistrationController::class, 'preferences'])->name('superadmin.deployment.preferences');
+    Route::post('/superadmin/deployment/revoke', [\App\Http\Controllers\DeploymentRegistrationController::class, 'revoke'])->name('superadmin.deployment.revoke');
+    Route::post('/superadmin/updates/check', [\App\Http\Controllers\OfficialUpdateController::class, 'check'])->middleware('throttle:6,1')->name('superadmin.updates.check');
+    Route::post('/superadmin/updates/prepare', [\App\Http\Controllers\OfficialUpdateController::class, 'prepare'])->middleware('throttle:2,1')->name('superadmin.updates.prepare');
+});
+
 
 // Manage Locations
 Route::get('/superadmin/location/senatorial-districts', [LocationController::class, 'allSenatorialDistricts'])->name('superadmin.location.senatorial-districts')->middleware(['auth','access_level:superadmin']);
@@ -401,3 +411,4 @@ Route::post('/superadmin/incident/store', [ElectionController::class, 'storeIcid
 
 
 });
+

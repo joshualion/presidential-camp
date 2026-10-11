@@ -112,7 +112,7 @@ class InstallerService
 
             $this->applyRuntimeConfig($environment, $database, $mail);
 
-            $this->runStep('database migrations', fn () => Artisan::call('migrate', ['--force' => true]));
+            $this->runStep('database migrations', fn () => $this->runArtisanCommand('migrate', ['--force' => true]));
             $this->ensureLocalLicenseTablesExist();
             $this->runStep('installer seed data', fn () => $this->seedCoreData($mail));
 
@@ -512,7 +512,7 @@ class InstallerService
             \Database\Seeders\ProductsSeeder::class => 'products',
         ] as $seeder => $table) {
             if (Schema::hasTable($table) && DB::table($table)->count() === 0) {
-                Artisan::call('db:seed', ['--class' => $seeder, '--force' => true]);
+                $this->runArtisanCommand('db:seed', ['--class' => $seeder, '--force' => true]);
             }
         }
 
@@ -523,19 +523,32 @@ class InstallerService
         $this->seedPermissions();
 
         if (Schema::hasTable('system_settings') && Schema::hasColumn('system_settings', 'community_guidelines')) {
-            Artisan::call('db:seed', ['--class' => \Database\Seeders\CommunityRulesSeeder::class, '--force' => true]);
+            $this->runArtisanCommand('db:seed', ['--class' => \Database\Seeders\CommunityRulesSeeder::class, '--force' => true]);
         }
     }
 
     private function createSuperAdmin(array $admin): User
     {
+        $existing = User::query()->where('email', $admin['email'])->first();
+        if ($existing) {
+            if ($existing->access_level === 'superadmin' && Hash::check($admin['password'], $existing->password)) {
+                return $existing;
+            }
+
+            throw new RuntimeException('An account already exists for this email. Installation cannot replace or promote an existing account.');
+        }
+
+        if (User::query()->exists()) {
+            throw new RuntimeException('This database already contains users. Restore the installation state or use an empty database.');
+        }
+
         $nameParts = preg_split('/\s+/', trim((string) $admin['name']), 2);
         $firstname = $nameParts[0] ?: 'Super';
         $lastname = $nameParts[1] ?? 'Admin';
 
-        return User::updateOrCreate(
-            ['email' => $admin['email']],
+        return User::create(
             [
+                'email' => $admin['email'],
                 'firstname' => $firstname,
                 'lastname' => $lastname,
                 'username' => $this->uniqueUsername($admin['email']),
@@ -544,7 +557,6 @@ class InstallerService
                 'access_level' => 'superadmin',
                 'status' => 'active',
                 'requires_update' => false,
-                'email_verified_at' => now(),
             ]
         );
     }
@@ -683,6 +695,14 @@ class InstallerService
             return $callback();
         } catch (Throwable $e) {
             throw new RuntimeException(ucfirst($stage).' failed: '.$this->cleanMessage($e->getMessage()), 0, $e);
+        }
+    }
+
+    private function runArtisanCommand(string $command, array $arguments): void
+    {
+        if (Artisan::call($command, $arguments) !== 0) {
+            // Console output can contain connection details; keep it out of the installer response.
+            throw new RuntimeException('The required '.$command.' command did not complete successfully.');
         }
     }
 
@@ -853,5 +873,6 @@ class InstallerService
         return $this->localLicenseService->customerMessage($message, 'Installation failed.');
     }
 }
+
 
 

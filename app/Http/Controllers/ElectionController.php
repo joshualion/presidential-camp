@@ -672,6 +672,26 @@ class ElectionController extends Controller
             // Return the bar chart data as JSON
             return response()->json($chartData);
         }
+        public function allVotes()
+        {
+            return $this->manageVotesByPu();
+        }
+
+        public function editVote($uuid)
+        {
+            abort(410, 'Use the polling-unit result review workflow to correct election results.');
+        }
+
+        public function updateVote($uuid)
+        {
+            abort(410, 'Use the polling-unit result review workflow to correct election results.');
+        }
+
+        public function deleteVote($uuid)
+        {
+            abort(410, 'Individual vote deletion is unavailable. Use the polling-unit result dispute workflow.');
+        }
+
         public function manageVotesByPu($uuid = null, ElectionReportService $reportService = null){
 
                 // Fetch the election by UUID
@@ -1123,3 +1143,4 @@ class ElectionController extends Controller
         
 
 }
+

@@ -29,20 +29,20 @@ Route::middleware(['auth','check_onboarding'])->group(function () {
     /*Regional Admin Ajax Routes */
 
 //Gender Distribution
-Route::get('/pu/member/distribution/gender', [PollingUnitAdminController::class, 'puadminGenderDistribution'])->name('puadmin.member.distribution.gender')->middleware('access_level:puadmin');
+Route::get('/pu/member/distribution/gender', [ChartsController::class, 'NationalGenderDistribution'])->name('puadmin.member.distribution.gender')->middleware('access_level:puadmin');
 
 // Age Distribution
-Route::get('/pu/member/distribution/age', [PollingUnitAdminController::class, 'puadminAgeDistribution'])->name('puadmin.member.distribution.age')->middleware('access_level:puadmin');
+Route::get('/pu/member/distribution/age', [ChartsController::class, 'NationalAgeDistribution'])->name('puadmin.member.distribution.age')->middleware('access_level:puadmin');
 
 // Region Distribution
-Route::get('/pu/member/distribution/region', [PollingUnitAdminController::class, 'puadminRegionDistribution'])->name('puadmin.member.distribution.region')->middleware('access_level:puadmin');
+Route::get('/pu/member/distribution/region', [ChartsController::class, 'NationalRegionDistribution'])->name('puadmin.member.distribution.region')->middleware('access_level:puadmin');
 /*End Super Admin Ajax Routes */
 // Religion Distribution
-Route::get('/pu/member/distribution/religion', [PollingUnitAdminController::class, 'puadminReligionDistribution'])->name('puadmin.member.distribution.religion')->middleware('access_level:puadmin');
+Route::get('/pu/member/distribution/religion', [ChartsController::class, 'NationalReligionDistribution'])->name('puadmin.member.distribution.religion')->middleware('access_level:puadmin');
 // Valid Voter Distribution
-Route::get('/pu/member/distribution/voter', [PollingUnitAdminController::class, 'puadminVoterDistribution'])->name('puadmin.member.distribution.voter')->middleware('access_level:puadmin');
+Route::get('/pu/member/distribution/voter', [ChartsController::class, 'NationalVoterDistribution'])->name('puadmin.member.distribution.voter')->middleware('access_level:puadmin');
 // State Distribution
-Route::get('/pu/member/distribution/state', [PollingUnitAdminController::class, 'puadminStateDistribution'])->name('puadmin.member.distribution.state')->middleware('access_level:puadmin');
+Route::get('/pu/member/distribution/state', [ChartsController::class, 'NationalStateDistribution'])->name('puadmin.member.distribution.state')->middleware('access_level:puadmin');
 
 
 //Member Management
@@ -222,3 +222,4 @@ Route::delete('/pu/vote/delete/{uuid}', [ElectionController::class, 'deleteVote'
 
 
 });
+

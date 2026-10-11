@@ -68,7 +68,7 @@ return [
     'signing' => [
         'keys_dir' => env('CAMPAIGN_RELEASE_KEYS_DIR', 'storage/app/release-keys'),
         'private_key_path' => env('CAMPAIGN_RELEASE_PRIVATE_KEY_PATH', 'storage/app/release-keys/campaign_release_private.pem'),
-        'public_key_path' => env('CAMPAIGN_RELEASE_PUBLIC_KEY_PATH', 'storage/app/release-keys/campaign_release_public.pem'),
+        'public_key_path' => env('CAMPAIGN_RELEASE_PUBLIC_KEY_PATH', 'config/release-public.pem'),
         'public_key' => env('RELEASE_SIGNING_PUBLIC_KEY'),
         'public_key_id' => env('RELEASE_SIGNING_PUBLIC_KEY_ID', 'campaign-manager-release-v1'),
     ],
@@ -534,3 +534,4 @@ return [
         'Thumbs.db',
     ],
 ];
+
