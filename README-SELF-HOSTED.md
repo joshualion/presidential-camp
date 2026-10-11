@@ -30,3 +30,13 @@ The package includes `vendor` and built frontend assets, so customers should not
 - Reverb is an optional advanced mode that requires additional server setup.
 
 See `docs/self-hosted-installation-guide.md` for the full customer install process.
+
+### Confirm hosting ownership before setup
+
+The installer now requires a local server setup code before accepting configuration. Open `/install/access`, then read `storage/app/installer/access-token` through your own hosting file manager or SSH and enter that code. Do not share it or expose the storage directory through the web server. Alternatively, set a random `CAMPAIGN_INSTALLER_ACCESS_TOKEN` of at least 32 characters in the server environment before setup. This protects installation from visitors; it is not a licence key, paid service or remote activation. Existing completed installations keep the installer closed.
+
+### Update and support foundation (not yet a production upgrade runner)
+
+Super Admin → Official Updates checks the official GitHub release and verifies signed metadata against the installed trusted public key. Preparation downloads and verifies a package into private staging without replacing application files or running migrations. An apply/backup/rollback runner is not enabled in this implementation checkpoint. Releases older than this updater require an initial manual upgrade.
+
+Portal registration is optional and explains the deployment ID, domain, administrator contact email, installed version and status before submission. Marketing has a separate opt-in and requires email confirmation. Revocation disables local polling immediately and retries remote deletion if the Portal is unavailable. No supporter, voter, password or campaign records are transmitted by this registration service. Public Community ZIP downloads remain free. Paid assistance credits are separate from software activation.
