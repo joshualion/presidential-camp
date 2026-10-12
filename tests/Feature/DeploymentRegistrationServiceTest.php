@@ -24,7 +24,7 @@ test('unregistered installations send no Portal telemetry', function () {
 
 test('registration sends only disclosed fields and encrypts its local credential', function () {
     Http::fake([
-        'https://portal.test/api/v2/campaign-manager/deployments/register' => Http::response(['registered' => true, 'contact_verified' => false], 201),
+        'https://portal.test/api/v2/campaign-manager/deployments/register' => fn ($request)=>registrationReceiptFixture($request),
         'https://portal.test/api/v2/campaign-manager/deployments/*/preferences' => Http::response(['updated' => true]),
     ]);
     $admin = User::factory()->create(['access_level' => 'superadmin']);
@@ -37,7 +37,7 @@ test('registration sends only disclosed fields and encrypts its local credential
             return false;
         }
         $data = $request->data();
-        expect(array_keys($data))->toBe(['deployment_id', 'token', 'domain', 'contact_email', 'installed_version', 'installation_status', 'registration_consent', 'marketing_opt_in']);
+        expect(array_keys($data))->toBe(['deployment_id', 'token', 'domain', 'contact_email', 'installed_version', 'installation_status', 'registration_consent', 'marketing_opt_in', 'terms_version']);
         return $data['contact_email'] === $admin->email && $data['domain'] === 'campaign.example.test' && $data['registration_consent'] === true;
     });
     expect(File::get(storage_path('app/private/deployment-registration.json')))->not->toContain($admin->email)->not->toContain('campaign.example.test');
@@ -45,7 +45,7 @@ test('registration sends only disclosed fields and encrypts its local credential
 
 test('revocation stops local reporting even while the Portal is offline', function () {
     Http::fake([
-        'https://portal.test/api/v2/campaign-manager/deployments/register' => Http::response(['registered' => true], 201),
+        'https://portal.test/api/v2/campaign-manager/deployments/register' => fn ($request)=>registrationReceiptFixture($request),
         'https://portal.test/api/v2/campaign-manager/deployments/*/preferences' => Http::response(['updated' => true]),
     ]);
     $service = app(DeploymentRegistrationService::class);
@@ -67,6 +67,8 @@ test('Super Admin can open update and registration controls without contacting t
     Http::fake();
     \App\Models\SystemSetting::query()->create(['package' => 'presidential', 'system_name' => 'Test Campaign', 'system_country' => 'Nigeria']);
     $admin = User::factory()->create(['access_level' => 'superadmin']);
-    $this->actingAs($admin)->get(route('superadmin.updates'))->assertOk()->assertSee('Optional deployment registration')->assertSee('Official Updates');
+    $this->actingAs($admin)->get(route('superadmin.updates'))->assertOk()->assertSee('Installation registration')->assertSee('Official Updates');
     Http::assertNothingSent();
 });
+
+function registrationReceiptFixture($request){return Http::response(['registered'=>true,'contact_verified'=>false,'receipt'=>['installation_id'=>$request['deployment_id'],'domain'=>'campaign.example.test','contact_email'=>$request['contact_email'],'terms_version'=>'2026-10-12','registered_at'=>'2026-10-12T00:00:00Z']],201);}

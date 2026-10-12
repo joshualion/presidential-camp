@@ -49,5 +49,7 @@ Previously supplied backups require current verification:
 
 Recover core registration changes first, commit them immediately, rerun focused tests; recover portal changes, complete regressions, push draft PRs and record exact commit SHAs and CI URLs here. Do not enable production deployment or replace historical public releases.
 
-## Core recovery checkpoint
-Installer acceptance, encrypted registration identity, matching receipt validation and completion status retry have been recovered. This initial recovery commit awaits new test runs and additional UI integration. No release or production operation performed.
+## Fresh core validation checkpoint
+Recovered source now passes 33 focused integration/regression tests / 104 assertions, including registration retry, mismatched receipts, domain/HTTPS rejection, existing installation availability and controller-route checks. A full recovered suite is running. PR #2: https://github.com/joshualion/presidential-camp/pull/2 . Initial recovery SHA: 1341fd4e98c579e8670c7ad2e12ca6d2056c3803.
+
+GitHub Actions run 38282001915 failed before assigning any runner: both PHP jobs have empty runner names and no steps; job logs return BlobNotFound. Do not represent this as a PHP test failure or assume an account/billing cause without further evidence. Updated fixtures are committed here; rerun CI and inspect hosting-account runner availability.

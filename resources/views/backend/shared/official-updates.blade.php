@@ -20,13 +20,15 @@
             @if(!empty($updateStatus['available']) && !empty($updateStatus['verified']))
                 <form method="post" action="{{ route('superadmin.updates.prepare') }}" class="mt-3">@csrf<button class="btn btn-outline-primary">Download and verify for review</button></form>
             @endif
-            <p class="mt-3">Community software and official release downloads remain free. Update assistance is an optional paid service. Your current installation continues to work without a purchase or registration.</p>
+            <p class="mt-3">Community software and official release downloads remain free. Update assistance is an optional paid service. Established installations remain operational during the registration transition and portal outages.</p>
             <p>Update checks retrieve public release information from GitHub. They do not send your domain, email or campaign records.</p>
             <p><a href="{{ rtrim(config('campaign.portal_web_base'), '/') }}/clientarea/updates" target="_blank" rel="noopener">Optional update assistance and credit balance</a></p>
-            <hr><h2>Optional deployment registration</h2>
+            <hr><h2>Installation registration</h2>
             @if(!empty($registration['error']))<p>{{ $registration['error'] }}</p>@endif
             @if(!empty($registration['registered']))
                 <p>Registered domain: {{ $registration['domain'] }}. Contact: {{ $registration['contact_email'] }}. {{ !empty($registration['contact_verified']) ? 'Contact confirmed.' : 'Contact confirmation pending.' }}</p>
+                <form method="post" action="{{ route('superadmin.deployment.resend') }}">@csrf<button class="btn btn-secondary">Resend contact confirmation</button></form>
+                <form method="post" action="{{ route('superadmin.deployment.domain-change') }}">@csrf<button class="btn btn-secondary">Request change to {{ $registrationDomain }}</button></form>
                 <form method="post" action="{{ route('superadmin.deployment.preferences') }}">@csrf<input type="hidden" name="marketing_opt_in" value="0"><label><input type="checkbox" name="marketing_opt_in" value="1" @checked(!empty($registration['marketing_opt_in']))> Receive optional marketing communications</label><button class="btn btn-secondary">Save preference</button></form>
                 <form method="post" action="{{ route('superadmin.deployment.sync') }}" class="mt-3">@csrf<button class="btn btn-secondary">Refresh Portal messages</button></form>
                 <form method="post" action="{{ route('superadmin.deployment.revoke') }}" class="mt-3">@csrf<button class="btn btn-outline-danger">Remove registration and stop reporting</button></form>
@@ -35,9 +37,10 @@
                 <form method="post" action="{{ route('superadmin.deployment.revoke') }}">@csrf<button class="btn btn-secondary">Retry Portal deletion</button></form>
             @else
                 <p>Registration sends a deployment identifier, domain <strong>{{ $registrationDomain }}</strong>, Super Admin email <strong>{{ $profileData->email }}</strong>, installed version and installation completion status to Campaign Manager Portal. If registered, later checks report the installed version and successful update check status. Campaign supporter records, voter information and application passwords are not included.</p>
-                <p>Registration is optional and can be revoked. Operational registration and support messages are separate from marketing. It is not activation and is not required to use Community software or download free releases.</p>
+                <p>New v1.1.0 installations require free registration under the licence/privacy terms. Existing installations can complete this transition here without a data reset or remote lockout. Marketing remains optional.</p>
+                <p><a href="https://campaignmanager.ng/community/privacy" target="_blank" rel="noopener noreferrer">Read the licence and privacy notice</a> — version 2026-10-12.</p>
                 <form method="post" action="{{ route('superadmin.deployment.register') }}">@csrf
-                    <label><input type="checkbox" name="registration_consent" value="1" required> I agree to this deployment registration and its operational communications.</label><br>
+                    <label><input type="checkbox" name="registration_consent" value="1" required> I accept the Community licence and privacy notice, including installation registration and essential software communications.</label><br>
                     <label><input type="checkbox" name="marketing_opt_in" value="1"> I also want optional product news and marketing communications.</label><br>
                     <button class="btn btn-secondary">Register this deployment</button>
                 </form>

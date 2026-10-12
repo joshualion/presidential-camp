@@ -22,6 +22,8 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth', 'access_level:superadmin'])->group(function () {
     Route::get('/superadmin/updates', [\App\Http\Controllers\OfficialUpdateController::class, 'index'])->name('superadmin.updates');
+    Route::post('/superadmin/deployment/domain-change',[\App\Http\Controllers\DeploymentRegistrationController::class,'domainChange'])->middleware('throttle:3,60')->name('superadmin.deployment.domain-change');
+    Route::post('/superadmin/deployment/resend-verification',[\App\Http\Controllers\DeploymentRegistrationController::class,'resend'])->middleware('throttle:3,60')->name('superadmin.deployment.resend');
     Route::post('/superadmin/deployment/register', [\App\Http\Controllers\DeploymentRegistrationController::class, 'register'])->middleware('throttle:3,60')->name('superadmin.deployment.register');
     Route::post('/superadmin/deployment/sync', [\App\Http\Controllers\DeploymentRegistrationController::class, 'sync'])->middleware('throttle:6,1')->name('superadmin.deployment.sync');
     Route::post('/superadmin/deployment/preferences', [\App\Http\Controllers\DeploymentRegistrationController::class, 'preferences'])->name('superadmin.deployment.preferences');

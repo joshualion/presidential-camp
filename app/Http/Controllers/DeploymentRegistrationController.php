@@ -14,7 +14,7 @@ class DeploymentRegistrationController extends Controller
             $registration->register($request->user(), (bool) ($data['marketing_opt_in'] ?? false));
             return back()->with('update_notice', 'Deployment registered. Confirm the contact email sent by the Portal. Marketing remains a separate optional choice.');
         } catch (\Throwable $exception) {
-            return back()->with('update_error', 'Registration could not be confirmed. Check Portal connectivity and your application URL. The application remains available without registration.');
+            return back()->with('update_error', 'Registration could not be confirmed. Check Portal connectivity and your application URL. Existing installations remain available; new setup requires a confirmed receipt.');
         }
     }
 
@@ -39,6 +39,16 @@ class DeploymentRegistrationController extends Controller
         }
     }
 
+    public function domainChange(DeploymentRegistrationService $registration)
+    {
+        try {$registration->requestDomainChange();return back()->with('update_notice','Confirm the domain change through the verified contact email, then re-register this installation.');}
+        catch (\Throwable $exception) {return back()->with('update_error','Confirm the existing contact and retry the domain change later.');}
+    }
+    public function resend(DeploymentRegistrationService $registration)
+    {
+        try {$registration->resendVerification();return back()->with('update_notice','Contact confirmation requested.');}
+        catch (\Throwable $exception) {return back()->with('update_error','Contact confirmation could not be sent. Retry later.');}
+    }
     public function revoke(DeploymentRegistrationService $registration)
     {
         try {

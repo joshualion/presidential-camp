@@ -190,6 +190,7 @@ test('installer service validation no longer requires a license preview for comm
             'email' => 'community-installer@example.test',
             'password' => 'secret-password',
         ],
+        'registration'=>['terms_version'=>'2026-10-12','accepted_at'=>'2026-10-12T00:00:00Z','marketing_opt_in'=>false],
     ]);
 
     expect($result['ok'])->toBeFalse()
@@ -344,4 +345,5 @@ test('legacy local license remains authoritative when present', function () {
         ->and($scope->scope_name)->toBe('Cross River')
         ->and($scope->license_status)->toBe('active');
 });
+
 
