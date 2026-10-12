@@ -315,7 +315,7 @@ class InstallerController extends Controller
                 ]);
                 $this->completeStep('geography_setup');
 
-                return redirect()->route('install.admin')->with('status', 'Manual geography setup selected. No key or portal connection is required.');
+                return redirect()->route('install.admin')->with('status', 'Manual geography setup selected. No geography provisioning key is required. Installation registration requires the official portal.');
             }
 
             $licenseKey = trim((string) ($data['license_key'] ?? ''));
@@ -384,6 +384,7 @@ class InstallerController extends Controller
                 'email' => ['required', 'email', 'max:255'],
                 'phone' => ['nullable', 'string', 'max:40'],
                 'password' => ['required', 'confirmed', 'min:8'],
+                'terms_accepted'=>['required','accepted'], 'marketing_opt_in'=>['sometimes','boolean'],
             ]);
 
             session(['installer.admin' => $data]);
@@ -392,6 +393,8 @@ class InstallerController extends Controller
                 'email' => $data['email'],
                 'phone' => $data['phone'] ?? null,
             ]]);
+            $registration=['terms_version'=>'2026-10-12','accepted_at'=>now()->toIso8601String(),'marketing_opt_in'=>$request->boolean('marketing_opt_in')];
+            session(['installer.registration'=>$registration]);$this->stateStore->merge(['registration'=>$registration]);
             $this->completeStep('admin');
 
             return redirect()->route('install.run');
@@ -983,4 +986,5 @@ class InstallerController extends Controller
         return 'The installer will prepare the campaign geography included with your provisioning key.';
     }
 }
+
 

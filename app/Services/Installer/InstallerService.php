@@ -100,6 +100,9 @@ class InstallerService
             return array_merge(['ok' => false, 'stage' => 'validation'], $stateError);
         }
 
+        if (($state['registration']['terms_version']??null)!=='2026-10-12' || empty($state['registration']['accepted_at'])) {
+            return ['ok'=>false,'stage'=>'registration','missing_step'=>'admin','message'=>'Accept the licence and privacy notice in Super Admin setup before installation.'];
+        }
         $databaseTest = $this->databaseSetup->test($database);
         if (!$databaseTest['ok']) {
             return ['ok' => false, 'stage' => 'database', 'message' => $databaseTest['message']];
@@ -111,6 +114,11 @@ class InstallerService
             ]));
 
             $this->applyRuntimeConfig($environment, $database, $mail);
+            try {
+                app(\App\Services\DeploymentRegistrationService::class)->registerIdentity($admin['email'],(bool)($state['registration']['marketing_opt_in']??false));
+            } catch (Throwable $exception) {
+                return ['ok'=>false,'stage'=>'registration','message'=>'Required installation registration could not be confirmed. Retry Run Installation when the official portal is available. Configuration and existing records are preserved.'];
+            }
 
             $this->runStep('database migrations', fn () => $this->runArtisanCommand('migrate', ['--force' => true]));
             $this->ensureLocalLicenseTablesExist();
@@ -143,7 +151,9 @@ class InstallerService
                     'warnings' => ['Community installation completed without paid QuickStart geography provisioning. Configure geography manually or provision later when a provisioning entitlement is available.'],
                 ];
 
-                $this->runStep('install lock write', fn () => $this->installationState->create([
+                app(\App\Services\DeploymentRegistrationService::class)->assertInstallationReceipt($admin['email']);
+            app(\App\Services\DeploymentRegistrationService::class)->reportInstallationCompleted();
+            $this->runStep('install lock write', fn () => $this->installationState->create([
                     'installation_mode' => 'community',
                     'source' => 'local',
                     'remote_validation_required' => false,
@@ -270,6 +280,8 @@ class InstallerService
 
             $this->runStep('first super admin creation', fn () => $this->createSuperAdmin($admin));
 
+            app(\App\Services\DeploymentRegistrationService::class)->assertInstallationReceipt($admin['email']);
+            app(\App\Services\DeploymentRegistrationService::class)->reportInstallationCompleted();
             $this->runStep('install lock write', fn () => $this->installationState->create([
                 'deployment_mode' => 'self_hosted',
                 'package_type' => $localLicense->package_type,

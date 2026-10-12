@@ -261,13 +261,14 @@
                         <div class="field"><label>Password</label><input type="password" name="password" required></div>
                         <div class="field"><label>Confirm password</label><input type="password" name="password_confirmation" required></div>
                     </div>
+                    @include('installer.registration-terms')
                     <div class="actions"><a class="btn secondary" href="{{ route('install.geography_setup') }}">Previous</a><button class="btn">Continue</button></div>
                 </form>
             @elseif($step === 'run')
                 <h2 style="color: #008751;">Run Installation</h2>
-                <p class="lead">This step prepares your application, runs migrations, writes the campaign scope and identity, and creates the first super admin. Manual Community installs skip remote activation and portal calls.</p>
+                <p class="lead">This step prepares your application, runs migrations, writes the campaign scope and identity, and creates the first super admin. Manual Community installs require a free installation registration receipt; geography provisioning is optional.</p>
                 @if($display)<div class="summary"><div><strong>Package:</strong> {{ $display['package_type'] ?? 'Not provided' }}</div><div><strong>Scope:</strong> {{ $display['scope_type'] ?? '' }} {{ $display['scope_name'] ?? '' }}</div></div>@endif
-                @if(!empty($display))<div class="alert info">Automatic setup will provision supported location data from the Campaign Manager portal. Full CSV data is not bundled in this release.</div>@else<div class="alert info">Community setup does not contact the Campaign Manager portal. You can configure geography manually after installation.</div>@endif
+                @if(!empty($display))<div class="alert info">Automatic setup will provision supported location data from the Campaign Manager portal. Full CSV data is not bundled in this release.</div>@else<div class="alert info">The official portal must acknowledge installation registration before setup completes. Temporary failure preserves your configuration and database for retry.</div>@endif
                 <form method="post">@csrf<div class="actions"><a class="btn secondary" href="{{ route('install.admin') }}">Previous</a><button class="btn">Run Installation</button></div></form>
             @elseif($step === 'provision')
                 <h2 style="color: #008751;">Provision Location Data</h2>
