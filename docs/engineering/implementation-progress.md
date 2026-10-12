@@ -1,55 +1,60 @@
 # Campaign Manager v1.1.0 implementation progress
 
-Updated: 2026-10-12. This is an execution checkpoint, not a release-completion claim.
+Checkpoint: 2026-10-12 (Africa/Lagos). Source implementation is pushed; release and production deployment are incomplete. This report is maintained on the implementation branches, not main. No production database reset, production cutover, public v1.1.0 release, or replacement of historical releases was performed.
 
-| Milestone | State | Evidence / next action |
+## Milestone ledger
+
+| Milestone | Status | Evidence / remaining gate |
 | --- | --- | --- |
-| Repository audit | Complete | Portal main fd7fb9f5614987d31e280dc7ade5fc79bd277045; core PR #1 head 2fe1b77a3e7e05966120ba07a572bec164ba43da; public latest v1.0.9. |
-| Marketing portal development | Recovery in progress | Local download funnel, dashboard, receipt API, domain confirmation and retention were implemented before an execution-environment refresh. Recover and commit source incrementally. |
-| Mandatory installation registration | Implemented before refresh; recovery pending | Encrypted persistent identity; matching receipt required before install lock; retry preserves records. |
-| Core stabilization | Existing PR #1 preserved | Existing application checks runs 38146924812 and 38146921955 completed successfully at the PR head. |
-| Integration / regression testing | Earlier local runs complete; rerun recovered source | Core: 380 tests / 1,691 assertions. Portal registration/download: 16 tests / 86 assertions. Both frontend builds and Composer / production npm audits passed. These results describe the pre-refresh checkout. |
-| Verified release build | Blocked | No committed trusted config/release-public.pem; protected signing identity must be provided through GitHub environment secrets. Local LFS assets also require full authenticated checkout. |
-| Public GitHub publication | Not performed | v1.0.9 and all historical assets remain unchanged. Do not publish v1.1.0 until signed packaging and live required registration pass. |
-| Portal deployment handover | In progress | Prepare exact tested commits, additive migrations, backup hook and atomic rollback instructions. Production has not been changed. |
+| Repository audit | Complete for implementation | Inspected private portal `joshualion/campaigmanager.ng`, private core `joshualion/presidential-camp`, public distribution `joshualion/Campaign-Manager`; integrated earlier work instead of restarting. |
+| Marketing portal | Implemented and pushed | PR #13: branded download lead form, real GitHub asset resolution, owner analytics/export, verification/unsubscribe, retention, backup command. |
+| Mandatory installation registration | Implemented and pushed | Portal API + core PR #2: explicit terms, separate marketing consent, encrypted credential, identity-bound receipt, durable retries, verified domain-change flow. |
+| Core application fixes | Implemented and tested locally | Earlier stabilization preserved; final full suite 384 passed, 1,695 assertions. |
+| Integration testing | Partial | Portal focused 21 passed, 102 assertions. Full suite 175 passed / 3 failed, 905 assertions; all failures are unavailable full geography data. Real synthetic backup restoration passed. Production mail/payment/staging and physical PHP 8.2/MySQL 8 validation remain. |
+| Release build | Prepared; unsigned dry-run only | Release workflow and signing checks implemented; frontend builds passed. Complete hydrated source, successful CI, owner key and legal approval required. No release ZIP generated. |
+| Public GitHub publication | Documentation PR published; binary blocked | Public PR #15. Latest public release remains v1.0.9. No v1.1.0 tag/assets/checksum exists. |
+| Portal deployment handover | Prepared and pushed | See `portal-deployment-handover.md`. No live deployment; readiness endpoint returned HTTP 302, not ready JSON. |
 
-## Repository findings
+## Exact source revisions
 
-- Portal PR #7 and #8 are draft and conflict with current main; their useful work must be integrated while preserving main's newer SSH/staging workflow files.
-- Core PR #1 is draft and mergeable. Existing registration is optional; new installation integration is required.
-- Public release list still starts at v1.0.9.
-- Existing successful portal staging run: 38265889314. Earlier SSH check success: 38168258141.
-- Portal PR #8 CI run 38167533553 completed successfully at head 2759a044606bde50a90e3c0a47741f5a91e8a50b.
+| Repository | Branch | Source commit | Review |
+| --- | --- | --- | --- |
+| joshualion/campaigmanager.ng | feat/community-v110-implementation | f49cd44318c015d219860e133f8a95156838fd03 | https://github.com/joshualion/campaigmanager.ng/pull/13 |
+| joshualion/presidential-camp | feat/required-installation-registration-v110 | 803b15056fa00933da5445d7d2f08a6e74e6c92a | https://github.com/joshualion/presidential-camp/pull/2 |
+| joshualion/Campaign-Manager | docs/community-v110-registration | 36065e345b68f6f2e4ef48a0778e57aea649ad43 | https://github.com/joshualion/Campaign-Manager/pull/15 |
 
-## Current blocker and recovery
+Subsequent report-only commits may change branch heads; the revisions above identify implemented source. Portal f49cd44 adds the API readiness deployment gate to tested application source b735ca71532e32a822cc25cbdc8db9b82a974203; YAML parsed successfully. Earlier portal foundation PR #7 and deployment PR #8, and core stabilization PR #1, were preserved. Implementation PRs are unmerged drafts.
 
-The execution environment refreshed during a user steering message. Unpushed working directories from this turn are no longer present. Earlier source checkouts still exist. This repository-backed checkpoint preserves task state immediately; source recovery will use those checkouts and the recorded implementation without repeating the repository audit. Earlier local test counts must not be represented as validation of the recovered checkout until rerun.
+## Implemented behavior
 
-## Release and deployment gates
+- Portal buttons route through a branded, CSRF-protected first-name/last-name/email form with separate unchecked marketing consent, honeypot, timing and throttle. A request is tracked before redirect to the actual stable official GitHub asset; it is not proof of transfer or installation. No phone is collected. GitHub download totals are anonymous and never presented as identified people.
+- Registration API authenticates an installation token stored hashed at the portal and encrypted locally; validates domains, email, UUID, terms and receipt; rejects mismatched retries. Consent and version retry safely without duplicates. Receipt is required before new installation migrations/lock. Existing installations have a deliberate transition and no remote kill switch.
+- Verification, resend, unsubscribe, revocation and one-use domain changes are implemented. Operational messages remain available; promotions require verified opted-in contact. Diagnostics disclose event/version/short code only, not campaign records, passwords or raw errors. Failed/completed status retry durably.
+- Owner-only analytics show leads, installations, versions, last-seen/status and verified contact, with filters and safe CSV export. Domains/status are self-reported. Customer linkage is supported, but automatic paid conversion attribution is a follow-up rather than a false claim.
+- Additive migrations, scheduled retention, private backup artifacts, streamed dump/compression, integrity manifests and a fail-closed backup hook are implemented. Application rollback preserves database and shared data.
+- Existing core stabilization and signed updater foundation were retained. Manual update preparation is supported; automatic apply/rollback is deferred.
+- Protected release workflow requires matching established RSA signing keys, stable production registration readiness, legal-review flag, tests, dependency audit and complete Git LFS data. It publishes immutable official assets only when version is absent.
 
-1. Commit recovered implementation on feature branches; run local checks and full GitHub CI with genuine LFS assets.
-2. Complete owner/legal review of Community licence and privacy wording, including controller details and rights process.
-3. Commit the established trusted public key and configure protected private signing material; never create a substitute identity.
-4. Configure scoped public-distribution publishing credentials through the protected GitHub environment.
-5. Deploy and verify the registration API before publicly releasing an installer that requires it.
-6. Verify current database and file backup integrity and prove isolated restoration before production cutover.
-7. Production uses reviewed additive migrations only. Never migrate:fresh, migrate:refresh, db:wipe or destructive seeding.
+## Validation evidence
 
-## Production paths retained for handover
+- Core final local suite: **384 passed, 1,695 assertions**, 110.68 seconds; correct working-directory run, testing environment only.
+- Portal focused final suite: **21 passed, 102 assertions**, including registration, download/dashboard/export/retention and backup fixtures. Synthetic database/schema and uploaded file restored independently. This is not a restoration test of real production backups.
+- Portal full local suite: **175 passed, 3 failed, 905 assertions**. Three `CampaignLocationProductionDatasetTest` failures require missing complete LFS-backed geography CSV. No fabricated replacements were used.
+- Both frontend production builds passed. Locked Composer audit: zero advisories; production npm audit: zero. Full npm audit: seven Tailwind 3 build-chain advisories (two moderate, five high) remain in each project. Critical portal advisories were removed; Tailwind 4 migration is separate work.
+- Changed PHP syntax, deploy Bash syntax and workflow YAML checks passed. Core bootstrap release dry-run passed; unsigned, not a distributable package and not a production dependency install.
+- GitHub final-source CI at the earlier source heads stopped before runner allocation: jobs have empty runner names and zero steps. The root cause is unverified; this is not a passing check or demonstrated source-code test failure.
+  - Core: https://github.com/joshualion/presidential-camp/actions/runs/38289562722 and https://github.com/joshualion/presidential-camp/actions/runs/38289557314
+  - Portal: https://github.com/joshualion/campaigmanager.ng/actions/runs/38289527802 and https://github.com/joshualion/campaigmanager.ng/actions/runs/38289527779
+- Live readiness probe `https://campaignmanager.ng/api/v2/campaign-manager/deployments/health`: HTTP 302. The installer release must wait for HTTP 200 ready JSON on this canonical HTTPS origin.
 
-Host business106.web-hosting.com; user payopxxb; SSH port 21098.
-Deployment root /home/payopxxb/campaignmanager-portal-deploy.
-Public link /home/payopxxb/campaignmanager.ng/public.
-Legacy application /home/payopxxb/campaign/campaigmanager.ng.
-Previously supplied backups require current verification:
-- backups/portal-db-20261012T142852Z.sql.gz
-- backups/portal-files-20261012T143540Z.tar.gz
+## External gates and next actions
 
-## Next checkpoint
+1. Resolve GitHub Actions runner startup and rerun full checks with complete LFS data. Do not merge through failed required checks. Connector exposes no workflow dispatch or release creation operation; browser is signed out.
+2. Securely configure protected production deployment and `community-release` environments in GitHub. No credentials should be pasted into chat. Commit the owner's established public signing key at core `config/release-public.pem`; configure matching private key and distribution token securely. A new arbitrary trust identity must not be invented to bypass this gate.
+3. Review privacy/terms drafts with the appropriate owner/legal reviewer; only then set the legal-review approval flag.
+4. Follow the handover: test real backup restoration in isolation, staging and safe additive migrations; deploy portal first and prove registration readiness. Then build and publish core v1.1.0 and verify public asset downloads/signature/hash. Record the actual new artifact size, SHA256, timestamp and release URL at publication; none exists yet.
+5. Follow-ups: Tailwind build-chain major upgrade; paid-conversion linkage automation; real email/payment smoke tests; full PHP 8.2/shared-host/MySQL 8 matrix; separately reviewed automatic updater apply/rollback.
 
-Recover core registration changes first, commit them immediately, rerun focused tests; recover portal changes, complete regressions, push draft PRs and record exact commit SHAs and CI URLs here. Do not enable production deployment or replace historical public releases.
+## Public release truth
 
-## Fresh core validation checkpoint
-Recovered source now passes 33 focused integration/regression tests / 104 assertions, including registration retry, mismatched receipts, domain/HTTPS rejection, existing installation availability and controller-route checks. A full recovered suite is running. PR #2: https://github.com/joshualion/presidential-camp/pull/2 . Initial recovery SHA: 1341fd4e98c579e8670c7ad2e12ca6d2056c3803.
-
-GitHub Actions run 38282001915 failed before assigning any runner: both PHP jobs have empty runner names and no steps; job logs return BlobNotFound. Do not represent this as a PHP test failure or assume an account/billing cause without further evidence. Updated fixtures are committed here; rerun CI and inspect hosting-account runner availability.
+Verified latest release: https://github.com/joshualion/Campaign-Manager/releases/tag/v1.0.9 . Existing asset `campaign-manager.zip`, 225,887,520 bytes, SHA256 `5432653795b01ee730a80eb49ad1981e2a3396db955b83341b986ce7d15dffe0`. These are historical v1.0.9 values, not a v1.1.0 artifact. Historical assets remain intact.
