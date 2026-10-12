@@ -15,6 +15,16 @@ Artisan::command('inspire', function () {
 
 Schedule::command('notifications:prune-expired')->hourly();
 
+Schedule::command('campaign:updates-check')->daily()->withoutOverlapping()
+    ->when(fn () => config('updates.enabled') && app(\App\Services\InstallationStateService::class)->installed());
+
+Schedule::command('campaign:portal-sync')->hourly()->withoutOverlapping()
+    ->when(function () {
+        $state = app(\App\Services\DeploymentRegistrationService::class)->summary();
+        return app(\App\Services\InstallationStateService::class)->installed()
+            && (!empty($state['registered']) || !empty($state['pending_revoke']));
+    });
+
 $smsEnabled = fn () => Schema::hasTable('sms_allocations')
     && Schema::hasColumn('system_settings', 'portal_sms_enabled')
     && (bool) SystemSetting::query()->first()?->portal_sms_enabled;
@@ -33,3 +43,4 @@ Schedule::call(function () {
         ->pluck('id')
         ->each(fn (int $id) => SyncPortalSmsBatch::dispatch($id));
 })->everyTenMinutes()->name('portal-sms-batch-sync')->withoutOverlapping()->when($smsEnabled);
+

@@ -49,6 +49,9 @@ class NationalSystemSettingController extends Controller
         public function updateSystemsSettings(Request $request){
 
             $request->validate([
+                'logo' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+                'login_page_background' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
+                'favicon' => 'nullable|image|mimes:png,ico|max:512',
                 'enable_s3_storage' => 'boolean',
                 'enable_local_storage'=> 'boolean',
                 's3_key' => 'required_if:enable_s3_storage,1',
@@ -74,7 +77,7 @@ class NationalSystemSettingController extends Controller
 
                         if($request->hasFile('logo')) {
                                     $file = $request->file('logo');
-                                    $logofilename = date('YmdHi') . $file->getClientOriginalName();
+                                    $logofilename = (string) \Illuminate\Support\Str::uuid() . '.' . $file->extension();
                                     $file->move(public_path('uploads/system_images/'), $logofilename);
                                     @unlink(public_path('uploads/system_images/') . $SystemSetting->logo);
                                     $SystemSetting->logo = $logofilename;
@@ -84,7 +87,7 @@ class NationalSystemSettingController extends Controller
 
                         if($request->hasfile('login_page_background')){
                             $file = $request->file('login_page_background');
-                            $loginPageBg = date('YmdHi') . $file->getClientOriginalName();
+                            $loginPageBg = (string) \Illuminate\Support\Str::uuid() . '.' . $file->extension();
                             $file->move(public_path('uploads/system_images/'), $loginPageBg);
                             @unlink(public_path('uploads/system_images/') . $SystemSetting->login_page_background);
                             $SystemSetting->login_page_background = $loginPageBg;
@@ -95,7 +98,7 @@ class NationalSystemSettingController extends Controller
 
                         if($request->hasFile('favicon')) {
                             $file = $request->file('favicon');
-                            $favicon = date('YmdHi') . $file->getClientOriginalName();
+                            $favicon = (string) \Illuminate\Support\Str::uuid() . '.' . $file->extension();
                             $file->move(public_path('uploads/system_images/'), $favicon);
                             @unlink(public_path('uploads/system_images/') . $SystemSetting->favicon);
                             $SystemSetting->favicon = $favicon;
@@ -237,3 +240,4 @@ class NationalSystemSettingController extends Controller
 
 
 }
+

@@ -1,6 +1,8 @@
+> v1.1.0 candidate: new installations require a free registration receipt after licence/privacy acceptance. The portal receives only installation contact email, configured domain, UUID, version, status and terms acknowledgement through an encrypted-local registration credential. No campaign records, voters, political activity, operator phone or administrator passwords are sent. Marketing is separately optional. Existing installations use Official Updates for their transition and remain operational during portal outages. Final licence/privacy review and the established signing identity are required before publication.
+
 # Campaign Manager Self-Hosted Package
 
-This package is the universal Campaign Manager core app for licensed self-hosted installs.
+This package supports free Community self-hosted installations, with optional licensed provisioning services.
 
 ## Production Deployment
 
@@ -17,7 +19,7 @@ This package is the universal Campaign Manager core app for licensed self-hosted
 2. Copy `.env.example` to `.env`.
 3. Set database credentials and `APP_URL`.
 4. Open the browser installer.
-5. Complete package checks, database setup, license activation, geography provisioning, and first superadmin creation.
+5. Confirm installer ownership, complete configuration and Super Administrator details, accept licence/privacy terms and obtain the required free registration receipt. Manual geography setup is free; paid QuickStart provisioning is optional.
 
 The package includes `vendor` and built frontend assets, so customers should not need Composer, Node.js, npm, or Vite for a normal install.
 
@@ -30,3 +32,13 @@ The package includes `vendor` and built frontend assets, so customers should not
 - Reverb is an optional advanced mode that requires additional server setup.
 
 See `docs/self-hosted-installation-guide.md` for the full customer install process.
+
+### Confirm hosting ownership before setup
+
+The installer now requires a local server setup code before accepting configuration. Open `/install/access`, then read `storage/app/installer/access-token` through your own hosting file manager or SSH and enter that code. Do not share it or expose the storage directory through the web server. Alternatively, set a random `CAMPAIGN_INSTALLER_ACCESS_TOKEN` of at least 32 characters in the server environment before setup. This protects installation from visitors; it is not a licence key, paid service or remote activation. Existing completed installations keep the installer closed.
+
+### Update and support foundation (not yet a production upgrade runner)
+
+Super Admin → Official Updates checks the official GitHub release and verifies signed metadata against the installed trusted public key. Preparation downloads and verifies a package into private staging without replacing application files or running migrations. An apply/backup/rollback runner is not enabled in this implementation checkpoint. Releases older than this updater require an initial manual upgrade.
+
+Portal registration is optional and explains the deployment ID, domain, administrator contact email, installed version and status before submission. Marketing has a separate opt-in and requires email confirmation. Revocation disables local polling immediately and retries remote deletion if the Portal is unavailable. No supporter, voter, password or campaign records are transmitted by this registration service. Public Community ZIP downloads remain free. Paid assistance credits are separate from software activation.

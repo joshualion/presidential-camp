@@ -12,7 +12,14 @@ Broadcast::channel('posts', function ($user) {
 
 // BroadcastServiceProvider.php
 Broadcast::channel('posts.{postId}', function ($user, $postId) {
-    return (bool) $user; // Only authenticated users can listen
+    if (!$user) {
+        return false;
+    }
+    $query = \App\Models\Post::query()->whereKey($postId);
+    app(\App\Services\CommunityAudienceService::class)->applyVisibility($query, $user);
+    $post = $query->first();
+
+    return $post && app(\App\Services\CommunityModerationService::class)->postInActorScope($user, $post);
 });
 
 // Messaging private channel per user
@@ -45,3 +52,4 @@ Broadcast::channel('activity-{scope}-{id}', function ($user, $scope, $id) {
             return false;
     }
 });
+

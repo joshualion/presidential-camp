@@ -56,6 +56,14 @@ class ReleaseBuildService
         }
 
         $packageFiles = $this->packageEntries($files['included'], $effectiveConfig);
+        if (!$dryRun) {
+            $signingConfig = array_merge(Arr::get($effectiveConfig, 'signing', []), ['_base_path' => $this->basePath]);
+            $keys = new ReleaseSigningKeyService($this->basePath, $signingConfig);
+            $keys->ensureForBuild();
+            $publicKey = $keys->readPublicKey();
+            $packageFiles = array_values(array_filter($packageFiles, fn ($entry) => $entry['path'] !== 'config/release-public.pem'));
+            $packageFiles[] = ['path' => 'config/release-public.pem', 'contents' => $publicKey, 'size' => strlen($publicKey), 'hardened' => false];
+        }
         $checksums = $this->checksumList($packageFiles);
         $manifest = $this->manifest($version, $channel, $profile, $effectiveConfig, $files, $checks, $profileChecks, $packageFiles, $checksums);
         $signingWarnings = [];
@@ -143,6 +151,12 @@ class ReleaseBuildService
             $result['checksum_sha256'] = hash_file('sha256', $zipPath);
             $result['manifest']['checksum_sha256'] = $result['checksum_sha256'];
             $result['manifest']['size_bytes'] = $result['size_bytes'];
+            // The external manifest covers the finished ZIP; the embedded manifest
+            // covers its contents and cannot include a hash of its own archive.
+            $result['manifest'] = (new ReleaseManifestSigner())->sign($result['manifest'], $signingConfig)['manifest'];
+            if ((new ReleaseManifestSigner())->verify($result['manifest'], null, $signingConfig) !== true) {
+                throw new RuntimeException('The completed release manifest could not be verified.');
+            }
         }
 
         File::put($result['manifest_path'], $this->json($result['manifest']));
@@ -232,6 +246,10 @@ class ReleaseBuildService
         $entries = [];
 
         foreach ($files as $file) {
+            $prefix = file_get_contents($file['absolute_path'], false, null, 0, 128);
+            if (is_string($prefix) && str_starts_with($prefix, 'version https://git-lfs.github.com/spec/v1')) {
+                throw new RuntimeException('Unresolved Git LFS object in package: '.$file['path'].'. Materialize release assets before building.');
+            }
             $hardened = false;
             $entry = [
                 'path' => $file['path'],
@@ -839,3 +857,4 @@ class ReleaseBuildService
         return json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES).PHP_EOL;
     }
 }
+

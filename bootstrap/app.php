@@ -52,6 +52,7 @@ return Application::configure(basePath: dirname(__DIR__))
                          'EnsureSystemNotActivated' => EnsureSystemNotActivated::class,
                          'eyen_ino_no_way' => ValidateLicense::class,
                          'installer.block_if_installed' => BlockInstallerIfInstalled::class,
+                         'installer.owner' => \App\Http\Middleware\RequireInstallerOwnerProof::class,
                          'community.enabled' => EnsureCommunityEnabled::class,
                          'community.profile_complete' => EnsureCommunityProfileLocationComplete::class,
                          'email_notifications.enabled' => EnsureEmailNotificationsEnabled::class,
@@ -95,3 +96,4 @@ return Application::configure(basePath: dirname(__DIR__))
             ], $status);
         });
     })->create();
+

@@ -118,21 +118,15 @@ class AppServiceProvider extends ServiceProvider
             }
 
             if ($SystemSetting?->enable_s3_storage) {
-                Storage::extend('s3', function ($app, $config) use ($SystemSetting) {
-                    return new \League\Flysystem\AwsS3V3\AwsS3V3Adapter(
-                        new \Aws\S3\S3Client([
-                            'credentials' => [
-                                'key' => $SystemSetting->s3_key,
-                                'secret' => $SystemSetting->s3_secret,
-                            ],
-                            'region' => $SystemSetting->s3_region,
-                            'version' => 'latest',
-                        ]),
-                        $SystemSetting->s3_bucket
-                    );
-                });
+                Config::set('filesystems.disks.s3.key', $SystemSetting->s3_key);
+                Config::set('filesystems.disks.s3.secret', $SystemSetting->s3_secret);
+                Config::set('filesystems.disks.s3.region', $SystemSetting->s3_region);
+                Config::set('filesystems.disks.s3.bucket', $SystemSetting->s3_bucket);
+                Config::set('filesystems.disks.s3.endpoint', $SystemSetting->s3_endpoint ?: null);
+                Storage::forgetDisk('s3');
             }
 
         }// End if
     }
 }
+

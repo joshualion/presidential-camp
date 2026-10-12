@@ -62,7 +62,7 @@ class InstallerStateStore
     private function write(array $state): void
     {
         File::ensureDirectoryExists(dirname($this->path()));
-        File::put($this->path(), json_encode($state, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+        File::replace($this->path(), json_encode($state, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR), 0600);
     }
 
     private function sanitizeArray(array $values): array
@@ -97,3 +97,4 @@ class InstallerStateStore
         return in_array(strtoupper($key), ['DB_PASSWORD', 'MAIL_PASSWORD', 'PASSWORD', 'PASSWORD_CONFIRMATION'], true);
     }
 }
+

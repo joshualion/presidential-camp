@@ -5,12 +5,18 @@ return [
         'name' => 'Campaign Manager Core',
         'package' => 'campaign-manager-core',
         'channel' => env('RELEASE_CHANNEL', 'self-hosted'),
-        'version' => env('APP_VERSION', '1.0.5'),
+        'version' => env('APP_VERSION', '1.1.0'),
         'build_date' => env('RELEASE_BUILD_DATE', null),
         'minimum_php' => '8.2.0',
     ],
 
     'release_notes' => [
+        '1.1.0' => [
+            'Required free installation registration after explicit licence and privacy acceptance.',
+            'Persistent encrypted retry identity, receipt validation and safe existing-installation transition.',
+            'Optional verified-contact marketing, domain migration and resend controls.',
+            'Stabilization fixes and signature-verified official update staging; manual application only.',
+        ],
         '1.0.9' => [
             'Installer geography selection now preserves authoritative Portal geography codes separately from Portal IDs.',
             'Base campaign geography bootstrapping creates or reuses coded State, Senatorial District, Federal Constituency, and LGA records.',
@@ -68,7 +74,7 @@ return [
     'signing' => [
         'keys_dir' => env('CAMPAIGN_RELEASE_KEYS_DIR', 'storage/app/release-keys'),
         'private_key_path' => env('CAMPAIGN_RELEASE_PRIVATE_KEY_PATH', 'storage/app/release-keys/campaign_release_private.pem'),
-        'public_key_path' => env('CAMPAIGN_RELEASE_PUBLIC_KEY_PATH', 'storage/app/release-keys/campaign_release_public.pem'),
+        'public_key_path' => env('CAMPAIGN_RELEASE_PUBLIC_KEY_PATH', 'config/release-public.pem'),
         'public_key' => env('RELEASE_SIGNING_PUBLIC_KEY'),
         'public_key_id' => env('RELEASE_SIGNING_PUBLIC_KEY_ID', 'campaign-manager-release-v1'),
     ],
@@ -534,3 +540,4 @@ return [
         'Thumbs.db',
     ],
 ];
+

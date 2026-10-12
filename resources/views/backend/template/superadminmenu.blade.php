@@ -4,6 +4,14 @@
 @php($packageUi = $packageUi ?? app(\App\Services\CampaignPackageUiService::class))
 <nav class="mt-2">
       <ul class="nav nav-pills nav-sidebar flex-column sidebar-nav" data-widget="treeview" role="menu" data-accordion="false">
+<li class="nav-item">
+    <a href="{{ route('superadmin.updates') }}" class="nav-link">
+        <i class="nav-icon fas fa-cloud-download-alt"></i><p>Official Updates
+        @if(data_get(app(\App\Services\OfficialUpdateService::class)->status(), 'available'))<span class="badge badge-info">Available</span>@endif
+        </p>
+    </a>
+</li>
+
 
             <li class="tab nav-item menu-close">
                         <a href="{{ url('superadmin/dashboard') }}" class="nav-link">

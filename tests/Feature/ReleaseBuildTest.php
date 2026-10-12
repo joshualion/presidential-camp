@@ -72,6 +72,8 @@ function releaseBuildFixture(array $omit = [], array $extraFiles = []): array
         releaseBuildPut($basePath, is_int($file) ? $contents : $file, is_int($file) ? 'local-only' : $contents);
     }
 
+    (new \App\Services\ReleaseSigningKeyService($basePath, $config['signing']))->generate();
+
     return [$basePath, $config];
 }
 
@@ -297,15 +299,18 @@ test('manifest signing works when release key paths are configured', function ()
         'zip' => false,
     ]);
 
-    $publicKey = File::get($basePath.'/storage/app/release-keys/campaign_release_public.pem');
+    $publicKey = (new \App\Services\ReleaseSigningKeyService($basePath, $config['signing']))->readPublicKey();
 
     expect($result['manifest']['manifest_signature']['algorithm'])->toBe('rsa-sha256')
         ->and(app(\App\Services\ReleaseManifestSigner::class)->verify($result['manifest'], $publicKey))->toBeTrue()
-        ->and(collect($result['warnings'])->pluck('label')->all())->toContain('Release signing keys');
+        ->and(collect($result['warnings'])->pluck('label')->all())->not->toContain('Release signing keys');
 });
 
 test('unsigned local build warns but does not crash', function () {
     [$basePath, $config] = releaseBuildFixture();
+    $keys = new \App\Services\ReleaseSigningKeyService($basePath, $config['signing']);
+    File::delete($keys->status()['private_key_path']);
+    File::delete($keys->status()['public_key_path']);
 
     $result = releaseBuildService($basePath, $config)->dryRun([
         'profile' => 'full',
@@ -600,6 +605,7 @@ test('campaign release build only creates standard zip without publishing', func
     $publisher->shouldReceive('assertRepositoryAllowed')->once()->with('joshualion/Campaign-Manager', false);
     $publisher->shouldNotReceive('publish');
     app()->instance(GitHubReleasePublisher::class, $publisher);
+    app()->instance(ReleaseBuildService::class, releaseBuildService($basePath, config('release')));
 
     $exit = Artisan::call('campaign:release', [
         '--build-only' => true,
@@ -671,6 +677,7 @@ test('campaign release publishes with explicit gh repo when confirmed', function
             'output' => '',
         ]);
     app()->instance(GitHubReleasePublisher::class, $publisher);
+    app()->instance(ReleaseBuildService::class, releaseBuildService($basePath, config('release')));
 
     $this->artisan('campaign:release', [
         '--version-bump' => 'minor',
@@ -710,6 +717,7 @@ test('campaign release state file overrides configured fallback version', functi
     $publisher->shouldReceive('assertRepositoryAllowed')->once()->with('joshualion/Campaign-Manager', false);
     $publisher->shouldNotReceive('publish');
     app()->instance(GitHubReleasePublisher::class, $publisher);
+    app()->instance(ReleaseBuildService::class, releaseBuildService($basePath, config('release')));
 
     $exit = Artisan::call('campaign:release', [
         '--build-only' => true,
@@ -739,6 +747,7 @@ test('failed github publication does not advance release version state', functio
     $publisher->shouldReceive('assertRepositoryAllowed')->once()->with('joshualion/Campaign-Manager', false);
     $publisher->shouldReceive('publish')->once()->andThrow(new RuntimeException('GitHub CLI failed.'));
     app()->instance(GitHubReleasePublisher::class, $publisher);
+    app()->instance(ReleaseBuildService::class, releaseBuildService($basePath, config('release')));
 
     $this->artisan('campaign:release', [
         '--version-bump' => 'patch',
@@ -766,6 +775,7 @@ test('explicit release version still overrides version bump target', function ()
     $publisher->shouldReceive('assertRepositoryAllowed')->once()->with('joshualion/Campaign-Manager', false);
     $publisher->shouldNotReceive('publish');
     app()->instance(GitHubReleasePublisher::class, $publisher);
+    app()->instance(ReleaseBuildService::class, releaseBuildService($basePath, config('release')));
 
     $exit = Artisan::call('campaign:release', [
         '--build-only' => true,
@@ -790,4 +800,31 @@ test('optional output path works', function () {
     ]);
 
     expect($result['zip_path'])->toContain('public'.DIRECTORY_SEPARATOR.'releases');
+});
+
+test('completed external manifest signature covers the finished archive hash', function () {
+    [$basePath, $config] = releaseBuildFixture();
+    $result = releaseBuildService($basePath, $config)->build(['profile' => 'standard', 'version' => '1.1.0']);
+    $manifest = json_decode(File::get($result['manifest_path']), true);
+    $signing = array_merge($config['signing'], ['_base_path' => $basePath]);
+    $signer = new \App\Services\ReleaseManifestSigner();
+    expect($signer->verify($manifest, null, $signing))->toBeTrue()
+        ->and($manifest['checksum_sha256'])->toBe(hash_file('sha256', $result['zip_path']))
+        ->and($manifest['size_bytes'])->toBe(filesize($result['zip_path']));
+    $manifest['checksum_sha256'] = str_repeat('0', 64);
+    expect($signer->verify($manifest, null, $signing))->toBeFalse();
+});
+
+
+
+test('release packaging rejects unresolved Git LFS assets', function () {
+    [$path, $config] = releaseBuildFixture([], [
+        'public/images/geography.png' => "version https://git-lfs.github.com/spec/v1\noid sha256:".str_repeat('0', 64)."\nsize 12345\n",
+    ]);
+    try {
+        expect(fn () => releaseBuildService($path, $config)->dryRun(['profile' => 'standard']))
+            ->toThrow(RuntimeException::class, 'Unresolved Git LFS object');
+    } finally {
+        File::deleteDirectory($path);
+    }
 });

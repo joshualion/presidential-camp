@@ -43,31 +43,11 @@ class NewPostCreated implements ShouldBroadcastNow
 
     public function broadcastWith()
     {
-        return [
-            'post' => [
-                'id' => $this->post->id,
-                'content' => $this->post->content,
-                'image_url' => $this->post->image_url,
-                'video_url' => $this->post->video_url,
-                'created_at' => $this->post->created_at,
-                'post_type' => $this->post->post_type,
-                'audience' => $this->post->audience,
-                'user' => [
-                    'id' => $this->post->user->id,
-                    'firstname' => $this->post->user->firstname,
-                    'lastname' => $this->post->user->lastname,
-                    'photo' => $this->post->user->photo,
-                ],
-                // Optional: Include location data if needed
-                'country_id' => $this->post->country_id,
-                'region_id' => $this->post->region_id,
-                'state_id' => $this->post->state_id,
-                'lga_id' => $this->post->lga_id,
-                'ward_id' => $this->post->ward_id,
-                'pu_id' => $this->post->pu_id,
-            ],
-        ];
+        // Shared channel carries an invalidation signal only. Fetch content through
+        // the authenticated feed endpoint, which applies the audience rules.
+        return ['refresh' => true];
     }
 
 
 }
+

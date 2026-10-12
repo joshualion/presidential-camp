@@ -105,7 +105,7 @@
                         <p class="lead">Configure this campaign installation, select its operating scope, prepare base geography, and create the first super admin.</p>
                     </div>
                 </div>
-                <div class="alert info">Community setup is free and self-hosted. QuickStart Geography Provisioning remains optional for teams that want Govware to populate detailed electoral geography automatically.</div>
+                <div class="alert info">Community setup is free and self-hosted. Populate Campaign Locations Automatically remains optional for teams that want Govware to populate detailed electoral geography automatically.</div>
                 <div class="alert warning-note">For best security, point your domain document root to the Laravel public folder or use the public-webroot bridge. Do not expose the full Laravel source directory.</div>
                 <div class="notice-grid">
                     <div><strong>Current APP_URL</strong>{{ $welcomeMeta['app_url'] }}</div>
@@ -238,14 +238,14 @@
                 @if($display)<div class="summary">@foreach($display as $label => $value)<div><strong>{{ str_replace('_', ' ', ucfirst($label)) }}:</strong> {{ is_array($value) ? implode(', ', $value) : ($value ?: 'Not provided') }}</div>@endforeach</div>@endif
                 <form method="post">@csrf
                     <div class="choice-grid">
-                        <label class="choice"><input type="radio" name="method" value="manual" @checked(old('method', data_get($state, 'geography_setup.method', 'manual')) === 'manual')><strong>Configure Geography Manually</strong><span>Free. No key, portal connection, activation, or entitlement check required. The base campaign geography is created locally and you configure the remaining footprint yourself.</span></label>
-                        <label class="choice"><input type="radio" name="method" value="quickstart" @checked(old('method', data_get($state, 'geography_setup.method')) === 'quickstart')><strong>QuickStart Geography Provisioning</strong><span>Optional paid convenience service for automatic supported geography import. Portal connectivity and a QuickStart Provisioning Key are required.</span></label>
+                        <label class="choice"><input type="radio" name="method" value="manual" @checked(old('method', data_get($state, 'geography_setup.method', 'manual')) === 'manual')><strong>Configure Geography Manually</strong><span>Free. No key, portal connection, activation, or entitlement check required. Choose this if you have the campaign locations and want to enter or import them yourself. The base campaign geography is created locally.</span></label>
+                        <label class="choice"><input type="radio" name="method" value="quickstart" @checked(old('method', data_get($state, 'geography_setup.method')) === 'quickstart')><strong>Populate Campaign Locations Automatically</strong><span>Ask the system to populate supported states, constituencies, local governments, wards and polling units for your selected campaign scope. This optional paid service requires a Portal purchase and a provisioning code. Review coverage before paying.</span></label>
                     </div>
                     <div class="field conditional" id="quickstart-key">
-                        <label>QuickStart Provisioning Key</label>
+                        <label>Geography Provisioning Code</label>
                         <input type="password" name="license_key" value="{{ old('license_key') }}">
                         <p class="lead" style="margin-top:10px">Don't have a provisioning key? Get one from Campaign Manager Portal, then return here and paste the key to continue.</p>
-                        <a class="btn secondary" href="{{ $quickstartOrderUrl }}" target="_blank" rel="noopener">Get QuickStart Provisioning Key</a>
+                        <a class="btn secondary" href="{{ $quickstartOrderUrl }}" target="_blank" rel="noopener">Buy a Geography Provisioning Code</a>
                     </div>
                     <div class="actions"><a class="btn secondary" href="{{ route('install.campaign_identity') }}">Previous</a><button class="btn">Continue</button></div>
                 </form>
@@ -261,13 +261,14 @@
                         <div class="field"><label>Password</label><input type="password" name="password" required></div>
                         <div class="field"><label>Confirm password</label><input type="password" name="password_confirmation" required></div>
                     </div>
+                    @include('installer.registration-terms')
                     <div class="actions"><a class="btn secondary" href="{{ route('install.geography_setup') }}">Previous</a><button class="btn">Continue</button></div>
                 </form>
             @elseif($step === 'run')
                 <h2 style="color: #008751;">Run Installation</h2>
-                <p class="lead">This step prepares your application, runs migrations, writes the campaign scope and identity, and creates the first super admin. Manual Community installs skip remote activation and portal calls.</p>
+                <p class="lead">This step prepares your application, runs migrations, writes the campaign scope and identity, and creates the first super admin. Manual Community installs require a free installation registration receipt; geography provisioning is optional.</p>
                 @if($display)<div class="summary"><div><strong>Package:</strong> {{ $display['package_type'] ?? 'Not provided' }}</div><div><strong>Scope:</strong> {{ $display['scope_type'] ?? '' }} {{ $display['scope_name'] ?? '' }}</div></div>@endif
-                @if(!empty($display))<div class="alert info">QuickStart will provision supported location data from the Campaign Manager portal. Full CSV data is not bundled in this release.</div>@else<div class="alert info">Community setup does not contact the Campaign Manager portal. You can configure geography manually after installation.</div>@endif
+                @if(!empty($display))<div class="alert info">Automatic setup will provision supported location data from the Campaign Manager portal. Full CSV data is not bundled in this release.</div>@else<div class="alert info">The official portal must acknowledge installation registration before setup completes. Temporary failure preserves your configuration and database for retry.</div>@endif
                 <form method="post">@csrf<div class="actions"><a class="btn secondary" href="{{ route('install.admin') }}">Previous</a><button class="btn">Run Installation</button></div></form>
             @elseif($step === 'provision')
                 <h2 style="color: #008751;">Provision Location Data</h2>
