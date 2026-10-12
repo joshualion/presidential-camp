@@ -11,6 +11,12 @@ return [
     ],
 
     'release_notes' => [
+        '1.1.0' => [
+            'Required free installation registration after explicit licence and privacy acceptance.',
+            'Persistent encrypted retry identity, receipt validation and safe existing-installation transition.',
+            'Optional verified-contact marketing, domain migration and resend controls.',
+            'Stabilization fixes and signature-verified official update staging; manual application only.',
+        ],
         '1.0.9' => [
             'Installer geography selection now preserves authoritative Portal geography codes separately from Portal IDs.',
             'Base campaign geography bootstrapping creates or reuses coded State, Senatorial District, Federal Constituency, and LGA records.',

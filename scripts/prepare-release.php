@@ -16,6 +16,11 @@ $keyPath = getenv('CAMPAIGN_RELEASE_PRIVATE_KEY_PATH');
 if (!$key || !$keyPath || !is_file(__DIR__.'/../config/release-public.pem')) {
     throw new RuntimeException('Owner-managed private signing key and committed trusted public key are required.');
 }
+$private = openssl_pkey_get_private($key);
+$public = openssl_pkey_get_public(file_get_contents(__DIR__.'/../config/release-public.pem'));
+if (!$private || !$public || openssl_pkey_get_details($private)['type'] !== OPENSSL_KEYTYPE_RSA || openssl_pkey_get_details($private)['bits'] < 2048 || !hash_equals(openssl_pkey_get_details($public)['key'], openssl_pkey_get_details($private)['key'])) {
+    throw new RuntimeException('Signing material does not match the established trusted public key.');
+}
 if (file_put_contents($keyPath, $key, LOCK_EX) === false || !chmod($keyPath, 0600)) {
     throw new RuntimeException('Private signing material could not be secured.');
 }

@@ -1,6 +1,8 @@
+> v1.1.0 candidate: new installations require a free registration receipt after licence/privacy acceptance. The portal receives only installation contact email, configured domain, UUID, version, status and terms acknowledgement through an encrypted-local registration credential. No campaign records, voters, political activity, operator phone or administrator passwords are sent. Marketing is separately optional. Existing installations use Official Updates for their transition and remain operational during portal outages. Final licence/privacy review and the established signing identity are required before publication.
+
 # Campaign Manager Self-Hosted Package
 
-This package is the universal Campaign Manager core app for licensed self-hosted installs.
+This package supports free Community self-hosted installations, with optional licensed provisioning services.
 
 ## Production Deployment
 
@@ -17,7 +19,7 @@ This package is the universal Campaign Manager core app for licensed self-hosted
 2. Copy `.env.example` to `.env`.
 3. Set database credentials and `APP_URL`.
 4. Open the browser installer.
-5. Complete package checks, database setup, license activation, geography provisioning, and first superadmin creation.
+5. Confirm installer ownership, complete configuration and Super Administrator details, accept licence/privacy terms and obtain the required free registration receipt. Manual geography setup is free; paid QuickStart provisioning is optional.
 
 The package includes `vendor` and built frontend assets, so customers should not need Composer, Node.js, npm, or Vite for a normal install.
 

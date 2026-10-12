@@ -1,0 +1,87 @@
+name: Publish verified Community v1.1.0
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: community-release
+  cancel-in-progress: false
+jobs:
+  release:
+    if: github.ref == 'refs/heads/main'
+    environment: community-release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      APP_ENV: testing
+      APP_URL: http://localhost
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ':memory:'
+      CANDIDATE_VERSION: '1.1.0'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+          persist-credentials: false
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, xml, curl, zip, gd, bcmath, intl, pdo_sqlite, pdo_mysql
+          tools: composer:v2
+          coverage: none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Require legal review, trusted signing key and live registration
+        env:
+          LEGAL_READY: ${{ vars.COMMUNITY_LEGAL_REVIEW_APPROVED }}
+        run: |
+          set -Eeuo pipefail
+          test "$LEGAL_READY" = true
+          test -f config/release-public.pem
+          curl --fail --silent --show-error --max-time 30 https://campaignmanager.ng/api/v2/campaign-manager/deployments/health > "$RUNNER_TEMP/registration-health.json"
+          jq -e '.ready == true and .protocol == 1 and .terms_version == "2026-10-12"' "$RUNNER_TEMP/registration-health.json"
+          if git lfs ls-files | grep ' - '; then echo 'Unresolved LFS assets' >&2; exit 1; fi
+      - run: composer install --prefer-dist --no-interaction && composer audit --locked --no-interaction
+      - run: npm ci && npm run build && npm audit --omit=dev
+      - run: cp .env.example .env && php artisan key:generate --force && php artisan test --log-junit test-results.xml
+      - run: composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction
+      - name: Build with established signing identity
+        env:
+          CAMPAIGN_RELEASE_PRIVATE_KEY: ${{ secrets.CAMPAIGN_RELEASE_PRIVATE_KEY }}
+          CAMPAIGN_RELEASE_PRIVATE_KEY_PATH: ${{ runner.temp }}/campaign-release-private.pem
+          CAMPAIGN_RELEASE_PUBLIC_KEY_PATH: config/release-public.pem
+        run: php scripts/prepare-release.php
+      - name: Verify archive and checksums
+        run: |
+          cd builds/candidate
+          test -s release-manifest.json
+          test -s campaign-manager.zip
+          sha256sum --check campaign-manager.zip.sha256
+          unzip -t campaign-manager.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: community-v1.1.0
+          path: |
+            builds/candidate/campaign-manager.zip
+            builds/candidate/release-manifest.json
+            builds/candidate/campaign-manager.zip.sha256
+            test-results.xml
+          if-no-files-found: error
+      - name: Publish to official public distribution repository
+        env:
+          GH_TOKEN: ${{ secrets.COMMUNITY_DISTRIBUTION_TOKEN }}
+        run: |
+          set -Eeuo pipefail
+          test -n "$GH_TOKEN"
+          gh release list --repo joshualion/Campaign-Manager --limit 100 --json tagName > "$RUNNER_TEMP/releases.json"
+          if jq -e 'any(.[]; .tagName == "v1.1.0")' "$RUNNER_TEMP/releases.json"; then
+            echo 'Version exists; asset replacement is prohibited.' >&2
+            exit 1
+          fi
+          gh release create v1.1.0 --repo joshualion/Campaign-Manager --title 'Campaign Manager v1.1.0' --notes-file docs/releases/v1.1.0.md \
+            builds/candidate/campaign-manager.zip builds/candidate/release-manifest.json builds/candidate/campaign-manager.zip.sha256
+      - name: Remove temporary signing material
+        if: always()
+        run: rm -f "$RUNNER_TEMP/campaign-release-private.pem"

@@ -2,17 +2,28 @@
 
 namespace App\Services\Installer;
 
+use App\Models\LocalLicense;
 use App\Models\User;
 use App\Services\CampaignInstallationSettingsService;
+use App\Services\DeploymentRegistrationService;
 use App\Services\InstallationStateService;
-use App\Services\LocationProvisioningException;
-use App\Services\LocationProvisioningIntegrityService;
-use App\Services\LocationProvisioningImportService;
-use App\Services\LocalLicenseService;
 use App\Services\LocalLicenseScopeReconciliationService;
+use App\Services\LocalLicenseService;
+use App\Services\LocationProvisioningException;
+use App\Services\LocationProvisioningImportService;
+use App\Services\LocationProvisioningIntegrityService;
 use App\Services\PackageGovernanceService;
 use App\Services\RemoteLicenseClient;
 use App\Services\ServerFingerprintService;
+use Database\Seeders\AgeGradeTableSeeder;
+use Database\Seeders\CommunityRulesSeeder;
+use Database\Seeders\CountrySeeder;
+use Database\Seeders\PoliticalPartiesSeeder;
+use Database\Seeders\ProductCategoriesSeeder;
+use Database\Seeders\ProductsSeeder;
+use Database\Seeders\RegionSeeder;
+use Database\Seeders\ReligionTableSeeder;
+use Database\Seeders\SupportGroupSeeder;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
@@ -67,8 +78,7 @@ class InstallerService
         private InstallationStateService $installationState,
         private CampaignInstallationSettingsService $campaignInstallationSettings,
         private BaseCampaignGeographyBootstrapper $baseGeographyBootstrapper,
-    ) {
-    }
+    ) {}
 
     public function run(array $state): array
     {
@@ -81,7 +91,7 @@ class InstallerService
         $communityInstall = $licenseKey === null;
         $admin = $state['admin'] ?? [];
 
-        if ($licenseKey && !$licensePreview) {
+        if ($licenseKey && ! $licensePreview) {
             $preview = $this->remoteLicenseClient->preview([
                 'license_key' => $licenseKey,
                 'app_url' => $environment['APP_URL'] ?? config('app.url'),
@@ -100,11 +110,11 @@ class InstallerService
             return array_merge(['ok' => false, 'stage' => 'validation'], $stateError);
         }
 
-        if (($state['registration']['terms_version']??null)!=='2026-10-12' || empty($state['registration']['accepted_at'])) {
-            return ['ok'=>false,'stage'=>'registration','missing_step'=>'admin','message'=>'Accept the licence and privacy notice in Super Admin setup before installation.'];
+        if (($state['registration']['terms_version'] ?? null) !== '2026-10-12' || empty($state['registration']['accepted_at'])) {
+            return ['ok' => false, 'stage' => 'registration', 'missing_step' => 'admin', 'message' => 'Accept the licence and privacy notice in Super Admin setup before installation.'];
         }
         $databaseTest = $this->databaseSetup->test($database);
-        if (!$databaseTest['ok']) {
+        if (! $databaseTest['ok']) {
             return ['ok' => false, 'stage' => 'database', 'message' => $databaseTest['message']];
         }
 
@@ -115,9 +125,9 @@ class InstallerService
 
             $this->applyRuntimeConfig($environment, $database, $mail);
             try {
-                app(\App\Services\DeploymentRegistrationService::class)->registerIdentity($admin['email'],(bool)($state['registration']['marketing_opt_in']??false));
+                app(DeploymentRegistrationService::class)->registerIdentity($admin['email'], (bool) ($state['registration']['marketing_opt_in'] ?? false));
             } catch (Throwable $exception) {
-                return ['ok'=>false,'stage'=>'registration','message'=>'Required installation registration could not be confirmed. Retry Run Installation when the official portal is available. Configuration and existing records are preserved.'];
+                return ['ok' => false, 'stage' => 'registration', 'message' => 'Required installation registration could not be confirmed. Retry Run Installation when the official portal is available. Configuration and existing records are preserved.'];
             }
 
             $this->runStep('database migrations', fn () => $this->runArtisanCommand('migrate', ['--force' => true]));
@@ -151,9 +161,9 @@ class InstallerService
                     'warnings' => ['Community installation completed without paid QuickStart geography provisioning. Configure geography manually or provision later when a provisioning entitlement is available.'],
                 ];
 
-                app(\App\Services\DeploymentRegistrationService::class)->assertInstallationReceipt($admin['email']);
-            app(\App\Services\DeploymentRegistrationService::class)->reportInstallationCompleted();
-            $this->runStep('install lock write', fn () => $this->installationState->create([
+                app(DeploymentRegistrationService::class)->assertInstallationReceipt($admin['email']);
+                app(DeploymentRegistrationService::class)->reportInstallationCompleted();
+                $this->runStep('install lock write', fn () => $this->installationState->create([
                     'installation_mode' => 'community',
                     'source' => 'local',
                     'remote_validation_required' => false,
@@ -180,8 +190,8 @@ class InstallerService
             $activationRequired = $this->localLicenseService->activationRequired($licensePreview);
             $localLicense = $this->localLicenseService->activatedForLicense($licenseKey);
 
-            if (!$localLicense) {
-                if (!$activationRequired) {
+            if (! $localLicense) {
+                if (! $activationRequired) {
                     $activationPayload = $this->localLicenseService->normalizePortalPayload($licensePreview);
                     $localLicense = $this->runStep('QuickStart provisioning key persistence', fn () => $this->localLicenseService->persistActivation($licenseKey, $activationPayload));
                     $this->localLicenseService->log($localLicense, $licenseKey, 'quickstart_entitlement', 'success', 'QuickStart provisioning key validated during installation.', ['data' => $activationPayload]);
@@ -197,6 +207,7 @@ class InstallerService
 
                     if (($activation['ok'] ?? false) !== true) {
                         $this->localLicenseService->log(null, $licenseKey, 'activate', 'failed', $activation['message'] ?? null, $activation);
+
                         return ['ok' => false, 'stage' => 'activation', 'message' => $this->localLicenseService->customerMessage($activation['message'] ?? null, 'Activation failed for this legacy self-hosted licence.')];
                     }
 
@@ -207,7 +218,7 @@ class InstallerService
                     );
 
                     $activationRequired = $this->localLicenseService->activationRequired($activationPayload);
-                    if ($activationRequired && !$this->localLicenseService->activationId($activationPayload)) {
+                    if ($activationRequired && ! $this->localLicenseService->activationId($activationPayload)) {
                         $message = 'The portal confirmed activation but did not return an activation reference. Retry activation. If the problem continues, contact support.';
                         $this->localLicenseService->log(null, $licenseKey, 'activate', 'failed', $message, $activation);
 
@@ -247,6 +258,8 @@ class InstallerService
                 'provisioning_run_id' => $run->id,
             ];
         } catch (Throwable $e) {
+            $this->reportInstallerFailure($admin);
+
             return ['ok' => false, 'stage' => 'install', 'message' => $this->cleanMessage($e->getMessage())];
         }
     }
@@ -255,13 +268,13 @@ class InstallerService
     {
         $licenseKey = $state['license_key'] ?? null;
         $admin = $state['admin'] ?? [];
-        $localLicense = \App\Models\LocalLicense::query()->with('scope')->latest('id')->first();
+        $localLicense = LocalLicense::query()->with('scope')->latest('id')->first();
 
-        if (!$localLicense) {
+        if (! $localLicense) {
             return ['ok' => false, 'message' => 'QuickStart provisioning setup is incomplete. Return to Run Installation and try again.'];
         }
 
-        if (!$admin || empty($admin['email']) || empty($admin['password']) || empty($admin['name'])) {
+        if (! $admin || empty($admin['email']) || empty($admin['password']) || empty($admin['name'])) {
             return ['ok' => false, 'message' => 'Super admin details are missing. Return to the Super Admin step and save them again.'];
         }
 
@@ -280,8 +293,8 @@ class InstallerService
 
             $this->runStep('first super admin creation', fn () => $this->createSuperAdmin($admin));
 
-            app(\App\Services\DeploymentRegistrationService::class)->assertInstallationReceipt($admin['email']);
-            app(\App\Services\DeploymentRegistrationService::class)->reportInstallationCompleted();
+            app(DeploymentRegistrationService::class)->assertInstallationReceipt($admin['email']);
+            app(DeploymentRegistrationService::class)->reportInstallationCompleted();
             $this->runStep('install lock write', fn () => $this->installationState->create([
                 'deployment_mode' => 'self_hosted',
                 'package_type' => $localLicense->package_type,
@@ -296,7 +309,19 @@ class InstallerService
                 'location_provisioning' => $this->compactProvisioningSummary($locationProvisioning),
             ];
         } catch (Throwable $e) {
+            $this->reportInstallerFailure($admin);
+
             return ['ok' => false, 'message' => $this->cleanMessage($e->getMessage())];
+        }
+    }
+
+    private function reportInstallerFailure(array $admin): void
+    {
+        try {
+            $registration = app(DeploymentRegistrationService::class);
+            $registration->assertInstallationReceipt((string) ($admin['email'] ?? ''));
+            $registration->reportInstallationFailed();
+        } catch (Throwable $exception) { /* Keep the original failure and preserve configuration. */
         }
     }
 
@@ -324,7 +349,7 @@ class InstallerService
             ];
         }
 
-        if (!$this->campaignInstallationSettings->completeGeography($campaignScope, $state['campaign_geography'] ?? [])) {
+        if (! $this->campaignInstallationSettings->completeGeography($campaignScope, $state['campaign_geography'] ?? [])) {
             return [
                 'missing_step' => 'campaign_geography',
                 'message' => 'Campaign geography is incomplete. Return to Relevant Geography and save again.',
@@ -340,21 +365,21 @@ class InstallerService
         }
 
         $geographySetup = $state['geography_setup']['method'] ?? null;
-        if (!in_array($geographySetup, ['manual', 'quickstart'], true)) {
+        if (! in_array($geographySetup, ['manual', 'quickstart'], true)) {
             return [
                 'missing_step' => 'geography_setup',
                 'message' => 'Geography setup method is missing. Return to Geography Setup and choose manual setup or QuickStart provisioning.',
             ];
         }
 
-        if ($licenseKey && !$licensePreview) {
+        if ($licenseKey && ! $licensePreview) {
             return [
                 'missing_step' => 'geography_setup',
                 'message' => 'QuickStart preview is missing. Return to Geography Setup and preview the provisioning key again before running installation.',
             ];
         }
 
-        if (!$admin || empty($admin['email']) || empty($admin['password']) || empty($admin['name'])) {
+        if (! $admin || empty($admin['email']) || empty($admin['password']) || empty($admin['name'])) {
             return [
                 'missing_step' => 'admin',
                 'message' => 'Super admin details are missing. Return to the Super Admin step and save them again. For security, the admin password is kept only in the browser session.',
@@ -368,7 +393,7 @@ class InstallerService
     {
         $environment = array_filter($state['environment'] ?? [], fn ($value) => $value !== null && $value !== '');
 
-        if (!$this->missingRequired($environment, self::ENVIRONMENT_KEYS)) {
+        if (! $this->missingRequired($environment, self::ENVIRONMENT_KEYS)) {
             return $environment;
         }
 
@@ -387,7 +412,7 @@ class InstallerService
     private function quickStartScopeError(array $state, array $licensePreview): ?string
     {
         $payload = $this->localLicenseService->normalizePortalPayload($licensePreview);
-        if (!$this->localLicenseService->isQuickStartProvisioning($payload)) {
+        if (! $this->localLicenseService->isQuickStartProvisioning($payload)) {
             return null;
         }
 
@@ -417,7 +442,7 @@ class InstallerService
 
             $expectedName = $campaignGeography[$installerNameKey] ?? null;
             $actualName = data_get($payload, 'scope.'.$previewNameKey);
-            if (!$expectedId && !$actualId && $expectedName && $actualName && $this->normal($expectedName) !== $this->normal($actualName)) {
+            if (! $expectedId && ! $actualId && $expectedName && $actualName && $this->normal($expectedName) !== $this->normal($actualName)) {
                 return 'QuickStart provisioning key does not match the campaign geography selected in the installer.';
             }
         }
@@ -456,7 +481,7 @@ class InstallerService
     {
         $database = $state['database'] ?? [];
 
-        if (!$this->missingRequired($database, self::DATABASE_KEYS, ['DB_PASSWORD']) && array_key_exists('DB_PASSWORD', $database)) {
+        if (! $this->missingRequired($database, self::DATABASE_KEYS, ['DB_PASSWORD']) && array_key_exists('DB_PASSWORD', $database)) {
             return $database;
         }
 
@@ -483,11 +508,11 @@ class InstallerService
     private function missingRequired(array $values, array $required, array $allowEmpty = []): array
     {
         return array_values(array_filter($required, function (string $key) use ($values, $allowEmpty) {
-            if (!array_key_exists($key, $values)) {
+            if (! array_key_exists($key, $values)) {
                 return true;
             }
 
-            return !in_array($key, $allowEmpty, true) && ($values[$key] === null || $values[$key] === '');
+            return ! in_array($key, $allowEmpty, true) && ($values[$key] === null || $values[$key] === '');
         }));
     }
 
@@ -514,14 +539,14 @@ class InstallerService
     private function seedCoreData(array $mail): void
     {
         foreach ([
-            \Database\Seeders\CountrySeeder::class => 'countries',
-            \Database\Seeders\RegionSeeder::class => 'regions',
-            \Database\Seeders\AgeGradeTableSeeder::class => 'age_grades',
-            \Database\Seeders\SupportGroupSeeder::class => 'support_groups',
-            \Database\Seeders\ReligionTableSeeder::class => 'religions',
-            \Database\Seeders\PoliticalPartiesSeeder::class => 'political_parties',
-            \Database\Seeders\ProductCategoriesSeeder::class => 'product_categories',
-            \Database\Seeders\ProductsSeeder::class => 'products',
+            CountrySeeder::class => 'countries',
+            RegionSeeder::class => 'regions',
+            AgeGradeTableSeeder::class => 'age_grades',
+            SupportGroupSeeder::class => 'support_groups',
+            ReligionTableSeeder::class => 'religions',
+            PoliticalPartiesSeeder::class => 'political_parties',
+            ProductCategoriesSeeder::class => 'product_categories',
+            ProductsSeeder::class => 'products',
         ] as $seeder => $table) {
             if (Schema::hasTable($table) && DB::table($table)->count() === 0) {
                 $this->runArtisanCommand('db:seed', ['--class' => $seeder, '--force' => true]);
@@ -535,7 +560,7 @@ class InstallerService
         $this->seedPermissions();
 
         if (Schema::hasTable('system_settings') && Schema::hasColumn('system_settings', 'community_guidelines')) {
-            $this->runArtisanCommand('db:seed', ['--class' => \Database\Seeders\CommunityRulesSeeder::class, '--force' => true]);
+            $this->runArtisanCommand('db:seed', ['--class' => CommunityRulesSeeder::class, '--force' => true]);
         }
     }
 
@@ -588,7 +613,7 @@ class InstallerService
 
     private function syncPackageSetting(?string $packageType): void
     {
-        if (!$packageType || !Schema::hasTable('system_settings')) {
+        if (! $packageType || ! Schema::hasTable('system_settings')) {
             return;
         }
 
@@ -598,7 +623,7 @@ class InstallerService
 
     private function syncCommunityInstallationSetting(string $packageType, string $scopeType, ?string $scopeName): void
     {
-        if (!Schema::hasTable('system_settings')) {
+        if (! Schema::hasTable('system_settings')) {
             return;
         }
 
@@ -631,6 +656,7 @@ class InstallerService
             'scope_name' => $state['campaign_scope']['scope_name'] ?? $this->campaignInstallationSettings->defaultScopeName($scopeType),
         ];
     }
+
     private function communityPackageType(array $state, array $environment): string
     {
         return $this->packageGovernance->normalize(
@@ -664,10 +690,11 @@ class InstallerService
             default => null,
         };
     }
+
     private function ensureLocalLicenseTablesExist(): void
     {
         foreach (['local_licenses', 'local_license_scopes', 'local_license_modules', 'license_check_logs'] as $table) {
-            if (!Schema::hasTable($table)) {
+            if (! Schema::hasTable($table)) {
                 throw new RuntimeException("Migration completed, but required local license table {$table} is missing.");
             }
         }
@@ -720,7 +747,7 @@ class InstallerService
 
     private function seedSystemSettings(): void
     {
-        if (!Schema::hasTable('system_settings')) {
+        if (! Schema::hasTable('system_settings')) {
             return;
         }
 
@@ -728,7 +755,7 @@ class InstallerService
         $values = [
             'package' => $packageType,
             'logo' => '',
-            'favicon'=> 'favicon.png',
+            'favicon' => 'favicon.png',
             'login_page_background' => '',
             'dark_theme_color' => '#008751',
             'light_theme_color' => '#f7f7f7',
@@ -761,7 +788,7 @@ class InstallerService
 
     private function seedPaymentGateways(): void
     {
-        if (!Schema::hasTable('payment_gateways')) {
+        if (! Schema::hasTable('payment_gateways')) {
             return;
         }
 
@@ -778,7 +805,7 @@ class InstallerService
 
     private function seedRoles(): void
     {
-        if (!Schema::hasTable('roles')) {
+        if (! Schema::hasTable('roles')) {
             return;
         }
 
@@ -792,7 +819,7 @@ class InstallerService
 
     private function seedPermissions(): void
     {
-        if (!Schema::hasTable('permissions')) {
+        if (! Schema::hasTable('permissions')) {
             return;
         }
 
@@ -885,6 +912,3 @@ class InstallerService
         return $this->localLicenseService->customerMessage($message, 'Installation failed.');
     }
 }
-
-
-

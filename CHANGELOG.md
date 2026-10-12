@@ -1,5 +1,17 @@
 # Changelog
 
+## v1.1.0 — candidate, publication pending
+
+- Require free installation registration after explicit licence/privacy acceptance for new setups.
+- Keep downloader and installation contacts separate; optional promotions remain unchecked and require verified contact.
+- Persist encrypted registration identity before network requests and validate the receipt before installer completion.
+- Retry status reporting without remotely disabling established installations.
+- Add confirmed-contact domain migration and resend controls.
+- Preserve the preceding route, upload, privacy, installer ownership and verified update-staging fixes.
+- Publish only through the gated workflow using the established trusted signing identity and live registration API.
+- Automatic updater application/rollback remains unavailable; use verified manual maintenance.
+
+
 ## [1.0.9] - 2026-09-06
 
 ### Fixed
