@@ -1,4 +1,4 @@
-name: Publish verified Community v1.1.0
+name: Publish verified Community v1.1.1
 on:
   workflow_dispatch:
 permissions:
@@ -17,7 +17,7 @@ jobs:
       APP_URL: http://localhost
       DB_CONNECTION: sqlite
       DB_DATABASE: ':memory:'
-      CANDIDATE_VERSION: '1.1.0'
+      CANDIDATE_VERSION: '1.1.1'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -62,7 +62,7 @@ jobs:
           unzip -t campaign-manager.zip
       - uses: actions/upload-artifact@v4
         with:
-          name: community-v1.1.0
+          name: community-v1.1.1
           path: |
             builds/candidate/campaign-manager.zip
             builds/candidate/release-manifest.json
@@ -76,12 +76,13 @@ jobs:
           set -Eeuo pipefail
           test -n "$GH_TOKEN"
           gh release list --repo joshualion/Campaign-Manager --limit 100 --json tagName > "$RUNNER_TEMP/releases.json"
-          if jq -e 'any(.[]; .tagName == "v1.1.0")' "$RUNNER_TEMP/releases.json"; then
+          if jq -e 'any(.[]; .tagName == "v1.1.1")' "$RUNNER_TEMP/releases.json"; then
             echo 'Version exists; asset replacement is prohibited.' >&2
             exit 1
           fi
-          gh release create v1.1.0 --repo joshualion/Campaign-Manager --title 'Campaign Manager v1.1.0' --notes-file docs/releases/v1.1.0.md \
+          gh release create v1.1.1 --repo joshualion/Campaign-Manager --title 'Campaign Manager v1.1.1' --notes-file docs/releases/v1.1.1.md \
             builds/candidate/campaign-manager.zip builds/candidate/release-manifest.json builds/candidate/campaign-manager.zip.sha256
       - name: Remove temporary signing material
         if: always()
         run: rm -f "$RUNNER_TEMP/campaign-release-private.pem"
+

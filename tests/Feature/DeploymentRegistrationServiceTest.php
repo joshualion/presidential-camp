@@ -67,8 +67,10 @@ test('Super Admin can open update and registration controls without contacting t
     Http::fake();
     \App\Models\SystemSetting::query()->create(['package' => 'presidential', 'system_name' => 'Test Campaign', 'system_country' => 'Nigeria']);
     $admin = User::factory()->create(['access_level' => 'superadmin']);
-    $this->actingAs($admin)->get(route('superadmin.updates'))->assertOk()->assertSee('Installation registration')->assertSee('Official Updates');
+    $this->actingAs($admin)->get(route('superadmin.updates'))->assertOk()->assertSee('Official Updates')->assertDontSee('Register this deployment');
+    $this->get(route('superadmin.deployment.settings'))->assertOk()->assertSee('Installation registration');
     Http::assertNothingSent();
 });
 
 function registrationReceiptFixture($request){return Http::response(['registered'=>true,'contact_verified'=>false,'receipt'=>['installation_id'=>$request['deployment_id'],'domain'=>'campaign.example.test','contact_email'=>$request['contact_email'],'terms_version'=>'2026-10-12','registered_at'=>'2026-10-12T00:00:00Z']],201);}
+

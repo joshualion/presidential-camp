@@ -5,12 +5,18 @@ return [
         'name' => 'Campaign Manager Core',
         'package' => 'campaign-manager-core',
         'channel' => env('RELEASE_CHANNEL', 'self-hosted'),
-        'version' => env('APP_VERSION', '1.1.0'),
+        'version' => env('APP_VERSION', '1.1.1'),
         'build_date' => env('RELEASE_BUILD_DATE', null),
         'minimum_php' => '8.2.0',
     ],
 
     'release_notes' => [
+        '1.1.1' => [
+            'Consistent AdminLTE layouts for Official Updates and installation registration.',
+            'Automatic update discovery on the updates screen with clearly labelled verified staging.',
+            'Branded server access confirmation and mobile installer improvements.',
+            'Update application remains a manual operation; no automatic file or database replacement.',
+        ],
         '1.1.0' => [
             'Required free installation registration after explicit licence and privacy acceptance.',
             'Persistent encrypted retry identity, receipt validation and safe existing-installation transition.',
