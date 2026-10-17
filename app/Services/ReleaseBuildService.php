@@ -452,6 +452,19 @@ class ReleaseBuildService
         File::move($temporaryZipPath, $zipPath);
     }
 
+    private function reviewedUpgradeMigrations(array $checksums): array
+    {
+        $approved = [];
+        foreach (config('updates.approved_migrations', []) as $name => $reviewedHash) {
+            $path = 'database/migrations/'.$name.'.php';
+            if (!preg_match('/^[a-f0-9]{64}$/D', (string) $reviewedHash) || ($checksums[$path] ?? null) !== $reviewedHash) {
+                throw new RuntimeException('A reviewed upgrade migration changed or is absent: '.$name);
+            }
+            $approved[$name] = $reviewedHash;
+        }
+        return $approved;
+    }
+
     private function manifest(string $version, string $channel, string $profile, array $effectiveConfig, array $files, array $checks, array $profileChecks, array $packageFiles, array $checksums): array
     {
         $profileConfig = Arr::get($effectiveConfig, "profiles.{$profile}", []);
@@ -479,9 +492,16 @@ class ReleaseBuildService
             'automatic_location_provisioning' => (bool) Arr::get($profileConfig, 'automatic_location_provisioning', false),
             'requirements' => [
                 'php' => '^8.2',
-                'laravel' => '^11.9',
+                'laravel' => '^12.0',
+                'extensions' => ['openssl', 'pdo', 'mbstring', 'fileinfo', 'zip', 'dom'],
                 'composer_runtime' => 'vendor is bundled; customers should not need Composer for normal install.',
                 'frontend_runtime' => 'public/build is bundled; customers should not need Node.js, npm, or Vite for normal install.',
+            ],
+            'upgrade' => [
+                'protocol' => 1,
+                'supported_sources' => config('updates.supported_sources', []),
+                'approved_migrations' => $this->reviewedUpgradeMigrations($checksums),
+                'created_tables' => config('updates.created_tables', []),
             ],
             'features' => [
                 'browser_installer' => 'included',

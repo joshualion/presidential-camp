@@ -25,3 +25,7 @@ Automatic application/rollback of updates is a separate follow-up. No applicatio
 Save on a `ui/` review branch; do not open a PR while CI is on hold. Existing workflows trigger on pull requests and main/feat/fix pushes. No CI, merge, deployment, tag creation or publication was performed.
 
 When the owner is ready: open the PR, run CI, review/merge, then manually run the verified v1.1.1 publication workflow. Publication still requires the established owner signing key, legal-readiness setting, registration health check and distribution token. The portal is deployed from its own private repository after its approved checks and merge.
+
+## Approved automatic-update follow-up
+
+The subsequent approved update service and legacy compatibility work is documented in [automatic-updates.md](automatic-updates.md). It supersedes earlier notes describing staging as manual-only. CI and publication remain on hold.

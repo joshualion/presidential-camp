@@ -1,3 +1,10 @@
+## Automatic updater follow-up for 1.1.1 (unreleased)
+
+- Optional automatic updates with owner-configured service prices by campaign scope, installation and target release, with free manual downloads unchanged.
+- Signed explicit compatibility/migration policy, private verified database/file backups, detached worker, protected progress and standalone recovery.
+- Signed legacy bootstrap for 1.0.8/1.0.9/1.1.0 and reviewed pending migration execution without reset or seeding.
+- See docs/automatic-updates.md. CI, merge, publication and deployment remain pending.
+
 # Changelog
 
 ## 1.1.1

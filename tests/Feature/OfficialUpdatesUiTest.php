@@ -52,6 +52,8 @@ test('ordinary members cannot change installation registration or check updates'
     $this->actingAs(User::factory()->create(['access_level' => 'user']))
         ->get(route('superadmin.deployment.settings'))->assertForbidden();
     $this->postJson(route('superadmin.updates.check'))->assertForbidden();
+    $this->post(route('superadmin.updates.apply'), [])->assertForbidden();
+    $this->post(route('superadmin.updates.discard'), [])->assertForbidden();
     Http::assertNothingSent();
 });
 

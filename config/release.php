@@ -15,7 +15,7 @@ return [
             'Consistent AdminLTE layouts for Official Updates and installation registration.',
             'Automatic update discovery on the updates screen with clearly labelled verified staging.',
             'Branded server access confirmation and mobile installer improvements.',
-            'Update application remains a manual operation; no automatic file or database replacement.',
+            'Optional automatic updates with Portal-managed scope pricing with verified private backups, reviewed pending migrations and legacy bootstrap support.',
         ],
         '1.1.0' => [
             'Required free installation registration after explicit licence and privacy acceptance.',
@@ -438,6 +438,7 @@ return [
     ],
 
     'include_roots' => [
+        'tools/updater',
         'app',
         'bootstrap',
         'config',

@@ -10,10 +10,24 @@
             <div class="card-body">
                 <span class="cm-muted">Installed version</span>
                 <div class="cm-version">{{ $installedVersion }}</div>
+                @if($activeJob)
+                <div class="alert {{ in_array($activeJob['state'], ['recovery_required','failed']) ? 'alert-warning' : 'alert-info' }} mt-3" id="update-job" role="status" aria-live="polite"><strong id="update-job-message">{{ $activeJob['message'] }}</strong><div class="small mt-1">{{ $activeJob['source_version'] }} → {{ $activeJob['target_version'] }}</div></div>
+                @endif
                 <div id="update-status" role="status" aria-live="polite">
                 @if($preparedUpdate)
                     <div class="alert alert-info mt-3"><strong>Version {{ $preparedUpdate['version'] }} is ready for review.</strong><p class="mb-0 mt-1">The package has been downloaded and verified. Your installed version is still {{ $installedVersion }}.</p></div>
-                    <p class="cm-help">Apply the verified package using the release installation guide after backing up your application and database. Automatic installation will be added separately.</p>
+                    @if($automaticError)<div class="alert alert-warning">{{ $automaticError }} <a href="{{ route('superadmin.deployment.settings') }}">Installation settings</a></div>
+                    @elseif(!empty($entitlement['entitled']))
+                        <form method="post" action="{{ route('superadmin.updates.apply') }}" data-update-prepare>@csrf<input type="hidden" name="stage_id" value="{{ $preparedUpdate['id'] }}">
+                            <label class="d-flex align-items-start"><input type="checkbox" name="update_consent" value="1" required class="mt-1 mr-2"><span>I’m ready for a short maintenance period. Back up this installation, apply the verified files and run approved pending migrations.</span></label>
+                            <button class="btn btn-primary">Update safely to {{ $preparedUpdate['version'] }}</button>
+                        </form><p class="cm-help mt-2">Your automatic update payment is confirmed. Retries for this installation and release do not require another purchase.</p>
+                    @elseif($entitlement)
+                        <p>Automatic updates cost <strong>{{ $entitlement['currency'] }} {{ number_format($entitlement['price_minor']/100, 2) }}</strong> for {{ $entitlement['scope_label'] }}, this installation and release.</p>
+                        <a class="btn btn-primary" href="{{ $entitlement['checkout_url'] }}" target="_blank" rel="noopener">Continue to secure payment</a>
+                        <p class="cm-help mt-2">After payment, return here and check again. Your update includes verified backups and approved pending migrations.</p>
+                    @endif
+                    @if(!empty($preparedUpdate['id']))<details class="mt-3"><summary>Prepared package options</summary><form method="post" action="{{ route('superadmin.updates.discard') }}" class="mt-2">@csrf<input type="hidden" name="stage_id" value="{{ $preparedUpdate['id'] }}"><button class="btn btn-outline-secondary btn-sm">Discard prepared package</button></form></details>@endif
                 @elseif(!empty($updateStatus['available']))
                     <div class="alert alert-info mt-3"><strong>Version {{ $updateStatus['latest_version'] }} is available.</strong></div>
                     @if(!empty($updateStatus['verified']))
@@ -63,7 +77,20 @@
         }
     }
     form.addEventListener('submit', check);
-    @if($shouldCheck) check(); @endif
+    @if($activeJob && !in_array($activeJob['state'], ['completed','failed','recovered','recovery_required']))
+    button.disabled = true;
+    const poll = async function () {
+        try {
+            const response = await fetch(@json(url('/campaign-update-status.php').'?job='.$activeJob['id']), {credentials:'same-origin',cache:'no-store'});
+            if (!response.ok) throw new Error('Status unavailable');
+            const status = await response.json();
+            document.getElementById('update-job-message').textContent = status.message;
+            if (['completed','failed','recovered'].includes(status.state)) { window.location.reload(); return; }
+            if (status.state === 'recovery_required') { document.getElementById('update-job').className='alert alert-warning mt-3'; return; }
+        } catch (e) { document.getElementById('update-job-message').textContent='The updater is running. If progress does not return, ask your hosting operator to inspect the private update journal.'; }
+        setTimeout(poll, 3000);
+    }; poll();
+    @elseif($shouldCheck) check(); @endif
     const prepare = document.querySelector('[data-update-prepare]');
     if (prepare) prepare.addEventListener('submit', function () {
         const button = prepare.querySelector('button'); button.disabled = true; button.textContent = 'Downloading and verifying…';

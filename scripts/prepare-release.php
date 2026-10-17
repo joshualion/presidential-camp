@@ -36,9 +36,12 @@ try {
         throw new RuntimeException('Canonical updater manifest could not be written.');
     }
     file_put_contents(base_path('builds/candidate/campaign-manager.zip.sha256'), $result['checksum_sha256']."  campaign-manager.zip\n");
+    require base_path('tools/updater/build-bootstrap.php');
+    buildCampaignUpdaterBootstrap(base_path('builds/candidate'), $key, file_get_contents(config_path('release-public.pem')), $version);
     echo "Signed private candidate prepared. No GitHub release has been published.\n";
 } finally {
     if (is_file($keyPath)) {
         unlink($keyPath);
     }
 }
+
