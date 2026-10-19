@@ -1,52 +1,100 @@
 @extends('backend.template.backend-master')
 @section('content')
-<div class="content-wrapper">
-    <section class="content-header"><h1>Official Updates</h1></section>
-    <section class="content">
-        <div class="card"><div class="card-body">
-            <p>Installed version: <strong>{{ $installedVersion }}</strong></p>
-            @if(session('update_notice'))<div class="alert alert-info">{{ session('update_notice') }}</div>@endif
-            @if(session('update_error'))<div class="alert alert-danger">{{ session('update_error') }}</div>@endif
-            @if(!empty($updateStatus))
-                <p>Latest checked version: <strong>{{ $updateStatus['latest_version'] ?? 'Unknown' }}</strong></p>
-                <p>{{ $updateStatus['message'] ?? '' }}</p>
-                <p>Last successful check: {{ $updateStatus['checked_at'] ?? 'Not yet checked' }}</p>
-                @if(!empty($updateStatus['available']))
-                    <div class="alert alert-info">A newer official version is available.</div>
-                    <a class="btn btn-secondary" href="https://github.com/joshualion/Campaign-Manager/releases" target="_blank" rel="noopener">Free manual download and release notes</a>
+<section class="content pt-3 cm-ui"><div class="container-fluid">
+    <div class="row"><div class="col-xl-8 col-lg-10">
+        @if(session('update_notice'))<div class="alert alert-info" role="status">{{ session('update_notice') }}</div>@endif
+        @if(session('update_error'))<div class="alert alert-danger" role="alert">{{ session('update_error') }}</div>@endif
+        <div class="alert alert-warning d-none" id="update-check-error" role="alert">We could not check for updates. Check your server connection and try again.</div>
+        <div class="card">
+            <div class="card-header"><h3 class="card-title">Official Updates</h3><p class="cm-help mb-0 mt-1">Keep your Campaign Manager installation up to date.</p></div>
+            <div class="card-body">
+                <span class="cm-muted">Installed version</span>
+                <div class="cm-version">{{ $installedVersion }}</div>
+                @if($activeJob)
+                <div class="alert {{ in_array($activeJob['state'], ['recovery_required','failed']) ? 'alert-warning' : 'alert-info' }} mt-3" id="update-job" role="status" aria-live="polite"><strong id="update-job-message">{{ $activeJob['message'] }}</strong><div class="small mt-1">{{ $activeJob['source_version'] }} → {{ $activeJob['target_version'] }}</div></div>
                 @endif
-            @endif
-            <form method="post" action="{{ route('superadmin.updates.check') }}" class="mt-3">@csrf<button class="btn btn-primary">Check for updates</button></form>
-            @if(!empty($updateStatus['available']) && !empty($updateStatus['verified']))
-                <form method="post" action="{{ route('superadmin.updates.prepare') }}" class="mt-3">@csrf<button class="btn btn-outline-primary">Download and verify for review</button></form>
-            @endif
-            <p class="mt-3">Community software and official release downloads remain free. Update assistance is an optional paid service. Established installations remain operational during the registration transition and portal outages.</p>
-            <p>Update checks retrieve public release information from GitHub. They do not send your domain, email or campaign records.</p>
-            <p><a href="{{ rtrim(config('campaign.portal_web_base'), '/') }}/clientarea/updates" target="_blank" rel="noopener">Optional update assistance and credit balance</a></p>
-            <hr><h2>Installation registration</h2>
-            @if(!empty($registration['error']))<p>{{ $registration['error'] }}</p>@endif
-            @if(!empty($registration['registered']))
-                <p>Registered domain: {{ $registration['domain'] }}. Contact: {{ $registration['contact_email'] }}. {{ !empty($registration['contact_verified']) ? 'Contact confirmed.' : 'Contact confirmation pending.' }}</p>
-                <form method="post" action="{{ route('superadmin.deployment.resend') }}">@csrf<button class="btn btn-secondary">Resend contact confirmation</button></form>
-                <form method="post" action="{{ route('superadmin.deployment.domain-change') }}">@csrf<button class="btn btn-secondary">Request change to {{ $registrationDomain }}</button></form>
-                <form method="post" action="{{ route('superadmin.deployment.preferences') }}">@csrf<input type="hidden" name="marketing_opt_in" value="0"><label><input type="checkbox" name="marketing_opt_in" value="1" @checked(!empty($registration['marketing_opt_in']))> Receive optional marketing communications</label><button class="btn btn-secondary">Save preference</button></form>
-                <form method="post" action="{{ route('superadmin.deployment.sync') }}" class="mt-3">@csrf<button class="btn btn-secondary">Refresh Portal messages</button></form>
-                <form method="post" action="{{ route('superadmin.deployment.revoke') }}" class="mt-3">@csrf<button class="btn btn-outline-danger">Remove registration and stop reporting</button></form>
-            @elseif(!empty($registration['pending_revoke']))
-                <p>Reporting has stopped. Portal deletion is pending until connectivity is restored.</p>
-                <form method="post" action="{{ route('superadmin.deployment.revoke') }}">@csrf<button class="btn btn-secondary">Retry Portal deletion</button></form>
-            @else
-                <p>Registration sends a deployment identifier, domain <strong>{{ $registrationDomain }}</strong>, Super Admin email <strong>{{ $profileData->email }}</strong>, installed version and installation completion status to Campaign Manager Portal. If registered, later checks report the installed version and successful update check status. Campaign supporter records, voter information and application passwords are not included.</p>
-                <p>New v1.1.0 installations require free registration under the licence/privacy terms. Existing installations can complete this transition here without a data reset or remote lockout. Marketing remains optional.</p>
-                <p><a href="https://campaignmanager.ng/community/privacy" target="_blank" rel="noopener noreferrer">Read the licence and privacy notice</a> — version 2026-10-12.</p>
-                <form method="post" action="{{ route('superadmin.deployment.register') }}">@csrf
-                    <label><input type="checkbox" name="registration_consent" value="1" required> I accept the Community licence and privacy notice, including installation registration and essential software communications.</label><br>
-                    <label><input type="checkbox" name="marketing_opt_in" value="1"> I also want optional product news and marketing communications.</label><br>
-                    <button class="btn btn-secondary">Register this deployment</button>
-                </form>
-            @endif
-            @foreach($registration['messages'] ?? [] as $message)<div class="alert alert-info mt-3"><strong>{{ $message['title'] }}</strong><p style="white-space:pre-wrap">{{ $message['body'] }}</p></div>@endforeach
-        </div></div>
-    </section>
-</div>
+                <div id="update-status" role="status" aria-live="polite">
+                @if($preparedUpdate)
+                    <div class="alert alert-info mt-3"><strong>Version {{ $preparedUpdate['version'] }} is ready for review.</strong><p class="mb-0 mt-1">The package has been downloaded and verified. Your installed version is still {{ $installedVersion }}.</p></div>
+                    @if($automaticError)<div class="alert alert-warning">{{ $automaticError }} <a href="{{ route('superadmin.deployment.settings') }}">Installation settings</a></div>
+                    @elseif(!empty($entitlement['entitled']))
+                        <form method="post" action="{{ route('superadmin.updates.apply') }}" data-update-prepare>@csrf<input type="hidden" name="stage_id" value="{{ $preparedUpdate['id'] }}">
+                            <label class="d-flex align-items-start"><input type="checkbox" name="update_consent" value="1" required class="mt-1 mr-2"><span>I’m ready for a short maintenance period. Back up this installation, apply the verified files and run approved pending migrations.</span></label>
+                            <button class="btn btn-primary">Update safely to {{ $preparedUpdate['version'] }}</button>
+                        </form><p class="cm-help mt-2">Your automatic update payment is confirmed. Retries for this installation and release do not require another purchase.</p>
+                    @elseif($entitlement)
+                        <p>Automatic updates cost <strong>{{ $entitlement['currency'] }} {{ number_format($entitlement['price_minor']/100, 2) }}</strong> for {{ $entitlement['scope_label'] }}, this installation and release.</p>
+                        <a class="btn btn-primary" href="{{ $entitlement['checkout_url'] }}" target="_blank" rel="noopener">Continue to secure payment</a>
+                        <p class="cm-help mt-2">After payment, return here and check again. Your update includes verified backups and approved pending migrations.</p>
+                    @endif
+                    @if(!empty($preparedUpdate['id']))<details class="mt-3"><summary>Prepared package options</summary><form method="post" action="{{ route('superadmin.updates.discard') }}" class="mt-2">@csrf<input type="hidden" name="stage_id" value="{{ $preparedUpdate['id'] }}"><button class="btn btn-outline-secondary btn-sm">Discard prepared package</button></form></details>@endif
+                @elseif(!empty($updateStatus['available']))
+                    <div class="alert alert-info mt-3"><strong>Version {{ $updateStatus['latest_version'] }} is available.</strong></div>
+                    @if(!empty($updateStatus['verified']))
+                        <form method="post" action="{{ route('superadmin.updates.prepare') }}" class="mb-3" data-update-prepare>@csrf
+                            <button class="btn btn-primary"><i class="fas fa-download mr-2" aria-hidden="true"></i>Download and verify {{ $updateStatus['latest_version'] }}</button>
+                        </form>
+                        <p class="cm-help">This safely prepares the update for review. It does not install it or change your application data.</p>
+                    @else
+                        <p class="cm-help">This release cannot be prepared automatically because verified update metadata is unavailable. Use the official manual download.</p>
+                        <a class="btn btn-primary mb-3" href="https://github.com/joshualion/Campaign-Manager/releases" target="_blank" rel="noopener">Download from official releases</a>
+                    @endif
+                @elseif(!empty($updateStatus['checked_at']))
+                    <div class="alert alert-success mt-3"><strong>You are up to date.</strong><p class="mb-0 mt-1">No newer official release was found during the last successful check.</p></div>
+                @else
+                    <p class="cm-help mt-3">Checking for the latest official release…</p>
+                @endif
+                </div>
+                <div class="cm-actions mt-3">
+                    <form method="post" action="{{ route('superadmin.updates.check') }}" id="update-check-form">@csrf<button class="btn btn-outline-secondary" id="update-check-button">Check again</button></form>
+                    <a href="https://github.com/joshualion/Campaign-Manager/releases" target="_blank" rel="noopener" class="small">Release notes and installation guide <span class="sr-only">(opens in a new tab)</span></a>
+                </div>
+                <p class="cm-help mt-3 mb-0">Last successful check: {{ !empty($updateStatus['checked_at']) && strtotime($updateStatus['checked_at']) ? \Illuminate\Support\Carbon::parse($updateStatus['checked_at'])->timezone(config('app.timezone'))->format('j M Y, H:i T') : 'Not yet checked' }}. Official software downloads are free.</p>
+            </div>
+        </div>
+    </div></div>
+</div></section>
 @endsection
+@push('scripts')
+<script>
+(function () {
+    const form = document.getElementById('update-check-form');
+    const button = document.getElementById('update-check-button');
+    async function check(event) {
+        if (event) event.preventDefault();
+        if (button.disabled) return;
+        button.disabled = true;
+        button.textContent = 'Checking…';
+        document.getElementById('update-check-error').classList.add('d-none');
+        try {
+            const response = await fetch(form.action, {method: 'POST', body: new FormData(form), headers: {'Accept': 'application/json'}, credentials: 'same-origin'});
+            if (!response.ok) throw new Error('Check failed');
+            window.location.reload();
+        } catch (error) {
+            document.getElementById('update-check-error').classList.remove('d-none');
+            button.disabled = false;
+            button.textContent = 'Try again';
+        }
+    }
+    form.addEventListener('submit', check);
+    @if($activeJob && !in_array($activeJob['state'], ['completed','failed','recovered','recovery_required']))
+    button.disabled = true;
+    const poll = async function () {
+        try {
+            const response = await fetch(@json(url('/campaign-update-status.php').'?job='.$activeJob['id']), {credentials:'same-origin',cache:'no-store'});
+            if (!response.ok) throw new Error('Status unavailable');
+            const status = await response.json();
+            document.getElementById('update-job-message').textContent = status.message;
+            if (['completed','failed','recovered'].includes(status.state)) { window.location.reload(); return; }
+            if (status.state === 'recovery_required') { document.getElementById('update-job').className='alert alert-warning mt-3'; return; }
+        } catch (e) { document.getElementById('update-job-message').textContent='The updater is running. If progress does not return, ask your hosting operator to inspect the private update journal.'; }
+        setTimeout(poll, 3000);
+    }; poll();
+    @elseif($shouldCheck) check(); @endif
+    const prepare = document.querySelector('[data-update-prepare]');
+    if (prepare) prepare.addEventListener('submit', function () {
+        const button = prepare.querySelector('button'); button.disabled = true; button.textContent = 'Downloading and verifying…';
+    });
+})();
+</script>
+@endpush

@@ -11,6 +11,7 @@ use Illuminate\Support\Str;
 
 function releaseBuildFixture(array $omit = [], array $extraFiles = []): array
 {
+    config(['updates.approved_migrations' => []]); // Synthetic packages contain no upgrade migrations.
     $basePath = storage_path('framework/testing/release-build/'.(string) Str::uuid());
     $config = config('release');
     $fixtureCounts = [

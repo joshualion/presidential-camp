@@ -89,7 +89,7 @@
 
     }
 
-    a{
+    a:not(.btn):not(.nav-link):not(.page-link){
       color: {{ $SystemSetting->dark_theme_color ?? ' #008751'}} !important;
     }
 
@@ -201,6 +201,8 @@
 
 </style>
    @livewireStyles
+<link rel="stylesheet" href="{{ asset('assets/dist/css/campaign-ui.css') }}?v=1.1.1">
+@stack('styles')
 </head>
 <body class="hold-transition sidebar-mini layout-fixed">
 <script>
@@ -229,3 +231,4 @@
     <img class="animation__shake" src="{{ !empty($SystemSetting->favicon) ? url('uploads/system_images/'.$SystemSetting->favicon) : url('uploads/system_images/favicon.png') }}" alt="Logo" height="15%" width="15%">
   </div> --}}
   @endmobile()
+

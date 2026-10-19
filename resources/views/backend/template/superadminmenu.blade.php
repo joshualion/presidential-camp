@@ -429,6 +429,7 @@
                     <p>General Settings</p>
                   </a>
                 </li>
+              <li class="nav-item"><a href="{{ route('superadmin.deployment.settings') }}" class="nav-link"><i class="fas fa-server nav-icon"></i><p>Installation registration</p></a></li>
                 @endif
 
                 <li class="nav-item">
@@ -593,3 +594,4 @@
       </ul>
 </nav>
 @endif
+

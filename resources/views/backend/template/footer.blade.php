@@ -59,13 +59,13 @@
     var validVoterYes = document.getElementById('validvoter_yes');
     var vinInputBox = document.getElementById('vinInputBox');
 
-    validVoterYes.addEventListener('click', function() {
+    validVoterYes?.addEventListener('click', function() {
         vinInputBox.style.display = 'block';
     });
 
     var validVoterNo = document.getElementById('validvoter_no');
 
-    validVoterNo.addEventListener('click', function() {
+    validVoterNo?.addEventListener('click', function() {
         vinInputBox.style.display = 'none';
     });
 </script>
@@ -117,7 +117,7 @@ $(document).ready(function() {
 
 
 <!-- jQuery -->
-<script src="{{asset('assets/plugins/jquery/jquery.min.js')}}"></script>
+
 <!-- jQuery UI 1.11.4 -->
 <script src="{{asset('assets/plugins/jquery-ui/jquery-ui.min.js')}}"></script>
 <!-- Resolve conflict in jQuery UI tooltip with Bootstrap tooltip -->
@@ -168,5 +168,7 @@ $(document).ready(function() {
 <script src="{{asset('assets/plugins/datatables-buttons/js/buttons.colVis.min.js')}}"></script>
 
  @livewireScripts
+@stack('scripts')
 </body>
 </html>
+
