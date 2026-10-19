@@ -21,9 +21,9 @@
                         <form method="post" action="{{ route('superadmin.updates.apply') }}" data-update-prepare>@csrf<input type="hidden" name="stage_id" value="{{ $preparedUpdate['id'] }}">
                             <label class="d-flex align-items-start"><input type="checkbox" name="update_consent" value="1" required class="mt-1 mr-2"><span>I’m ready for a short maintenance period. Back up this installation, apply the verified files and run approved pending migrations.</span></label>
                             <button class="btn btn-primary">Update safely to {{ $preparedUpdate['version'] }}</button>
-                        </form><p class="cm-help mt-2">Your automatic update payment is confirmed. Retries for this installation and release do not require another purchase.</p>
+                        </form><p class="cm-help mt-2">Your automatic update is covered.@if(!empty($entitlement['coverage_expires_at'])) Coverage ends {{ \Illuminate\Support\Carbon::parse($entitlement['coverage_expires_at'])->format('j M Y') }}.@endif No additional payment is needed for this update.</p>
                     @elseif($entitlement)
-                        <p>Automatic updates cost <strong>{{ $entitlement['currency'] }} {{ number_format($entitlement['price_minor']/100, 2) }}</strong> for {{ $entitlement['scope_label'] }}, this installation and release.</p>
+                        <p>Automatic updates cost <strong>{{ $entitlement['currency'] }} {{ number_format($entitlement['price_minor']/100, 2) }}</strong> for {{ $entitlement['scope_label'] }}, {{ $entitlement['coverage_months'] ?? 12 }} months of updates for this installation.</p>
                         <a class="btn btn-primary" href="{{ $entitlement['checkout_url'] }}" target="_blank" rel="noopener">Continue to secure payment</a>
                         <p class="cm-help mt-2">After payment, return here and check again. Your update includes verified backups and approved pending migrations.</p>
                     @endif

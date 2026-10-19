@@ -244,7 +244,8 @@ test('manifest contains version channel checksum protected files and portal prov
         ->and($manifest['portal_location_provisioning'])->toBeTrue()
         ->and($manifest['deployment_type'])->toBe('self_hosted')
         ->and($manifest)->toHaveKey('protected_files')
-        ->and($manifest)->toHaveKey('checksums')
+        ->and($manifest)->toHaveKey('embedded_manifest_sha256')
+        ->and($manifest)->not->toHaveKey('checksums')
         ->and($manifest['update_entitlement_warning'])->toContain('blocked or flagged')
         ->and($manifest)->toHaveKey('location_data')
         ->and(json_encode($manifest))->not->toContain('advanced_analytics')
@@ -807,6 +808,13 @@ test('completed external manifest signature covers the finished archive hash', f
     [$basePath, $config] = releaseBuildFixture();
     $result = releaseBuildService($basePath, $config)->build(['profile' => 'standard', 'version' => '1.1.0']);
     $manifest = json_decode(File::get($result['manifest_path']), true);
+    $zip = new ZipArchive();
+    $zip->open($result['zip_path']);
+    expect(File::size($result['manifest_path']))->toBeLessThanOrEqual(1048576)
+        ->and($manifest)->not->toHaveKey('checksums')
+        ->and($manifest['embedded_manifest_sha256'])->toBe(hash('sha256', $zip->getFromName('release-manifest.json')));
+    $zip->close();
+
     $signing = array_merge($config['signing'], ['_base_path' => $basePath]);
     $signer = new \App\Services\ReleaseManifestSigner();
     expect($signer->verify($manifest, null, $signing))->toBeTrue()

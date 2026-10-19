@@ -5,17 +5,16 @@ return [
         'name' => 'Campaign Manager Core',
         'package' => 'campaign-manager-core',
         'channel' => env('RELEASE_CHANNEL', 'self-hosted'),
-        'version' => env('APP_VERSION', '1.1.1'),
+        'version' => env('APP_VERSION', '1.1.2'),
         'build_date' => env('RELEASE_BUILD_DATE', null),
         'minimum_php' => '8.2.0',
     ],
 
     'release_notes' => [
-        '1.1.1' => [
-            'Consistent AdminLTE layouts for Official Updates and installation registration.',
-            'Automatic update discovery on the updates screen with clearly labelled verified staging.',
-            'Branded server access confirmation and mobile installer improvements.',
-            'Optional automatic updates with Portal-managed scope pricing with verified private backups, reviewed pending migrations and legacy bootstrap support.',
+        '1.1.2' => [
+            'Compact signed update metadata restores compatibility with existing checkers.',
+            'Portal-managed automatic-update coverage includes all updates during the purchased period, with no automatic renewal.',
+            'Signed bootstrap support for 1.0.8, 1.0.9, 1.1.0 and 1.1.1 with private backups and reviewed pending migrations.',
         ],
         '1.1.0' => [
             'Required free installation registration after explicit licence and privacy acceptance.',

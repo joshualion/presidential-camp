@@ -1,3 +1,8 @@
+# v1.1.2
+
+- Restore legacy update discovery with compact signed metadata.
+- Include Portal-managed update coverage periods and signed bootstrap support for 1.1.1.
+
 ## Automatic updater follow-up for 1.1.1 (unreleased)
 
 - Optional automatic updates with owner-configured service prices by campaign scope, installation and target release, with free manual downloads unchanged.

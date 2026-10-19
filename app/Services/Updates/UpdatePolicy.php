@@ -22,7 +22,17 @@ class UpdatePolicy
         if (app(ReleaseManifestSigner::class)->verify($manifest) !== true) {
             throw new RuntimeException('Staged release signature is invalid.');
         }
-        foreach (['version', 'checksums', 'upgrade'] as $key) {
+        $outer = $journal['manifest'];
+        $keys = ['version', 'upgrade'];
+        if (isset($outer['embedded_manifest_sha256'])) {
+            if (! is_string($outer['embedded_manifest_sha256']) || ! preg_match('/^[a-f0-9]{64}$/D', $outer['embedded_manifest_sha256'])
+                || ! hash_equals($outer['embedded_manifest_sha256'], hash_file('sha256', $path))) {
+                throw new RuntimeException('The embedded manifest does not match the signed discovery metadata.');
+            }
+        } else {
+            $keys[] = 'checksums'; // Existing full manifests remain supported.
+        }
+        foreach ($keys as $key) {
             if (($manifest[$key] ?? null) !== ($journal['manifest'][$key] ?? null)) {
                 throw new RuntimeException('The inner and outer release policies differ.');
             }

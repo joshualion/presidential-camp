@@ -216,6 +216,15 @@ test('bootstrap packaging signs every bridge file and refuses tampering before i
     $p = new Process([PHP_BINARY, $bundle.'/bootstrap-install.php', $this->sandbox]);
     $p->run();
     expect($p->getOutput().$p->getErrorOutput())->toContain('Bootstrap installed')->and($p->getExitCode())->toBe(0)->and(file_get_contents($this->sandbox.'/.env'))->toBe('APP_KEY=preserved')->and(is_file($this->sandbox.'/public/campaign-update-bootstrap.php'))->toBeTrue();
+    $again = new Process([PHP_BINARY, $bundle.'/bootstrap-install.php', $this->sandbox]);
+    $again->run();
+    expect($again->getExitCode())->toBe(1);
+    $replace = new Process([PHP_BINARY, $bundle.'/bootstrap-install.php', $this->sandbox, '--replace-bootstrap']);
+    $replace->run();
+    expect($replace->getExitCode())->toBe(0)
+        ->and(glob($this->sandbox.'/storage/app/updates/bootstrap-history/*/bootstrap'))->toHaveCount(1)
+        ->and(file_get_contents($this->sandbox.'/.env'))->toBe('APP_KEY=preserved');
+
 });
 
 test('authorized startup writes a valid private worker and permits cancelling only queued jobs', function () {
@@ -310,6 +319,23 @@ test('backup failure stops the worker before replacing application files', funct
     (new UpdateWorker($policy, $database, $portal))->run($id);
     $journal = json_decode(file_get_contents($directory.'/journal.json'), true);
     expect($journal['state'])->toBe('failed')->and(file_get_contents($this->sandbox.'/app/Existing.php'))->toBe('old application')->and(is_file(storage_path('framework/down')))->toBeFalse();
+});
+
+test('compact signed discovery metadata binds the exact full embedded manifest', function () {
+    config(['release.identity.version' => '1.1.0']);
+    $id = safetyStage($this, [], [], ['1.1.0']);
+    $stage = UpdatePaths::stage($id);
+    $journal = json_decode(file_get_contents($stage.'/journal.json'), true);
+    unset($journal['manifest']['checksums'], $journal['manifest']['manifest_signature']);
+    $journal['manifest']['embedded_manifest_sha256'] = hash_file('sha256', $stage.'/application/release-manifest.json');
+    $journal['manifest'] = safetySign($journal['manifest'], $this->updateKey);
+    UpdatePaths::write($stage.'/journal.json', $journal);
+    expect(app(UpdatePolicy::class)->inspect($id)['target_version'])->toBe('1.1.1');
+    $inner = json_decode(file_get_contents($stage.'/application/release-manifest.json'), true);
+    $inner['changed'] = true;
+    unset($inner['manifest_signature']);
+    File::put($stage.'/application/release-manifest.json', json_encode(safetySign($inner, $this->updateKey)));
+    expect(fn () => app(UpdatePolicy::class)->inspect($id))->toThrow(RuntimeException::class, 'embedded manifest');
 });
 
 test('Core requests the Portal price for its installed scope and maps chairmanship to local government', function () {

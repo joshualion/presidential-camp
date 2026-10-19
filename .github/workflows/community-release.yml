@@ -1,4 +1,4 @@
-name: Publish verified Community v1.1.1
+name: Publish verified Community v1.1.2
 on:
   workflow_dispatch:
 permissions:
@@ -17,7 +17,7 @@ jobs:
       APP_URL: http://localhost
       DB_CONNECTION: sqlite
       DB_DATABASE: ':memory:'
-      CANDIDATE_VERSION: '1.1.1'
+      CANDIDATE_VERSION: '1.1.2'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -41,7 +41,7 @@ jobs:
           test "$LEGAL_READY" = true
           test -f config/release-public.pem
           curl --fail --silent --show-error --max-time 30 https://campaignmanager.ng/api/v2/campaign-manager/deployments/health > "$RUNNER_TEMP/registration-health.json"
-          jq -e '.ready == true and .protocol == 1 and .terms_version == "2026-10-12" and .automatic_updates.protocol == 1 and .automatic_updates.ready == true and .automatic_updates.payment_ready == true and .automatic_updates.pricing_source == "campaign_service_prices" and (.automatic_updates.configured_scopes | length) > 0' "$RUNNER_TEMP/registration-health.json"
+          jq -e '.ready == true and .protocol == 1 and .terms_version == "2026-10-12" and .automatic_updates.protocol == 1 and .automatic_updates.ready == true and .automatic_updates.payment_ready == true and .automatic_updates.coverage_protocol == 1 and .automatic_updates.coverage_ready == true and .automatic_updates.pricing_source == "campaign_service_prices" and (.automatic_updates.configured_scopes | length) > 0' "$RUNNER_TEMP/registration-health.json"
           if git lfs ls-files | grep ' - '; then echo 'Unresolved LFS assets' >&2; exit 1; fi
       - run: composer install --prefer-dist --no-interaction && composer audit --locked --no-interaction
       - run: npm ci && npm run build && npm audit --omit=dev
@@ -64,7 +64,7 @@ jobs:
           unzip -t campaign-manager-updater-bootstrap.zip
       - uses: actions/upload-artifact@v4
         with:
-          name: community-v1.1.1
+          name: community-v1.1.2
           path: |
             builds/candidate/campaign-manager.zip
             builds/candidate/release-manifest.json
@@ -80,11 +80,11 @@ jobs:
           set -Eeuo pipefail
           test -n "$GH_TOKEN"
           gh release list --repo joshualion/Campaign-Manager --limit 100 --json tagName > "$RUNNER_TEMP/releases.json"
-          if jq -e 'any(.[]; .tagName == "v1.1.1")' "$RUNNER_TEMP/releases.json"; then
+          if jq -e 'any(.[]; .tagName == "v1.1.2")' "$RUNNER_TEMP/releases.json"; then
             echo 'Version exists; asset replacement is prohibited.' >&2
             exit 1
           fi
-          gh release create v1.1.1 --repo joshualion/Campaign-Manager --title 'Campaign Manager v1.1.1' --notes-file docs/releases/v1.1.1.md \
+          gh release create v1.1.2 --repo joshualion/Campaign-Manager --title 'Campaign Manager v1.1.2' --notes-file docs/releases/v1.1.2.md \
             builds/candidate/campaign-manager.zip builds/candidate/release-manifest.json builds/candidate/campaign-manager.zip.sha256 builds/candidate/campaign-manager-updater-bootstrap.zip builds/candidate/campaign-manager-updater-bootstrap.zip.sha256
       - name: Remove temporary signing material
         if: always()
