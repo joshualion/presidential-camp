@@ -12,8 +12,8 @@ try {
         throw new RuntimeException('Supply the existing installed Core directory, not a new installation.');
     }
     $installed = json_decode(file_get_contents($base.'/release-manifest.json'), true, 64, JSON_THROW_ON_ERROR);
-    if (! in_array($installed['version'] ?? '', ['1.0.8', '1.0.9', '1.1.0', '1.1.1'], true)) {
-        throw new RuntimeException('This bootstrap supports only 1.0.8, 1.0.9, 1.1.0 and 1.1.1.');
+    if (! in_array($installed['version'] ?? '', ['1.0.8', '1.0.9', '1.1.0', '1.1.1', '1.1.2'], true)) {
+        throw new RuntimeException('This bootstrap supports only 1.0.8, 1.0.9, 1.1.0, 1.1.1 and 1.1.2.');
     }
     $bundle = json_decode(file_get_contents(__DIR__.'/bootstrap-manifest.json'), true, 64, JSON_THROW_ON_ERROR);
     $signature = base64_decode($bundle['signature'] ?? '', true);
