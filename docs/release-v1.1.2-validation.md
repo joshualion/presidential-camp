@@ -2,7 +2,7 @@
 
 Core final local suite: **442 passed, 1,949 assertions**, no skipped tests (PHP 8.3, SQLite, explicit testing/localhost environment). The SMS-specific suite also runs against isolated MariaDB. Production frontend build passes. Locked Composer and production npm audits report zero known vulnerabilities.
 
-The final production-dependency candidate includes Community customer-owned SMS. Its compact discovery manifest is **9,468 bytes**. Both manifest signatures and **15,173 embedded file hashes** are verified. The unchanged 1.1.0/1.1.1 discovery implementation identifies 1.1.2 as a verified update. The final sending service, worker, migration and pinned migration policy match the archive. SMS source, setup guide, new job and model files are required package entries; private runtime configuration, database files, signing secrets and local QA material are excluded.
+The final production-dependency candidate includes Community customer-owned SMS. Its compact discovery manifest is **9,468 bytes**. Both manifest signatures and **15,174 embedded file hashes** are verified. The unchanged 1.1.0/1.1.1 discovery implementation identifies 1.1.2 as a verified update. The final sending service, worker, migration and pinned migration policy match the archive. SMS source, setup guide, new job and model files are required package entries; private runtime configuration, database files, signing secrets and local QA material are excluded.
 
 This candidate uses an isolated **test signing key** and MUST NOT be published. The official workflow must use the established owner signing identity. v1.1.1 and its immutable assets remain untouched. No GitHub CI run, official v1.1.2 publication or real SMS delivery has been performed for this SMS change.
 
