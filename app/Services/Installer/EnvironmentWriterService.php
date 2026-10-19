@@ -2,18 +2,25 @@
 
 namespace App\Services\Installer;
 
+use App\Services\ReleaseSigningKeyService;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
-use Illuminate\Support\Str;
 use RuntimeException;
 
 class EnvironmentWriterService
 {
+    public function __construct(private ?string $basePath = null) {}
+
+    private function path(string $file): string
+    {
+        return rtrim($this->basePath ?? base_path(), DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR.$file;
+    }
+
     public function read(array $keys): array
     {
-        $path = base_path('.env');
+        $path = $this->path('.env');
 
-        if (!File::exists($path) || !File::isReadable($path)) {
+        if (! File::exists($path) || ! File::isReadable($path)) {
             return [];
         }
 
@@ -22,7 +29,7 @@ class EnvironmentWriterService
 
         foreach ($lines as $line) {
             $line = trim($line);
-            if ($line === '' || str_starts_with($line, '#') || !str_contains($line, '=')) {
+            if ($line === '' || str_starts_with($line, '#') || ! str_contains($line, '=')) {
                 continue;
             }
 
@@ -39,22 +46,38 @@ class EnvironmentWriterService
 
     public function write(array $values): void
     {
-        $path = base_path('.env');
+        $path = $this->path('.env');
 
-        if (!File::exists($path)) {
-            if (File::exists(base_path('.env.example'))) {
-                File::copy(base_path('.env.example'), $path);
+        if (! File::exists($path)) {
+            if (File::exists($this->path('.env.example'))) {
+                File::copy($this->path('.env.example'), $path);
             } else {
                 File::put($path, '');
             }
         }
 
-        if (!is_writable($path)) {
+        if (! is_writable($path)) {
             throw new RuntimeException('.env is not writable.');
         }
 
+        $existing = $this->read(['APP_KEY', 'CAMPAIGN_RELEASE_PUBLIC_KEY_PATH', 'RELEASE_SIGNING_PUBLIC_KEY']);
+        $effective = array_replace($existing, $values);
+        $configuredPath = trim((string) ($effective['CAMPAIGN_RELEASE_PUBLIC_KEY_PATH'] ?? ''));
+        $legacyPath = $this->path(ReleaseSigningKeyService::LEGACY_PUBLIC_KEY_PATH);
+        $missingLegacy = in_array($configuredPath, [ReleaseSigningKeyService::LEGACY_PUBLIC_KEY_PATH, $legacyPath], true)
+            && ! File::exists($legacyPath) && ! is_link($legacyPath);
+
+        if (empty($effective['RELEASE_SIGNING_PUBLIC_KEY']) && ($configuredPath === '' || $missingLegacy || $configuredPath === ReleaseSigningKeyService::BUNDLED_PUBLIC_KEY_PATH)) {
+            // Validate the packaged trust anchor before saving an installer default.
+            (new ReleaseSigningKeyService($this->basePath, [
+                'public_key_path' => ReleaseSigningKeyService::BUNDLED_PUBLIC_KEY_PATH,
+            ]))->readPublicKey();
+            $values['CAMPAIGN_RELEASE_PUBLIC_KEY_PATH'] = ReleaseSigningKeyService::BUNDLED_PUBLIC_KEY_PATH;
+            $values['RELEASE_SIGNING_PUBLIC_KEY'] = '';
+        }
+
         if (empty($values['APP_KEY'])) {
-            $values['APP_KEY'] = config('app.key') ?: 'base64:'.base64_encode(random_bytes(32));
+            $values['APP_KEY'] = ($existing['APP_KEY'] ?? null) ?: config('app.key') ?: 'base64:'.base64_encode(random_bytes(32));
         }
 
         $contents = File::get($path);

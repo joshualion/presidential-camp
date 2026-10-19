@@ -1,9 +1,10 @@
 <?php
 
-use App\Services\ReleaseBuildService;
-use App\Services\ReleaseReadinessService;
 use App\Services\GitHubReleasePublisher;
-use App\Services\ReleaseVersionState;
+use App\Services\ReleaseBuildService;
+use App\Services\ReleaseManifestSigner;
+use App\Services\ReleaseReadinessService;
+use App\Services\ReleaseSigningKeyService;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\File;
@@ -73,7 +74,7 @@ function releaseBuildFixture(array $omit = [], array $extraFiles = []): array
         releaseBuildPut($basePath, is_int($file) ? $contents : $file, is_int($file) ? 'local-only' : $contents);
     }
 
-    (new \App\Services\ReleaseSigningKeyService($basePath, $config['signing']))->generate();
+    (new ReleaseSigningKeyService($basePath, $config['signing']))->generate();
 
     return [$basePath, $config];
 }
@@ -89,6 +90,8 @@ function releaseBuildEnvExample(): string
 {
     return implode("\n", [
         'APP_KEY=',
+        'CAMPAIGN_RELEASE_PUBLIC_KEY_PATH=config/release-public.pem',
+        'RELEASE_SIGNING_PUBLIC_KEY=',
         'APP_DEBUG=false',
         'DEPLOYMENT_MODE=self_hosted',
         'INSTALLER_ENABLED=true',
@@ -126,7 +129,7 @@ function releaseBuildService(string $basePath, array $config): ReleaseBuildServi
 
 function releaseBuildZipNames(string $zipPath): array
 {
-    $zip = new ZipArchive();
+    $zip = new ZipArchive;
     $zip->open($zipPath);
 
     $names = [];
@@ -141,7 +144,7 @@ function releaseBuildZipNames(string $zipPath): array
 
 function releaseBuildZipContents(string $zipPath, string $name): string
 {
-    $zip = new ZipArchive();
+    $zip = new ZipArchive;
     $zip->open($zipPath);
     $contents = $zip->getFromName($name);
     $zip->close();
@@ -301,16 +304,16 @@ test('manifest signing works when release key paths are configured', function ()
         'zip' => false,
     ]);
 
-    $publicKey = (new \App\Services\ReleaseSigningKeyService($basePath, $config['signing']))->readPublicKey();
+    $publicKey = (new ReleaseSigningKeyService($basePath, $config['signing']))->readPublicKey();
 
     expect($result['manifest']['manifest_signature']['algorithm'])->toBe('rsa-sha256')
-        ->and(app(\App\Services\ReleaseManifestSigner::class)->verify($result['manifest'], $publicKey))->toBeTrue()
+        ->and(app(ReleaseManifestSigner::class)->verify($result['manifest'], $publicKey))->toBeTrue()
         ->and(collect($result['warnings'])->pluck('label')->all())->not->toContain('Release signing keys');
 });
 
 test('unsigned local build warns but does not crash', function () {
     [$basePath, $config] = releaseBuildFixture();
-    $keys = new \App\Services\ReleaseSigningKeyService($basePath, $config['signing']);
+    $keys = new ReleaseSigningKeyService($basePath, $config['signing']);
     File::delete($keys->status()['private_key_path']);
     File::delete($keys->status()['public_key_path']);
 
@@ -340,7 +343,7 @@ test('release build fails if keys are invalid', function () {
 test('private release key is excluded from generated zip', function () {
     [$basePath, $config] = releaseBuildFixture();
 
-    app(\App\Services\ReleaseSigningKeyService::class, [
+    app(ReleaseSigningKeyService::class, [
         'basePath' => $basePath,
         'signingConfig' => $config['signing'],
     ])->generate();
@@ -603,7 +606,7 @@ test('campaign release build only creates standard zip without publishing', func
         ],
     ]));
 
-    $publisher = \Mockery::mock(GitHubReleasePublisher::class);
+    $publisher = Mockery::mock(GitHubReleasePublisher::class);
     $publisher->shouldReceive('assertRepositoryAllowed')->once()->with('joshualion/Campaign-Manager', false);
     $publisher->shouldNotReceive('publish');
     app()->instance(GitHubReleasePublisher::class, $publisher);
@@ -661,12 +664,11 @@ test('campaign release publishes with explicit gh repo when confirmed', function
         ],
     ]));
 
-    $publisher = \Mockery::mock(GitHubReleasePublisher::class);
+    $publisher = Mockery::mock(GitHubReleasePublisher::class);
     $publisher->shouldReceive('assertRepositoryAllowed')->once()->with('joshualion/Campaign-Manager', false);
     $publisher->shouldReceive('publish')
         ->once()
-        ->withArgs(fn (string $repository, string $tag, string $zipPath, string $title, mixed $notes, bool $allowUnapproved) =>
-            $repository === 'joshualion/Campaign-Manager'
+        ->withArgs(fn (string $repository, string $tag, string $zipPath, string $title, mixed $notes, bool $allowUnapproved) => $repository === 'joshualion/Campaign-Manager'
             && $tag === 'v1.1.0'
             && basename($zipPath) === 'campaign-manager.zip'
             && $title === 'Campaign Manager v1.1.0'
@@ -715,7 +717,7 @@ test('campaign release state file overrides configured fallback version', functi
         ],
     ]));
 
-    $publisher = \Mockery::mock(GitHubReleasePublisher::class);
+    $publisher = Mockery::mock(GitHubReleasePublisher::class);
     $publisher->shouldReceive('assertRepositoryAllowed')->once()->with('joshualion/Campaign-Manager', false);
     $publisher->shouldNotReceive('publish');
     app()->instance(GitHubReleasePublisher::class, $publisher);
@@ -745,7 +747,7 @@ test('failed github publication does not advance release version state', functio
         ],
     ]));
 
-    $publisher = \Mockery::mock(GitHubReleasePublisher::class);
+    $publisher = Mockery::mock(GitHubReleasePublisher::class);
     $publisher->shouldReceive('assertRepositoryAllowed')->once()->with('joshualion/Campaign-Manager', false);
     $publisher->shouldReceive('publish')->once()->andThrow(new RuntimeException('GitHub CLI failed.'));
     app()->instance(GitHubReleasePublisher::class, $publisher);
@@ -773,7 +775,7 @@ test('explicit release version still overrides version bump target', function ()
         ],
     ]));
 
-    $publisher = \Mockery::mock(GitHubReleasePublisher::class);
+    $publisher = Mockery::mock(GitHubReleasePublisher::class);
     $publisher->shouldReceive('assertRepositoryAllowed')->once()->with('joshualion/Campaign-Manager', false);
     $publisher->shouldNotReceive('publish');
     app()->instance(GitHubReleasePublisher::class, $publisher);
@@ -808,7 +810,7 @@ test('completed external manifest signature covers the finished archive hash', f
     [$basePath, $config] = releaseBuildFixture();
     $result = releaseBuildService($basePath, $config)->build(['profile' => 'standard', 'version' => '1.1.0']);
     $manifest = json_decode(File::get($result['manifest_path']), true);
-    $zip = new ZipArchive();
+    $zip = new ZipArchive;
     $zip->open($result['zip_path']);
     expect(File::size($result['manifest_path']))->toBeLessThanOrEqual(1048576)
         ->and($manifest)->not->toHaveKey('checksums')
@@ -816,15 +818,13 @@ test('completed external manifest signature covers the finished archive hash', f
     $zip->close();
 
     $signing = array_merge($config['signing'], ['_base_path' => $basePath]);
-    $signer = new \App\Services\ReleaseManifestSigner();
+    $signer = new ReleaseManifestSigner;
     expect($signer->verify($manifest, null, $signing))->toBeTrue()
         ->and($manifest['checksum_sha256'])->toBe(hash_file('sha256', $result['zip_path']))
         ->and($manifest['size_bytes'])->toBe(filesize($result['zip_path']));
     $manifest['checksum_sha256'] = str_repeat('0', 64);
     expect($signer->verify($manifest, null, $signing))->toBeFalse();
 });
-
-
 
 test('release packaging rejects unresolved Git LFS assets', function () {
     [$path, $config] = releaseBuildFixture([], [

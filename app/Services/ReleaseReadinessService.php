@@ -114,6 +114,8 @@ class ReleaseReadinessService
                 'QUEUE_CONNECTION' => 'sync',
                 'CACHE_STORE' => 'file',
                 'SESSION_DRIVER' => 'file',
+                'CAMPAIGN_RELEASE_PUBLIC_KEY_PATH' => ReleaseSigningKeyService::BUNDLED_PUBLIC_KEY_PATH,
+                'RELEASE_SIGNING_PUBLIC_KEY' => '',
             ],
             '.env.production.example' => [
                 'DEPLOYMENT_MODE' => 'self_hosted',
@@ -123,6 +125,8 @@ class ReleaseReadinessService
                 'QUEUE_CONNECTION' => 'sync',
                 'CACHE_STORE' => 'file',
                 'SESSION_DRIVER' => 'file',
+                'CAMPAIGN_RELEASE_PUBLIC_KEY_PATH' => ReleaseSigningKeyService::BUNDLED_PUBLIC_KEY_PATH,
+                'RELEASE_SIGNING_PUBLIC_KEY' => '',
                 'APP_DEBUG' => 'false',
             ],
         ];
@@ -182,14 +186,14 @@ class ReleaseReadinessService
     private function readEnvExample(string $relativePath): array
     {
         $path = $this->path($relativePath);
-        if (!File::isFile($path)) {
+        if (! File::isFile($path)) {
             return [];
         }
 
         $values = [];
         foreach (File::lines($path) as $line) {
             $line = trim($line);
-            if ($line === '' || str_starts_with($line, '#') || !str_contains($line, '=')) {
+            if ($line === '' || str_starts_with($line, '#') || ! str_contains($line, '=')) {
                 continue;
             }
 
