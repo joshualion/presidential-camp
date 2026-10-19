@@ -35,6 +35,13 @@ try {
     if (!copy($result['manifest_path'], base_path('builds/candidate/release-manifest.json'))) {
         throw new RuntimeException('Canonical updater manifest could not be written.');
     }
+    $metadata = file_get_contents(base_path('builds/candidate/release-manifest.json'));
+    if (strlen($metadata) > 8388608) {
+        throw new RuntimeException('Release metadata exceeds the updater 8 MiB limit. Publication stopped.');
+    }
+    $app->make(App\Services\OfficialUpdateService::class)->validateManifest(
+        json_decode($metadata, true, 64, JSON_THROW_ON_ERROR), $version
+    );
     file_put_contents(base_path('builds/candidate/campaign-manager.zip.sha256'), $result['checksum_sha256']."  campaign-manager.zip\n");
     require base_path('tools/updater/build-bootstrap.php');
     buildCampaignUpdaterBootstrap(base_path('builds/candidate'), $key, file_get_contents(config_path('release-public.pem')), $version);

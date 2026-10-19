@@ -64,7 +64,9 @@ class OfficialUpdateService
                 throw new RuntimeException('The release assets are not hosted at the official repository.');
             }
             $response = Http::connectTimeout(5)->timeout(config('updates.timeout'))->get($base.'release-manifest.json')->throw();
-            if (strlen($response->body()) > 1048576) {
+            // Production manifests include vendor file hashes and exceed 1 MiB.
+            // Keep a finite bound while retaining mandatory signature verification.
+            if (strlen($response->body()) > 8388608) {
                 throw new RuntimeException('Release metadata exceeds the allowed size.');
             }
             $manifest = json_decode($response->body(), true, 64, JSON_THROW_ON_ERROR);
