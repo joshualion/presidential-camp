@@ -42,12 +42,12 @@ function safetySign(array $manifest, string $private): array
 
     return $manifest;
 }
-function safetyStage($test, array $migrationFiles = [], array $approved = [], array $sources = ['1.0.8', '1.0.9', '1.1.0']): string
+function safetyStage($test, array $migrationFiles = [], array $approved = [], array $sources = ['1.0.8', '1.0.9', '1.1.0'], string $target = '1.1.1'): string
 {
     $id = (string) Str::uuid();
     $stage = UpdatePaths::stage($id);
     $files = ['artisan' => '<?php', 'vendor/autoload.php' => '<?php', 'bootstrap/app.php' => '<?php', 'app/Console/Commands/CampaignUpdateHealth.php' => '<?php'] + $migrationFiles;
-    $manifest = ['version' => '1.1.1', 'checksums' => [], 'upgrade' => ['protocol' => 1, 'supported_sources' => $sources, 'approved_migrations' => $approved, 'created_tables' => []]];
+    $manifest = ['version' => $target, 'checksums' => [], 'upgrade' => ['protocol' => 1, 'supported_sources' => $sources, 'approved_migrations' => $approved, 'created_tables' => []]];
     foreach ($files as $name => $content) {
         File::ensureDirectoryExists(dirname($stage.'/application/'.$name));
         File::put($stage.'/application/'.$name, $content);
@@ -55,7 +55,7 @@ function safetyStage($test, array $migrationFiles = [], array $approved = [], ar
     }
     File::put($stage.'/application/release-manifest.json', json_encode(safetySign($manifest, $test->updateKey)));
     $outer = safetySign($manifest + ['checksum_sha256' => str_repeat('a', 64), 'size_bytes' => 100], $test->updateKey);
-    UpdatePaths::write($stage.'/journal.json', ['id' => $id, 'version' => '1.1.1', 'state' => 'prepared', 'manifest' => $outer]);
+    UpdatePaths::write($stage.'/journal.json', ['id' => $id, 'version' => $target, 'state' => 'prepared', 'manifest' => $outer]);
 
     return $id;
 }
@@ -189,7 +189,7 @@ test('the initiating response contains live progress and a private raw status co
     expect($cookie->getName())->toBe('cm_update_'.$id)->and($cookie->getValue())->toBe(str_repeat('c', 64))->and($cookie->isHttpOnly())->toBeTrue()->and($cookie->isSecure())->toBeTrue()->and($cookie->getSameSite())->toBe('strict')->and($cookie->getPath())->toBe('/campaign-update-status.php');
 });
 
-test('bootstrap packaging signs every bridge file and refuses tampering before installation', function () {
+test('bootstrap packaging signs every bridge file and refuses tampering before installation', function ($sourceVersion) {
     require_once $this->originalBase.'/tools/updater/build-bootstrap.php';
     app()->setBasePath($this->originalBase);
     try {
@@ -205,7 +205,7 @@ test('bootstrap packaging signs every bridge file and refuses tampering before i
     File::ensureDirectoryExists($this->sandbox.'/vendor');
     File::put($this->sandbox.'/vendor/autoload.php', '<?php');
     File::put($this->sandbox.'/.env', 'APP_KEY=preserved');
-    File::put($this->sandbox.'/release-manifest.json', '{"version":"1.0.8"}');
+    File::put($this->sandbox.'/release-manifest.json', json_encode(['version' => $sourceVersion]));
     $path = $bundle.'/engine/UpdatePolicy.php';
     $original = file_get_contents($path);
     file_put_contents($path, $original.'tampered');
@@ -225,7 +225,7 @@ test('bootstrap packaging signs every bridge file and refuses tampering before i
         ->and(glob($this->sandbox.'/storage/app/updates/bootstrap-history/*/bootstrap'))->toHaveCount(1)
         ->and(file_get_contents($this->sandbox.'/.env'))->toBe('APP_KEY=preserved');
 
-});
+})->with(['1.0.8', '1.1.2']);
 
 test('authorized startup writes a valid private worker and permits cancelling only queued jobs', function () {
     $id = (string) Str::uuid();
@@ -357,3 +357,13 @@ test('Core refuses to authorize a job prepared for another installed scope', fun
     expect(fn () => app(UpdatePortalClient::class)->authorize(['package_type' => 'lga']))->toThrow(RuntimeException::class,'scope changed');
     Http::assertNothingSent();
 });
+
+
+test('corrective release accepts each reviewed source without replaying installed migrations', function ($version) {
+    config(['release.identity.version' => $version]);
+    $stage = safetyStage($this, sources: config('updates.supported_sources'), target: '1.1.3');
+    $plan = app(UpdatePolicy::class)->inspect($stage);
+    expect($plan['source_version'])->toBe($version)
+        ->and($plan['target_version'])->toBe('1.1.3')
+        ->and($plan['pending_migrations'])->toBe([]);
+})->with(['1.0.8', '1.0.9', '1.1.0', '1.1.1', '1.1.2']);

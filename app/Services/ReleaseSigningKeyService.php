@@ -7,6 +7,10 @@ use RuntimeException;
 
 class ReleaseSigningKeyService
 {
+    public const BUNDLED_PUBLIC_KEY_PATH = 'config/release-public.pem';
+
+    public const LEGACY_PUBLIC_KEY_PATH = 'storage/app/release-keys/campaign_release_public.pem';
+
     public function __construct(
         private ?string $basePath = null,
         private ?array $signingConfig = null,
@@ -26,7 +30,7 @@ class ReleaseSigningKeyService
         $privateExists = File::isFile($privatePath);
         $publicExists = File::isFile($publicPath);
 
-        if (($privateExists || $publicExists) && !$force) {
+        if (($privateExists || $publicExists) && ! $force) {
             return [
                 'generated' => false,
                 'message' => 'Release signing keys already exist. Use --force to regenerate deliberately.',
@@ -34,7 +38,7 @@ class ReleaseSigningKeyService
             ];
         }
 
-        if (!function_exists('openssl_pkey_new')) {
+        if (! function_exists('openssl_pkey_new')) {
             throw new RuntimeException('PHP OpenSSL extension is required to generate release signing keys.');
         }
 
@@ -48,18 +52,18 @@ class ReleaseSigningKeyService
 
         $resource = openssl_pkey_new($keyConfig);
 
-        if (!$resource) {
+        if (! $resource) {
             throw new RuntimeException('Unable to generate release signing RSA key pair. '.$this->opensslErrors());
         }
 
         $privatePem = '';
-        if (!openssl_pkey_export($resource, $privatePem, null, $keyConfig)) {
+        if (! openssl_pkey_export($resource, $privatePem, null, $keyConfig)) {
             throw new RuntimeException('Unable to export release signing private key. '.$this->opensslErrors());
         }
 
         $details = openssl_pkey_get_details($resource);
         $publicPem = $details['key'] ?? null;
-        if (!$publicPem) {
+        if (! $publicPem) {
             throw new RuntimeException('Unable to export release signing public key.');
         }
 
@@ -69,7 +73,7 @@ class ReleaseSigningKeyService
         @chmod($publicPath, 0644);
 
         $status = $this->status();
-        if (!$status['valid']) {
+        if (! $status['valid']) {
             throw new RuntimeException('Generated release signing keys failed validation: '.implode(' ', $status['errors']));
         }
 
@@ -84,11 +88,11 @@ class ReleaseSigningKeyService
     {
         $status = $this->status();
 
-        if (!$status['private_exists'] && !$status['public_exists']) {
+        if (! $status['private_exists'] && ! $status['public_exists']) {
             throw new RuntimeException('Release signing keys are not configured. Provision the approved release key pair before building; builds never generate a new signing identity automatically.');
         }
 
-        if (!$status['valid']) {
+        if (! $status['valid']) {
             throw new RuntimeException('Release signing keys are invalid: '.implode(' ', $status['errors']));
         }
 
@@ -106,11 +110,11 @@ class ReleaseSigningKeyService
         $publicExists = File::isFile($publicPath);
         $errors = [];
 
-        if (!$privateExists) {
+        if (! $privateExists) {
             $errors[] = 'Private signing key is missing.';
         }
 
-        if (!$publicExists) {
+        if (! $publicExists) {
             $errors[] = 'Public signing key is missing.';
         }
 
@@ -120,14 +124,14 @@ class ReleaseSigningKeyService
 
         if ($privateExists) {
             $privateUsable = File::isReadable($privatePath) && openssl_pkey_get_private(File::get($privatePath)) !== false;
-            if (!$privateUsable) {
+            if (! $privateUsable) {
                 $errors[] = 'Private signing key is unreadable or invalid.';
             }
         }
 
         if ($publicExists) {
             $publicUsable = File::isReadable($publicPath) && openssl_pkey_get_public(File::get($publicPath)) !== false;
-            if (!$publicUsable) {
+            if (! $publicUsable) {
                 $errors[] = 'Public signing key is unreadable or invalid.';
             }
         }
@@ -135,7 +139,7 @@ class ReleaseSigningKeyService
         if ($privateUsable && $publicUsable) {
             $verification = $this->verifyTestPayload();
             $pairMatches = $verification['ok'];
-            if (!$pairMatches) {
+            if (! $pairMatches) {
                 $errors[] = $verification['message'];
             }
         }
@@ -170,7 +174,7 @@ class ReleaseSigningKeyService
     {
         $privatePem = $this->readPrivateKey();
 
-        if (!openssl_sign($payload, $signature, $privatePem, OPENSSL_ALGO_SHA256)) {
+        if (! openssl_sign($payload, $signature, $privatePem, OPENSSL_ALGO_SHA256)) {
             throw new RuntimeException('Unable to sign payload with release private key.');
         }
 
@@ -192,7 +196,7 @@ class ReleaseSigningKeyService
     public function readPrivateKey(): string
     {
         $path = $this->privateKeyPath();
-        if (!File::isReadable($path)) {
+        if (! File::isReadable($path)) {
             throw new RuntimeException('Release private signing key is missing or unreadable.');
         }
 
@@ -207,7 +211,15 @@ class ReleaseSigningKeyService
     public function readPublicKey(): string
     {
         $path = $this->publicKeyPath();
-        if (!File::isReadable($path)) {
+
+        // Older distribution templates pointed at an unshipped storage file.
+        // Only recover that missing default; custom or invalid keys must fail closed.
+        if ($path === $this->absolutePath(self::LEGACY_PUBLIC_KEY_PATH)
+            && ! File::exists($path) && ! is_link($path)) {
+            $path = $this->absolutePath(self::BUNDLED_PUBLIC_KEY_PATH);
+        }
+
+        if (! File::isReadable($path)) {
             throw new RuntimeException('Release public signing key is missing or unreadable.');
         }
 
@@ -241,7 +253,7 @@ class ReleaseSigningKeyService
 
     private function publicKeyPath(): string
     {
-        return $this->absolutePath($this->signingConfig['public_key_path'] ?? 'storage/app/release-keys/campaign_release_public.pem');
+        return $this->absolutePath($this->signingConfig['public_key_path'] ?? self::BUNDLED_PUBLIC_KEY_PATH);
     }
 
     private function absolutePath(string $path): string
@@ -281,4 +293,3 @@ class ReleaseSigningKeyService
         return $errors ? implode(' ', array_unique($errors)) : '';
     }
 }
-

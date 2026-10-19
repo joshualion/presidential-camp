@@ -5,12 +5,17 @@ return [
         'name' => 'Campaign Manager Core',
         'package' => 'campaign-manager-core',
         'channel' => env('RELEASE_CHANNEL', 'self-hosted'),
-        'version' => env('APP_VERSION', '1.1.2'),
+        'version' => env('APP_VERSION', '1.1.3'),
         'build_date' => env('RELEASE_BUILD_DATE', null),
         'minimum_php' => '8.2.0',
     ],
 
     'release_notes' => [
+        '1.1.3' => [
+            'Installer automatically configures and validates the bundled release public key.',
+            'Upgrade compatibility handles the missing legacy template key path without disabling signature verification.',
+            'Free update discovery recovery guide and reviewed upgrade sources through 1.1.2.',
+        ],
         '1.1.2' => [
             'Community SMS with individually owned Termii or BulkSMSNigeria credentials, delegated access and geographically scoped audit reports.',
             'Compact signed update metadata restores compatibility with existing checkers.',
@@ -241,6 +246,7 @@ return [
         'config/direct_sms.php',
         'database/migrations/2026_10_19_000002_create_direct_sms_tables.php',
         'docs/customer-owned-sms.md',
+        'docs/update-check-recovery.md',
         'docs/automatic-update-coverage-v1.1.2.md',
         'resources/views/backend/sms/direct/settings.blade.php',
         'resources/views/backend/sms/direct/index.blade.php',
@@ -495,6 +501,7 @@ return [
         '!docs/self-hosted-shared-hosting-guide.md',
         '!docs/member-product-contract.md',
         '!docs/customer-owned-sms.md',
+        '!docs/update-check-recovery.md',
         '!docs/automatic-updates.md',
         '!docs/automatic-update-coverage-v1.1.2.md',
         '.htaccess',
@@ -568,4 +575,3 @@ return [
         'Thumbs.db',
     ],
 ];
-

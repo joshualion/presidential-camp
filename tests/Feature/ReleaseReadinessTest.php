@@ -46,6 +46,8 @@ function releaseReadinessEnvExample(): string
         'APP_NAME="Campaign Manager"',
         'APP_ENV=production',
         'APP_KEY=',
+        'CAMPAIGN_RELEASE_PUBLIC_KEY_PATH=config/release-public.pem',
+        'RELEASE_SIGNING_PUBLIC_KEY=',
         'APP_DEBUG=false',
         'APP_URL=https://clientdomain.com',
         'DEPLOYMENT_MODE=self_hosted',
@@ -129,4 +131,22 @@ test('real env examples keep self-hosted safe defaults', function () {
 
     expect($envChecks)->not->toBeEmpty()
         ->and($envChecks->pluck('status')->unique()->values()->all())->toBe(['pass']);
+});
+
+test('release readiness blocks the obsolete updater trust path in distribution examples', function () {
+    $base = releaseReadinessFixture();
+    foreach (['.env.example', '.env.production.example'] as $file) {
+        File::put($base.'/'.$file, str_replace(
+            'CAMPAIGN_RELEASE_PUBLIC_KEY_PATH=config/release-public.pem',
+            'CAMPAIGN_RELEASE_PUBLIC_KEY_PATH=storage/app/release-keys/campaign_release_public.pem',
+            File::get($base.'/'.$file)
+        ));
+    }
+    $service = new ReleaseReadinessService($base, config('release'));
+    $checks = $service->inspect();
+    foreach (['.env.example', '.env.production.example'] as $file) {
+        $check = releaseReadinessCheck($checks, $file.' default: CAMPAIGN_RELEASE_PUBLIC_KEY_PATH');
+        expect($check['status'])->toBe('fail')->and($check['critical'])->toBeTrue();
+    }
+    expect($service->hasCriticalFailures($checks))->toBeTrue();
 });
