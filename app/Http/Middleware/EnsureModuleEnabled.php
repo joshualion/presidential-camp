@@ -15,6 +15,7 @@ class EnsureModuleEnabled
 
     public function handle(Request $request, Closure $next, string $module): Response
     {
+        if (in_array($module, ['sms','bulk_sms'], true) && !config('direct_sms.portal_visible')) abort(404);
         $this->modules->requireEnabled($module);
 
         return $next($request);

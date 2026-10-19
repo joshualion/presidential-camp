@@ -48,3 +48,7 @@
 - QuickStart now proceeds directly to geography provisioning after entitlement validation.
 - New Community/QuickStart users no longer receive legacy software-activation errors in this path.
 
+
+### Pending 1.1.2 — customer-owned SMS
+
+Community administrators can use their own Termii or BulkSMSNigeria account when enabled by Super Admin. Includes encrypted account revisions, geographic audit isolation and explicit wider oversight, recipient confirmation, opt-outs, scheduling, queued chunks and authenticated delivery reports. Hosted SMS remains hidden by default. See docs/customer-owned-sms.md.

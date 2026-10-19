@@ -439,7 +439,7 @@
                   </a>
                 </li>
 
-                @if(app(\App\Services\ModuleGateService::class)->enabled('sms'))
+                @if(config('direct_sms.portal_visible') && app(\App\Services\ModuleGateService::class)->enabled('sms'))
                 <li class="nav-item">
                   <a href="{{ route('superadmin.sms.settings.index') }}" class="nav-link">
                     <i class="fas fa-sms nav-icon"></i>

@@ -1,4 +1,14 @@
 @php
+ $directSmsAccess = app(\App\Services\Sms\Direct\DirectSmsAccess::class);
+@endphp
+@if($directSmsAccess->enabled($profileData))
+<nav class="mt-2"><ul class="nav nav-pills nav-sidebar flex-column sidebar-nav" data-widget="treeview" role="menu">
+<li class="nav-item"><a class="nav-link" href="{{ route($profileData->access_level.'.direct-sms.index') }}"><i class="nav-icon fas fa-sms"></i><p>SMS messages</p></a></li>
+<li class="nav-item"><a class="nav-link" href="{{ route($profileData->access_level.'.direct-sms.settings') }}"><i class="nav-icon fas fa-cog"></i><p>My SMS provider</p></a></li>
+</ul></nav>
+@endif
+@if(config('direct_sms.portal_visible'))
+@php
     $smsAccess = app(\App\Services\Sms\SmsAccessService::class);
     $smsConfigured = \Illuminate\Support\Facades\Schema::hasColumn('system_settings', 'portal_sms_enabled')
         && (bool) optional(\App\Models\SystemSetting::first())->portal_sms_enabled;
@@ -16,4 +26,6 @@
         @if($profileData->access_level === 'superadmin')<li class="nav-item"><a class="nav-link" href="{{ route('superadmin.sms.settings.index') }}"><i class="far fa-circle nav-icon"></i><p>SMS Settings</p></a></li>@endif
     </ul></li>
 </ul></nav>
+@endif
+
 @endif

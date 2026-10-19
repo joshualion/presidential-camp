@@ -12,6 +12,7 @@ return [
 
     'release_notes' => [
         '1.1.2' => [
+            'Community SMS with individually owned Termii or BulkSMSNigeria credentials, delegated access and geographically scoped audit reports.',
             'Compact signed update metadata restores compatibility with existing checkers.',
             'Portal-managed automatic-update coverage includes all updates during the purchased period, with no automatic renewal.',
             'Signed bootstrap support for 1.0.8, 1.0.9, 1.1.0 and 1.1.1 with private backups and reviewed pending migrations.',
@@ -227,6 +228,23 @@ return [
 
     'required_files' => [
         'artisan',
+        'app/Http/Controllers/DirectSmsController.php',
+        'app/Services/Sms/Direct/DirectSmsService.php',
+        'app/Services/Sms/Direct/DirectSmsAccess.php',
+        'app/Services/Sms/Direct/DirectSmsProvider.php',
+        'app/Services/Sms/Direct/SmsMessageEstimate.php',
+        'app/Jobs/SendDirectSmsBatch.php',
+        'app/Jobs/SyncDirectSmsBatch.php',
+        'app/Models/SmsProviderAccount.php',
+        'app/Models/SmsDirectBatch.php',
+        'app/Models/SmsDirectMessage.php',
+        'config/direct_sms.php',
+        'database/migrations/2026_10_19_000002_create_direct_sms_tables.php',
+        'docs/customer-owned-sms.md',
+        'resources/views/backend/sms/direct/settings.blade.php',
+        'resources/views/backend/sms/direct/index.blade.php',
+        'resources/views/backend/sms/direct/compose.blade.php',
+        'resources/views/backend/sms/direct/show.blade.php',
         'composer.json',
         'composer.lock',
         'vendor/autoload.php',
@@ -475,6 +493,8 @@ return [
         '!docs/self-hosted-installation-guide.md',
         '!docs/self-hosted-shared-hosting-guide.md',
         '!docs/member-product-contract.md',
+        '!docs/customer-owned-sms.md',
+        '!docs/automatic-updates.md',
         '.htaccess',
         '!public/.htaccess',
         'htaccess',

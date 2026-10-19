@@ -96,6 +96,7 @@ class PortalSmsClient
 
     private function operation(string $method, string $operation, array $payload = [], array $parameters = [], ?string $idempotencyKey = null): array
     {
+        if (!config('direct_sms.portal_visible')) return ['ok'=>false,'status'=>503,'code'=>'sms_unavailable','message'=>'This SMS service is unavailable.','data'=>[]];
         $endpoints = config('portal_sms.endpoints', []);
         $template = is_array($endpoints) ? ($endpoints[$operation] ?? null) : null;
         if (!is_string($template) || $template === '') {
