@@ -1,3 +1,5 @@
+> Since 1.1.2, Community installations use administrator-owned providers by default. This document describes the reserved hosted SMS integration, hidden unless the installation owner enables it. See [customer-owned SMS](customer-owned-sms.md) for the active service.
+
 # Core application portal SMS integration
 
 ## Ownership boundary

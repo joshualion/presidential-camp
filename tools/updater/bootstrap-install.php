@@ -12,8 +12,8 @@ try {
         throw new RuntimeException('Supply the existing installed Core directory, not a new installation.');
     }
     $installed = json_decode(file_get_contents($base.'/release-manifest.json'), true, 64, JSON_THROW_ON_ERROR);
-    if (! in_array($installed['version'] ?? '', ['1.0.8', '1.0.9', '1.1.0'], true)) {
-        throw new RuntimeException('This bootstrap supports only 1.0.8, 1.0.9 and 1.1.0.');
+    if (! in_array($installed['version'] ?? '', ['1.0.8', '1.0.9', '1.1.0', '1.1.1'], true)) {
+        throw new RuntimeException('This bootstrap supports only 1.0.8, 1.0.9, 1.1.0 and 1.1.1.');
     }
     $bundle = json_decode(file_get_contents(__DIR__.'/bootstrap-manifest.json'), true, 64, JSON_THROW_ON_ERROR);
     $signature = base64_decode($bundle['signature'] ?? '', true);
@@ -38,8 +38,22 @@ try {
         }
     }
     $private = $base.'/storage/app/updates/bootstrap';
-    if (is_dir($private) || is_file($base.'/public/campaign-update-bootstrap.php')) {
-        throw new RuntimeException('A bootstrap already exists. Review or remove the previous verified bootstrap first.');
+    $replacing = is_dir($private) || is_file($base.'/public/campaign-update-bootstrap.php');
+    if ($replacing && ! in_array('--replace-bootstrap', $argv, true)) {
+        throw new RuntimeException('A bootstrap exists. After confirming no update is active, use --replace-bootstrap to archive and replace it.');
+    }
+    if ($replacing) {
+        if (is_file($base.'/storage/framework/down') || is_link($private)) throw new RuntimeException('Cannot replace a bootstrap during maintenance or through a symlink.');
+        foreach (glob($base.'/storage/app/updates/jobs/*/journal.json') as $journal) {
+            $job = json_decode(file_get_contents($journal), true);
+            if (! is_array($job) || ! in_array($job['state'] ?? '', ['completed', 'recovered'], true)) throw new RuntimeException('Recover or finish existing update jobs before replacing the bootstrap.');
+        }
+        $history = $base.'/storage/app/updates/bootstrap-history/'.gmdate('YmdHis').'-'.bin2hex(random_bytes(6));
+        if (! mkdir($history, 0700, true)) throw new RuntimeException('Cannot create bootstrap history.');
+        if (is_dir($private) && ! rename($private, $history.'/bootstrap')) throw new RuntimeException('Cannot archive the previous bootstrap.');
+        foreach (['campaign-update-bootstrap.php', 'campaign-update-status.php'] as $name) {
+            if (is_file($base.'/public/'.$name) && ! rename($base.'/public/'.$name, $history.'/'.$name)) throw new RuntimeException('Cannot archive the previous bootstrap entry point.');
+        }
     }
     if (is_link($base.'/storage') || str_starts_with(realpath($base.'/storage'), realpath($base.'/public').DIRECTORY_SEPARATOR)) {
         throw new RuntimeException('Bootstrap storage must be private.');

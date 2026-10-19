@@ -1,3 +1,5 @@
+> Updated coverage and metadata compatibility rules: see [v1.1.2 operations](automatic-update-coverage-v1.1.2.md). These supersede the earlier per-release pricing descriptions below.
+
 # Automatic updates and legacy installations
 
 ## Customer flow

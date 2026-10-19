@@ -159,7 +159,17 @@ class ReleaseBuildService
             }
         }
 
-        File::put($result['manifest_path'], $this->json($result['manifest']));
+        $discovery = $result['manifest'];
+        if ($zipEnabled) {
+            unset($discovery['checksums'], $discovery['manifest_signature']);
+            $discovery['embedded_manifest_sha256'] = hash('sha256', $manifestJson);
+            $discovery = (new ReleaseManifestSigner())->sign($discovery, $signingConfig)['manifest'];
+            if (strlen($this->json($discovery)) > 1048576) {
+                throw new RuntimeException('Discovery metadata exceeds the legacy updater 1 MiB limit.');
+            }
+        }
+        $result['discovery_manifest'] = $discovery;
+        File::put($result['manifest_path'], $this->json($discovery));
         File::put($outputDirectory.DIRECTORY_SEPARATOR.'checksums.txt', $checksumsText);
         File::put($result['release_notes_path'], $this->releaseNotesMarkdown($version, $result['manifest']['release_notes'] ?? []));
 

@@ -24,6 +24,7 @@ if (!$private || !$public || openssl_pkey_get_details($private)['type'] !== OPEN
 if (file_put_contents($keyPath, $key, LOCK_EX) === false || !chmod($keyPath, 0600)) {
     throw new RuntimeException('Private signing material could not be secured.');
 }
+$failure = null;
 try {
     $app = require __DIR__.'/../bootstrap/app.php';
     $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
@@ -35,13 +36,27 @@ try {
     if (!copy($result['manifest_path'], base_path('builds/candidate/release-manifest.json'))) {
         throw new RuntimeException('Canonical updater manifest could not be written.');
     }
+    $metadata = file_get_contents(base_path('builds/candidate/release-manifest.json'));
+    if (strlen($metadata) > 1048576) {
+        throw new RuntimeException('Release metadata exceeds the legacy updater 1 MiB limit. Publication stopped.');
+    }
+    $app->make(App\Services\OfficialUpdateService::class)->validateManifest(
+        json_decode($metadata, true, 64, JSON_THROW_ON_ERROR), $version
+    );
     file_put_contents(base_path('builds/candidate/campaign-manager.zip.sha256'), $result['checksum_sha256']."  campaign-manager.zip\n");
     require base_path('tools/updater/build-bootstrap.php');
     buildCampaignUpdaterBootstrap(base_path('builds/candidate'), $key, file_get_contents(config_path('release-public.pem')), $version);
     echo "Signed private candidate prepared. No GitHub release has been published.\n";
+} catch (Throwable $exception) {
+    $failure = $exception;
 } finally {
     if (is_file($keyPath)) {
         unlink($keyPath);
     }
 }
 
+
+if ($failure) {
+    fwrite(STDERR, 'Release preparation failed: '.$failure->getMessage().PHP_EOL);
+    exit(1);
+}

@@ -439,6 +439,26 @@ foreach (AccessLevelRouteService::prefixes() as $accessLevel => $prefix) {
         });
 }
 
+// Customer-funded SMS uses its own access grants, not the hosted SMS licence/wallet gate.
+foreach (array_diff_key(AccessLevelRouteService::prefixes(), ['user' => true]) as $level => $prefix) {
+ Route::middleware(['auth', 'access_level:'.$level])->prefix($prefix.'/sms/direct')->name($level.'.direct-sms.')->group(function () {
+  Route::get('oversight-boundaries', [\App\Http\Controllers\DirectSmsController::class,'boundaries'])->middleware('throttle:60,1')->name('boundaries');
+  Route::get('/', [\App\Http\Controllers\DirectSmsController::class,'index'])->name('index');
+  Route::get('/settings', [\App\Http\Controllers\DirectSmsController::class,'settings'])->name('settings');
+  Route::post('/settings', [\App\Http\Controllers\DirectSmsController::class,'save'])->middleware('throttle:20,1')->name('settings.save');
+  Route::post('/settings/test', [\App\Http\Controllers\DirectSmsController::class,'test'])->middleware('throttle:6,1')->name('settings.test');
+  Route::post('/suppression', [\App\Http\Controllers\DirectSmsController::class,'suppression'])->name('suppression');
+  Route::post('/policy', [\App\Http\Controllers\DirectSmsController::class,'policy'])->name('policy');
+  Route::post('/grants/{admin}', [\App\Http\Controllers\DirectSmsController::class,'grant'])->name('grant');
+  Route::get('/compose', [\App\Http\Controllers\DirectSmsController::class,'compose'])->name('compose');
+  Route::get('/locations/{type}', [\App\Http\Controllers\DirectSmsController::class,'locations'])->name('locations');
+  Route::post('/preview', [\App\Http\Controllers\DirectSmsController::class,'preview'])->middleware('throttle:20,1')->name('preview');
+  Route::post('/send', [\App\Http\Controllers\DirectSmsController::class,'send'])->middleware('throttle:10,1')->name('send');
+  Route::get('/batches/{batch}', [\App\Http\Controllers\DirectSmsController::class,'show'])->name('show');
+  Route::post('/batches/{batch}/sync', [\App\Http\Controllers\DirectSmsController::class,'sync'])->middleware('throttle:6,1')->name('sync');
+ });
+}
+
 //Require Super Admin Routes file
 require __DIR__.'/superAdmin.php';
 

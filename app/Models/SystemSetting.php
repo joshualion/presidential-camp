@@ -15,6 +15,8 @@ class SystemSetting extends Model
     protected function casts(): array
     {
         return [
+            'direct_sms_enabled' => 'boolean',
+            'direct_sms_levels' => 'array',
             'portal_sms_enabled' => 'boolean',
             'portal_sms_secret' => 'encrypted',
             'portal_sms_system_route_enabled' => 'boolean',

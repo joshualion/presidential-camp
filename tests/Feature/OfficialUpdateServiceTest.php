@@ -55,6 +55,36 @@ test('unsigned or altered update metadata cannot authorize a package', function 
     expect(fn () => app(OfficialUpdateService::class)->validateManifest($manifest, '9.0.0'))->toThrow(RuntimeException::class, 'signature');
 });
 
+test('official checks handle large signed metadata without accepting oversized or tampered responses', function (int $payloadBytes, bool $tampered, ?string $error) {
+    $base = 'https://github.com/joshualion/Campaign-Manager/releases/download/v9.0.0/';
+    $manifest = signUpdateFixture([
+        'version' => '9.0.0', 'checksum_sha256' => str_repeat('a', 64), 'size_bytes' => 100,
+        'metadata_padding' => str_repeat('x', $payloadBytes),
+    ], $this->updatePrivateKey);
+    if ($tampered) {
+        $manifest['metadata_padding'][0] = 'z';
+    }
+    Http::fake([
+        'https://api.github.com/repos/joshualion/Campaign-Manager/releases/latest' => Http::response([
+            'tag_name' => 'v9.0.0', 'draft' => false, 'prerelease' => false,
+            'assets' => [
+                ['name' => 'release-manifest.json', 'browser_download_url' => $base.'release-manifest.json'],
+                ['name' => 'campaign-manager.zip', 'browser_download_url' => $base.'campaign-manager.zip'],
+            ],
+        ]),
+        $base.'release-manifest.json' => Http::response($manifest),
+    ]);
+    if ($error === null) {
+        expect(app(OfficialUpdateService::class)->check()['verified'])->toBeTrue();
+    } else {
+        expect(fn () => app(OfficialUpdateService::class)->check())->toThrow(RuntimeException::class, $error);
+    }
+})->with([
+    'production-sized signed manifest' => [2173787, false, null],
+    'production-sized tampered manifest' => [2173787, true, 'signature'],
+    'oversized signed manifest' => [8388609, false, 'metadata exceeds'],
+]);
+
 test('legacy releases show manual availability without enabling verified preparation', function () {
     Http::fake(['https://api.github.com/repos/joshualion/Campaign-Manager/releases/latest' => Http::response(['tag_name' => 'v9.0.0', 'assets' => []])]);
     $result = app(OfficialUpdateService::class)->check();

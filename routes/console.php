@@ -25,7 +25,7 @@ Schedule::command('campaign:portal-sync')->hourly()->withoutOverlapping()
             && (!empty($state['registered']) || !empty($state['pending_revoke']));
     });
 
-$smsEnabled = fn () => Schema::hasTable('sms_allocations')
+$smsEnabled = fn () => config('direct_sms.portal_visible') && Schema::hasTable('sms_allocations')
     && Schema::hasColumn('system_settings', 'portal_sms_enabled')
     && (bool) SystemSetting::query()->first()?->portal_sms_enabled;
 
@@ -44,3 +44,12 @@ Schedule::call(function () {
         ->each(fn (int $id) => SyncPortalSmsBatch::dispatch($id));
 })->everyTenMinutes()->name('portal-sms-batch-sync')->withoutOverlapping()->when($smsEnabled);
 
+
+Schedule::call(function () {
+ if (!Schema::hasTable('sms_direct_batches')) return;
+ \App\Models\SmsDirectBatch::where('status','queued')->where(fn($q)=>$q->whereNull('scheduled_at')->orWhere('scheduled_at','<=',now()))->orderBy('id')->limit(100)->pluck('id')->each(fn($id)=>\App\Jobs\SendDirectSmsBatch::dispatch($id)->onQueue('sms'));
+})->everyMinute()->name('direct-sms-dispatch')->withoutOverlapping();
+Schedule::call(function () {
+ if (!Schema::hasTable('sms_direct_messages')) return;
+ \App\Models\SmsDirectBatch::whereHas('messages',fn($q)=>$q->where('status','accepted')->where('submitted_at','>=',now()->subDays(7))->where(fn($q)=>$q->whereNull('last_synced_at')->orWhere('last_synced_at','<',now()->subMinutes(10))))->orderBy('id')->limit(20)->each(fn($batch)=>\App\Jobs\SyncDirectSmsBatch::dispatch($batch->id)->onQueue('sms'));
+})->everyTenMinutes()->name('direct-sms-delivery-sync')->withoutOverlapping();

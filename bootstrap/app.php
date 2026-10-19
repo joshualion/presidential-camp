@@ -66,6 +66,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
     })
     ->withExceptions(function (Exceptions $exceptions) {// Custom exception handling
+         $exceptions->dontFlash(['api_key']);
          // Custom exception handling
          $exceptions->render(function (HttpException $e, $request) {
             $status = $e->getStatusCode(); // Get the status code
