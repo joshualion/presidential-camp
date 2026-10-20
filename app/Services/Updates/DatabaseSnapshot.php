@@ -38,11 +38,17 @@ class DatabaseSnapshot
         }
         $this->binary('mysql_dump', ['/usr/bin/mysqldump', '/usr/bin/mariadb-dump']);
         $this->binary('mysql_client', ['/usr/bin/mysql', '/usr/bin/mariadb']);
-        $tables = DB::select('SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = ? AND TABLE_TYPE = ?', [$c['database'], 'BASE TABLE']);
+        $tables = DB::select('SELECT TABLE_NAME AS table_name, ENGINE AS engine FROM information_schema.TABLES WHERE TABLE_SCHEMA = ? AND TABLE_TYPE = ?', [$c['database'], 'BASE TABLE']);
+        $unsupported = [];
         foreach ($tables as $table) {
-            if (strtoupper((string) $table->ENGINE) !== 'INNODB') {
-                throw new RuntimeException('Automatic backups require InnoDB tables for a consistent database snapshot.');
+            if (strtoupper((string) $table->engine) !== 'INNODB') {
+                $unsupported[] = $table->table_name.' ('.$table->engine.')';
             }
+        }
+        if ($unsupported !== []) {
+            throw new UpdateFlowException('database_storage',
+                'Automatic updating is paused because these database tables cannot be backed up consistently: '.
+                implode(', ', $unsupported).'. Ask your hosting administrator to take and verify a full database backup, then review converting these tables to InnoDB. No update or payment has started. Retry the readiness check after the database is ready.');
         }
 
         return (int) DB::selectOne('SELECT COALESCE(SUM(DATA_LENGTH + INDEX_LENGTH),0) AS bytes FROM information_schema.TABLES WHERE TABLE_SCHEMA = ?', [$c['database']])->bytes;
@@ -81,6 +87,7 @@ class DatabaseSnapshot
 
     public function backup(string $directory): array
     {
+        $this->preflight(); // Recheck immediately before export, not only before checkout.
         $c = $this->connection();
         $path = $directory.'/database.'.($c['driver'] === 'sqlite' ? 'sqlite' : 'sql');
         $tables = array_column(Schema::getTables(), 'name');

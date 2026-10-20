@@ -12,7 +12,7 @@ class AutomaticUpdateService
 {
     public function __construct(private UpdatePolicy $policy, private DatabaseSnapshot $database, private UpdatePortalClient $portal) {}
 
-    public function preflight(string $stage): array
+    public function readiness(): int
     {
         if (PHP_SAPI !== 'cli' && filter_var(ini_get('opcache.enable'), FILTER_VALIDATE_BOOLEAN) && ! filter_var(ini_get('opcache.validate_timestamps'), FILTER_VALIDATE_BOOLEAN)) {
             throw new RuntimeException('This host requires a PHP worker restart after file changes. Use an operator-assisted deployment.');
@@ -20,7 +20,6 @@ class AutomaticUpdateService
         if (realpath(storage_path()) !== realpath(base_path('storage'))) {
             throw new RuntimeException('A custom storage directory needs an operator-reviewed update configuration.');
         }
-        $plan = $this->policy->inspect($stage);
         if (is_file(storage_path('framework/down'))) {
             throw new RuntimeException('An installation already in maintenance needs operator review first.');
         }
@@ -35,6 +34,23 @@ class AutomaticUpdateService
                 throw new RuntimeException('Finish or recover the current update before starting another.');
             }
         }
+        if (! in_array(config('queue.default'), ['database', 'sync', 'null'], true)) {
+            throw new RuntimeException('This queue backend needs an operator-reviewed worker pause before automatic updates.');
+        }
+        if (config('queue.default') === 'database' && Schema::hasTable('jobs') && DB::table('jobs')->whereNotNull('reserved_at')->exists()) {
+            throw new RuntimeException('Wait for active queue jobs to finish before updating.');
+        }
+        if (disk_free_space(UpdatePaths::root()) < 67108864 + 2 * $size) {
+            throw new RuntimeException('Insufficient disk space for verified update backups.');
+        }
+
+        return $size;
+    }
+
+    public function preflight(string $stage): array
+    {
+        $size = $this->readiness();
+        $plan = $this->policy->inspect($stage);
         $needed = 67108864 + 2 * $size;
         foreach ($plan['files'] as $name => $hash) {
             $destination = UpdatePaths::destination($name);

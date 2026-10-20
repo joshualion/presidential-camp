@@ -99,7 +99,7 @@ class OfficialUpdateService
         }
     }
 
-    public function prepare(): array
+    public function prepare(?array $expected = null): array
     {
         File::ensureDirectoryExists(storage_path('app/updates'), 0700);
         $lock = fopen(storage_path('app/updates/prepare.lock'), 'c');
@@ -113,20 +113,25 @@ class OfficialUpdateService
             if (File::isDirectory(storage_path('app/updates/staged')) && File::directories(storage_path('app/updates/staged')) !== []) {
                 throw new RuntimeException('An update is already staged. Review or discard it before preparing another.');
             }
-            return $this->prepareUnlocked();
+            return $this->prepareUnlocked($expected);
         } finally {
             flock($lock, LOCK_UN);
             fclose($lock);
         }
     }
 
-    private function prepareUnlocked(): array
+    private function prepareUnlocked(?array $expected = null): array
     {
         $status = $this->check();
         if (empty($status['available']) || empty($status['verified'])) {
             throw new RuntimeException('No newer verified release is available for preparation.');
         }
         $manifest = $status['manifest'];
+        if ($expected && (($expected['version'] ?? null) !== $status['latest_version'] ||
+            ! hash_equals($manifest['checksum_sha256'], (string) ($expected['sha256'] ?? '')))) {
+            throw new \App\Services\Updates\UpdateFlowException('release', 'The available release changed. Review it again before updating.');
+        }
+        app(\App\Services\Updates\UpdateDownloadAccess::class)->assertAllowed($status);
         $id = (string) Str::uuid();
         $directory = storage_path('app/updates/staged/'.$id);
         File::ensureDirectoryExists($directory, 0700);

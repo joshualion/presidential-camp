@@ -243,6 +243,10 @@ return [
     ],
 
     'required_files' => [
+        'app/Services/Updates/AutomaticUpdateFlow.php',
+        'app/Services/Updates/UpdateDownloadAccess.php',
+        'app/Services/Updates/UpdateFlowException.php',
+        'resources/views/backend/shared/automatic-update.blade.php',
         'app/Services/OfflineRegistrationForm.php',
         'app/Services/MemberEnrollmentSchema.php',
         'resources/views/backend/shared/member/offline-form-options.blade.php',

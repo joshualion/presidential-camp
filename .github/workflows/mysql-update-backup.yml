@@ -1,0 +1,59 @@
+name: MySQL automatic-update backup checks
+on:
+  push:
+    branches: ['fix/coverage-first-updates']
+    paths:
+      - '.github/workflows/mysql-update-backup.yml'
+      - 'scripts/verify-mysql-update-backup.php'
+      - 'app/Services/Updates/**'
+  pull_request:
+    paths:
+      - '.github/workflows/mysql-update-backup.yml'
+      - 'scripts/verify-mysql-update-backup.php'
+      - 'app/Services/Updates/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  mysql-backup:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: updater-ci-password
+          MYSQL_DATABASE: campaign_updater_ci
+          MYSQL_ROOT_HOST: '%'
+        ports: ['33060:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -pupdater-ci-password"
+          --health-interval=10s --health-timeout=5s --health-retries=10
+    env:
+      APP_ENV: testing
+      APP_URL: http://localhost
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 33060
+      DB_DATABASE: campaign_updater_ci
+      DB_USERNAME: root
+      DB_PASSWORD: updater-ci-password
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, xml, curl, zip, gd, bcmath, intl, pdo_mysql
+          tools: composer:v2
+          coverage: none
+      - name: Ensure MySQL backup and recovery clients
+        run: |
+          if ! command -v mysqldump >/dev/null; then
+            sudo apt-get update
+            sudo apt-get install -y mysql-client
+          fi
+      - run: composer install --prefer-dist --no-interaction
+      - run: cp .env.example .env && php artisan key:generate --force
+      - run: php scripts/verify-mysql-update-backup.php
