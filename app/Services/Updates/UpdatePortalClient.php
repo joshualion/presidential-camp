@@ -29,12 +29,12 @@ class UpdatePortalClient
     {
         $p = storage_path('app/private/deployment-registration.json');
         if (! is_file($p)) {
-            throw new RuntimeException('Complete the one-time installation registration in Settings first.');
+            throw new UpdateFlowException('registration', 'Connect this installation before using automatic updates.');
         }
         $s = json_decode(Crypt::decryptString(file_get_contents($p)), true, 64, JSON_THROW_ON_ERROR);
         $host = strtolower((string) parse_url(config('app.url'), PHP_URL_HOST));
         if (empty($s['registered']) || empty($s['id']) || empty($s['token']) || ($s['domain'] ?? null) !== $host || ! empty($s['pending_revoke'])) {
-            throw new RuntimeException('Confirm the installation registration and current domain before using paid updates.');
+            throw new UpdateFlowException('registration', 'Confirm this installation and its current domain before using automatic updates.');
         }
 
         return $s;

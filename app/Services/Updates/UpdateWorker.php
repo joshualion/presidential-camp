@@ -32,6 +32,8 @@ class UpdateWorker
         if (! $lock || ! flock($lock, LOCK_EX)) {
             throw new RuntimeException('Cannot acquire update lock.');
         }
+        $previousJobDirectory = getenv('CAMPAIGN_UPDATE_JOB_DIR');
+        putenv('CAMPAIGN_UPDATE_JOB_DIR='.$this->directory);
         try {
             $this->job = json_decode(file_get_contents($this->directory.'/journal.json'), true, 64, JSON_THROW_ON_ERROR);
             if ($this->job['state'] !== 'queued') {
@@ -52,7 +54,11 @@ class UpdateWorker
             UpdateProcess::artisan(['down', '--retry=5']);
             $this->job['maintenance_hash'] = hash_file('sha256', storage_path('framework/down'));
             $this->progress('backing_up', 'Backing up and verifying the database and affected application files.');
-            // Default workers respect maintenance mode. Forced/external workers are unsupported.
+            // Maintenance prevents new normal jobs; allow existing jobs to drain.
+            $deadline = microtime(true) + 30;
+            while (config('queue.default') === 'database' && Schema::hasTable('jobs') && DB::table('jobs')->whereNotNull('reserved_at')->exists() && microtime(true) < $deadline) {
+                usleep(250000);
+            }
             if (config('queue.default') === 'database' && Schema::hasTable('jobs') && DB::table('jobs')->whereNotNull('reserved_at')->exists()) {
                 throw new RuntimeException('A queue job is still active.');
             }
@@ -79,6 +85,10 @@ class UpdateWorker
             UpdateProcess::artisan(['campaign:updates-health', $this->job['target_version']]);
             UpdateProcess::artisan(['config:cache']);
             UpdateProcess::artisan(['view:cache']);
+            // Commit the verified outcome BEFORE reopening. A crash after this
+            // point must never roll back a database that has accepted new writes.
+            $this->job['installation_verified'] = true;
+            $this->progress('reopening', 'The update passed verification. Reopening the application.');
             $this->releaseMaintenance();
             try {
                 UpdateProcess::artisan(['queue:restart']);
@@ -104,23 +114,46 @@ class UpdateWorker
             chmod($this->directory.'/failure.log', 0600);
             $this->job['failure_phase'] = $this->job['state'];
             $this->job['error_class'] = get_class($exception); // No credentials or raw command output in browser-readable progress.
-            if (! empty($this->job['backup_complete']) && empty($this->job['migrations_started'])) {
+            if (! empty($this->job['installation_verified'])) {
                 try {
+                    $this->releaseMaintenance();
+                    $this->progress('completed', 'The verified update is installed. Some cleanup or receipt reporting will be retried.');
+                    try {
+                        $this->portal->finish($this->job, true);
+                    } catch (\Throwable) {
+                        $this->job['portal_receipt_pending'] = true;
+                        UpdatePaths::write($this->directory.'/journal.json', $this->job);
+                    }
+                } catch (\Throwable) {
+                    $this->progress('recovery_required', 'The update passed verification, but maintenance ownership needs review. No database rollback was attempted.');
+                }
+                return;
+            }
+            if (! empty($this->job['backup_complete'])) {
+                try {
+                    $this->progress('recovering', 'Restoring the verified pre-update application and database.');
+                    // Validate all file backups before changing either files or database.
+                    $this->validateFileBackups();
+                    if (! empty($this->job['migrations_started'])) {
+                        $this->database->restore($this->directory.'/backup', $this->job['database'], $this->job['created_tables']);
+                    }
                     $this->restoreFiles();
                     $this->clearGeneratedCaches();
+                    UpdateProcess::artisan(['campaign:updates-health', $this->job['source_version']]);
                     $this->releaseMaintenance();
-                    $this->progress('failed', 'The update stopped and application files were restored. Your purchase can be retried.');
-                } catch (\Throwable) {
-                    $this->progress('recovery_required', 'The application remains in maintenance. Use the private recovery kit or contact support.');
+                    $this->progress('recovered', 'The update stopped and the previous application was restored automatically. Your coverage remains available for retry.');
+                } catch (\Throwable $recoveryError) {
+                    file_put_contents($this->directory.'/recovery-failure.log', (string) $recoveryError);
+                    chmod($this->directory.'/recovery-failure.log', 0600);
+                    $this->progress('recovery_required', 'Automatic recovery could not be verified. The application remains protected in maintenance with its private backups.');
                 }
-            } elseif (empty($this->job['backup_complete'])) {
+            } else {
                 try {
                     $this->releaseMaintenance();
+                    $this->progress('failed', 'The backup stopped before application changes. Your coverage remains available for retry.');
                 } catch (\Throwable) {
+                    $this->progress('recovery_required', 'Maintenance ownership changed. Application files were not updated.');
                 }
-                $this->progress('failed', 'Pre-update checks or backup failed. Application files were not updated; your purchase can be retried.');
-            } else {
-                $this->progress('recovery_required', 'A migration or health check failed. The application remains in maintenance with verified backups for operator recovery.');
             }
             try {
                 $this->portal->finish($this->job, false);
@@ -129,6 +162,7 @@ class UpdateWorker
                 UpdatePaths::write($this->directory.'/journal.json', $this->job);
             }
         } finally {
+            $previousJobDirectory === false ? putenv('CAMPAIGN_UPDATE_JOB_DIR') : putenv('CAMPAIGN_UPDATE_JOB_DIR='.$previousJobDirectory);
             flock($lock, LOCK_UN);
             fclose($lock);
         }
@@ -156,9 +190,9 @@ class UpdateWorker
             throw new RuntimeException('Environment backup failed.');
         }
         $connection = config('database.connections.'.config('database.default'));
-        $connection = array_intersect_key($connection, array_flip(['driver', 'database', 'host', 'port', 'username', 'password', 'unix_socket', 'options']));
+        $connection = array_intersect_key($connection, array_flip(['driver', 'database', 'host', 'port', 'username', 'password', 'unix_socket', 'options', 'charset', 'collation']));
         UpdatePaths::write($backup.'/connection.json', $connection);
-        $recovery = is_file(base_path('tools/updater/recover.php')) ? base_path('tools/updater/recover.php') : storage_path('app/updates/bootstrap/recover.php');
+        $recovery = is_file(storage_path('app/updates/bootstrap/recover.php')) ? storage_path('app/updates/bootstrap/recover.php') : base_path('tools/updater/recover.php');
         if (! is_file($recovery) || ! copy($recovery, $this->directory.'/recover.php')) {
             throw new RuntimeException('A standalone recovery kit is required.');
         } chmod($this->directory.'/recover.php', 0600);
@@ -183,6 +217,23 @@ class UpdateWorker
         chmod($tmp, $this->job['original_files'][$name]['mode'] ?? 0644);
         if (! rename($tmp, $destination)) {
             throw new RuntimeException('Application replacement failed.');
+        }
+    }
+
+    private function validateFileBackups(): void
+    {
+        foreach ($this->job['original_files'] as $name => $entry) {
+            if ($entry['exists']) {
+                $source = $this->directory.'/backup/files/'.$name;
+                if (! is_file($source) || ! hash_equals($entry['sha256'], hash_file('sha256', $source))) {
+                    throw new RuntimeException('Application backup checksum mismatch.');
+                }
+            } else {
+                $destination = UpdatePaths::destination($name);
+                if (is_file($destination) && ! hash_equals($this->job['files'][$name], hash_file('sha256', $destination))) {
+                    throw new RuntimeException('An added application file changed.');
+                }
+            }
         }
     }
 

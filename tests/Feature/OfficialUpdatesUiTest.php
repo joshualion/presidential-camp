@@ -21,7 +21,7 @@ test('updates displays the latest cached result and keeps registration in settin
     ]));
     $this->actingAs($this->uiAdmin)->get(route('superadmin.updates'))
         ->assertOk()->assertViewHas('shouldCheck', false)
-        ->assertSee('Download and verify 9.0.0')->assertDontSee('Register this deployment')
+        ->assertSee('Update automatically')->assertDontSee('Download and verify 9.0.0')->assertDontSee('Register this deployment')
         ->assertDontSee('Remove registration and stop reporting');
     $this->get(route('superadmin.deployment.settings'))->assertOk()->assertSee('Installation registration');
     Http::assertNothingSent();

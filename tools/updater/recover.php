@@ -6,6 +6,7 @@ if (PHP_SAPI !== 'cli') {
     exit;
 }
 umask(0077);
+set_time_limit(0);
 function stopRecovery(string $message): never
 {
     fwrite(STDERR, $message."\n");
@@ -23,7 +24,10 @@ try {
     if (! preg_match('/^[a-f0-9-]{36}$/D', $job['id'] ?? '') || ! in_array('--confirm='.$job['id'], $argv, true)) {
         stopRecovery('Pass --confirm=<job UUID>. Add --restore-database when migrations have started; this restores the verified pre-update snapshot.');
     }
-    if (! in_array($job['state'], ['recovery_required', 'applying', 'migrating', 'verifying', 'maintenance', 'backing_up'], true) || empty($job['backup_complete'])) {
+    if (! empty($job['installation_verified'])) {
+        stopRecovery('This update already passed final verification. Database rollback after reopening is prohibited.');
+    }
+    if (! in_array($job['state'], ['recovery_required', 'applying', 'migrating', 'verifying', 'maintenance', 'backing_up', 'recovering'], true) || empty($job['backup_complete'])) {
         stopRecovery('This job has no complete recoverable backup or is already finished.');
     }
     if (! empty($job['migrations_started']) && ! in_array('--restore-database', $argv, true)) {
@@ -37,14 +41,22 @@ try {
     if (! $lock || ! flock($lock, LOCK_EX | LOCK_NB)) {
         stopRecovery('An update worker is still active.');
     }
+    $commandLock = fopen(__DIR__.'/commands.lock', 'c');
+    if (! $commandLock || ! flock($commandLock, LOCK_EX | LOCK_NB)) {
+        stopRecovery('An update command is still running; recovery will wait.');
+    }
     $down = $base.'/storage/framework/down';
     if (! is_file($down) || ! hash_equals($job['maintenance_hash'] ?? '', hash_file('sha256', $down))) {
         stopRecovery('Maintenance ownership changed; review with an operator.');
     }
     $backup = __DIR__.'/backup';
     $database = $backup.'/'.$job['database']['filename'];
-    if (! in_array($job['database']['filename'], ['database.sql', 'database.sqlite'], true) || ! is_file($database) || ! hash_equals($job['database']['sha256'], hash_file('sha256', $database))) {
+    if (! in_array($job['database']['filename'], ['database.sql', 'database.sqlite', 'database.jsonl'], true) || ! is_file($database) || ! hash_equals($job['database']['sha256'], hash_file('sha256', $database))) {
         stopRecovery('Database backup integrity check failed. No restore attempted.');
+    }
+    if ($job['database']['filename'] === 'database.jsonl') {
+        require_once __DIR__.'/engine/MysqlBackup.php';
+        \App\Services\Updates\MysqlBackup::validate($database);
     }
     $paths = [];
     foreach ($job['original_files'] as $name => $entry) {
@@ -104,6 +116,11 @@ try {
             }
             @unlink($live.'-wal');
             @unlink($live.'-shm');
+        } elseif ($job['database']['filename'] === 'database.jsonl') {
+            $pdo = null;
+            $pdo = \App\Services\Updates\MysqlBackup::connect($c);
+            \App\Services\Updates\MysqlBackup::restore($pdo, $database, $job['created_tables']);
+            $pdo = null;
         } else {
             $client = $job['mysql_client'];
             if (! is_file($client) || ! is_executable($client)) {
@@ -141,6 +158,14 @@ try {
             }
         }
     }
+    if (! empty($job['migrations_started']) && ($job['database']['driver'] ?? '') === 'mysql' && ! empty($job['database']['inventory'])) {
+        require_once __DIR__.'/engine/MysqlBackup.php';
+        $verify = \App\Services\Updates\MysqlBackup::connect($c);
+        if (\App\Services\Updates\MysqlBackup::inventory($verify) !== $job['database']['inventory']) {
+            stopRecovery('Restored database objects or engines do not match the verified backup.');
+        }
+        $verify = null;
+    }
     foreach ($paths as $name => $dest) {
         $entry = $job['original_files'][$name];
         if (! $entry['exists']) {
@@ -164,6 +189,15 @@ continue;
     }
     foreach (glob($base.'/storage/framework/views/*.php') as $view) {
         unlink($view);
+    }
+    if (in_array('--automatic', $argv, true)) {
+        if (empty($job['source_version']) || ! is_file($base.'/artisan')) {
+            stopRecovery('Recovered application health could not be checked.');
+        }
+        $health = proc_open([PHP_BINARY, $base.'/artisan', 'campaign:updates-health', $job['source_version']], [0 => ['file', '/dev/null', 'r'], 1 => ['file', __DIR__.'/recovery.log', 'a'], 2 => ['file', __DIR__.'/recovery.log', 'a']], $pipes, $base);
+        if (! is_resource($health) || proc_close($health) !== 0) {
+            stopRecovery('Recovered application health check failed; maintenance stays enabled.');
+        }
     }
     if (! hash_equals($job['maintenance_hash'], hash_file('sha256', $down)) || ! unlink($down)) {
         stopRecovery('Files restored; maintenance requires operator review.');

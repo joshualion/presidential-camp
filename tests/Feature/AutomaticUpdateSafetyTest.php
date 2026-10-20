@@ -249,6 +249,10 @@ test('authorized startup writes a valid private worker and permits cancelling on
     $p = new Process([PHP_BINARY, '-l', $dir.'/worker.php']);
     $p->run();
     expect($p->getExitCode())->toBe(0)->and(fileperms($dir.'/worker.php') & 0777)->toBe(0600);
+    $supervisorLint = new Process([PHP_BINARY, '-l', $dir.'/supervise.php']);
+    $supervisorLint->run();
+    expect($supervisorLint->getExitCode())->toBe(0)
+        ->and(fileperms($dir.'/supervise.php') & 0777)->toBe(0600);
     $service->cancelQueued($job['id']);
     $journal = json_decode(file_get_contents($dir.'/journal.json'), true);
     expect($journal['state'])->toBe('failed');
@@ -276,7 +280,7 @@ function workerSafetyFixture($test): array
 
     return [$id, $directory, $plan];
 }
-test('a migration process failure keeps maintenance and verified backups until explicit standalone recovery', function () {
+test('a migration failure automatically restores the database and application before reopening', function () {
     [$id,$directory,$plan] = workerSafetyFixture($this);
     $live = $this->sandbox.'/live.sqlite';
     touch($live);
@@ -292,15 +296,14 @@ test('a migration process failure keeps maintenance and verified backups until e
     try {
         (new UpdateWorker($policy, app(DatabaseSnapshot::class), $portal))->run($id);
         $journal = json_decode(file_get_contents($directory.'/journal.json'), true);
-        expect($journal['state'])->toBe('recovery_required')->and($journal['migrations_started'])->toBeTrue()->and($journal['backup_complete'])->toBeTrue()->and(is_file(storage_path('framework/down')))->toBeTrue()->and(file_get_contents($this->sandbox.'/app/Existing.php'))->toBe('new application');
+        $this->assertSame('recovered', $journal['state'], (is_file($directory.'/failure.log') ? file_get_contents($directory.'/failure.log') : '').(is_file(storage_path('app/updates/command-errors.log')) ? file_get_contents(storage_path('app/updates/command-errors.log')) : ''));
+        expect($journal['state'])->toBe('recovered')
+            ->and($journal['migrations_started'])->toBeTrue()
+            ->and($journal['backup_complete'])->toBeTrue()
+            ->and(is_file(storage_path('framework/down')))->toBeFalse()
+            ->and(file_get_contents($this->sandbox.'/app/Existing.php'))->toBe('old application');
         DB::purge('update_worker_fixture');
-        expect(DB::table('customers')->value('name'))->toBe('Partial migration write');
-        DB::purge('update_worker_fixture');
-        $p = new Process([PHP_BINARY, $directory.'/recover.php', '--confirm='.$id, '--restore-database']);
-        $p->run();
-        expect($p->getOutput().$p->getErrorOutput())->toContain('Recovery completed')->and($p->getExitCode())->toBe(0);
-        DB::purge('update_worker_fixture');
-        expect(DB::table('customers')->value('name'))->toBe('Existing customer')->and(file_get_contents($this->sandbox.'/app/Existing.php'))->toBe('old application');
+        expect(DB::table('customers')->value('name'))->toBe('Existing customer');
     } finally {
         DB::purge('update_worker_fixture');
         config(['database.default' => 'sqlite']);
@@ -380,4 +383,80 @@ test('the signed 1.1.4 policy admits 1.1.3 and only the reviewed NDC migration',
     expect($plan['source_version'])->toBe('1.1.3')
         ->and($plan['target_version'])->toBe('1.1.4')
         ->and($plan['pending_migrations'])->toBe([$name => $approved[$name]]);
+});
+
+
+test('the independent supervisor recovers a terminated worker without loading Laravel', function () {
+    [$id, $dir, $live] = recoveryFixture($this);
+    $job = json_decode(file_get_contents($dir.'/journal.json'), true);
+    $job['state'] = 'migrating';
+    $job['source_version'] = '1.0.8';
+    UpdatePaths::write($dir.'/journal.json', $job);
+    File::put($this->sandbox.'/artisan', '<?php exit(0);');
+    File::put($dir.'/worker.php', '<?php exit(137);');
+    File::put($dir.'/supervise.php', '<?php require '.var_export($this->originalBase.'/app/Services/Updates/UpdateSupervisor.php', true).'; App\\Services\\Updates\\UpdateSupervisor::run(__DIR__,PHP_BINARY);');
+    $process = new Process([PHP_BINARY, $dir.'/supervise.php']);
+    $process->run();
+    expect($process->getExitCode())->toBe(0);
+    $job = json_decode(file_get_contents($dir.'/journal.json'), true);
+    expect($job['state'])->toBe('recovered')
+        ->and(is_file($this->sandbox.'/storage/framework/down'))->toBeFalse()
+        ->and(file_get_contents($this->sandbox.'/app/Example.php'))->toBe('old code');
+    $pdo = new PDO('sqlite:'.$live);
+    expect($pdo->query('SELECT name FROM customers')->fetchColumn())->toBe('Existing customer');
+});
+
+test('automatic recovery refuses to race a surviving update command', function () {
+    [$id, $dir, $live] = recoveryFixture($this);
+    $lock = fopen($dir.'/commands.lock', 'c');
+    flock($lock, LOCK_EX);
+    try {
+        $process = new Process([PHP_BINARY, $dir.'/recover.php', '--confirm='.$id, '--restore-database', '--automatic']);
+        $process->run();
+        expect($process->getExitCode())->toBe(1)
+            ->and(file_get_contents($this->sandbox.'/app/Example.php'))->toBe('new code')
+            ->and(is_file($this->sandbox.'/storage/framework/down'))->toBeTrue();
+        $pdo = new PDO('sqlite:'.$live);
+        expect($pdo->query('SELECT name FROM customers')->fetchColumn())->toBe('Partial migration');
+    } finally {
+        flock($lock, LOCK_UN);
+        fclose($lock);
+    }
+});
+
+test('automatic recovery keeps maintenance enabled when restored health fails', function () {
+    [$id, $dir, $live] = recoveryFixture($this);
+    $job = json_decode(file_get_contents($dir.'/journal.json'), true);
+    $job['source_version'] = '1.0.8';
+    UpdatePaths::write($dir.'/journal.json', $job);
+    File::put($this->sandbox.'/artisan', '<?php exit(1);');
+    $process = new Process([PHP_BINARY, $dir.'/recover.php', '--confirm='.$id, '--restore-database', '--automatic']);
+    $process->run();
+    expect($process->getExitCode())->toBe(1)
+        ->and(file_get_contents($this->sandbox.'/app/Example.php'))->toBe('old code')
+        ->and(is_file($this->sandbox.'/storage/framework/down'))->toBeTrue();
+});
+
+
+test('recovery never rolls back a verified update that may have accepted new writes', function () {
+    [$id, $dir, $live] = recoveryFixture($this);
+    $job = json_decode(file_get_contents($dir.'/journal.json'), true);
+    $job['installation_verified'] = true;
+    $job['state'] = 'reopening';
+    UpdatePaths::write($dir.'/journal.json', $job);
+    $process = new Process([PHP_BINARY, $dir.'/recover.php', '--confirm='.$id, '--restore-database', '--automatic']);
+    $process->run();
+    expect($process->getExitCode())->toBe(1)
+        ->and(file_get_contents($this->sandbox.'/app/Example.php'))->toBe('new code');
+    $pdo = new PDO('sqlite:'.$live);
+    expect($pdo->query('SELECT name FROM customers')->fetchColumn())->toBe('Partial migration');
+    File::put($dir.'/supervise.php', '<?php require '.var_export($this->originalBase.'/app/Services/Updates/UpdateSupervisor.php', true).'; App\\Services\\Updates\\UpdateSupervisor::run(__DIR__,PHP_BINARY,true);');
+    $process = new Process([PHP_BINARY, $dir.'/supervise.php']);
+    $process->run();
+    $job = json_decode(file_get_contents($dir.'/journal.json'), true);
+    expect($process->getExitCode())->toBe(0)
+        ->and($job['state'])->toBe('completed')
+        ->and(is_file($this->sandbox.'/storage/framework/down'))->toBeFalse()
+        ->and(file_get_contents($this->sandbox.'/app/Example.php'))->toBe('new code')
+        ->and($pdo->query('SELECT name FROM customers')->fetchColumn())->toBe('Partial migration');
 });

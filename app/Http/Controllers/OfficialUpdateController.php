@@ -20,16 +20,6 @@ class OfficialUpdateController extends Controller
             }
         }
 
-        $automatic = app(\App\Services\Updates\AutomaticUpdateService::class);
-        $automaticError = null; $entitlement = null;
-        if ($preparedUpdate && !empty($preparedUpdate['id'])) {
-            try {
-                $plan = $automatic->preflight($preparedUpdate['id']);
-                $entitlement = app(\App\Services\Updates\UpdatePortalClient::class)->status($plan['target_version'], $plan['package_sha256']);
-                if (empty($entitlement['entitled']) && empty($entitlement['payment_available'])) $automaticError = 'Paystack or bank payment is not available for this campaign scope and currency. Free manual downloads remain available.';
-                if (empty($entitlement['contact_confirmed'])) $automaticError = 'Confirm your installation contact email before purchasing an automatic update.';
-            } catch (\Throwable $e) { $automaticError = $e instanceof \App\Services\Updates\UpdateException ? $e->getMessage() : 'Automatic updates need a server configuration review. Free manual downloads remain available.'; }
-        }
         $activeJob = null;
         foreach (glob(storage_path('app/updates/jobs/*/journal.json')) as $path) {
             $job = json_decode(file_get_contents($path), true);
@@ -44,7 +34,7 @@ class OfficialUpdateController extends Controller
             'pageTitle' => 'Official Updates', 'profileData' => $request->user(),
             'installedVersion' => $updates->installedVersion(), 'updateStatus' => $status,
             'shouldCheck' => !$checkedAt || $checkedAt < now()->subMinutes(15)->timestamp,
-            'preparedUpdate' => $preparedUpdate, 'automaticError' => $automaticError, 'entitlement' => $entitlement, 'activeJob' => $activeJob,
+            'preparedUpdate' => $preparedUpdate, 'activeJob' => $activeJob,
         ]);
     }
 
@@ -73,15 +63,33 @@ class OfficialUpdateController extends Controller
         }
     }
 
-    public function prepare(OfficialUpdateService $updates)
+    public function automatic(Request $request, OfficialUpdateService $updates, \App\Services\Updates\AutomaticUpdateFlow $flow)
     {
+        return view('backend.shared.automatic-update', $flow->screen() + [
+            'pageTitle' => 'Automatic Update', 'profileData' => $request->user(),
+            'installedVersion' => $updates->installedVersion(),
+        ]);
+    }
+
+    public function prepare(Request $request, \App\Services\Updates\AutomaticUpdateFlow $flow)
+    {
+        $data = $request->validate([
+            'version' => ['required', 'regex:/^\\d+\\.\\d+\\.\\d+$/D'],
+            'sha256' => ['required', 'regex:/^[a-f0-9]{64}$/D'],
+            'update_consent' => 'accepted',
+        ]);
         try {
-            $updates->prepare();
-            return redirect()->route('superadmin.updates')->with('update_notice', 'The signed update is staged for review. Application files, configuration, uploads and the database have not been replaced.');
+            $job = $flow->start($data['version'], $data['sha256']);
+
+            return \App\Services\Updates\UpdateProgress::response($job, $request);
         } catch (\Throwable $exception) {
-            return redirect()->route('superadmin.updates')->with('update_error', 'Update preparation stopped. The package could not be verified, the server cannot stage it, or another package is already staged. Your installed version remains in place.');
+            return redirect()->route('superadmin.updates.automatic')->with('update_error',
+                $exception instanceof \App\Services\Updates\UpdateException
+                    ? $exception->getMessage()
+                    : 'The automatic update could not start. Check coverage and server readiness, then retry.');
         }
     }
+
     public function apply(Request $request, \App\Services\Updates\AutomaticUpdateService $automatic)
     {
         $data = $request->validate(['stage_id' => 'required|uuid', 'update_consent' => 'accepted']);

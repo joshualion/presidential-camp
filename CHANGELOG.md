@@ -1,3 +1,7 @@
+# 1.1.5
+
+Coverage-first automatic updating, engine-aware consistent backups, native-tool fallback, bounded export retries, automatic rollback and independently supervised recovery. Existing 1.1.4 assets remain unchanged. See docs/releases/v1.1.5.md.
+
 # 1.1.4
 
 Administrator navigation and theme fixes, conditional SMS recipient input, printable offline registration PDFs, NDC with an official INEC logo, and reviewed automatic upgrades from 1.1.3. See docs/releases/v1.1.4.md.

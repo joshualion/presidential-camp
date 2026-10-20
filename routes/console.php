@@ -53,3 +53,11 @@ Schedule::call(function () {
  if (!Schema::hasTable('sms_direct_messages')) return;
  \App\Models\SmsDirectBatch::whereHas('messages',fn($q)=>$q->where('status','accepted')->where('submitted_at','>=',now()->subDays(7))->where(fn($q)=>$q->whereNull('last_synced_at')->orWhere('last_synced_at','<',now()->subMinutes(10))))->orderBy('id')->limit(20)->each(fn($batch)=>\App\Jobs\SyncDirectSmsBatch::dispatch($batch->id)->onQueue('sms'));
 })->everyTenMinutes()->name('direct-sms-delivery-sync')->withoutOverlapping();
+
+
+// Progress polling is a second trigger; this also handles disconnected browsers.
+Schedule::call(function () {
+    foreach (glob(storage_path('app/updates/jobs/*/journal.json')) as $journal) {
+        \App\Services\Updates\UpdateSupervisor::kick(dirname($journal));
+    }
+})->everyMinute()->name('automatic-update-recovery')->withoutOverlapping()->evenInMaintenanceMode();
