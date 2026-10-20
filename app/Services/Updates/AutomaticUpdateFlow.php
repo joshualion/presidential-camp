@@ -81,6 +81,18 @@ class AutomaticUpdateFlow
         return null;
     }
 
+    public function startPrepared(string $id): array
+    {
+        $path = UpdatePaths::stage($id).'/journal.json';
+        $stage = is_file($path) ? json_decode(file_get_contents($path), true) : null;
+        if (! is_array($stage) || ($stage['id'] ?? null) !== $id || ($stage['state'] ?? null) !== 'prepared' ||
+            ! is_string($stage['version'] ?? null) || ! is_string($stage['manifest']['checksum_sha256'] ?? null)) {
+            throw new UpdateFlowException('staged_package', 'This prepared package is unavailable. Review the latest automatic update.');
+        }
+
+        return $this->start($stage['version'], $stage['manifest']['checksum_sha256']);
+    }
+
     public function start(string $version, string $hash): array
     {
         $review = $this->review();

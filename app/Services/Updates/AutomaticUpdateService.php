@@ -178,6 +178,9 @@ class AutomaticUpdateService
         try {
             foreach (glob(UpdatePaths::root().'/jobs/*/journal.json') as $p) {
                 $j = json_decode(file_get_contents($p), true);
+                if (! is_array($j) || ! is_string($j['state'] ?? null)) {
+                    throw new RuntimeException('An unreadable update journal needs recovery review before removing packages.');
+                }
                 if (($j['stage_id'] ?? null) === $stage && ! in_array($j['state'] ?? '', ['completed', 'failed', 'recovered'], true)) {
                     throw new RuntimeException('This package belongs to an active or unrecovered update.');
                 }

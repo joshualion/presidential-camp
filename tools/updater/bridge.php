@@ -34,7 +34,7 @@ Route::match(['GET', 'POST'], '/campaign-update-bootstrap.php', function (Reques
                     break;
                 case 'apply':
                     $v = $request->validate(['stage_id' => 'required|uuid', 'update_consent' => 'accepted']);
-                    $job = $automatic->start($v['stage_id']);
+                    $job = app(\App\Services\Updates\AutomaticUpdateFlow::class)->startPrepared($v['stage_id']);
 
                     return UpdateProgress::response($job, $request);
                 default: abort(422);

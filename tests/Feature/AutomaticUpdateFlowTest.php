@@ -295,3 +295,94 @@ test('automatic screen checks latest metadata even when an older check is still 
     Http::assertSent(fn ($request) => $request->url() === 'https://api.github.com/repos/joshualion/Campaign-Manager/releases/latest');
     Http::assertNotSent(fn ($request) => str_ends_with($request->url(), '/campaign-manager.zip'));
 });
+
+
+test('legacy apply requests cannot install an obsolete selected package', function () {
+    $this->flowQuote['entitled'] = true;
+    $old = writeFlowStage('1.1.4', ['checksum_sha256' => str_repeat('b', 64)]);
+    $this->flowAutomatic->shouldNotReceive('start');
+    $this->actingAs($this->flowAdmin)->post(route('superadmin.updates.apply'), [
+        'stage_id' => $old, 'update_consent' => '1',
+    ])->assertRedirect()->assertSessionHas('update_error');
+    expect(File::exists(storage_path('app/updates/staged/'.$old)))->toBeTrue();
+    Http::assertNotSent(fn ($request) => str_ends_with($request->url(), '/campaign-manager.zip'));
+});
+
+test('a failed fresh discovery leaves an old prepared package and backups intact', function () {
+    $this->flowQuote['entitled'] = true;
+    $old = writeFlowStage('1.1.4');
+    Http::fake(['https://api.github.com/*' => Http::response([], 503)]);
+    $this->flowAutomatic->shouldNotReceive('start');
+    expect(fn () => app(AutomaticUpdateFlow::class)->start('9.0.0', str_repeat('a', 64)))->toThrow(\Illuminate\Http\Client\RequestException::class);
+    expect(File::exists(storage_path('app/updates/staged/'.$old)))->toBeTrue();
+    Http::assertNotSent(fn ($request) => str_ends_with($request->url(), '/campaign-manager.zip'));
+});
+
+test('a held preparation lock prevents superseding a package', function () {
+    $this->flowQuote['entitled'] = true;
+    $old = writeFlowStage('1.1.4');
+    $lock = fopen(storage_path('app/updates/prepare.lock'), 'c');
+    flock($lock, LOCK_EX);
+    try {
+        expect(fn () => app(AutomaticUpdateFlow::class)->start('9.0.0', str_repeat('a', 64)))
+            ->toThrow(RuntimeException::class, 'already running');
+        expect(File::exists(storage_path('app/updates/staged/'.$old)))->toBeTrue();
+    } finally {
+        flock($lock, LOCK_UN);
+        fclose($lock);
+    }
+});
+
+test('an older unused stage is replaced by a newly downloaded authenticated latest package', function () {
+    $this->flowQuote['entitled'] = true;
+    $old = writeFlowStage('1.1.4');
+    $contents = '<?php return "latest";';
+    $inner = ['version' => '9.0.0', 'checksums' => ['app/Example.php' => hash('sha256', $contents)]];
+    openssl_sign(app(ReleaseManifestSigner::class)->canonicalPayload($inner), $signature, $this->flowKey, OPENSSL_ALGO_SHA256);
+    $inner['manifest_signature'] = ['algorithm' => 'rsa-sha256', 'value' => base64_encode($signature)];
+    $zipPath = storage_path('fixture.zip');
+    $zip = new ZipArchive;
+    $zip->open($zipPath, ZipArchive::CREATE);
+    $zip->addFromString('app/Example.php', $contents);
+    $zip->addFromString('release-manifest.json', json_encode($inner));
+    $zip->close();
+    $outer = $this->flowStatus['manifest'];
+    unset($outer['manifest_signature']);
+    $outer['checksum_sha256'] = hash_file('sha256', $zipPath);
+    $outer['size_bytes'] = filesize($zipPath);
+    openssl_sign(app(ReleaseManifestSigner::class)->canonicalPayload($outer), $signature, $this->flowKey, OPENSSL_ALGO_SHA256);
+    $outer['manifest_signature'] = ['algorithm' => 'rsa-sha256', 'value' => base64_encode($signature)];
+    $status = $this->flowStatus;
+    $status['manifest'] = $outer;
+    File::put(storage_path('app/updates/check.json'), json_encode($status));
+    $base = 'https://github.com/joshualion/Campaign-Manager/releases/download/v9.0.0/';
+    Http::fake([
+        'https://api.github.com/repos/joshualion/Campaign-Manager/releases/latest' => Http::response([
+            'tag_name' => 'v9.0.0', 'assets' => [
+                ['name' => 'release-manifest.json', 'browser_download_url' => $base.'release-manifest.json'],
+                ['name' => 'campaign-manager.zip', 'browser_download_url' => $base.'campaign-manager.zip'],
+            ],
+        ]),
+        $base.'release-manifest.json' => Http::response($outer),
+        $base.'campaign-manager.zip' => Http::response(File::get($zipPath)),
+    ]);
+    $this->flowAutomatic->shouldReceive('start')->once()->withArgs(function ($id) use ($old, $contents) {
+        return $id !== $old && File::get(storage_path('app/updates/staged/'.$id.'/application/app/Example.php')) === $contents;
+    })->andReturn(['id' => 'latest-worker']);
+    expect(app(AutomaticUpdateFlow::class)->start('9.0.0', $outer['checksum_sha256'])['id'])->toBe('latest-worker');
+    expect(File::exists(storage_path('app/updates/staged/'.$old)))->toBeFalse();
+    Http::assertSent(fn ($request) => $request->url() === $base.'campaign-manager.zip');
+});
+
+test('unreadable job journals stop automatic stage removal', function () {
+    $this->flowQuote['entitled'] = true;
+    $old = writeFlowStage('1.1.4');
+    writeFlowStage('9.0.0', $this->flowStatus['manifest']);
+    $job = storage_path('app/updates/jobs/'.Str::uuid());
+    File::ensureDirectoryExists($job);
+    File::put($job.'/journal.json', '{incomplete');
+    $this->flowAutomatic->shouldNotReceive('start');
+    expect(fn () => app(AutomaticUpdateFlow::class)->start('9.0.0', str_repeat('a', 64)))
+        ->toThrow(\App\Services\Updates\UpdateException::class, 'unreadable');
+    expect(File::exists(storage_path('app/updates/staged/'.$old)))->toBeTrue();
+});
