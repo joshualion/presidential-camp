@@ -1,6 +1,7 @@
 name: Application checks
 on:
   workflow_dispatch:
+  workflow_call:
   pull_request:
   push:
     branches: [main, 'fix/**', 'feat/**']
@@ -29,6 +30,8 @@ jobs:
           node-version: '22'
           cache: npm
       - run: composer install --prefer-dist --no-interaction
+      - name: Lint application, updater, recovery and test PHP
+        run: rg --files app config routes tools scripts tests -g '*.php' -0 | xargs -0 -n 1 php -l
       - run: composer audit --locked --no-interaction
       - run: npm ci
       - run: npm run build

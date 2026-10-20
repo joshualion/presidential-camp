@@ -11,6 +11,15 @@ return [
     ],
 
     'release_notes' => [
+        '1.1.5' => [
+            'Checks hosting readiness and paid coverage before any in-app update archive download.',
+            'Supports consistent backups of mixed InnoDB, MyISAM, MEMORY and MariaDB Aria tables without converting engines.',
+            'Automatically falls back to a private streaming PDO backup when native database tools are unavailable or fail.',
+            'Retries incomplete exports from fresh snapshots and verifies recovery metadata before installation.',
+            'Automatically restores verified database and application backups after failed migrations or health checks.',
+            'Independent supervision and command leases protect recovery after an interrupted update worker.',
+            'Includes a signed updater bootstrap for existing installations through 1.1.4.',
+        ],
         '1.1.4' => [
             'Removes the obsolete Community Settings link; community rules remain in General Settings.',
             'Pasted SMS numbers appear only for the selected pasted-number recipient source.',
@@ -244,6 +253,10 @@ return [
 
     'required_files' => [
         'app/Services/Updates/AutomaticUpdateFlow.php',
+        'app/Services/Updates/DatabaseSnapshot.php',
+        'app/Services/Updates/MysqlBackup.php',
+        'app/Services/Updates/UpdateSupervisor.php',
+        'tools/updater/recover.php',
         'app/Services/Updates/UpdateDownloadAccess.php',
         'app/Services/Updates/UpdateFlowException.php',
         'resources/views/backend/shared/automatic-update.blade.php',
@@ -527,6 +540,7 @@ return [
         '!docs/customer-owned-sms.md',
         '!docs/update-check-recovery.md',
         '!docs/automatic-updates.md',
+        '!docs/coverage-first-updates.md',
         '!docs/automatic-update-coverage-v1.1.2.md',
         '.htaccess',
         '!public/.htaccess',

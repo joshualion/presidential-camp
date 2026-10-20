@@ -12,8 +12,8 @@ try {
         throw new RuntimeException('Supply the existing installed Core directory, not a new installation.');
     }
     $installed = json_decode(file_get_contents($base.'/release-manifest.json'), true, 64, JSON_THROW_ON_ERROR);
-    if (! in_array($installed['version'] ?? '', ['1.0.8', '1.0.9', '1.1.0', '1.1.1', '1.1.2', '1.1.3'], true)) {
-        throw new RuntimeException('This bootstrap supports only 1.0.8, 1.0.9, 1.1.0, 1.1.1, 1.1.2 and 1.1.3.');
+    if (! in_array($installed['version'] ?? '', ['1.0.8', '1.0.9', '1.1.0', '1.1.1', '1.1.2', '1.1.3', '1.1.4'], true)) {
+        throw new RuntimeException('This bootstrap supports only 1.0.8, 1.0.9, 1.1.0, 1.1.1, 1.1.2, 1.1.3 and 1.1.4.');
     }
     $bundle = json_decode(file_get_contents(__DIR__.'/bootstrap-manifest.json'), true, 64, JSON_THROW_ON_ERROR);
     $signature = base64_decode($bundle['signature'] ?? '', true);
@@ -46,7 +46,7 @@ try {
         if (is_file($base.'/storage/framework/down') || is_link($private)) throw new RuntimeException('Cannot replace a bootstrap during maintenance or through a symlink.');
         foreach (glob($base.'/storage/app/updates/jobs/*/journal.json') as $journal) {
             $job = json_decode(file_get_contents($journal), true);
-            if (! is_array($job) || ! in_array($job['state'] ?? '', ['completed', 'recovered'], true)) throw new RuntimeException('Recover or finish existing update jobs before replacing the bootstrap.');
+            if (! is_array($job) || ! in_array($job['state'] ?? '', ['completed', 'recovered', 'failed'], true)) throw new RuntimeException('Recover or finish existing update jobs before replacing the bootstrap.');
         }
         $history = $base.'/storage/app/updates/bootstrap-history/'.gmdate('YmdHis').'-'.bin2hex(random_bytes(6));
         if (! mkdir($history, 0700, true)) throw new RuntimeException('Cannot create bootstrap history.');

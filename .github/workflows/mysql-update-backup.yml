@@ -1,33 +1,41 @@
-name: MySQL automatic-update backup checks
+name: MySQL and MariaDB automatic-update backup checks
 on:
   push:
-    branches: ['fix/coverage-first-updates']
+    branches: ['fix/coverage-first-updates', main]
     paths:
       - '.github/workflows/mysql-update-backup.yml'
       - 'scripts/verify-mysql-update-backup.php'
       - 'app/Services/Updates/**'
+      - 'tools/updater/**'
   pull_request:
     paths:
       - '.github/workflows/mysql-update-backup.yml'
       - 'scripts/verify-mysql-update-backup.php'
       - 'app/Services/Updates/**'
+      - 'tools/updater/**'
   workflow_dispatch:
+  workflow_call:
 permissions:
   contents: read
 jobs:
   mysql-backup:
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        database: ['mysql:8.0', 'mariadb:10.11', 'mariadb:11.4']
+        php: ['8.2', '8.3']
     services:
       mysql:
-        image: mysql:8.0
+        image: ${{ matrix.database }}
         env:
           MYSQL_ROOT_PASSWORD: updater-ci-password
           MYSQL_DATABASE: campaign_updater_ci
           MYSQL_ROOT_HOST: '%'
         ports: ['33060:3306']
         options: >-
-          --health-cmd="mysqladmin ping -h localhost -pupdater-ci-password"
+          --health-cmd="if command -v mysqladmin >/dev/null; then mysqladmin ping -h localhost -pupdater-ci-password; else mariadb-admin ping -h localhost -pupdater-ci-password; fi"
           --health-interval=10s --health-timeout=5s --health-retries=10
     env:
       APP_ENV: testing
@@ -44,16 +52,21 @@ jobs:
           lfs: true
       - uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.3'
+          php-version: '${{ matrix.php }}'
           extensions: mbstring, xml, curl, zip, gd, bcmath, intl, pdo_mysql
           tools: composer:v2
           coverage: none
-      - name: Ensure MySQL backup and recovery clients
+      - name: Install matching native backup and recovery clients
+        env:
+          DATABASE_IMAGE: ${{ matrix.database }}
         run: |
-          if ! command -v mysqldump >/dev/null; then
-            sudo apt-get update
+          sudo apt-get update
+          if [[ "$DATABASE_IMAGE" == mariadb:* ]]; then
+            sudo apt-get install -y mariadb-client
+          else
             sudo apt-get install -y mysql-client
           fi
       - run: composer install --prefer-dist --no-interaction
       - run: cp .env.example .env && php artisan key:generate --force
-      - run: php scripts/verify-mysql-update-backup.php
+      - name: Backup, restore, fallback and failure checks
+        run: php scripts/verify-mysql-update-backup.php

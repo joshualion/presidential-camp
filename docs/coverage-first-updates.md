@@ -1,37 +1,42 @@
-# Coverage-first automatic updating
+# Automatic updating in 1.1.5
 
-The Official Updates page offers **Update automatically** and a free manual GitHub download.
+## Customer flow
 
-1. Automatic Update validates signed release metadata and supported source versions.
-2. Server readiness runs without downloading the archive or changing application data.
-3. Installation coverage is checked with the Portal.
-4. An unpaid installation sees secure checkout. Returning to the same screen refreshes coverage.
-5. An installation with active coverage gets one consented **Back up and update** action.
-6. The server checks coverage again before downloading. It reuses a matching, already-verified staged package where possible. The existing worker still independently authorizes the job, verifies signatures, backs up, applies files, runs approved migrations, checks health and provides recovery.
+1. Check signed release metadata, supported source versions, PHP/background execution, writable paths, storage and database recovery capabilities.
+2. Check the installation's Portal coverage without downloading the application archive.
+3. Uncovered installations continue to Portal checkout; covered installations see **Back up and update**.
+4. Recheck coverage before archive download and independently authorize the installation/scope/version/checksum-bound worker.
+5. Enter maintenance, drain normal database queue jobs, back up, apply verified files, run only approved migrations and check health.
+6. If installation fails, attempt automatic database/file restoration and check the restored application before reopening it. Coverage remains available for retry.
 
-Direct legacy calls to package preparation are gated inside the download service. Free manual ZIPs remain on GitHub. Previously staged files are not silently deleted.
+Free manual downloads remain on GitHub. Old staged packages are retained until explicitly discarded; a matching paid staged package can be reused.
 
-## Database readiness
+## Engine-aware backups
 
-MySQL/MariaDB backups use a transaction-consistent dump. Non-InnoDB base tables remain blocked, including immediately before export. The message names the affected tables and directs the administrator to database backup/hosting work. It does not offer an unrelated installation-registration link. Production code does not convert database engines automatically.
+InnoDB uses a consistent transaction snapshot. A database containing MyISAM, MEMORY or MariaDB Aria uses one dedicated connection holding explicit READ locks across all application base tables for the whole export. READ LOCAL is not sufficient because it allows concurrent MyISAM inserts. No global lock across other hosted databases is requested. No production engine conversion or repair is performed.
 
-A disposable MySQL 8 CI check exercises a mixed InnoDB/MyISAM database, verifies refusal before export, then converts only its own disposable test table and checks a real backup, checksum and restore. Feature tests cover unpaid POST attempts, legacy preparation, paid coverage, payment return, wrong target versions and registration-specific help.
+Native dump/import clients are preferred when both are available. If absent, incompatible or unsuccessful, the updater automatically starts a fresh snapshot with the dependency-free streaming PDO exporter. Its private newline-delimited format stores individual base64 SQL statements, preserves NULL/binary/Unicode/numeric/temporal/spatial values, skips generated insert columns, explicitly includes invisible columns, restores views in dependency order and restores triggers after rows. Schema, routines, triggers, disabled events, engines and row-count manifests are retained. It does not parse SQL delimiters, evaluate PHP or unserialize backup data.
 
-## Existing installations
+Exports are written to partial files with restricted permissions and atomically finalized after completion checks. Incomplete snapshots are discarded, with at most three fresh attempts. PDO restore validates the entire stream before changing data, then checks restored row counts and object/engine inventory. Native restore checks object/engine inventory; a checksum/completion marker alone is not a full proof of restoreability.
 
-Repository changes do not alter files already installed on customer servers. The revised signed bootstrap must be built and verified before using this flow on an existing 1.1.3 installation. Existing published 1.1.4 application ZIPs must not be replaced.
+Readiness performs real CREATE/INSERT/UPDATE/ALTER/DROP probes using randomly named, isolated probe objects; existing client rows are not modified. When corresponding objects exist, it also probes view/trigger/routine/event recreation. It verifies readable definitions and, for mixed engines, actual read-lock acquisition. Probes are immediately removed. Readiness is not a promise that permissions or disk capacity cannot change after checkout.
 
-The owner's reported live database has not been inspected in this session. The earlier 1.1.3-to-1.1.4 release exercise used isolated SQLite and stubbed entitlement calls; it did not prove live MySQL readiness or real payment checkout.
+## Interrupted updates
 
-Read-only diagnosis in the application's database:
+A separate PHP supervisor waits for the worker. On an unexpected exit it checks both the installation lock and artisan command leases before invoking the standalone private recovery kit. A surviving migration must finish before recovery starts. Browser progress polling and the existing Laravel scheduler can restart orphan recovery after a process/host interruption. Scheduler recovery runs in maintenance mode; host-wide restart recovery still needs either a returning progress request or the configured scheduler to run.
 
-```sql
-SELECT TABLE_NAME, ENGINE
-FROM information_schema.TABLES
-WHERE TABLE_SCHEMA = DATABASE()
-  AND TABLE_TYPE = 'BASE TABLE'
-  AND UPPER(COALESCE(ENGINE, '')) <> 'INNODB'
-ORDER BY TABLE_NAME;
-```
+The worker journals the completed database/file backup before applying files. It validates all file backups before rollback, restores the database after started migrations, restores managed files, clears generated caches and verifies the previous version through a fresh CLI health check. The standalone recovery kit does not depend on Laravel/vendor boot for file/database restoration. Failed recovery verification leaves maintenance enabled and retains private backups and diagnostics. Final verification is durably committed before reopening; recovery must never restore an old snapshot after the application may have accepted new writes.
 
-Inspect and verify a full backup before reviewing any engine conversion. Do not alter tables blindly or bypass backup checks.
+Automatic updating assumes exclusive application write ownership while in maintenance. Forced queue workers, direct external writers, independent schema changes, active database events and unsupported distributed/remote database topologies need a verified pause strategy. Database table locks protect a mixed-engine export, not later migration/rollback writes. Discarding/remote engines such as BLACKHOLE/FEDERATED are not treated as ordinary local tables. Denied privileges, corruption and exhausted storage cannot be bypassed safely.
+
+## Existing installations and verification
+
+Code already installed in 1.1.3/1.1.4 does not change when a new release is discovered. Install the new signed companion bootstrap once; then use its authenticated Automatic Update screen. The bundle preserves existing Core, environment, uploads and database, and verifies every updater file against the established signing identity. It accepts source versions through 1.1.4 and can archive a previous bootstrap when no active/unrecovered job exists.
+
+Version 1.1.4 assets must never be replaced. Prepare 1.1.5 with:
+
+- PHP 8.2/8.3 application, worker, recovery and bootstrap tests.
+- MySQL 8.0 and MariaDB 10.11/11.4 real backup/restore, native/PDO fallback, concurrency, engine preservation, denied permissions, truncation and unexpected-table checks.
+- Signed bootstrap rehearsals from official 1.1.3 and 1.1.4 archives into the immutable signed 1.1.5 candidate.
+
+These checks are release gates. Test code being present does not mean it passed. Isolated rehearsals stub entitlement calls; they do not exercise real payment or the owner's production database.
