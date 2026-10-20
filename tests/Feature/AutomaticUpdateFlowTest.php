@@ -174,3 +174,19 @@ test('coverage revoked after review is rechecked before the archive request', fu
         ->toThrow(UpdateFlowException::class, 'coverage');
     Http::assertNotSent(fn ($request) => str_ends_with($request->url(), '/campaign-manager.zip'));
 });
+
+
+test('the legacy bootstrap renders both unpaid checkout and covered update screens', function () {
+    app('view')->addNamespace('updaterRendering', base_path('tools/updater'));
+    $data = [
+        'installedVersion' => '1.1.3', 'registration' => ['registered' => true],
+        'status' => $this->flowStatus, 'entitlement' => $this->flowQuote,
+        'issue' => null, 'job' => null, 'stage' => null,
+    ];
+    $unpaid = view('updaterRendering::screen', $data)->render();
+    expect($unpaid)->toContain('Continue to secure payment')->not->toContain('Back up and update to');
+    $data['entitlement']['entitled'] = true;
+    $covered = view('updaterRendering::screen', $data)->render();
+    expect($covered)->toContain('Back up and update to 9.0.0')->not->toContain('Continue to secure payment');
+    Http::assertNothingSent();
+});

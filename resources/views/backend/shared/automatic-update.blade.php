@@ -10,7 +10,7 @@
 <strong>Automatic updating needs attention</strong><p class="mb-0 mt-2">{{ $issue['message'] }}</p>
 @if($issue['reason'] === 'registration')<a class="d-inline-block mt-2" href="{{ route('superadmin.deployment.settings') }}">Connect or confirm this installation</a>@endif
 </div>
-<p class="cm-help">Readiness checks do not change your database, install an update, or charge you.</p>
+<p class="cm-help">Readiness checks verify backup and recovery support before payment.</p>
 @elseif(!empty($entitlement['entitled']))
 <div class="alert alert-success"><strong>Your automatic updates are covered.</strong>
 @if(!empty($entitlement['coverage_expires_at']))<p class="mb-0">Coverage ends {{ \Illuminate\Support\Carbon::parse($entitlement['coverage_expires_at'])->format('j M Y') }}.</p>@endif
@@ -28,7 +28,13 @@
 <p class="cm-help mt-3">After payment, return here and check coverage. The update package is downloaded only after coverage is confirmed and you start the update.</p>
 @endif
 <div class="cm-actions mt-3">
-<a class="btn btn-outline-secondary" href="{{ route('superadmin.updates.automatic') }}">@if($entitlement && empty($entitlement['entitled']))I have paid — check coverage@else Check readiness and coverage again@endif</a>
+<a class="btn btn-outline-secondary" href="{{ route('superadmin.updates.automatic') }}">
+@if($entitlement && empty($entitlement['entitled']))
+I have paid — check coverage
+@else
+Check readiness and coverage again
+@endif
+</a>
 <a href="https://github.com/joshualion/Campaign-Manager/releases" target="_blank" rel="noopener">Free manual download on GitHub</a>
 </div>
 @if(!empty($prepared['id']))
