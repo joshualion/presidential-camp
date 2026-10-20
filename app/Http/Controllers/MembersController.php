@@ -991,6 +991,16 @@ class MembersController extends Controller
      public function addMember()
      {
          $profileData = $this->getProfileData();
+         // This branch deliberately uses the existing add-member route and its middleware.
+         if (request()->boolean('offline_form')) {
+             $validated = request()->validate(['enrollment_level' => 'nullable|string|max:40']);
+             $level = $validated['enrollment_level'] ?? 'user';
+             abort_unless($this->packageRoles()->canAssignAccessLevel($profileData, $level), 403);
+
+             return app(\App\Services\OfflineRegistrationForm::class)->download(
+                 $profileData, $level, $this->memberLocationRules($level)
+             );
+         }
          $pageTitle = 'Add Member';
          $locationOptions = $this->locationForms()->options($profileData);
          $locationForm = $this->locationForms()->context($profileData);

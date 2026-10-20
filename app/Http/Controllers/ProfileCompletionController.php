@@ -112,30 +112,11 @@ class ProfileCompletionController extends Controller
     {
         $profileData = $this->getProfileData();
         $request->merge($this->locationForms()->mergeFixedPayload($request->all()));
-        $requireBank = optional(SystemSetting::first())->require_bank_details;
-        $bankRule = $requireBank ? 'required|string|max:255' : 'nullable|string|max:255';
-        $accountRule = $requireBank ? 'required|string|size:10' : 'nullable|string|size:10';
-
-         // Validation rules
         $locationRules = $this->profileLocationRules($profileData->access_level);
-
-         $validatedData = $request->validate(array_merge([
-            'firstname' => 'required|string|max:255',
-            'lastname' => 'required|string|max:255',
-            'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($profileData->id)],
-            'phone' => 'required|string|max:15|unique:users,phone,' .$profileData->id,
-            'validvoter' => 'required|in:yes,no',
-            'vin' => 'nullable|string|max:255',
-            'age_grade_id' => 'required|exists:age_grades,id',
-            'gender' => 'required|in:male,female',
-            'religion_id' => 'required|exists:religions,id',
-            'bank' => $bankRule,
-            'bank_account_number' => $accountRule,
-            'address' => 'nullable|string|max:255',
-            'occupation' => 'nullable|string|max:255',
-            'qualification' => 'nullable|string|max:255',
-            'photo' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
-        ], $locationRules));
+        $validatedData = $request->validate(array_merge(
+            app(\App\Services\MemberEnrollmentSchema::class)->profileRules($profileData),
+            $locationRules
+        ));
 
         $scopeErrors = app(LicensedScopeQueryService::class)->payloadErrors([
             'state_id' => $validatedData['state_id'] ?? null,

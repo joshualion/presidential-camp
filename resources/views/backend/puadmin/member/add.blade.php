@@ -15,6 +15,7 @@
                 </div>
                 <!-- /.card-header -->
                 <div class="card-body">
+@include('backend.shared.member.offline-form-options')
 
                     <form action="{{ route($profileData->access_level.'.member.store') }}" method="POST">
                         @csrf

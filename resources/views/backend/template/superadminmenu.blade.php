@@ -268,11 +268,13 @@
                   <li class="nav-item">
                     <a href="{{ route($profileData->access_level.'.messages.page') }}" class="nav-link">
                       <i class="fas fa-comments nav-icon"></i>
-                      <p>Internal Communication</p>
+                      <p>Messenger</p>
                     </a>
                   </li>
 
                   @include('backend.template.partials.email-notifications-menu-item')
+@include('backend.template.partials.sms-menu')
+@include('backend.template.partials.announcements-menu-item')
 
                 <!-- <li class="nav-item">
                   <a href="#" class="nav-link">
@@ -293,9 +295,7 @@
   {{-- / Messaging --}}
 
 
-@include('backend.template.partials.sms-menu')
 
-  @include('backend.template.partials.announcements-menu-item')
 
      {{--  Products Menu --}}
      {{-- <li class="nav-item  menu-close">
@@ -421,6 +421,7 @@
                 </p>
               </a>
               <ul class="nav nav-treeview">
+@include('backend.template.partials.sms-provider-menu-item')
           @if(($profileData->hasRole('National ICT Director')) || ( $profileData->access_level == 'superadmin'))
 
                 <li class="nav-item">
@@ -486,16 +487,6 @@
                     <p>Political Parties</p>
                   </a>
                 </li>
-
-
-                @if(app(\App\Services\CommunityRealtimeService::class)->moduleAvailable())
-                <li class="nav-item">
-                  <a href="{{ url('superadmin/community/forum') }}" class="nav-link">
-                  <i class="fas fa-comments nav-icon"></i>
-                    <p> Community Settings</p>
-                  </a>
-                </li>
-                @endif
 
                 <li class="nav-item">
                   <a href="{{ url('superadmin/setting/agegrade') }}" class="nav-link">

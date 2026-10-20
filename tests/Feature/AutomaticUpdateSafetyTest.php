@@ -367,3 +367,17 @@ test('corrective release accepts each reviewed source without replaying installe
         ->and($plan['target_version'])->toBe('1.1.3')
         ->and($plan['pending_migrations'])->toBe([]);
 })->with(['1.0.8', '1.0.9', '1.1.0', '1.1.1', '1.1.2']);
+
+test('the signed 1.1.4 policy admits 1.1.3 and only the reviewed NDC migration', function () {
+    config(['release.identity.version' => '1.1.3']);
+    $name = '2026_10_20_000001_add_nigeria_democratic_congress';
+    $content = file_get_contents($this->originalBase.'/database/migrations/'.$name.'.php');
+    $approved = config('updates.approved_migrations');
+    expect($approved[$name])->toBe(hash('sha256', $content));
+    DB::table('migrations')->where('migration', $name)->delete();
+    $stage = safetyStage($this, ['database/migrations/'.$name.'.php' => $content], [$name => $approved[$name]], config('updates.supported_sources'), '1.1.4');
+    $plan = app(UpdatePolicy::class)->inspect($stage);
+    expect($plan['source_version'])->toBe('1.1.3')
+        ->and($plan['target_version'])->toBe('1.1.4')
+        ->and($plan['pending_migrations'])->toBe([$name => $approved[$name]]);
+});

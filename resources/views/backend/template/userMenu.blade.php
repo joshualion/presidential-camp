@@ -42,7 +42,7 @@
         <li class="nav-item">
           <a href="{{ route($profileData->access_level.'.messages.page') }}" class="nav-link {{ request()->routeIs($profileData->access_level.'.messages.*') ? 'active' : '' }}">
             <i class="fas fa-envelope nav-icon"></i>
-            <p>Internal Communication</p>
+            <p>Messenger</p>
           </a>
         </li>
         @endif

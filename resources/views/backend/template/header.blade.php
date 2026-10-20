@@ -80,6 +80,20 @@
 
   <style>
 
+    :root { --cm-primary: {{ $SystemSetting->dark_theme_color ?? '#008751' }}; }
+    .main-header.navbar-white .nav-link,
+    .main-header.navbar-white .btn-navbar,
+    .page-item:not(.active) .page-link,
+    .nav-tabs .nav-link:not(.active),
+    .content-wrapper .text-primary { color: var(--cm-primary) !important; }
+    /* Override the general link rule on dashboard widgets, including hover/focus. */
+    .content-wrapper .small-box:not(.bg-white):not(.bg-light) a,
+    .content-wrapper .info-box:not(.bg-white):not(.bg-light) a { color: #fff !important; }
+    .content-wrapper .small-box.bg-white a,
+    .content-wrapper .small-box.bg-light a,
+    .content-wrapper .info-box.bg-white a,
+    .content-wrapper .info-box.bg-light a,
+    .content-wrapper .info-box:not([class*="bg-"]) a { color: var(--cm-primary) !important; }
     h1{
       color: {{ $SystemSetting->dark_theme_color ?? ' #008751'}} !important;
     }

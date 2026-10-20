@@ -99,15 +99,17 @@
                 <li class="nav-item">
                     <a href="{{ url('messages') }}" class="nav-link">
                         <i class="fas fa-comments nav-icon"></i>
-                        <p>Internal Communication</p>
+                        <p>Messenger</p>
                     </a>
                 </li>
                 @include('backend.template.partials.email-notifications-menu-item')
+@include('backend.template.partials.sms-menu')
+@include('backend.template.partials.announcements-menu-item')
             </ul>
         </li>
         {{-- / Messaging --}}
-        @include('backend.template.partials.sms-menu')
-        @include('backend.template.partials.announcements-menu-item')
+@include('backend.template.partials.sms-settings-menu')
+
 
         <li class="tab nav-item menu-close">
             <a href="#" class="nav-link">

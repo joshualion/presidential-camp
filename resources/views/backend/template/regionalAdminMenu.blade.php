@@ -237,11 +237,13 @@ $region = \App\Models\Region::find(Auth::user()->region_id);
                           <li class="nav-item">
                             <a href="{{ url('messages') }}" class="nav-link">
                               <i class="fas fa-comments nav-icon"></i>
-                              <p>Internal Communication</p>
+                              <p>Messenger</p>
                             </a>
                           </li>
 
                           @include('backend.template.partials.email-notifications-menu-item')
+@include('backend.template.partials.sms-menu')
+@include('backend.template.partials.announcements-menu-item')
 
                           <!-- <li class="nav-item">
                             <a href="#" class="nav-link">
@@ -266,11 +268,7 @@ $region = \App\Models\Region::find(Auth::user()->region_id);
 
             </li>
             {{-- / Messaging --}}
-            @include('backend.template.partials.sms-menu')
-            @include('backend.template.partials.announcements-menu-item')
-
-
-
+@include('backend.template.partials.sms-settings-menu')
 
 
             {{-- Locations --}}

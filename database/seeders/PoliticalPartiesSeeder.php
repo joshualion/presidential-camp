@@ -26,6 +26,7 @@ class PoliticalPartiesSeeder extends Seeder
             ['name' => 'Boot Party', 'acronym' => 'BP'],
             ['name' => 'Labour Party', 'acronym' => 'LP'],
             ['name' => 'National Rescue Movement', 'acronym' => 'NRM'],
+            ['name' => 'Nigeria Democratic Congress', 'acronym' => 'NDC'],
             ['name' => 'New Nigeria Peoples Party', 'acronym' => 'NNPP'],
             ['name' => 'Peoples Democratic Party', 'acronym' => 'PDP'],
             ['name' => 'Peoples Redemption Party', 'acronym' => 'PRP'],
@@ -36,12 +37,12 @@ class PoliticalPartiesSeeder extends Seeder
         ];
 
         foreach ($politicalParties as $party) {
-            PoliticalParty::create([
+            PoliticalParty::firstOrCreate(['acronym' => $party['acronym']], [
                 'uuid' => Str::uuid(),
                 'name' => $party['name'],
                 'acronym' => $party['acronym'],
                 'slogan' => null, // Defaulting to null
-                'logo' => $party['acronym'].'.png',   // Defaulting to null
+                'logo' => $party['acronym'] === 'NDC' ? 'NDC-INEC-2026-10.png' : $party['acronym'].'.png',
                 'user_id' => null, // Assuming no user is assigned initially
                 'created_at' => now(),
                 'updated_at' => now(),

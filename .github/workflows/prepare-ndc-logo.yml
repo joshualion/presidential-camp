@@ -1,0 +1,28 @@
+name: Prepare official INEC NDC logo
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  asset:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: curl, gd
+          coverage: none
+      - run: php scripts/fetch-ndc-logo.php
+      - name: Commit normalized official logo
+        run: |
+          set -eu
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add public/assets/img/parties/NDC.png public/uploads/system_images/politicalparty/NDC-INEC-2026-10.png
+          if ! git diff --cached --quiet; then
+            git commit -m "Bundle official INEC NDC logo for 1.1.4"
+            git push origin "HEAD:${{ github.ref_name }}"
+          fi

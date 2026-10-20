@@ -67,7 +67,7 @@
         }
       @endphp
       <li class="nav-item" id="backend-message-bell" data-count-url="{{ route(auth()->user()->access_level.'.messages.unread-count') }}">
-        <a class="nav-link" href="{{ route(auth()->user()->access_level.'.messages.page') }}" role="button" aria-label="Internal Communication">
+        <a class="nav-link" href="{{ route(auth()->user()->access_level.'.messages.page') }}" role="button" aria-label="Messenger">
           <i class="far fa-envelope"></i>
           <span class="badge badge-warning navbar-badge {{ $messageUnreadCount > 0 ? '' : 'd-none' }}" data-message-count>
             {{ $messageUnreadCount > 99 ? '99+' : $messageUnreadCount }}
@@ -99,9 +99,12 @@
       </li>
 
       <li class="nav-item">
-        <a class="nav-link" data-widget="control-sidebar" data-controlsidebar-slide="true" href="#" role="button">
-          <i class="fas fa-th-large"></i>
-        </a>
+        <form method="POST" action="{{ route('logout') }}">
+          @csrf
+          <button type="submit" class="nav-link border-0 bg-transparent" aria-label="Log out" title="Log out">
+            <i class="fas fa-sign-out-alt" aria-hidden="true"></i>
+          </button>
+        </form>
       </li>
 
     </ul>

@@ -9,3 +9,5 @@
         </button>
     </a>
 @endif
+
+@include('backend.shared.member.offline-form-button')

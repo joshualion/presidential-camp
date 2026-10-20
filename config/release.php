@@ -5,12 +5,23 @@ return [
         'name' => 'Campaign Manager Core',
         'package' => 'campaign-manager-core',
         'channel' => env('RELEASE_CHANNEL', 'self-hosted'),
-        'version' => env('APP_VERSION', '1.1.3'),
+        'version' => env('APP_VERSION', '1.1.4'),
         'build_date' => env('RELEASE_BUILD_DATE', null),
         'minimum_php' => '8.2.0',
     ],
 
     'release_notes' => [
+        '1.1.4' => [
+            'Removes the obsolete Community Settings link; community rules remain in General Settings.',
+            'Pasted SMS numbers appear only for the selected pasted-number recipient source.',
+            'Messaging groups Messenger, Email Notifications, SMS and Announcements across administrator levels.',
+            'SMS Provider appears under Settings only for administrators with SMS access.',
+            'Dashboard widget links use white on colored backgrounds and the configured primary color on white.',
+            'Navbar icons use the configured primary color and include a working secure logout action.',
+            'Authorized member creators can download campaign-aware printable registration PDFs.',
+            'Adds Nigeria Democratic Congress and the locally bundled official INEC logo without replacing custom party records.',
+            'Supports the signed automatic upgrade from 1.1.3 with a reviewed additive NDC migration.',
+        ],
         '1.1.3' => [
             'Installer automatically configures and validates the bundled release public key.',
             'Upgrade compatibility handles the missing legacy template key path without disabling signature verification.',
@@ -232,6 +243,15 @@ return [
     ],
 
     'required_files' => [
+        'app/Services/OfflineRegistrationForm.php',
+        'app/Services/MemberEnrollmentSchema.php',
+        'resources/views/backend/shared/member/offline-form-options.blade.php',
+        'resources/views/backend/shared/member/offline-form-button.blade.php',
+        'resources/views/backend/template/partials/sms-settings-menu.blade.php',
+        'resources/views/backend/template/partials/sms-provider-menu-item.blade.php',
+        'public/assets/img/parties/NDC.png',
+        'public/uploads/system_images/politicalparty/NDC-INEC-2026-10.png',
+        'database/migrations/2026_10_20_000001_add_nigeria_democratic_congress.php',
         'artisan',
         'app/Http/Controllers/DirectSmsController.php',
         'app/Services/Sms/Direct/DirectSmsService.php',
