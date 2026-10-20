@@ -11,9 +11,12 @@ class UpdateDownloadAccess
     {
         $this->automatic->readiness();
         $quote = $this->portal->status($status['latest_version'], $status['manifest']['checksum_sha256']);
-        if (empty($quote['contact_confirmed'])) {
+        if (($quote['contact_confirmed'] ?? null) !== true) {
             throw new UpdateFlowException('registration', 'Confirm the installation contact email before using automatic updates.');
         }
+
+        $quote['entitled'] = ($quote['entitled'] ?? null) === true;
+        $quote['payment_available'] = ($quote['payment_available'] ?? null) === true;
 
         return $quote;
     }

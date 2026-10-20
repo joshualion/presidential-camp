@@ -143,3 +143,33 @@ test('start requires explicit maintenance consent and administrator access', fun
     $this->actingAs(User::factory()->create(['access_level' => 'user', 'status' => 'active']))
         ->get(route('superadmin.updates.automatic'))->assertForbidden();
 });
+
+test('non-boolean entitlement values never authorize a package download', function () {
+    $this->flowQuote['entitled'] = 'false';
+    $screen = app(AutomaticUpdateFlow::class)->review();
+    expect($screen['entitlement']['entitled'])->toBeFalse();
+    $this->flowAutomatic->shouldNotReceive('start');
+    expect(fn () => app(AutomaticUpdateFlow::class)->start('9.0.0', str_repeat('a', 64)))
+        ->toThrow(UpdateFlowException::class, 'payment');
+    Http::assertNothingSent();
+});
+
+test('coverage revoked after review is rechecked before the archive request', function () {
+    $covered = $this->flowQuote;
+    $covered['entitled'] = true;
+    $this->flowPortal->shouldReceive('status')->twice()->andReturn($covered, $this->flowQuote);
+    $this->flowAutomatic->shouldNotReceive('start');
+    $base = 'https://github.com/joshualion/Campaign-Manager/releases/download/v9.0.0/';
+    Http::fake([
+        'https://api.github.com/repos/joshualion/Campaign-Manager/releases/latest' => Http::response([
+            'tag_name' => 'v9.0.0', 'assets' => [
+                ['name' => 'release-manifest.json', 'browser_download_url' => $base.'release-manifest.json'],
+                ['name' => 'campaign-manager.zip', 'browser_download_url' => $base.'campaign-manager.zip'],
+            ],
+        ]),
+        $base.'release-manifest.json' => Http::response($this->flowStatus['manifest']),
+    ]);
+    expect(fn () => app(AutomaticUpdateFlow::class)->start('9.0.0', str_repeat('a', 64)))
+        ->toThrow(UpdateFlowException::class, 'coverage');
+    Http::assertNotSent(fn ($request) => str_ends_with($request->url(), '/campaign-manager.zip'));
+});
