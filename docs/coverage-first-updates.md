@@ -1,4 +1,4 @@
-# Automatic updating in 1.1.5
+# Automatic updating in 1.1.6
 
 ## Customer flow
 
@@ -9,7 +9,7 @@
 5. Enter maintenance, drain normal database queue jobs, back up, apply verified files, run only approved migrations and check health.
 6. If installation fails, attempt automatic database/file restoration and check the restored application before reopening it. Coverage remains available for retry.
 
-Free manual downloads remain on GitHub. Old staged packages are retained until explicitly discarded; a matching paid staged package can be reused.
+Free manual downloads remain on GitHub. Older unused staged packages are replaced automatically after coverage is confirmed; a matching verified package is reused. Active and unrecovered update packages and private recovery backups are protected.
 
 ## Engine-aware backups
 
@@ -31,12 +31,18 @@ Automatic updating assumes exclusive application write ownership while in mainte
 
 ## Existing installations and verification
 
-Code already installed in 1.1.3/1.1.4 does not change when a new release is discovered. Install the new signed companion bootstrap once; then use its authenticated Automatic Update screen. The bundle preserves existing Core, environment, uploads and database, and verifies every updater file against the established signing identity. It accepts source versions through 1.1.4 and can archive a previous bootstrap when no active/unrecovered job exists.
+Code already installed in 1.1.3/1.1.4/1.1.5 does not change when a new release is discovered. Install the new signed companion bootstrap once; then use its authenticated Automatic Update screen. The bundle preserves existing Core, environment, uploads and database, and verifies every updater file against the established signing identity. It accepts source versions through 1.1.5 and can archive a previous bootstrap when no active/unrecovered job exists.
 
-Version 1.1.4 assets must never be replaced. Prepare 1.1.5 with:
+Version 1.1.4 and 1.1.5 assets must never be replaced. Prepare 1.1.6 with:
 
 - PHP 8.2/8.3 application, worker, recovery and bootstrap tests.
 - MySQL 8.0 and MariaDB 10.11/11.4 real backup/restore, native/PDO fallback, concurrency, engine preservation, denied permissions, truncation and unexpected-table checks.
-- Signed bootstrap rehearsals from official 1.1.3 and 1.1.4 archives into the immutable signed 1.1.5 candidate.
+- Signed bootstrap rehearsals from official 1.1.3, 1.1.4 and 1.1.5 archives into the immutable signed 1.1.6 candidate.
 
 These checks are release gates. Test code being present does not mean it passed. Isolated rehearsals stub entitlement calls; they do not exercise real payment or the owner's production database.
+
+## Latest release and skipped versions
+
+The latest signed release takes priority over an older downloaded package. Opening Automatic Update refreshes official metadata. Starting an update checks the signed version and checksum again; a newly changed target requires a fresh review. An older unused stage is superseded only after coverage and compatibility checks. A matching stage is reused and verified by the update policy before applying. Recovery backups are never removed by this process.
+
+Release 1.1.6 supports direct upgrades from 1.1.3, 1.1.4 and 1.1.5. Intermediate installation is unnecessary for those paths. Existing older updater code cannot replace itself just because a release is published: install the signed 1.1.6 bootstrap once, then open `/campaign-update-bootstrap.php` as Super Admin. Future skip paths remain subject to the signed release compatibility policy.

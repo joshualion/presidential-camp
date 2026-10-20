@@ -182,7 +182,10 @@ class AutomaticUpdateService
                     throw new RuntimeException('This package belongs to an active or unrecovered update.');
                 }
             }
-            File::deleteDirectory(UpdatePaths::stage($stage));
+            $directory = UpdatePaths::stage($stage);
+            if (is_dir($directory) && (! File::deleteDirectory($directory) || is_dir($directory))) {
+                throw new RuntimeException('The unused prepared package could not be removed. Check private update storage permissions and retry.');
+            }
         } finally {
             flock($lock, LOCK_UN);
             fclose($lock);

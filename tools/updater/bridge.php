@@ -57,7 +57,7 @@ Route::match(['GET', 'POST'], '/campaign-update-bootstrap.php', function (Reques
             break;
         }
     }
-    $review = app(\App\Services\Updates\AutomaticUpdateFlow::class)->screen();
+    $review = app(\App\Services\Updates\AutomaticUpdateFlow::class)->screen(true);
     $status = $review['status'];
     $entitlement = $review['entitlement'];
     $issue = $review['issue'];

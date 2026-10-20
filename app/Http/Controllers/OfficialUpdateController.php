@@ -65,7 +65,7 @@ class OfficialUpdateController extends Controller
 
     public function automatic(Request $request, OfficialUpdateService $updates, \App\Services\Updates\AutomaticUpdateFlow $flow)
     {
-        return view('backend.shared.automatic-update', $flow->screen() + [
+        return view('backend.shared.automatic-update', $flow->screen(true) + [
             'pageTitle' => 'Automatic Update', 'profileData' => $request->user(),
             'installedVersion' => $updates->installedVersion(),
         ]);

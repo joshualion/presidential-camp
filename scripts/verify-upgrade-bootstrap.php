@@ -14,8 +14,8 @@ use Illuminate\Support\Str;
 
 [$script, $root, $archive, $metadata, $report, $bootstrapArchive, $sourceVersion] = $argv;
 $targetVersion = json_decode(file_get_contents($metadata), true, 64, JSON_THROW_ON_ERROR)['version'];
-if (! in_array($sourceVersion, ['1.1.3', '1.1.4'], true) || $targetVersion !== '1.1.5') {
-    throw new RuntimeException('This rehearsal is restricted to reviewed 1.1.3/1.1.4 to 1.1.5 upgrades.');
+if (! in_array($sourceVersion, ['1.1.3', '1.1.4', '1.1.5'], true) || $targetVersion !== '1.1.6') {
+    throw new RuntimeException('This rehearsal is restricted to reviewed 1.1.3/1.1.4/1.1.5 to 1.1.6 upgrades.');
 }
 $root = realpath($root);
 $temporaryRoot = realpath(getenv('RUNNER_TEMP') ?: sys_get_temp_dir());
@@ -108,6 +108,34 @@ $zip->close();
 $inner = json_decode(file_get_contents($stage.'/application/release-manifest.json'), true, 512, JSON_THROW_ON_ERROR);
 $assert(app(ReleaseManifestSigner::class)->verify($inner) === true, 'Embedded signature failed.');
 UpdatePaths::write($stage.'/journal.json', ['id' => $stageId, 'version' => $targetVersion, 'state' => 'prepared', 'manifest' => $outer]);
+// Reproduce the customer's blocked state: an obsolete 1.1.4 download exists
+// while the latest signed 1.1.6 package is already staged and ready for reuse.
+$obsoleteId = (string) Str::uuid();
+mkdir(UpdatePaths::stage($obsoleteId), 0700, true);
+UpdatePaths::write(UpdatePaths::stage($obsoleteId).'/journal.json', [
+    'id' => $obsoleteId, 'version' => '1.1.4', 'state' => 'prepared', 'manifest' => [],
+]);
+$base = 'https://github.com/joshualion/Campaign-Manager/releases/download/v'.$targetVersion.'/';
+\Illuminate\Support\Facades\Http::preventStrayRequests();
+\Illuminate\Support\Facades\Http::fake([
+    'https://api.github.com/repos/joshualion/Campaign-Manager/releases/latest' => \Illuminate\Support\Facades\Http::response([
+        'tag_name' => 'v'.$targetVersion, 'assets' => [
+            ['name' => 'release-manifest.json', 'browser_download_url' => $base.'release-manifest.json'],
+            ['name' => 'campaign-manager.zip', 'browser_download_url' => $base.'campaign-manager.zip'],
+        ],
+    ]),
+    $base.'release-manifest.json' => \Illuminate\Support\Facades\Http::response($outer),
+]);
+// Hosting backup readiness is exercised by the real worker below. Only Portal
+// coverage is substituted for this preparation/reuse check.
+$access = new class extends \App\Services\Updates\UpdateDownloadAccess {
+    public function __construct() {}
+    public function assertAllowed(array $status): void {}
+};
+app()->instance(\App\Services\Updates\UpdateDownloadAccess::class, $access);
+$reused = app(OfficialUpdateService::class)->prepare(['version' => $targetVersion, 'sha256' => $outer['checksum_sha256']]);
+$assert($reused['id'] === $stageId && ! is_dir(UpdatePaths::stage($obsoleteId)), 'The obsolete stage blocked latest-package reuse.');
+\Illuminate\Support\Facades\Http::assertNotSent(fn ($request) => str_ends_with($request->url(), '/campaign-manager.zip'));
 $policy = app(UpdatePolicy::class); // The policy from the verified installed bootstrap.
 $plan = $policy->inspect($stageId);
 $assert($plan['source_version'] === $sourceVersion && $plan['target_version'] === $targetVersion, 'Unexpected upgrade plan.');
@@ -151,7 +179,7 @@ $assert(! is_file(storage_path('framework/down')) && $portal->finished, 'Upgrade
 $assert(password_verify('isolated-upgrade-password', DB::table('users')->where('username', 'upgrade-fixture')->value('password')), 'Existing credentials no longer verify.');
 $result = [
     'source' => 'official v'.$sourceVersion.' application ZIP', 'target' => 'signed v'.$targetVersion.' candidate',
-    'state' => 'completed', 'signed_bootstrap_engine_used' => true,
+    'state' => 'completed', 'obsolete_stage_superseded' => true, 'matching_package_reused' => true, 'signed_bootstrap_engine_used' => true,
     'signatures_verified' => true, 'backup_verified' => true,
     'environment_preserved' => true, 'existing_users_preserved' => true,
     'existing_uploads_preserved' => true, 'custom_parties_preserved' => true,

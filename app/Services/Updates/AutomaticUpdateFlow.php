@@ -13,11 +13,11 @@ class AutomaticUpdateFlow
         private UpdateDownloadAccess $access,
     ) {}
 
-    private function release(): array
+    private function release(bool $refresh = false): array
     {
         $status = $this->updates->status();
         $checked = strtotime((string) ($status['checked_at'] ?? ''));
-        if (! $checked || $checked < now()->subMinutes(15)->timestamp || empty($status['manifest'])) {
+        if ($refresh || ! $checked || $checked < now()->subMinutes(15)->timestamp || empty($status['manifest'])) {
             $status = $this->updates->check();
         }
         if (empty($status['available']) || empty($status['verified']) || empty($status['manifest']) ||
@@ -40,9 +40,9 @@ class AutomaticUpdateFlow
         return $status;
     }
 
-    public function review(): array
+    public function review(bool $refresh = false): array
     {
-        $status = $this->release();
+        $status = $this->release($refresh);
         $quote = $this->access->quote($status);
         if (empty($quote['entitled']) && empty($quote['payment_available'])) {
             throw new UpdateFlowException('payment', 'Automatic-update payment is currently unavailable for this campaign scope. Try again later or use the free manual download.');
@@ -51,11 +51,11 @@ class AutomaticUpdateFlow
         return ['status' => $status, 'entitlement' => $quote];
     }
 
-    public function screen(): array
+    public function screen(bool $refresh = false): array
     {
         $result = ['status' => $this->updates->status(), 'entitlement' => null, 'issue' => null, 'prepared' => $this->prepared()];
         try {
-            return array_merge($result, $this->review());
+            return array_merge($result, $this->review($refresh));
         } catch (UpdateFlowException $e) {
             $result['issue'] = ['reason' => $e->reason, 'message' => $e->getMessage()];
         } catch (UpdateException $e) {
@@ -63,6 +63,8 @@ class AutomaticUpdateFlow
         } catch (\Throwable) {
             $result['issue'] = ['reason' => 'service', 'message' => 'The update service could not complete this check. Try again. Your installation has not changed.'];
         }
+
+        $result['status'] = $this->updates->status();
 
         return $result;
     }
@@ -89,14 +91,7 @@ class AutomaticUpdateFlow
         if (empty($review['entitlement']['entitled'])) {
             throw new UpdateFlowException('coverage', 'Continue to secure payment before starting this automatic update. Nothing has been downloaded or installed.');
         }
-        $stage = $this->prepared();
-        if ($stage && (($stage['version'] ?? null) !== $version ||
-            ($stage['manifest']['checksum_sha256'] ?? null) !== $hash)) {
-            throw new UpdateFlowException('staged_package', 'An older package is still prepared. Remove that prepared package below, then retry this update.');
-        }
-        if (! $stage) {
-            $stage = $this->updates->prepare(['version' => $version, 'sha256' => $hash]);
-        }
+        $stage = $this->updates->prepare(['version' => $version, 'sha256' => $hash]);
 
         return $this->automatic->start($stage['id']);
     }
