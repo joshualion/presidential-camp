@@ -26,7 +26,7 @@
                     @if($preparedUpdate)
                     <p class="cm-help mt-2">Previously downloaded version {{ $preparedUpdate['version'] }} is not installed. A matching package will be reused; an older unused package will be replaced automatically after coverage is confirmed.</p>
                     @endif
-                @elseif($preparedUpdate)
+                @elseif($preparedUpdate && version_compare($preparedUpdate['version'], $installedVersion, '>'))
                     <div class="alert alert-info mt-3"><strong>Version {{ $preparedUpdate['version'] }} is ready for review.</strong><p class="mb-0 mt-1">The package has been downloaded and verified. Your installed version is still {{ $installedVersion }}.</p></div>
                     <a class="btn btn-primary" href="{{ route('superadmin.updates.automatic') }}">Update automatically</a>
                     <p class="cm-help mt-2">Check server readiness and update coverage before continuing. This prepared package has not been installed.</p>

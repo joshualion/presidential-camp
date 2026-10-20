@@ -96,3 +96,21 @@ test('cached availability is recalculated after an installed version changes', f
     ]));
     $this->actingAs($this->uiAdmin)->get(route('superadmin.updates'))->assertOk()->assertSee('You are up to date.');
 });
+
+
+test('a leftover older stage cannot offer a downgrade after manual installation', function () {
+    config(['release.identity.version' => '9.0.0']);
+    $directory = storage_path('app/updates/staged/ui-installed-test');
+    File::ensureDirectoryExists($directory);
+    File::put($directory.'/journal.json', json_encode(['state' => 'prepared', 'version' => '1.1.4']));
+    File::put(storage_path('app/updates/check.json'), json_encode([
+        'checked_at' => now()->toIso8601String(), 'latest_version' => '9.0.0', 'available' => true, 'verified' => true,
+    ]));
+    try {
+        $this->actingAs($this->uiAdmin)->get(route('superadmin.updates'))->assertOk()
+            ->assertSee('You are up to date.')
+            ->assertDontSee('Version 1.1.4 is ready for review.');
+    } finally {
+        File::deleteDirectory($directory);
+    }
+});
