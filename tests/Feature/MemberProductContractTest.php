@@ -83,7 +83,7 @@ test('missing member location hides protected facilities from navigation', funct
         'profileData' => contractMember(['polling_unit_id' => null]),
     ])->render();
 
-    expect($html)->not->toContain('Internal Communication')
+    expect($html)->not->toContain('Messenger')
         ->and($html)->not->toContain('My Voting Bloc')
         ->and($html)->not->toContain('Direct Referrals')
         ->and($html)->not->toContain('Notice Board')
@@ -211,7 +211,7 @@ test('member menu exposes available facilities and hides planned facilities', fu
     ])->render();
 
     expect($html)->toContain('Dashboard')
-        ->and($html)->toContain('Internal Communication')
+        ->and($html)->toContain('Messenger')
         ->and($html)->toContain('Manage Profile')
         ->and($html)->toContain('My Voting Bloc')
         ->and($html)->toContain('Direct Referrals')
