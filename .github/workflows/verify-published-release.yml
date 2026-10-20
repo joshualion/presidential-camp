@@ -1,0 +1,36 @@
+name: Verify published Community release
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/verify-published-release.yml'
+      - 'scripts/verify-published-release.php'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[verify-community]')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: openssl, zip
+          coverage: none
+      - name: Download the public stable assets anonymously and verify them
+        run: |
+          set -euo pipefail
+          release_version=1.1.5
+          release_base="https://github.com/joshualion/Campaign-Manager/releases/download/v$release_version"
+          curl --fail --silent --show-error --location --retry 3 "https://api.github.com/repos/joshualion/Campaign-Manager/releases/tags/v$release_version" -o github-release.json
+          for release_asset in release-manifest.json campaign-manager.zip campaign-manager.zip.sha256 campaign-manager-updater-bootstrap.zip campaign-manager-updater-bootstrap.zip.sha256; do
+            curl --fail --silent --show-error --location --retry 3 "$release_base/$release_asset" -o "$release_asset"
+          done
+          sha256sum --check campaign-manager.zip.sha256
+          sha256sum --check campaign-manager-updater-bootstrap.zip.sha256
+          unzip -tq campaign-manager.zip
+          unzip -tq campaign-manager-updater-bootstrap.zip
+          php scripts/verify-published-release.php "$release_version"
