@@ -42,6 +42,16 @@ try {
     if ($replacing && ! in_array('--replace-bootstrap', $argv, true)) {
         throw new RuntimeException('A bootstrap exists. After confirming no update is active, use --replace-bootstrap to archive and replace it.');
     }
+    if (is_link($base.'/storage') || str_starts_with(realpath($base.'/storage'), realpath($base.'/public').DIRECTORY_SEPARATOR)) {
+        throw new RuntimeException('Bootstrap storage must be private.');
+    }
+    if (! is_dir($base.'/storage/app/updates') && ! mkdir($base.'/storage/app/updates', 0700, true)) {
+        throw new RuntimeException('Cannot create private update storage.');
+    }
+    $applyLock = fopen($base.'/storage/app/updates/apply.lock', 'c');
+    if (! $applyLock || ! flock($applyLock, LOCK_EX | LOCK_NB)) {
+        throw new RuntimeException('An update is active. Finish it before installing the bootstrap.');
+    }
     if ($replacing) {
         if (is_file($base.'/storage/framework/down') || is_link($private)) throw new RuntimeException('Cannot replace a bootstrap during maintenance or through a symlink.');
         foreach (glob($base.'/storage/app/updates/jobs/*/journal.json') as $journal) {
@@ -54,9 +64,6 @@ try {
         foreach (['campaign-update-bootstrap.php', 'campaign-update-status.php'] as $name) {
             if (is_file($base.'/public/'.$name) && ! rename($base.'/public/'.$name, $history.'/'.$name)) throw new RuntimeException('Cannot archive the previous bootstrap entry point.');
         }
-    }
-    if (is_link($base.'/storage') || str_starts_with(realpath($base.'/storage'), realpath($base.'/public').DIRECTORY_SEPARATOR)) {
-        throw new RuntimeException('Bootstrap storage must be private.');
     }
     mkdir($private, 0700, true);
     foreach ($bundle['checksums'] as $name => $hash) {

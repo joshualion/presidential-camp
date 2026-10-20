@@ -170,7 +170,12 @@ class MysqlBackup
                 $transaction = true;
             }
 
-            return $export();
+            $result = $export();
+            if (self::inventory($pdo) !== $inventory) {
+                throw new RuntimeException('Database objects changed during the snapshot. A new backup is required.');
+            }
+
+            return $result;
         } finally {
             if ($locked) {
                 $pdo->exec('UNLOCK TABLES');

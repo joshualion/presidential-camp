@@ -155,16 +155,25 @@ try {
         $limited = null;
         $pdo->exec("DROP USER 'campaign_backup_limited'@'%'");
     }
-    $innodb = $inventory;
-    $innodb['tables'] = ['supporters'];
-    $innodb['engines'] = ['supporters' => 'InnoDB'];
-    MysqlBackup::snapshot($pdo, $innodb, function () use ($pdo, $c, $assert): void {
-        $before = $pdo->query('SELECT name FROM supporters WHERE id=1')->fetchColumn();
-        $writer = MysqlBackup::connect($c);
-        $writer->exec("UPDATE supporters SET name='Concurrent InnoDB write' WHERE id=1");
-        $assert($pdo->query('SELECT name FROM supporters WHERE id=1')->fetchColumn() === $before, 'InnoDB snapshot changed.');
-    });
-    MysqlBackup::restore($pdo, $path);
+    // Isolate the transaction strategy in its own disposable database so the
+    // complete inventory remains authoritative while excluding mixed engines.
+    $pdo->exec('CREATE DATABASE campaign_updater_innodb_ci');
+    try {
+        $transactionConfig = array_replace($c, ['database' => 'campaign_updater_innodb_ci']);
+        $transaction = MysqlBackup::connect($transactionConfig);
+        $transaction->exec('CREATE TABLE supporters (id INT PRIMARY KEY, name VARCHAR(100)) ENGINE=InnoDB');
+        $transaction->exec("INSERT INTO supporters VALUES (1,'Original snapshot')");
+        $innodb = MysqlBackup::inventory($transaction);
+        MysqlBackup::snapshot($transaction, $innodb, function () use ($transaction, $transactionConfig, $assert): void {
+            $before = $transaction->query('SELECT name FROM supporters WHERE id=1')->fetchColumn();
+            $writer = MysqlBackup::connect($transactionConfig);
+            $writer->exec("UPDATE supporters SET name='Concurrent InnoDB write' WHERE id=1");
+            $assert($transaction->query('SELECT name FROM supporters WHERE id=1')->fetchColumn() === $before, 'InnoDB snapshot changed.');
+        });
+        $transaction = null;
+    } finally {
+        $pdo->exec('DROP DATABASE campaign_updater_innodb_ci');
+    }
     $checkRestored();
     echo "Passed: preserved engines/objects; concurrency; lock cleanup; truncation; unexpected tables; permissions; transaction snapshot.\n";
 } finally {

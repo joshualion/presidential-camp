@@ -41,7 +41,7 @@ class DatabaseSnapshot
             $inventory = MysqlBackup::inventory($pdo);
             MysqlBackup::readiness($pdo, $inventory);
         } catch (\Throwable $error) {
-            throw new UpdateFlowException('database_storage', 'The database readiness check could not verify backup and recovery permissions or acquire a consistent snapshot. No package has been downloaded and no payment has started. Retry the readiness check.', $error);
+            throw new UpdateFlowException('database_storage', 'The database readiness check could not verify backup and recovery permissions or acquire a consistent snapshot. No installation changes have started. Retry the readiness check; any existing update coverage remains available.', $error);
         } finally {
             $pdo = null;
         }
