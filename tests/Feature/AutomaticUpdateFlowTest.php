@@ -45,7 +45,7 @@ beforeEach(function () {
     $this->flowPortal->shouldReceive('status')->andReturnUsing(fn () => $this->flowQuote)->byDefault();
     Http::preventStrayRequests();
     $base = 'https://github.com/joshualion/Campaign-Manager/releases/download/v9.0.0/';
-    Http::fake([
+    fakeFlowHttp([
         'https://api.github.com/repos/joshualion/Campaign-Manager/releases/latest' => Http::response([
             'tag_name' => 'v9.0.0', 'assets' => [
                 ['name' => 'release-manifest.json', 'browser_download_url' => $base.'release-manifest.json'],
@@ -81,7 +81,7 @@ test('a crafted start request without coverage cannot download or start a worker
 
 test('the download service itself rejects unpaid preparation even through a legacy entry point', function () {
     $base = 'https://github.com/joshualion/Campaign-Manager/releases/download/v9.0.0/';
-    Http::fake([
+    fakeFlowHttp([
         'https://api.github.com/repos/joshualion/Campaign-Manager/releases/latest' => Http::response([
             'tag_name' => 'v9.0.0', 'assets' => [
                 ['name' => 'release-manifest.json', 'browser_download_url' => $base.'release-manifest.json'],
@@ -171,7 +171,7 @@ test('coverage revoked after review is rechecked before the archive request', fu
     $this->flowPortal->shouldReceive('status')->twice()->andReturn($covered, $this->flowQuote);
     $this->flowAutomatic->shouldNotReceive('start');
     $base = 'https://github.com/joshualion/Campaign-Manager/releases/download/v9.0.0/';
-    Http::fake([
+    fakeFlowHttp([
         'https://api.github.com/repos/joshualion/Campaign-Manager/releases/latest' => Http::response([
             'tag_name' => 'v9.0.0', 'assets' => [
                 ['name' => 'release-manifest.json', 'browser_download_url' => $base.'release-manifest.json'],
@@ -269,7 +269,7 @@ test('fresh discovery rejects obsolete consent even when a matching old package 
     openssl_sign(app(ReleaseManifestSigner::class)->canonicalPayload($newManifest), $signature, $this->flowKey, OPENSSL_ALGO_SHA256);
     $newManifest['manifest_signature'] = ['algorithm' => 'rsa-sha256', 'value' => base64_encode($signature)];
     $base = 'https://github.com/joshualion/Campaign-Manager/releases/download/v9.0.1/';
-    Http::fake([
+    fakeFlowHttp([
         'https://api.github.com/repos/joshualion/Campaign-Manager/releases/latest' => Http::response([
             'tag_name' => 'v9.0.1', 'assets' => [
                 ['name' => 'release-manifest.json', 'browser_download_url' => $base.'release-manifest.json'],
@@ -311,7 +311,7 @@ test('legacy apply requests cannot install an obsolete selected package', functi
 test('a failed fresh discovery leaves an old prepared package and backups intact', function () {
     $this->flowQuote['entitled'] = true;
     $old = writeFlowStage('1.1.4');
-    Http::fake(['https://api.github.com/*' => Http::response([], 503)]);
+    fakeFlowHttp(['https://api.github.com/*' => Http::response([], 503)]);
     $this->flowAutomatic->shouldNotReceive('start');
     expect(fn () => app(AutomaticUpdateFlow::class)->start('9.0.0', str_repeat('a', 64)))->toThrow(\Illuminate\Http\Client\RequestException::class);
     expect(File::exists(storage_path('app/updates/staged/'.$old)))->toBeTrue();
@@ -356,7 +356,7 @@ test('an older unused stage is replaced by a newly downloaded authenticated late
     $status['manifest'] = $outer;
     File::put(storage_path('app/updates/check.json'), json_encode($status));
     $base = 'https://github.com/joshualion/Campaign-Manager/releases/download/v9.0.0/';
-    Http::fake([
+    fakeFlowHttp([
         'https://api.github.com/repos/joshualion/Campaign-Manager/releases/latest' => Http::response([
             'tag_name' => 'v9.0.0', 'assets' => [
                 ['name' => 'release-manifest.json', 'browser_download_url' => $base.'release-manifest.json'],
@@ -386,3 +386,13 @@ test('unreadable job journals stop automatic stage removal', function () {
         ->toThrow(\App\Services\Updates\UpdateException::class, 'unreadable');
     expect(File::exists(storage_path('app/updates/staged/'.$old)))->toBeTrue();
 });
+
+
+function fakeFlowHttp(array $responses): void
+{
+    // Laravel merges Http::fake callbacks; reset the factory so a new release
+    // response replaces the beforeEach fixture rather than falling behind it.
+    Http::swap(new \Illuminate\Http\Client\Factory);
+    Http::preventStrayRequests();
+    Http::fake($responses);
+}
