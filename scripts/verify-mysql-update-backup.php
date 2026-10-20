@@ -54,6 +54,15 @@ if (str_contains(strtolower($pdo->query('SELECT VERSION()')->fetchColumn()), 'ma
     $pdo->exec('CREATE TABLE aria_supporters (id INT PRIMARY KEY, name VARCHAR(100)) ENGINE=Aria');
     $pdo->exec("INSERT INTO aria_supporters VALUES (1,'Aria supporter')");
 }
+$additionalEngines = [];
+foreach ($pdo->query('SHOW ENGINES')->fetchAll(PDO::FETCH_ASSOC) as $engine) {
+    if (in_array(strtoupper($engine['Engine']), ['CSV', 'ARCHIVE'], true) && in_array($engine['Support'], ['YES', 'DEFAULT'], true)) {
+        $name = strtolower($engine['Engine']).'_supporters';
+        $pdo->exec('CREATE TABLE '.MysqlBackup::quote($name).' (id INT NOT NULL, name VARCHAR(100) NOT NULL) ENGINE='.$engine['Engine']);
+        $pdo->exec('INSERT INTO '.MysqlBackup::quote($name)." VALUES (1,'Additional engine supporter')");
+        $additionalEngines[] = $name;
+    }
+}
 $insert = $pdo->prepare('INSERT INTO supporters (id,name,latin_name,amount,negative_value,note,payload,flags,happened_at,hidden_value,position) VALUES (?,?,?,?,?,?,?,b\'100000001\',?,?,ST_GeomFromText(\'POINT(3 7)\'))');
 $insert->execute([1, 'Existing supporter 😀', 'Café', '12345678901234.12345678', '-0.00003125', "line one\nline two ' \\ ; DELIMITER $$", "\x00\xff\x01binary", '2026-10-20 12:34:56.123456', 'invisible preserved']);
 $pdo->exec("INSERT INTO legacy_supporters VALUES (1,'Legacy supporter')");
@@ -71,10 +80,13 @@ $noCli = new class extends DatabaseSnapshot {
 $brokenCli = new class extends DatabaseSnapshot {
     protected function binary(string $key, array $defaults): string { return '/usr/bin/false'; }
 };
-$checkRestored = function () use ($c, $baseline, $query, $inventory, $assert): void {
+$checkRestored = function () use ($c, $baseline, $query, $inventory, $assert, $additionalEngines): void {
     $check = MysqlBackup::connect($c);
     $assert($check->query($query)->fetchAll(PDO::FETCH_ASSOC) === $baseline, 'Restored data types, precision, binary, Unicode, generated or invisible columns differ.');
     $assert(MysqlBackup::inventory($check) === $inventory, 'Engines or objects changed.');
+    foreach ($additionalEngines as $name) {
+        $assert($check->query('SELECT name FROM '.MysqlBackup::quote($name).' WHERE id=1')->fetchColumn() === 'Additional engine supporter', 'Additional engine row was not restored: '.$name);
+    }
     $assert((int) $check->query('SELECT COUNT(*) FROM audit_rows')->fetchColumn() === 1, 'Triggers ran during restoration.');
     $assert((int) $check->query('SELECT COUNT(*) FROM duplicate_rows')->fetchColumn() === 2, 'Duplicate rows lost.');
     $assert((int) $check->query('SELECT COUNT(*) FROM a_dependent_names')->fetchColumn() === 1, 'Dependent views lost.');
