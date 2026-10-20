@@ -135,7 +135,7 @@ $access = new class extends \App\Services\Updates\UpdateDownloadAccess {
 app()->instance(\App\Services\Updates\UpdateDownloadAccess::class, $access);
 $reused = app(OfficialUpdateService::class)->prepare(['version' => $targetVersion, 'sha256' => $outer['checksum_sha256']]);
 $assert($reused['id'] === $stageId && ! is_dir(UpdatePaths::stage($obsoleteId)), 'The obsolete stage blocked latest-package reuse.');
-\Illuminate\Support\Facades\Http::assertNotSent(fn ($request) => str_ends_with($request->url(), '/campaign-manager.zip'));
+$assert(\Illuminate\Support\Facades\Http::recorded(fn ($request) => str_ends_with($request->url(), '/campaign-manager.zip'))->isEmpty(), 'Matching package reuse unexpectedly downloaded an archive.');
 $policy = app(UpdatePolicy::class); // The policy from the verified installed bootstrap.
 $plan = $policy->inspect($stageId);
 $assert($plan['source_version'] === $sourceVersion && $plan['target_version'] === $targetVersion, 'Unexpected upgrade plan.');
