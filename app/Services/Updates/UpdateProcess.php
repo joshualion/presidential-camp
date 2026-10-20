@@ -33,7 +33,8 @@ class UpdateProcess
             $guard = '$cmUpdateCommandLease=fopen(getenv("CAMPAIGN_UPDATE_JOB_DIR")."/commands.lock","c"); if(!$cmUpdateCommandLease || !flock($cmUpdateCommandLease,LOCK_EX)){exit(1);} require '.var_export(base_path('artisan'), true).';';
             $arguments = [self::php(), '-r', $guard, '--'];
         }
-        $p = new Process(array_merge($arguments, $args), base_path(), null, null, $timeout);
+        $environment = $directory ? ['CAMPAIGN_UPDATE_JOB_DIR' => $directory] : null;
+        $p = new Process(array_merge($arguments, $args), base_path(), $environment, null, $timeout);
         $p->run();
         if (! $p->isSuccessful()) {
             file_put_contents(UpdatePaths::root().'/command-errors.log', '['.gmdate('c').'] '.($args[0] ?? 'unknown')."\n".$p->getErrorOutput().$p->getOutput()."\n", FILE_APPEND | LOCK_EX);
