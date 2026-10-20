@@ -22,7 +22,7 @@
 <p class="muted">Return here after payment and check coverage. The package is downloaded only after coverage is confirmed and you start updating.</p>
 @endif
 <p><a href="{{ url('/campaign-update-bootstrap.php') }}">Check readiness and coverage again</a></p>
-@if($stage)<details><summary>Previously downloaded package</summary><p>The prepared version {{ $stage['version'] }} is not installed.</p><form method="post">@csrf<input type="hidden" name="action" value="discard"><input type="hidden" name="stage_id" value="{{ $stage['id'] }}"><button>Remove prepared package</button></form></details>@endif
+@if($stage)<details><summary>Previously downloaded package</summary><p>The prepared version {{ $stage['version'] }} is not installed. A matching package will be reused; an older unused package is replaced automatically after coverage is confirmed.</p><form method="post">@csrf<input type="hidden" name="action" value="discard"><input type="hidden" name="stage_id" value="{{ $stage['id'] }}"><button>Remove prepared package</button></form></details>@endif
 @elseif($issue)<div class="notice error">{{ $issue['message'] }}</div>
 @elseif(!empty($status['checked_at']))<p>No newer verified automatic update is ready. Manual releases remain available on GitHub.</p>@endif
 <form method="post" id="check-form">@csrf<input type="hidden" name="action" value="check"><button>Check for updates</button></form><p class="muted"><a href="https://github.com/joshualion/Campaign-Manager/releases" target="_blank" rel="noopener">Free manual downloads and release notes</a></p><p class="muted">The one-time bootstrap can be removed after a successful update.</p>

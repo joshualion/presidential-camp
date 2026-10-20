@@ -14,7 +14,8 @@ if ($signer->verify($manifest, $key) !== true || $manifest['version'] !== $versi
     || ! hash_equals($manifest['checksum_sha256'], hash_file('sha256', 'campaign-manager.zip'))
     || $manifest['size_bytes'] !== filesize('campaign-manager.zip')
     || ! in_array('1.1.3', $manifest['upgrade']['supported_sources'], true)
-    || ! in_array('1.1.4', $manifest['upgrade']['supported_sources'], true)) {
+    || ! in_array('1.1.4', $manifest['upgrade']['supported_sources'], true)
+    || ! in_array('1.1.5', $manifest['upgrade']['supported_sources'], true)) {
     throw new RuntimeException('Published application metadata or signature verification failed.');
 }
 $release = json_decode(file_get_contents('github-release.json'), true, 64, JSON_THROW_ON_ERROR);

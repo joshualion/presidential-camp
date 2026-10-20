@@ -14,12 +14,7 @@
                 <div class="alert {{ in_array($activeJob['state'], ['recovery_required','failed']) ? 'alert-warning' : 'alert-info' }} mt-3" id="update-job" role="status" aria-live="polite"><strong id="update-job-message">{{ $activeJob['message'] }}</strong><div class="small mt-1">{{ $activeJob['source_version'] }} → {{ $activeJob['target_version'] }}</div></div>
                 @endif
                 <div id="update-status" role="status" aria-live="polite">
-                @if($preparedUpdate)
-                    <div class="alert alert-info mt-3"><strong>Version {{ $preparedUpdate['version'] }} is ready for review.</strong><p class="mb-0 mt-1">The package has been downloaded and verified. Your installed version is still {{ $installedVersion }}.</p></div>
-                    <a class="btn btn-primary" href="{{ route('superadmin.updates.automatic') }}">Update automatically</a>
-                    <p class="cm-help mt-2">Check server readiness and update coverage before continuing. This prepared package has not been installed.</p>
-                    @if(!empty($preparedUpdate['id']))<details class="mt-3"><summary>Prepared package options</summary><form method="post" action="{{ route('superadmin.updates.discard') }}" class="mt-2">@csrf<input type="hidden" name="stage_id" value="{{ $preparedUpdate['id'] }}"><button class="btn btn-outline-secondary btn-sm">Discard prepared package</button></form></details>@endif
-                @elseif(!empty($updateStatus['available']))
+                @if(!empty($updateStatus['available']))
                     <div class="alert alert-info mt-3"><strong>Version {{ $updateStatus['latest_version'] }} is available.</strong></div>
                     @if(!empty($updateStatus['verified']))
                         <a class="btn btn-primary mb-3" href="{{ route('superadmin.updates.automatic') }}">Update automatically</a>
@@ -28,6 +23,14 @@
                         <p class="cm-help">This release cannot be prepared automatically because verified update metadata is unavailable. Use the official manual download.</p>
                         <a class="btn btn-primary mb-3" href="https://github.com/joshualion/Campaign-Manager/releases" target="_blank" rel="noopener">Download from official releases</a>
                     @endif
+                    @if($preparedUpdate)
+                    <p class="cm-help mt-2">Previously downloaded version {{ $preparedUpdate['version'] }} is not installed. A matching package will be reused; an older unused package will be replaced automatically after coverage is confirmed.</p>
+                    @endif
+                @elseif($preparedUpdate && version_compare($preparedUpdate['version'], $installedVersion, '>'))
+                    <div class="alert alert-info mt-3"><strong>Version {{ $preparedUpdate['version'] }} is ready for review.</strong><p class="mb-0 mt-1">The package has been downloaded and verified. Your installed version is still {{ $installedVersion }}.</p></div>
+                    <a class="btn btn-primary" href="{{ route('superadmin.updates.automatic') }}">Update automatically</a>
+                    <p class="cm-help mt-2">Check server readiness and update coverage before continuing. This prepared package has not been installed.</p>
+                    @if(!empty($preparedUpdate['id']))<details class="mt-3"><summary>Prepared package options</summary><form method="post" action="{{ route('superadmin.updates.discard') }}" class="mt-2">@csrf<input type="hidden" name="stage_id" value="{{ $preparedUpdate['id'] }}"><button class="btn btn-outline-secondary btn-sm">Discard prepared package</button></form></details>@endif
                 @elseif(!empty($updateStatus['checked_at']))
                     <div class="alert alert-success mt-3"><strong>You are up to date.</strong><p class="mb-0 mt-1">No newer official release was found during the last successful check.</p></div>
                 @else

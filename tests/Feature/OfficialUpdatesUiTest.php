@@ -70,3 +70,47 @@ test('a prepared package is not presented as an installed update or offered for 
         File::deleteDirectory($directory);
     }
 });
+
+
+test('a staged old download cannot hide a newer discovered release', function () {
+    $directory = storage_path('app/updates/staged/ui-obsolete-test');
+    File::ensureDirectoryExists($directory);
+    File::put($directory.'/journal.json', json_encode(['state' => 'prepared', 'version' => '1.1.4']));
+    File::put(storage_path('app/updates/check.json'), json_encode([
+        'checked_at' => now()->toIso8601String(), 'latest_version' => '9.0.0', 'available' => true, 'verified' => true,
+    ]));
+    try {
+        $this->actingAs($this->uiAdmin)->get(route('superadmin.updates'))->assertOk()
+            ->assertSee('Version 9.0.0 is available.')
+            ->assertSee('Previously downloaded version 1.1.4 is not installed.')
+            ->assertDontSee('Version 1.1.4 is ready for review.');
+    } finally {
+        File::deleteDirectory($directory);
+    }
+});
+
+test('cached availability is recalculated after an installed version changes', function () {
+    config(['release.identity.version' => '9.0.0']);
+    File::put(storage_path('app/updates/check.json'), json_encode([
+        'checked_at' => now()->toIso8601String(), 'latest_version' => '9.0.0', 'available' => true, 'verified' => true,
+    ]));
+    $this->actingAs($this->uiAdmin)->get(route('superadmin.updates'))->assertOk()->assertSee('You are up to date.');
+});
+
+
+test('a leftover older stage cannot offer a downgrade after manual installation', function () {
+    config(['release.identity.version' => '9.0.0']);
+    $directory = storage_path('app/updates/staged/ui-installed-test');
+    File::ensureDirectoryExists($directory);
+    File::put($directory.'/journal.json', json_encode(['state' => 'prepared', 'version' => '1.1.4']));
+    File::put(storage_path('app/updates/check.json'), json_encode([
+        'checked_at' => now()->toIso8601String(), 'latest_version' => '9.0.0', 'available' => true, 'verified' => true,
+    ]));
+    try {
+        $this->actingAs($this->uiAdmin)->get(route('superadmin.updates'))->assertOk()
+            ->assertSee('You are up to date.')
+            ->assertDontSee('Version 1.1.4 is ready for review.');
+    } finally {
+        File::deleteDirectory($directory);
+    }
+});

@@ -5,12 +5,19 @@ return [
         'name' => 'Campaign Manager Core',
         'package' => 'campaign-manager-core',
         'channel' => env('RELEASE_CHANNEL', 'self-hosted'),
-        'version' => env('APP_VERSION', '1.1.5'),
+        'version' => env('APP_VERSION', '1.1.6'),
         'build_date' => env('RELEASE_BUILD_DATE', null),
         'minimum_php' => '8.2.0',
     ],
 
     'release_notes' => [
+        '1.1.6' => [
+            'Shows the latest discovered release ahead of any previously downloaded package.',
+            'Refreshes signed metadata before automatic update review and rechecks the exact consented target before starting.',
+            'Automatically replaces older unused staged packages after coverage is confirmed, while protecting active updates and recovery backups.',
+            'Reuses matching verified packages and recalculates cached availability after installation.',
+            'Supports direct reviewed upgrades from 1.1.3, 1.1.4 and 1.1.5 through the signed updater bootstrap.',
+        ],
         '1.1.5' => [
             'Checks hosting readiness and paid coverage before any in-app update archive download.',
             'Supports consistent backups of mixed InnoDB, MyISAM, MEMORY and MariaDB Aria tables without converting engines.',

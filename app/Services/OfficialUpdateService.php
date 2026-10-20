@@ -27,7 +27,13 @@ class OfficialUpdateService
     {
         $path = storage_path('app/updates/check.json');
 
-        return File::isFile($path) ? (json_decode(File::get($path), true) ?: []) : [];
+        $status = File::isFile($path) ? (json_decode(File::get($path), true) ?: []) : [];
+        if (isset($status['latest_version'])) {
+            $status['installed_version'] = $this->installedVersion();
+            $status['available'] = version_compare($status['latest_version'], $status['installed_version'], '>');
+        }
+
+        return $status;
     }
 
     public function check(): array
@@ -37,7 +43,7 @@ class OfficialUpdateService
         }
 
         $repository = config('updates.repository');
-        $release = Http::acceptJson()->connectTimeout(5)->timeout(config('updates.timeout'))
+        $release = Http::acceptJson()->withHeaders(['Cache-Control' => 'no-cache'])->connectTimeout(5)->timeout(config('updates.timeout'))
             ->get('https://api.github.com/repos/'.$repository.'/releases/latest')->throw()->json();
         $version = ltrim((string) ($release['tag_name'] ?? ''), 'vV');
         if (!preg_match('/^\d+\.\d+\.\d+$/D', $version) || !empty($release['draft']) || !empty($release['prerelease'])) {
@@ -63,7 +69,7 @@ class OfficialUpdateService
                 || ($package['browser_download_url'] ?? '') !== $base.'campaign-manager.zip') {
                 throw new RuntimeException('The release assets are not hosted at the official repository.');
             }
-            $response = Http::connectTimeout(5)->timeout(config('updates.timeout'))->get($base.'release-manifest.json')->throw();
+            $response = Http::withHeaders(['Cache-Control' => 'no-cache'])->connectTimeout(5)->timeout(config('updates.timeout'))->get($base.'release-manifest.json')->throw();
             // Production manifests include vendor file hashes and exceed 1 MiB.
             // Keep a finite bound while retaining mandatory signature verification.
             if (strlen($response->body()) > 8388608) {
@@ -110,9 +116,6 @@ class OfficialUpdateService
             throw new RuntimeException('Another update preparation is already running.');
         }
         try {
-            if (File::isDirectory(storage_path('app/updates/staged')) && File::directories(storage_path('app/updates/staged')) !== []) {
-                throw new RuntimeException('An update is already staged. Review or discard it before preparing another.');
-            }
             return $this->prepareUnlocked($expected);
         } finally {
             flock($lock, LOCK_UN);
@@ -131,7 +134,39 @@ class OfficialUpdateService
             ! hash_equals($manifest['checksum_sha256'], (string) ($expected['sha256'] ?? '')))) {
             throw new \App\Services\Updates\UpdateFlowException('release', 'The available release changed. Review it again before updating.');
         }
+        if (($manifest['upgrade']['protocol'] ?? null) !== 1 ||
+            ! in_array($this->installedVersion(), $manifest['upgrade']['supported_sources'] ?? [], true)) {
+            throw new \App\Services\Updates\UpdateFlowException('release', 'This release does not support automatic updating from your installed version. Use the official manual upgrade guide.');
+        }
+        // Coverage and signed target binding precede any removal or archive request.
         app(\App\Services\Updates\UpdateDownloadAccess::class)->assertAllowed($status);
+        $matching = null;
+        $obsolete = [];
+        foreach (File::isDirectory(storage_path('app/updates/staged')) ? File::directories(storage_path('app/updates/staged')) : [] as $directory) {
+            $path = $directory.'/journal.json';
+            $stage = File::isFile($path) ? json_decode(File::get($path), true) : null;
+            $id = basename($directory);
+            if (! Str::isUuid($id) || is_link($directory) || ! is_array($stage) ||
+                ($stage['id'] ?? null) !== $id || ($stage['state'] ?? null) !== 'prepared' ||
+                ! preg_match('/^\d+\.\d+\.\d+$/D', (string) ($stage['version'] ?? ''))) {
+                throw new RuntimeException('An incomplete or unrecognized prepared package needs review before retrying. No package was removed.');
+            }
+            if ($stage['version'] === $status['latest_version'] &&
+                ($stage['manifest']['checksum_sha256'] ?? null) === $manifest['checksum_sha256']) {
+                $matching = $stage;
+            } elseif (version_compare($stage['version'], $status['latest_version'], '<')) {
+                $obsolete[] = $id;
+            } else {
+                throw new RuntimeException('A conflicting or newer package is already prepared. Check the official release before retrying. No package was removed.');
+            }
+        }
+        foreach ($obsolete as $id) {
+            // discard acquires apply.lock and refuses active or unrecovered jobs.
+            app(\App\Services\Updates\AutomaticUpdateService::class)->discard($id);
+        }
+        if ($matching) {
+            return $matching;
+        }
         $id = (string) Str::uuid();
         $directory = storage_path('app/updates/staged/'.$id);
         File::ensureDirectoryExists($directory, 0700);

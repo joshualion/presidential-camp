@@ -65,7 +65,7 @@ class OfficialUpdateController extends Controller
 
     public function automatic(Request $request, OfficialUpdateService $updates, \App\Services\Updates\AutomaticUpdateFlow $flow)
     {
-        return view('backend.shared.automatic-update', $flow->screen() + [
+        return view('backend.shared.automatic-update', $flow->screen(true) + [
             'pageTitle' => 'Automatic Update', 'profileData' => $request->user(),
             'installedVersion' => $updates->installedVersion(),
         ]);
@@ -90,11 +90,11 @@ class OfficialUpdateController extends Controller
         }
     }
 
-    public function apply(Request $request, \App\Services\Updates\AutomaticUpdateService $automatic)
+    public function apply(Request $request, \App\Services\Updates\AutomaticUpdateFlow $flow)
     {
         $data = $request->validate(['stage_id' => 'required|uuid', 'update_consent' => 'accepted']);
         try {
-            $job = $automatic->start($data['stage_id']);
+            $job = $flow->startPrepared($data['stage_id']);
             return \App\Services\Updates\UpdateProgress::response($job, $request);
         } catch (\Throwable $e) {
             return redirect()->route('superadmin.updates')->with('update_error', $e instanceof \App\Services\Updates\UpdateException ? $e->getMessage() : 'The automatic update could not start. No additional payment is required to retry.');

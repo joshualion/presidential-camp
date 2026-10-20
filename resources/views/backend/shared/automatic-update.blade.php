@@ -38,7 +38,7 @@ Check readiness and coverage again
 <a href="https://github.com/joshualion/Campaign-Manager/releases" target="_blank" rel="noopener">Free manual download on GitHub</a>
 </div>
 @if(!empty($prepared['id']))
-<details class="mt-3"><summary>Previously downloaded package</summary><p>Version {{ $prepared['version'] }} was staged earlier. It is not installed. A matching verified package can be reused after coverage is confirmed.</p>
+<details class="mt-3"><summary>Previously downloaded package</summary><p>Version {{ $prepared['version'] }} was staged earlier. It is not installed. A matching verified package will be reused. An older unused package is replaced automatically after coverage is confirmed; active updates and recovery backups are protected.</p>
 <form method="post" action="{{ route('superadmin.updates.discard') }}">@csrf<input type="hidden" name="stage_id" value="{{ $prepared['id'] }}"><button class="btn btn-outline-secondary btn-sm">Remove prepared package</button></form></details>
 @endif
 </div></div></div></div></div></section>
