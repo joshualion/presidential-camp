@@ -1,4 +1,4 @@
-# 1.1.5 — unreleased
+# 1.1.5
 
 Coverage-first automatic updating, engine-aware consistent backups, native-tool fallback, bounded export retries, automatic rollback and independently supervised recovery. Existing 1.1.4 assets remain unchanged. See docs/releases/v1.1.5.md.
 

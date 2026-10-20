@@ -66,6 +66,8 @@ jobs:
             (cd "$source_dir" && sha256sum --check campaign-manager.zip.sha256)
             unzip -q "$source_dir/campaign-manager.zip" -d "$source_dir/core"
             php scripts/verify-upgrade-bootstrap.php "$source_dir/core" "$PWD/builds/candidate/campaign-manager.zip" "$PWD/builds/candidate/release-manifest.json" "$PWD/builds/candidate/upgrade-$source_version-report.json" "$PWD/builds/candidate/campaign-manager-updater-bootstrap.zip" "$source_version"
+            test -s "$PWD/builds/candidate/upgrade-$source_version-report.json"
+            jq -e '.state == "completed" and .signed_bootstrap_engine_used == true and .signatures_verified == true and .backup_verified == true and .environment_preserved == true and .existing_users_preserved == true and .existing_uploads_preserved == true' "$PWD/builds/candidate/upgrade-$source_version-report.json"
           done
       - uses: actions/upload-artifact@v4
         with:
