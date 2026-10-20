@@ -31,7 +31,9 @@ jobs:
           cache: npm
       - run: composer install --prefer-dist --no-interaction
       - name: Lint application, updater, recovery and test PHP
-        run: rg --files app config routes tools scripts tests -g '*.php' -0 | xargs -0 -n 1 php -l
+        run: |
+          set -euo pipefail
+          find app config routes tools scripts tests -type f -name '*.php' -print0 | xargs -0 -r -n 1 php -l
       - run: composer audit --locked --no-interaction
       - run: npm ci
       - run: npm run build
