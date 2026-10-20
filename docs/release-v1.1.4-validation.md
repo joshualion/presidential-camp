@@ -19,3 +19,15 @@ The earlier candidate run stopped before packaging because the separate `release
 `06036a50125f8670adb74fed01913a89516f62769bc8e222d7cab26a04bac594`.
 
 This additive migration installs NDC if absent, fills an empty logo, preserves custom party details and logos, and copies the bundled default asset without overwriting an existing file.
+
+## Publication confirmed
+
+- Release workflow succeeded: https://github.com/joshualion/presidential-camp/actions/runs/39473369065
+- Final source revision: `bcaa98cf002154cca345a110d92f19a2d7cc554a`.
+- Final matrix succeeded: https://github.com/joshualion/presidential-camp/actions/runs/39473369086
+- Official release: https://github.com/joshualion/Campaign-Manager/releases/tag/v1.1.4
+- Published: 2026-10-20T18:20:57Z
+- Application ZIP SHA-256: `5ef4a2339a12284291aded1862898e4740301c5ec93b534a965b33ecfee9cd57`.
+- The real 1.1.3 update engine successfully applied the signed final package in an isolated installation. Signatures, verified backups, migration, health checks, version, user data, environment/APP_KEY, uploads, custom parties and credentials all passed. Entitlement calls alone were stubbed.
+- All five stable release assets are present. The 1.1.3 asset hashes and sizes are unchanged.
+- The owner can now return the source repository to private and test the paid update flow on their own registered installation.
