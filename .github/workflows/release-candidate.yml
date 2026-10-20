@@ -14,7 +14,7 @@ permissions:
 jobs:
   prepare:
     if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[prepare-candidate]')
-    environment: release-preparation
+    environment: community-release
     runs-on: ubuntu-latest
     env:
       APP_ENV: testing

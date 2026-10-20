@@ -65,6 +65,16 @@ jobs:
           unzip -t campaign-manager.zip
           sha256sum --check campaign-manager-updater-bootstrap.zip.sha256
           unzip -t campaign-manager-updater-bootstrap.zip
+      - name: Verify signed candidate on an actual isolated v1.1.3 installation
+        run: |
+          set -Eeuo pipefail
+          source_dir="$RUNNER_TEMP/campaign-upgrade-source"
+          mkdir -p "$source_dir/core"
+          curl --fail --location --retry 3 --silent --show-error https://github.com/joshualion/Campaign-Manager/releases/download/v1.1.3/campaign-manager.zip -o "$source_dir/campaign-manager.zip"
+          curl --fail --location --retry 3 --silent --show-error https://github.com/joshualion/Campaign-Manager/releases/download/v1.1.3/campaign-manager.zip.sha256 -o "$source_dir/campaign-manager.zip.sha256"
+          (cd "$source_dir" && sha256sum --check campaign-manager.zip.sha256)
+          unzip -q "$source_dir/campaign-manager.zip" -d "$source_dir/core"
+          php scripts/verify-upgrade-113.php "$source_dir/core" "$PWD/builds/candidate/campaign-manager.zip" "$PWD/builds/candidate/release-manifest.json" "$PWD/builds/candidate/upgrade-113-report.json"
       - uses: actions/upload-artifact@v4
         with:
           name: community-v1.1.4
@@ -74,6 +84,7 @@ jobs:
             builds/candidate/campaign-manager.zip.sha256
             builds/candidate/campaign-manager-updater-bootstrap.zip
             builds/candidate/campaign-manager-updater-bootstrap.zip.sha256
+            builds/candidate/upgrade-113-report.json
             test-results.xml
           if-no-files-found: error
       - name: Publish to official public distribution repository
