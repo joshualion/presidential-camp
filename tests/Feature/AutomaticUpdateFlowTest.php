@@ -19,6 +19,7 @@ beforeEach(function () {
     $this->flowStorage = sys_get_temp_dir().'/campaign-flow-'.Str::uuid();
     app()->useStoragePath($this->flowStorage);
     File::ensureDirectoryExists(storage_path('app/updates'));
+    app(\App\Services\InstallationStateService::class)->create(['fixture' => 'automatic-update-flow']);
     $key = openssl_pkey_new(['private_key_bits' => 2048, 'private_key_type' => OPENSSL_KEYTYPE_RSA]);
     openssl_pkey_export($key, $this->flowKey);
     config(['release.signing.public_key' => openssl_pkey_get_details($key)['key'], 'release.identity.version' => '1.1.4']);

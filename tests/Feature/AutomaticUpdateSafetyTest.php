@@ -296,6 +296,7 @@ test('a migration failure automatically restores the database and application be
     try {
         (new UpdateWorker($policy, app(DatabaseSnapshot::class), $portal))->run($id);
         $journal = json_decode(file_get_contents($directory.'/journal.json'), true);
+        $this->assertSame('recovered', $journal['state'], (is_file($directory.'/failure.log') ? file_get_contents($directory.'/failure.log') : '').(is_file(storage_path('app/updates/command-errors.log')) ? file_get_contents(storage_path('app/updates/command-errors.log')) : ''));
         expect($journal['state'])->toBe('recovered')
             ->and($journal['migrations_started'])->toBeTrue()
             ->and($journal['backup_complete'])->toBeTrue()
