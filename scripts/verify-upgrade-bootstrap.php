@@ -55,6 +55,14 @@ foreach (glob($private.'/services/*.php') as $file) { require_once $file; }
 foreach (glob($private.'/engine/*.php') as $file) { require_once $file; }
 $app = require $root.'/bootstrap/app.php';
 $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+
+// Laravel's standalone exception renderer may return a successful process status.
+// Every failed assertion MUST fail CI rather than only printing an error.
+set_exception_handler(static function (\Throwable $error): never {
+    fwrite(STDERR, (string) $error."\n");
+    exit(1);
+});
+
 config(['updates' => require $private.'/updates.php', 'release.signing.public_key' => file_get_contents($private.'/trusted.pem')]);
 $assert = function (bool $ok, string $message): void {
     if (! $ok) { throw new RuntimeException($message); }

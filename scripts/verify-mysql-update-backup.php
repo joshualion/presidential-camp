@@ -8,6 +8,14 @@ require __DIR__.'/../vendor/autoload.php';
 $app = require __DIR__.'/../bootstrap/app.php';
 $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
 
+// Laravel's standalone exception renderer may return a successful process status.
+// Every failed assertion MUST fail CI rather than only printing an error.
+set_exception_handler(static function (\Throwable $error): never {
+    fwrite(STDERR, (string) $error."\n");
+    exit(1);
+});
+
+
 use App\Services\Updates\DatabaseSnapshot;
 use App\Services\Updates\MysqlBackup;
 use App\Services\Updates\UpdateFlowException;

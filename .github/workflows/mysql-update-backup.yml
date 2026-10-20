@@ -69,4 +69,7 @@ jobs:
       - run: composer install --prefer-dist --no-interaction
       - run: cp .env.example .env && php artisan key:generate --force
       - name: Backup, restore, fallback and failure checks
-        run: php scripts/verify-mysql-update-backup.php
+        run: |
+          set -euo pipefail
+          php scripts/verify-mysql-update-backup.php | tee backup-checks.log
+          rg -Fq 'Passed: preserved engines/objects;' backup-checks.log

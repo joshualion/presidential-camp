@@ -162,7 +162,7 @@ class MysqlBackup
             if (($forceLocks || self::needsLocks($inventory)) && $inventory['tables'] !== []) {
                 $pdo->exec('SET autocommit=0');
                 // READ prevents concurrent MyISAM inserts; READ LOCAL does not.
-                $pdo->exec('LOCK TABLES '.implode(', ', array_map(fn ($t) => self::quote($t).' READ', $inventory['tables'])));
+                $pdo->exec('LOCK TABLES '.implode(', ', array_map(fn ($t) => self::quote($t).' READ', array_merge($inventory['tables'], $inventory['views']))));
                 $locked = true;
             } else {
                 $pdo->exec('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ');
