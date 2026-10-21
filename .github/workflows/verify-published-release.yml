@@ -23,7 +23,7 @@ jobs:
       - name: Download the public stable assets anonymously and verify them
         run: |
           set -euo pipefail
-          release_version=1.1.6
+          release_version=1.1.7
           release_base="https://github.com/joshualion/Campaign-Manager/releases/download/v$release_version"
           curl --fail --silent --show-error --location --retry 3 -H 'Cache-Control: no-cache' "https://api.github.com/repos/joshualion/Campaign-Manager/releases/latest" -o latest-release.json
           jq -e --arg release_tag "v$release_version" '.tag_name == $release_tag and .draft == false and .prerelease == false' latest-release.json

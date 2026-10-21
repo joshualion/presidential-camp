@@ -5,12 +5,18 @@ return [
         'name' => 'Campaign Manager Core',
         'package' => 'campaign-manager-core',
         'channel' => env('RELEASE_CHANNEL', 'self-hosted'),
-        'version' => env('APP_VERSION', '1.1.6'),
+        'version' => env('APP_VERSION', '1.1.7'),
         'build_date' => env('RELEASE_BUILD_DATE', null),
         'minimum_php' => '8.2.0',
     ],
 
     'release_notes' => [
+        '1.1.7' => [
+            'Validates explicitly trusted HTTPS Portal checkout origins and installation-bound payment return links.',
+            'Shows distinct Automatic Update and free Manual Update options; confirmed coverage is required before automatic downloads.',
+            'Fixes Volunteer Group and Age Grade settings on case-sensitive hosting and protects users when deleting age grades.',
+            'Supports reviewed direct upgrades from 1.1.3, 1.1.4, 1.1.5 and 1.1.6 through the signed updater bootstrap.',
+        ],
         '1.1.6' => [
             'Shows the latest discovered release ahead of any previously downloaded package.',
             'Refreshes signed metadata before automatic update review and rechecks the exact consented target before starting.',

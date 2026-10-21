@@ -14,8 +14,13 @@ use Illuminate\Support\Str;
 
 [$script, $root, $archive, $metadata, $report, $bootstrapArchive, $sourceVersion] = $argv;
 $targetVersion = json_decode(file_get_contents($metadata), true, 64, JSON_THROW_ON_ERROR)['version'];
-if (! in_array($sourceVersion, ['1.1.3', '1.1.4', '1.1.5'], true) || $targetVersion !== '1.1.6') {
-    throw new RuntimeException('This rehearsal is restricted to reviewed 1.1.3/1.1.4/1.1.5 to 1.1.6 upgrades.');
+$reviewedSources = match ($targetVersion) {
+    '1.1.6' => ['1.1.3', '1.1.4', '1.1.5'],
+    '1.1.7' => ['1.1.3', '1.1.4', '1.1.5', '1.1.6'],
+    default => [],
+};
+if (! in_array($sourceVersion, $reviewedSources, true)) {
+    throw new RuntimeException('This source/target pair has not been reviewed for the isolated rehearsal.');
 }
 $root = realpath($root);
 $temporaryRoot = realpath(getenv('RUNNER_TEMP') ?: sys_get_temp_dir());
@@ -109,7 +114,7 @@ $inner = json_decode(file_get_contents($stage.'/application/release-manifest.jso
 $assert(app(ReleaseManifestSigner::class)->verify($inner) === true, 'Embedded signature failed.');
 UpdatePaths::write($stage.'/journal.json', ['id' => $stageId, 'version' => $targetVersion, 'state' => 'prepared', 'manifest' => $outer]);
 // Reproduce the customer's blocked state: an obsolete 1.1.4 download exists
-// while the latest signed 1.1.6 package is already staged and ready for reuse.
+// while the latest signed target package is already staged and ready for reuse.
 $obsoleteId = (string) Str::uuid();
 mkdir(UpdatePaths::stage($obsoleteId), 0700, true);
 UpdatePaths::write(UpdatePaths::stage($obsoleteId).'/journal.json', [

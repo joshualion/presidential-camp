@@ -1,4 +1,4 @@
-# Unreleased — v1.1.7 candidate
+# 1.1.7
 
 - Fix Volunteer Group Settings and Age Grade Settings returning HTTP 500 on case-sensitive hosting, including their add and edit pages.
 - Correct settings redirects, accept optional descriptions, and prevent deleting an age grade that still has associated users.
