@@ -8,4 +8,6 @@ use Illuminate\Database\Eloquent\Model;
 class SMTPSetting extends Model
 {
     protected $guarded = [];
+
+    protected $hidden = ['password'];
 }

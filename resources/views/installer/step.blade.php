@@ -6,6 +6,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Campaign Manager Self-Hosted Installer</title>
     @include('installer.styles')
+@include('shared.password-visibility')
 </head>
 <body>
 @php
@@ -369,5 +370,6 @@
 </div>
 </body>
 </html>
+
 
 

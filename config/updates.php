@@ -11,7 +11,7 @@ return [
     'mysql_dump' => env('CAMPAIGN_UPDATE_MYSQL_DUMP'),
     'mysql_client' => env('CAMPAIGN_UPDATE_MYSQL_CLIENT'),
     // Explicit compatibility review; an unknown source version fails closed.
-    'supported_sources' => ['1.0.8', '1.0.9', '1.1.0', '1.1.1', '1.1.2', '1.1.3', '1.1.4', '1.1.5', '1.1.6', '1.1.7'],
+    'supported_sources' => ['1.0.8', '1.0.9', '1.1.0', '1.1.1', '1.1.2', '1.1.3', '1.1.4', '1.1.5', '1.1.6', '1.1.7', '1.1.8'],
     // Names are added only after reviewing their up() implementation and compatibility.
     'approved_migrations' => [
         '2026_10_20_000001_add_nigeria_democratic_congress' => '06036a50125f8670adb74fed01913a89516f62769bc8e222d7cab26a04bac594',
@@ -20,3 +20,4 @@ return [
     ],
     'created_tables' => ['sms_provider_grants', 'sms_provider_accounts', 'sms_direct_batches', 'sms_direct_messages', 'sms_direct_suppressions', 'sms_direct_events'],
 ];
+
