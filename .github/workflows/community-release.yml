@@ -97,6 +97,16 @@ jobs:
             builds/candidate/upgrade-*-report.json
             test-results.xml
           if-no-files-found: error
+      - name: Refuse publication from a superseded source commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -Eeuo pipefail
+          current_head="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)"
+          if [[ "$current_head" != "$GITHUB_SHA" ]]; then
+            echo 'Core main changed after this run started; publish only the newly verified source.' >&2
+            exit 1
+          fi
       - name: Publish to official public distribution repository
         env:
           GH_TOKEN: ${{ secrets.COMMUNITY_DISTRIBUTION_TOKEN }}
