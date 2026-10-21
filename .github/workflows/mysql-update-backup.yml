@@ -33,7 +33,7 @@ jobs:
           MYSQL_ROOT_PASSWORD: updater-ci-password
           MYSQL_DATABASE: campaign_updater_ci
           MYSQL_ROOT_HOST: '%'
-        ports: ['33060:3306']
+        ports: ['3306/tcp']
         options: >-
           --health-cmd="if command -v mysqladmin >/dev/null; then mysqladmin ping -h localhost -pupdater-ci-password; else mariadb-admin ping -h localhost -pupdater-ci-password; fi"
           --health-interval=10s --health-timeout=5s --health-retries=10
@@ -42,7 +42,6 @@ jobs:
       APP_URL: http://localhost
       DB_CONNECTION: mysql
       DB_HOST: 127.0.0.1
-      DB_PORT: 33060
       DB_DATABASE: campaign_updater_ci
       DB_USERNAME: root
       DB_PASSWORD: updater-ci-password
@@ -69,6 +68,8 @@ jobs:
       - run: composer install --prefer-dist --no-interaction
       - run: cp .env.example .env && php artisan key:generate --force
       - name: Backup, restore, fallback and failure checks
+        env:
+          DB_PORT: ${{ job.services.mysql.ports[3306] }}
         run: |
           set -euo pipefail
           php scripts/verify-mysql-update-backup.php | tee backup-checks.log
