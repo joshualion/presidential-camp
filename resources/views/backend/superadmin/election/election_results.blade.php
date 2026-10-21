@@ -4,25 +4,16 @@
 <section class="content">
     <div class="container-fluid">
         @include('backend.shared.election.governance-summary-cards')
+        @if($summary->isEmpty() && $summaryStats['submitted_polling_units'] === 0)
+            <div class="alert alert-info" role="status">No results have been received yet.</div>
+        @endif
 
         <div class="row">
             <div class="col-12">
                 <div class="card card-primary">
                     <div class="card-header">
                         <h3 class="card-title">
-                            @if($profileData->access_level == 'superadmin' || $profileData->access_level == 'nationaladmin')
-                                Campaignwide Votes Distribution By Political Parties in {{$profileData->country->name}}
-                            @elseif($profileData->access_level == 'regionaladmin')
-                                Regional Votes Distribution By Political Parties in {{ $profileData->region->name ?? 'Your Region' }}
-                            @elseif($profileData->access_level == 'stateadmin')
-                                State Votes Distribution By Political Parties in {{ $profileData->state->name ?? 'Your State' }}
-                            @elseif($profileData->access_level == 'lgaadmin')
-                                Local Government Area (LGA) Votes Distribution By Political Parties in {{ $profileData->lga->name ?? 'Your LGA' }}
-                            @elseif($profileData->access_level == 'wardadmin')
-                                Ward Votes Distribution By Political Parties in {{ $profileData->ward->name ?? 'Your Ward' }}
-                            @elseif($profileData->access_level == 'pollingunitadmin')
-                                Polling Unit Votes Distribution By Political Parties in {{ $profileData->pollingUnit->name ?? 'Your Polling Unit' }}
-                            @endif
+                            Votes Distribution by Political Party — {{ $resultsScopeLabel }}
                         </h3>
                         <div class="card-tools">
                             <button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-minus"></i></button>
@@ -115,7 +106,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach ($summary as $item)
+                                @forelse ($summary as $item)
                                     @php
                                         $share = $summaryStats['total_valid_votes'] > 0
                                             ? round(($item['total_votes'] / $summaryStats['total_valid_votes']) * 100, 1)
@@ -132,7 +123,11 @@
                                             <small>{{ $share }}%</small>
                                         </td>
                                     </tr>
-                                @endforeach
+                                @empty
+                                    <tr>
+                                        <td colspan="4" class="text-center text-muted py-4">No party votes have been recorded yet.</td>
+                                    </tr>
+                                @endforelse
                             </tbody>
                         </table>
                     </div>

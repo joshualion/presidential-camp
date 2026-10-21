@@ -630,8 +630,9 @@ class ElectionController extends Controller
             $summary = $report['summary'];
             $summaryStats = $report['stats'];
             $packageContext = $reportService->packageContext();
+            $resultsScopeLabel = $reportService->scopeLabel($profileData);
 
-            return view('backend.' . $profileData->access_level . '.election.election_results', compact('summary', 'summaryStats', 'profileData', 'election','pageTitle', 'packageContext'));
+            return view('backend.' . $profileData->access_level . '.election.election_results', compact('summary', 'summaryStats', 'profileData', 'election','pageTitle', 'packageContext', 'resultsScopeLabel'));
         }
 
 

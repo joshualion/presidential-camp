@@ -1,5 +1,6 @@
 # 1.1.7
 
+- Fix empty election results pages for every administrator level, including optional country records, explicit empty results and correctly scoped headings.
 - Fix Volunteer Group Settings and Age Grade Settings returning HTTP 500 on case-sensitive hosting, including their add and edit pages.
 - Correct settings redirects, accept optional descriptions, and prevent deleting an age grade that still has associated users.
 - Improve automatic-update checkout validation for explicitly trusted Portal origins and installation-bound return links. The matching Customer Portal correction must be deployed first.
