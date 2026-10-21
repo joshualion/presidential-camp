@@ -1,4 +1,4 @@
-name: Publish verified Community v1.1.8
+name: Publish verified Community v1.1.9
 on:
   workflow_dispatch:
 permissions:
@@ -22,7 +22,7 @@ jobs:
       APP_URL: http://localhost
       DB_CONNECTION: sqlite
       DB_DATABASE: ':memory:'
-      CANDIDATE_VERSION: '1.1.8'
+      CANDIDATE_VERSION: '1.1.9'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -69,10 +69,10 @@ jobs:
           unzip -t campaign-manager-updater-bootstrap.zip
       # Rehearsal runs with production-only dependencies from the published archives.
       # Exercise the actual bootstrap installer allowlist for every reviewed recent source.
-      - name: Rehearse signed bootstrap upgrades from official 1.1.3, 1.1.4, 1.1.5 and 1.1.6 archives
+      - name: Rehearse signed bootstrap upgrades from official 1.1.3 through 1.1.8 archives
         run: |
           set -Eeuo pipefail
-          for source_version in 1.1.3 1.1.4 1.1.5 1.1.6; do
+          for source_version in 1.1.3 1.1.4 1.1.5 1.1.6 1.1.7 1.1.8; do
             source_dir="$RUNNER_TEMP/campaign-upgrade-$source_version"
             mkdir -p "$source_dir/core"
             curl --fail --location --retry 3 --retry-all-errors --retry-delay 2 --connect-timeout 10 --max-time 180 --silent --show-error "https://github.com/joshualion/Campaign-Manager/releases/download/v$source_version/campaign-manager.zip" -o "$source_dir/campaign-manager.zip"
@@ -89,7 +89,7 @@ jobs:
           done
       - uses: actions/upload-artifact@v4
         with:
-          name: community-v1.1.8
+          name: community-v1.1.9
           path: |
             builds/candidate/campaign-manager.zip
             builds/candidate/release-manifest.json
@@ -117,11 +117,11 @@ jobs:
           set -Eeuo pipefail
           test -n "$GH_TOKEN"
           gh release list --repo joshualion/Campaign-Manager --limit 100 --json tagName > "$RUNNER_TEMP/releases.json"
-          if jq -e 'any(.[]; .tagName == "v1.1.8")' "$RUNNER_TEMP/releases.json"; then
+          if jq -e 'any(.[]; .tagName == "v1.1.9")' "$RUNNER_TEMP/releases.json"; then
             echo 'Version exists; asset replacement is prohibited.' >&2
             exit 1
           fi
-          gh release create v1.1.8 --repo joshualion/Campaign-Manager --latest --title 'Campaign Manager v1.1.8' --notes-file docs/releases/v1.1.8.md \
+          gh release create v1.1.9 --repo joshualion/Campaign-Manager --latest --title 'Campaign Manager v1.1.9' --notes-file docs/releases/v1.1.9.md \
             builds/candidate/campaign-manager.zip builds/candidate/release-manifest.json builds/candidate/campaign-manager.zip.sha256 builds/candidate/campaign-manager-updater-bootstrap.zip builds/candidate/campaign-manager-updater-bootstrap.zip.sha256
       - name: Verify anonymously published assets and signatures
         run: |
@@ -144,4 +144,5 @@ jobs:
       - name: Remove temporary signing material
         if: always()
         run: rm -f "$RUNNER_TEMP/campaign-release-private.pem"
+
 

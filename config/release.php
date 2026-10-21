@@ -5,12 +5,18 @@ return [
         'name' => 'Campaign Manager Core',
         'package' => 'campaign-manager-core',
         'channel' => env('RELEASE_CHANNEL', 'self-hosted'),
-        'version' => env('APP_VERSION', '1.1.8'),
+        'version' => env('APP_VERSION', '1.1.9'),
         'build_date' => env('RELEASE_BUILD_DATE', null),
         'minimum_php' => '8.2.0',
     ],
 
     'release_notes' => [
+        '1.1.9' => [
+            'Adds accessible Show/Hide Password controls to authentication, account and administrator password forms.',
+            'Keeps passwords hidden by default and conceals revealed fields before form submission or page exit.',
+            'Protects saved SMTP passwords from HTML and model serialization; blank replacement fields preserve existing credentials.',
+            'Retains signed automatic updates, verified payment coverage, explicit installation confirmation and private backups.',
+        ],
         '1.1.8' => [
             'Repairs the signed legacy updater login, session and asset URLs on existing installations.',
             'Simplifies Official Updates to Check for Updates, Update Automatically and free Manual Update.',
@@ -632,3 +638,4 @@ return [
         'Thumbs.db',
     ],
 ];
+

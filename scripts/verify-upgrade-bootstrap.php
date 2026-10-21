@@ -18,6 +18,7 @@ $reviewedSources = match ($targetVersion) {
     '1.1.6' => ['1.1.3', '1.1.4', '1.1.5'],
     '1.1.7' => ['1.1.3', '1.1.4', '1.1.5', '1.1.6'],
     '1.1.8' => ['1.1.3', '1.1.4', '1.1.5', '1.1.6', '1.1.7'],
+    '1.1.9' => ['1.1.3', '1.1.4', '1.1.5', '1.1.6', '1.1.7', '1.1.8'],
     default => [],
 };
 if (! in_array($sourceVersion, $reviewedSources, true)) {
@@ -194,3 +195,4 @@ $result = [
 ];
 file_put_contents($report, json_encode($result, JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR)."\n");
 echo json_encode($result, JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR)."\n";
+

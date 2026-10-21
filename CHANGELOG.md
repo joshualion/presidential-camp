@@ -1,3 +1,9 @@
+# 1.1.9
+
+- Add accessible Show/Hide Password controls across authentication, account and administrator forms. Passwords remain hidden by default.
+- Stop returning saved SMTP passwords in forms and model serialization. Blank password replacements retain the existing credential.
+- Preserve signed update authorization, payment checks, explicit confirmation and backup/recovery protections. No new database migrations.
+
 # 1.1.7
 
 - Fix empty election results pages for every administrator level, including optional country records, explicit empty results and correctly scoped headings.
@@ -68,3 +74,4 @@ Administrator navigation and theme fixes, conditional SMS recipient input, print
 ### Pending 1.1.2 — customer-owned SMS
 
 Community administrators can use their own Termii or BulkSMSNigeria account when enabled by Super Admin. Includes encrypted account revisions, geographic audit isolation and explicit wider oversight, recipient confirmation, opt-outs, scheduling, queued chunks and authenticated delivery reports. Hosted SMS remains hidden by default. See docs/customer-owned-sms.md.
+
