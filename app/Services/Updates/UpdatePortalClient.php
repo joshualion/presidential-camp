@@ -3,6 +3,7 @@
 namespace App\Services\Updates;
 
 use App\Services\Updates\UpdateException as RuntimeException;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -69,17 +70,45 @@ class UpdatePortalClient
 
     public function status(string $version, string $hash): array
     {
+        $session = app()->bound('request') && request()->hasSession() ? request()->session() : null;
+        $context = $session?->get('campaign_update_return');
+        if (! is_array($context) || ($context['expires'] ?? 0) < now()->timestamp) {
+            $context = ['state' => bin2hex(random_bytes(32)), 'expires' => now()->addMinutes(30)->timestamp];
+        }
         $result = $this->request('GET', '', ['version' => $version, 'sha256' => $hash, 'package_type' => $this->packageType(),
-            'return_url' => rtrim(config('app.url'), '/').'/superadmin/updates/automatic']);
+            'return_url' => rtrim(config('app.url'), '/').config('updates.return_path', '/superadmin/updates/automatic'),
+            'return_protocol' => 2, 'return_expires' => $context['expires'], 'return_state' => $context['state']]);
         if (($result['package_type'] ?? '') !== $this->packageType()) {
             throw new RuntimeException('The Portal quote does not match this campaign scope.');
         }
         $url = $result['checkout_url'] ?? '';
         app(PortalCheckoutAddress::class)->validate((string) $url, [
             'installation' => $this->identity()['id'], 'version' => $version, 'sha256' => $hash, 'package_type' => $this->packageType(),
+            'return_state' => $context['state'], 'return_expires' => (string) $context['expires'],
         ]);
+        parse_str((string) parse_url($url, PHP_URL_QUERY), $parameters);
+        $context['proof'] = $parameters['return_token'] ?? '';
+        $session?->put('campaign_update_return', $context);
 
         return $result;
+    }
+
+    public static function validBrowserReturn(Request $request): bool
+    {
+        if (! $request->hasAny(['campaign_update_return', 'campaign_update_proof'])) {
+            return true;
+        }
+        if (! $request->hasSession()) {
+            return false;
+        }
+        $context = $request->session()->get('campaign_update_return');
+
+        return is_array($context) && ($context['expires'] ?? 0) >= now()->timestamp
+            && is_string($context['state'] ?? null) && preg_match('/^[a-f0-9]{64}$/D', $context['state'])
+            && is_string($context['proof'] ?? null) && preg_match('/^[a-f0-9]{64}$/D', $context['proof'])
+            && is_string($request->query('campaign_update_return')) && is_string($request->query('campaign_update_proof'))
+            && hash_equals($context['state'] ?? '', $request->query('campaign_update_return'))
+            && hash_equals($context['proof'] ?? '', $request->query('campaign_update_proof'));
     }
 
     public function authorize(array $job): array

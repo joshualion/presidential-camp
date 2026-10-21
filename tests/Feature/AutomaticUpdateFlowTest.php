@@ -15,6 +15,7 @@ use Illuminate\Support\Str;
 beforeEach(function () {
     SystemSetting::create(['package' => 'presidential', 'system_name' => 'Flow Test']);
     $this->flowAdmin = User::factory()->create(['access_level' => 'superadmin', 'status' => 'active']);
+    $this->withSession(['campaign_update_intent' => ['expires' => now()->addHour()->timestamp]]);
     $this->oldFlowStorage = storage_path();
     $this->flowStorage = sys_get_temp_dir().'/campaign-flow-'.Str::uuid();
     app()->useStoragePath($this->flowStorage);
@@ -63,9 +64,8 @@ afterEach(function () {
 
 test('unpaid installations see payment before any package download or stage creation', function () {
     $this->flowAutomatic->shouldNotReceive('start');
-    $this->actingAs($this->flowAdmin)->get(route('superadmin.updates.automatic'))
-        ->assertOk()->assertSee('Continue to secure payment')->assertSee('I have paid')
-        ->assertDontSee('Back up and update to');
+    $this->actingAs($this->flowAdmin)->post(route('superadmin.updates.automatic'))
+        ->assertRedirect($this->flowQuote['checkout_url']);
     expect(File::isDirectory(storage_path('app/updates/staged')))->toBeFalse();
     Http::assertNotSent(fn ($request) => str_ends_with($request->url(), '/campaign-manager.zip'));
 });
@@ -98,15 +98,15 @@ test('the download service itself rejects unpaid preparation even through a lega
 test('covered installations get one backup-and-update action without another payment', function () {
     $this->flowQuote['entitled'] = true;
     $this->actingAs($this->flowAdmin)->get(route('superadmin.updates.automatic'))
-        ->assertOk()->assertSee('Back up and update to 9.0.0')
+        ->assertOk()->assertSee('Confirm and Install Update')
         ->assertSee('No additional payment')->assertDontSee('Continue to secure payment');
     Http::assertNotSent(fn ($request) => str_ends_with($request->url(), '/campaign-manager.zip'));
 });
 
 test('payment return refreshes coverage on the same screen without downloading', function () {
-    $this->actingAs($this->flowAdmin)->get(route('superadmin.updates.automatic'))->assertSee('Continue to secure payment');
+    $this->actingAs($this->flowAdmin)->post(route('superadmin.updates.automatic'))->assertRedirect($this->flowQuote['checkout_url']);
     $this->flowQuote['entitled'] = true;
-    $this->get(route('superadmin.updates.automatic'))->assertSee('Back up and update to 9.0.0');
+    $this->get(route('superadmin.updates.automatic'))->assertSee('Confirm and Install Update');
     Http::assertNotSent(fn ($request) => str_ends_with($request->url(), '/campaign-manager.zip'));
 });
 
@@ -123,7 +123,7 @@ test('database readiness problems show actionable table details without an insta
 test('only a registration problem offers the installation connection link', function () {
     $this->flowPortal->shouldReceive('status')->andThrow(new UpdateFlowException('registration', 'Confirm this installation.'));
     $this->actingAs($this->flowAdmin)->get(route('superadmin.updates.automatic'))
-        ->assertOk()->assertSee('Connect or confirm this installation');
+        ->assertOk()->assertSee('Connect Installation');
 });
 
 test('a changed target cannot silently download a different release', function () {
@@ -188,16 +188,23 @@ test('coverage revoked after review is rechecked before the archive request', fu
 
 test('the legacy bootstrap renders both unpaid checkout and covered update screens', function () {
     app('view')->addNamespace('updaterRendering', base_path('tools/updater'));
+    app('view')->addNamespace('campaignBootstrap', storage_path('framework/testing/bootstrap-view'));
+    File::ensureDirectoryExists(storage_path('framework/testing/bootstrap-view'));
+    File::copy(resource_path('views/backend/shared/update-customer-card.blade.php'), storage_path('framework/testing/bootstrap-view/customer-flow.blade.php'));
     $data = [
         'installedVersion' => '1.1.3', 'registration' => ['registered' => true],
         'status' => $this->flowStatus, 'entitlement' => $this->flowQuote,
-        'issue' => null, 'job' => null, 'stage' => null,
+        'issue' => null, 'job' => null, 'stage' => null, 'showRegistration' => false,
+        'errors' => new \Illuminate\Support\ViewErrorBag,
+        'automaticAction' => '/campaign-update-bootstrap.php', 'confirmAction' => '/campaign-update-bootstrap.php',
+        'checkAction' => '/campaign-update-bootstrap.php', 'registrationUrl' => '/campaign-update-bootstrap.php?registration=1',
+        'manualUrl' => 'https://github.com/joshualion/Campaign-Manager/releases/tag/v9.0.0',
     ];
     $unpaid = view('updaterRendering::screen', $data)->render();
-    expect($unpaid)->toContain('Continue to secure payment')->not->toContain('Back up and update to');
+    expect($unpaid)->toContain('Update Automatically')->not->toContain('Confirm and Install Update');
     $data['entitlement']['entitled'] = true;
     $covered = view('updaterRendering::screen', $data)->render();
-    expect($covered)->toContain('Back up and update to 9.0.0')->not->toContain('Continue to secure payment');
+    expect($covered)->toContain('Confirm and Install Update')->not->toContain('Continue to secure payment');
     Http::assertNotSent(fn ($request) => str_ends_with($request->url(), '/campaign-manager.zip'));
 });
 
@@ -291,7 +298,7 @@ test('automatic screen checks latest metadata even when an older check is still 
     File::put(storage_path('app/updates/check.json'), json_encode($cached));
     $this->flowQuote['entitled'] = true;
     $this->actingAs($this->flowAdmin)->get(route('superadmin.updates.automatic'))
-        ->assertOk()->assertSee('Back up and update to 9.0.0');
+        ->assertOk()->assertSee('Confirm and Install Update')->assertSee('9.0.0');
     Http::assertSent(fn ($request) => $request->url() === 'https://api.github.com/repos/joshualion/Campaign-Manager/releases/latest');
     Http::assertNotSent(fn ($request) => str_ends_with($request->url(), '/campaign-manager.zip'));
 });

@@ -20,18 +20,19 @@ test('updates displays the latest cached result and keeps registration in settin
         'available' => true, 'verified' => true,
     ]));
     $this->actingAs($this->uiAdmin)->get(route('superadmin.updates'))
-        ->assertOk()->assertViewHas('shouldCheck', false)
-        ->assertSee('Option 1: Automatic Update')->assertDontSee('Download and verify 9.0.0')->assertDontSee('Register this deployment')
+        ->assertOk()
+        ->assertSee('Update Automatically')->assertDontSee('Download and verify 9.0.0')->assertDontSee('Register this deployment')
         ->assertDontSee('Remove registration and stop reporting');
-    $this->get(route('superadmin.deployment.settings'))->assertOk()->assertSee('Installation registration');
+    $this->get(route('superadmin.deployment.settings'))->assertOk()->assertSee('Installation Registration');
     Http::assertNothingSent();
 });
 
-test('an old or missing update result requests automatic discovery', function () {
+test('an old or missing update result waits for Check for Updates without fetching or downloading', function () {
     File::put(storage_path('app/updates/check.json'), json_encode(['checked_at' => now()->subHour()->toIso8601String()]));
-    $this->actingAs($this->uiAdmin)->get(route('superadmin.updates'))->assertOk()->assertViewHas('shouldCheck', true);
+    $this->actingAs($this->uiAdmin)->get(route('superadmin.updates'))->assertOk()->assertSee('Check for Updates');
     File::delete(storage_path('app/updates/check.json'));
-    $this->get(route('superadmin.updates'))->assertOk()->assertViewHas('shouldCheck', true);
+    $this->get(route('superadmin.updates'))->assertOk()->assertSee('Check for Updates');
+    Http::assertNothingSent();
 });
 
 test('automatic discovery returns a safe error and preserves a previous successful check', function () {
@@ -57,14 +58,39 @@ test('ordinary members cannot change installation registration or check updates'
     Http::assertNothingSent();
 });
 
+test('registered installations see a summary without repeated verification or private identifiers', function () {
+    config(['app.url' => 'https://customer.example']);
+    File::ensureDirectoryExists(storage_path('app/private'));
+    $path = storage_path('app/private/deployment-registration.json');
+    File::put($path, \Illuminate\Support\Facades\Crypt::encryptString(json_encode([
+        'registered' => true, 'contact_verified' => true, 'domain' => 'customer.example',
+        'contact_email' => 'owner@customer.example', 'id' => 'private-installation-identifier', 'token' => 'private-authentication-token',
+    ])));
+    try {
+        $this->actingAs($this->uiAdmin)->get(route('superadmin.deployment.settings'))->assertOk()
+            ->assertSee('Registered with CampaignManager.ng')->assertSee('owner@customer.example')
+            ->assertSee('Manage Registration Details')->assertSee('Check for Portal Messages')
+            ->assertDontSee('Send Verification Email')->assertDontSee('Request Domain Change')
+            ->assertDontSee('private-installation-identifier')->assertDontSee('private-authentication-token');
+        Http::assertNothingSent();
+    } finally { File::delete($path); }
+});
+
+test('legacy unregistered installations have one guided connect action', function () {
+    File::delete(storage_path('app/private/deployment-registration.json'));
+    $this->actingAs($this->uiAdmin)->get(route('superadmin.deployment.settings'))->assertOk()
+        ->assertSee('Connect Installation')->assertDontSee('Send Verification Email')->assertDontSee('Request Domain Change');
+    Http::assertNothingSent();
+});
+
 test('a prepared package is not presented as an installed update or offered for repeated preparation', function () {
     $directory = storage_path('app/updates/staged/ui-preview-test');
     File::ensureDirectoryExists($directory);
     File::put($directory.'/journal.json', json_encode(['state' => 'prepared', 'version' => '9.0.0']));
     try {
         $this->actingAs($this->uiAdmin)->get(route('superadmin.updates'))->assertOk()
-            ->assertSee('Version 9.0.0 is ready for review.')
-            ->assertSee('Your installed version is still')
+            ->assertSee('Installed version:')
+            ->assertDontSee('ready for review')
             ->assertDontSee('action="'.route('superadmin.updates.prepare').'"', false);
     } finally {
         File::deleteDirectory($directory);
@@ -81,8 +107,8 @@ test('a staged old download cannot hide a newer discovered release', function ()
     ]));
     try {
         $this->actingAs($this->uiAdmin)->get(route('superadmin.updates'))->assertOk()
-            ->assertSee('Version 9.0.0 is available.')
-            ->assertSee('Previously downloaded version 1.1.4 is not installed.')
+            ->assertSee('Available version:')->assertSee('9.0.0')
+            ->assertDontSee('Previously downloaded')
             ->assertDontSee('Version 1.1.4 is ready for review.');
     } finally {
         File::deleteDirectory($directory);
@@ -94,7 +120,7 @@ test('cached availability is recalculated after an installed version changes', f
     File::put(storage_path('app/updates/check.json'), json_encode([
         'checked_at' => now()->toIso8601String(), 'latest_version' => '9.0.0', 'available' => true, 'verified' => true,
     ]));
-    $this->actingAs($this->uiAdmin)->get(route('superadmin.updates'))->assertOk()->assertSee('You are up to date.');
+    $this->actingAs($this->uiAdmin)->get(route('superadmin.updates'))->assertOk()->assertSee('Your installation is up to date.');
 });
 
 
@@ -108,7 +134,7 @@ test('a leftover older stage cannot offer a downgrade after manual installation'
     ]));
     try {
         $this->actingAs($this->uiAdmin)->get(route('superadmin.updates'))->assertOk()
-            ->assertSee('You are up to date.')
+            ->assertSee('Your installation is up to date.')
             ->assertDontSee('Version 1.1.4 is ready for review.');
     } finally {
         File::deleteDirectory($directory);

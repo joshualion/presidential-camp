@@ -5,12 +5,18 @@ return [
         'name' => 'Campaign Manager Core',
         'package' => 'campaign-manager-core',
         'channel' => env('RELEASE_CHANNEL', 'self-hosted'),
-        'version' => env('APP_VERSION', '1.1.7'),
+        'version' => env('APP_VERSION', '1.1.8'),
         'build_date' => env('RELEASE_BUILD_DATE', null),
         'minimum_php' => '8.2.0',
     ],
 
     'release_notes' => [
+        '1.1.8' => [
+            'Repairs the signed legacy updater login, session and asset URLs on existing installations.',
+            'Simplifies Official Updates to Check for Updates, Update Automatically and free Manual Update.',
+            'Adds expiring installation-bound checkout returns and revalidates coverage before explicit installation confirmation.',
+            'Clarifies registration status and keeps sensitive account changes in Manage Registration Details.',
+        ],
         '1.1.7' => [
             'Validates explicitly trusted HTTPS Portal checkout origins and installation-bound payment return links.',
             'Shows distinct Automatic Update and free Manual Update options; confirmed coverage is required before automatic downloads.',

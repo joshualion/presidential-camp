@@ -30,6 +30,14 @@ class DatabaseSnapshot
         return hash('sha256', json_encode(array_intersect_key($c, array_flip(['driver', 'database', 'host', 'port', 'unix_socket']))));
     }
 
+    private function tables(array $connection): array
+    {
+        // Laravel 12 lists every visible schema when no schema is specified.
+        // A shared database account must never make another application's tables
+        // part of this installation's rollback checks.
+        return array_column(Schema::getTables($connection['driver'] === 'mysql' ? $connection['database'] : null), 'name');
+    }
+
     public function preflight(): int
     {
         $c = $this->connection();
@@ -103,7 +111,7 @@ class DatabaseSnapshot
     private function backupAttempt(string $directory): array
     {
         $c = $this->connection();
-        $tables = array_column(Schema::getTables(), 'name');
+        $tables = $this->tables($c);
         $inventory = null;
         $counts = null;
         if ($c['driver'] === 'sqlite') {
@@ -189,7 +197,7 @@ class DatabaseSnapshot
         if ($snapshot['connection'] !== $this->identity($c) || ! is_file($path) || ! hash_equals($snapshot['sha256'], hash_file('sha256', $path))) {
             throw new RuntimeException('Backup identity or integrity verification failed.');
         }
-        $new = array_values(array_diff(array_column(Schema::getTables(), 'name'), $snapshot['tables']));
+        $new = array_values(array_diff($this->tables($c), $snapshot['tables']));
         if (array_diff($new, $declaredNewTables)) {
             throw new RuntimeException('Unexpected new tables require operator-reviewed recovery.');
         }
@@ -240,7 +248,7 @@ class DatabaseSnapshot
             }
         }
 
-        if (array_diff($snapshot['tables'], array_column(Schema::getTables(), 'name'))) {
+        if (array_diff($snapshot['tables'], $this->tables($c))) {
             throw new RuntimeException('Restored database schema could not be verified.');
         }
     }

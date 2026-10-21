@@ -25,9 +25,12 @@ use Illuminate\Support\Facades\Schema;
 use Symfony\Component\Process\Process;
 
 $assert = function (bool $ok, string $message): void { if (! $ok) { throw new RuntimeException($message); } };
-$assert(Schema::getTables() === [], 'The disposable database is not empty.');
+$assert(Schema::getTables(config('database.connections.mysql.database')) === [], 'The disposable database is not empty.');
 $c = config('database.connections.mysql');
 $pdo = MysqlBackup::connect($c);
+$pdo->exec('CREATE DATABASE campaign_updater_other_ci');
+$pdo->exec('CREATE TABLE campaign_updater_other_ci.foreign_only (id INT PRIMARY KEY) ENGINE=InnoDB');
+$pdo->exec('INSERT INTO campaign_updater_other_ci.foreign_only VALUES (71)');
 $pdo->exec("CREATE TABLE supporters (
     id BIGINT UNSIGNED PRIMARY KEY,
     name VARCHAR(100) CHARACTER SET utf8mb4,
@@ -195,8 +198,10 @@ try {
         $pdo->exec('DROP DATABASE campaign_updater_innodb_ci');
     }
     $checkRestored();
-    echo "Passed: preserved engines/objects; concurrency; lock cleanup; truncation; unexpected tables; permissions; transaction snapshot.\n";
+    $assert((int) $pdo->query('SELECT id FROM campaign_updater_other_ci.foreign_only')->fetchColumn() === 71, 'Another application schema was changed during recovery.');
+    echo "Passed: preserved engines/objects; concurrency; lock cleanup; truncation; unexpected tables; permissions; transaction snapshot; separate-schema isolation.\n";
 } finally {
+    if ($pdo) { $pdo->exec('DROP DATABASE campaign_updater_other_ci'); }
     $pdo = null;
     File::deleteDirectory($directory);
 }

@@ -239,7 +239,7 @@ test('bootstrap installation rejects an unreviewed source before changing the in
         ->and(is_dir($this->sandbox.'/storage/app/updates/bootstrap'))->toBeFalse()
         ->and(is_file($this->sandbox.'/public/campaign-update-bootstrap.php'))->toBeFalse()
         ->and(file_get_contents($this->sandbox.'/.env'))->toBe('APP_KEY=preserved');
-})->with(['1.1.7', '9.9.9']);
+})->with(['1.1.8', '9.9.9']);
 
 test('authorized startup writes a valid private worker and permits cancelling only queued jobs', function () {
     $id = (string) Str::uuid();
@@ -412,7 +412,7 @@ test('Core requests the Portal price for its installed scope and maps chairmansh
     File::ensureDirectoryExists(storage_path('app/private'));
     $uuid = (string) Str::uuid();
     File::put(storage_path('app/private/deployment-registration.json'), Crypt::encryptString(json_encode(['id' => $uuid, 'token' => str_repeat('a', 64), 'registered' => true, 'domain' => 'campaign.example.test'])));
-    Http::fake(['campaignmanager.ng/*' => Http::response(['package_type' => 'lga', 'scope_label' => 'Local Government', 'price_minor' => 500, 'currency' => 'USD', 'entitled' => false, 'payment_available' => true, 'checkout_url' => 'https://campaignmanager.ng/clientarea/automatic-update?'.http_build_query(['installation' => $uuid, 'version' => '1.1.1', 'sha256' => str_repeat('a', 64), 'package_type' => 'lga', 'quote_token' => str_repeat('b', 64)])])]);
+    Http::fake(['campaignmanager.ng/*' => fn ($request) => Http::response(['package_type' => 'lga', 'scope_label' => 'Local Government', 'price_minor' => 500, 'currency' => 'USD', 'entitled' => false, 'payment_available' => true, 'checkout_url' => 'https://campaignmanager.ng/clientarea/automatic-update?'.http_build_query(['installation' => $uuid, 'version' => '1.1.1', 'sha256' => str_repeat('a', 64), 'package_type' => 'lga', 'quote_token' => str_repeat('b', 64), 'return_url' => $request['return_url'], 'return_token' => str_repeat('c', 64), 'return_state' => $request['return_state'], 'return_expires' => $request['return_expires']])])]);
     $quote = app(UpdatePortalClient::class)->status('1.1.1', str_repeat('a', 64));
     expect($quote['price_minor'])->toBe(500);
     Http::assertSent(fn ($r) => $r['package_type'] === 'lga' && $r->header('Authorization') === ['Bearer '.str_repeat('a', 64)]);

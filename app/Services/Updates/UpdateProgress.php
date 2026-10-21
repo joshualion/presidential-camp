@@ -7,6 +7,19 @@ use Illuminate\Http\Request;
 
 class UpdateProgress
 {
+    public static function latest(): ?array
+    {
+        $latest = null;
+        foreach (glob(storage_path('app/updates/jobs/*/journal.json')) as $path) {
+            $job = json_decode(file_get_contents($path), true);
+            if (is_array($job) && (! $latest || ($job['created_at'] ?? '') > ($latest['created_at'] ?? ''))) {
+                $latest = $job;
+            }
+        }
+
+        return $latest;
+    }
+
     /** Return progress in the initiating response, before maintenance can block a redirect. */
     public static function response(array $job, Request $request)
     {
@@ -21,6 +34,6 @@ async function poll(){try{const r=await fetch(endpoint,{credentials:'same-origin
 </script></body></html>
 HTML;
 
-        return response($html)->header('Cache-Control', 'no-store')->header('X-Content-Type-Options', 'nosniff')->withCookie(cookie($name, $job['status_token'], 600, '/campaign-update-status.php', null, $request->isSecure(), true, false, 'strict'));
+        return response($html)->header('Cache-Control', 'no-store')->header('X-Content-Type-Options', 'nosniff')->withCookie(cookie($name, $job['status_token'], 600, parse_url(url('/campaign-update-status.php'), PHP_URL_PATH), null, $request->isSecure(), true, false, 'strict'));
     }
 }

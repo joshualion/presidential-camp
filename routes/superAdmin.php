@@ -29,7 +29,7 @@ Route::middleware(['auth', 'access_level:superadmin'])->group(function () {
     Route::post('/superadmin/deployment/sync', [\App\Http\Controllers\DeploymentRegistrationController::class, 'sync'])->middleware('throttle:6,1')->name('superadmin.deployment.sync');
     Route::post('/superadmin/deployment/preferences', [\App\Http\Controllers\DeploymentRegistrationController::class, 'preferences'])->name('superadmin.deployment.preferences');
     Route::post('/superadmin/deployment/revoke', [\App\Http\Controllers\DeploymentRegistrationController::class, 'revoke'])->name('superadmin.deployment.revoke');
-    Route::get('/superadmin/updates/automatic', [\App\Http\Controllers\OfficialUpdateController::class, 'automatic'])->name('superadmin.updates.automatic');
+    Route::match(['GET', 'POST'], '/superadmin/updates/automatic', [\App\Http\Controllers\OfficialUpdateController::class, 'automatic'])->name('superadmin.updates.automatic');
     Route::post('/superadmin/updates/apply', [\App\Http\Controllers\OfficialUpdateController::class, 'apply'])->middleware('throttle:2,1')->name('superadmin.updates.apply');
     Route::post('/superadmin/updates/discard', [\App\Http\Controllers\OfficialUpdateController::class, 'discard'])->name('superadmin.updates.discard');
     Route::post('/superadmin/updates/check', [\App\Http\Controllers\OfficialUpdateController::class, 'check'])->middleware('throttle:6,1')->name('superadmin.updates.check');

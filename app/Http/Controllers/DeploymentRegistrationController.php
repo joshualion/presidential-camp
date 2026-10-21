@@ -12,7 +12,7 @@ class DeploymentRegistrationController extends Controller
         $data = $request->validate(['registration_consent' => 'required|accepted', 'marketing_opt_in' => 'nullable|boolean']);
         try {
             $registration->register($request->user(), (bool) ($data['marketing_opt_in'] ?? false));
-            return back()->with('update_notice', 'Deployment registered. Confirm the contact email sent by the Portal. Marketing remains a separate optional choice.');
+            return back()->with('update_notice', 'Installation connected. Open the verification email once to enable purchases, then continue using Campaign Manager.');
         } catch (\Throwable $exception) {
             return back()->with('update_error', 'Registration could not be confirmed. Check Portal connectivity and your application URL. Existing installations remain available; new setup requires a confirmed receipt.');
         }

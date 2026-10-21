@@ -13,6 +13,8 @@ function buildCampaignUpdaterBootstrap(string $output, string $privateKey, strin
     foreach (['entry.php', 'bridge.php', 'screen.blade.php', 'recover.php'] as $name) {
         $files[$name] = file_get_contents(__DIR__.'/'.$name);
     }
+    $files['customer-flow.blade.php'] = file_get_contents(base_path('resources/views/backend/shared/update-customer-card.blade.php'));
+    $files['registration.blade.php'] = file_get_contents(base_path('resources/views/backend/shared/update-registration-card.blade.php'));
     $files['updates.php'] = file_get_contents(config_path('updates.php'));
     $files['status.php'] = file_get_contents(public_path('campaign-update-status.php'));
     $files['trusted.pem'] = $publicKey;
@@ -36,7 +38,7 @@ function buildCampaignUpdaterBootstrap(string $output, string $privateKey, strin
     $files['bootstrap-manifest.json'] = json_encode($manifest, JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR);
     $installer = file_get_contents(__DIR__.'/bootstrap-install.php');
     $files['bootstrap-install.php'] = str_replace("'__CAMPAIGN_BOOTSTRAP_TRUSTED_KEY__'", var_export($publicKey, true), $installer);
-    $files['README.txt'] = "Campaign Manager legacy updater\n\nFor existing 1.0.8, 1.0.9, 1.1.0, 1.1.1, 1.1.2, 1.1.3, 1.1.4, 1.1.5 and 1.1.6 installations only.\nExtract this official bundle OUTSIDE the web document root.\nRun: php bootstrap-install.php /absolute/path/to/existing/core\nSign in as Super Admin and open /campaign-update-bootstrap.php.\nThe bootstrap does not replace Core or run migrations. The paid update performs compatibility and backup checks first.\nBack up your installation before any maintenance. On hosts without PHP CLI or process execution, use the free manual update guide.\nAfter success, remove public/campaign-update-bootstrap.php and storage/app/updates/bootstrap. Keep private update backups securely until you have verified the installation.\n";
+    $files['README.txt'] = "Campaign Manager legacy updater\n\nFor existing 1.0.8, 1.0.9, 1.1.0, 1.1.1, 1.1.2, 1.1.3, 1.1.4, 1.1.5, 1.1.6 and 1.1.7 installations only.\nExtract this official bundle OUTSIDE the web document root.\nIn cPanel Terminal, run: php bootstrap-install.php /absolute/path/to/existing/core\nSign in as Super Admin and open /campaign-update-bootstrap.php.\nIf replacing a faulty bootstrap, use --replace-bootstrap after ensuring no update is running. The previous bootstrap is archived privately.\nThe bootstrap does not replace Core or run migrations. The paid update performs compatibility and backup checks first.\nBack up your installation before any maintenance. On hosts without PHP CLI or process execution, use the free manual update guide.\nAfter success, remove public/campaign-update-bootstrap.php and storage/app/updates/bootstrap. Keep private update backups securely until you have verified the installation.\n";
     $path = $output.'/campaign-manager-updater-bootstrap.zip';
     $zip = new ZipArchive;
     if ($zip->open($path, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {

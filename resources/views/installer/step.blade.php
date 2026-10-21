@@ -330,6 +330,12 @@
             @elseif($step === 'complete')
                 <h2 style="color: #008751;">Installation Complete</h2>
                 <p class="lead">The installation lock has been written. Use the super admin account to sign in.</p>
+                @php
+                    $installationRegistration = app(\App\Services\DeploymentRegistrationService::class)->summary();
+                @endphp
+                @if(!empty($installationRegistration['registered']) && empty($installationRegistration['contact_verified']))
+                    <div class="alert info">Your installation is registered. Open the verification email sent to {{ $installationRegistration['contact_email'] }} to confirm ownership for future purchases and account changes. This is a one-time step; you can sign in and use Campaign Manager now.</div>
+                @endif
                 @if(!empty($provisioningSummary))
                     <div class="alert ok">Location data provisioned successfully for {{ ucfirst(str_replace('_', ' ', $provisioningSummary['package_type'] ?? 'campaign package')) }} / {{ $provisioningSummary['scope_name'] ?? 'campaign scope' }}.</div>
                     <div class="summary">

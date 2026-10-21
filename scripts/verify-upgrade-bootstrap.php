@@ -17,6 +17,7 @@ $targetVersion = json_decode(file_get_contents($metadata), true, 64, JSON_THROW_
 $reviewedSources = match ($targetVersion) {
     '1.1.6' => ['1.1.3', '1.1.4', '1.1.5'],
     '1.1.7' => ['1.1.3', '1.1.4', '1.1.5', '1.1.6'],
+    '1.1.8' => ['1.1.3', '1.1.4', '1.1.5', '1.1.6', '1.1.7'],
     default => [],
 };
 if (! in_array($sourceVersion, $reviewedSources, true)) {
@@ -74,7 +75,7 @@ $assert = function (bool $ok, string $message): void {
 };
 $assert(app(OfficialUpdateService::class)->installedVersion() === $sourceVersion, 'Unexpected source archive version.');
 $sourceManifest = json_decode(file_get_contents($root.'/release-manifest.json'), true, 512, JSON_THROW_ON_ERROR);
-$assert(app(ReleaseManifestSigner::class)->verify($sourceManifest) === true, 'Source release signature failed.');
+$assert(app(ReleaseManifestSigner::class)->verify($sourceManifest, file_get_contents($root.'/config/release-public.pem')) === true, 'Source release signature failed.');
 $assert(Artisan::call('migrate', ['--force' => true, '--no-interaction' => true]) === 0, 'Cannot initialize the isolated source schema.');
 DB::table('system_settings')->insert(['package' => 'presidential', 'system_name' => 'Isolated upgrade fixture']);
 DB::table('users')->insert([

@@ -60,7 +60,8 @@ class AutomaticUpdateFlow
             $result['issue'] = ['reason' => $e->reason, 'message' => $e->getMessage()];
         } catch (UpdateException $e) {
             $result['issue'] = ['reason' => 'server', 'message' => $e->getMessage()];
-        } catch (\Throwable) {
+        } catch (\Throwable $exception) {
+            report($exception);
             $result['issue'] = ['reason' => 'service', 'message' => 'The update service could not complete this check. Try again. Your installation has not changed.'];
         }
 
@@ -95,7 +96,7 @@ class AutomaticUpdateFlow
 
     public function start(string $version, string $hash): array
     {
-        $review = $this->review();
+        $review = $this->review(true);
         $status = $review['status'];
         if ($status['latest_version'] !== $version || ! hash_equals($status['manifest']['checksum_sha256'], $hash)) {
             throw new UpdateFlowException('release', 'The available release changed. Review the current version before updating.');

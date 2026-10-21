@@ -25,6 +25,7 @@ Facade::clearResolvedInstance('request');
 $kernel = $app->make(Kernel::class);
 $kernel->bootstrap();
 config(['updates' => require $private.'/updates.php']);
+config(['updates.return_path' => '/campaign-update-bootstrap.php']);
 config(['release.signing.public_key' => file_get_contents($private.'/trusted.pem')]);
 config(['campaign.portal_api_base' => config('campaign.portal_api_base') ?: 'https://campaignmanager.ng/api/v2', 'campaign.portal_web_base' => config('campaign.portal_web_base') ?: 'https://campaignmanager.ng']);
 require $private.'/bridge.php';

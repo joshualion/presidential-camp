@@ -19,7 +19,7 @@ class PortalCheckoutAddress
         foreach (explode('&', $parts['query'] ?? '') as $pair) {
             $pieces = explode('=', $pair, 2);
             $key = rawurldecode($pieces[0]);
-            if (isset($query[$key]) || ! in_array($key, ['installation', 'version', 'sha256', 'package_type', 'quote_token', 'return_url', 'return_token'], true)) {
+            if (isset($query[$key]) || ! in_array($key, ['installation', 'version', 'sha256', 'package_type', 'quote_token', 'return_url', 'return_token', 'return_expires', 'return_state'], true)) {
                 throw new UpdateException('Invalid automatic-update checkout parameters.');
             }
             $query[$key] = rawurldecode($pieces[1] ?? '');
@@ -29,9 +29,18 @@ class PortalCheckoutAddress
                 throw new UpdateException('The checkout does not match this installation and release.');
             }
         }
-        if (isset($query['return_url']) && ($query['return_url'] !== rtrim(config('app.url'), '/').'/superadmin/updates/automatic'
+        $path = config('updates.return_path', '/superadmin/updates/automatic');
+        if (! in_array($path, ['/superadmin/updates/automatic', '/campaign-update-bootstrap.php'], true)) {
+            throw new UpdateException('Invalid installation update address.');
+        }
+        if (isset($query['return_url']) && ($query['return_url'] !== rtrim(config('app.url'), '/').$path
             || ! preg_match('/^[a-f0-9]{64}$/D', $query['return_token'] ?? ''))) {
             throw new UpdateException('Invalid installation return address.');
+        }
+        if (isset($query['return_expires']) || isset($query['return_state'])) {
+            if (! ctype_digit($query['return_expires'] ?? '') || (int) $query['return_expires'] < now()->timestamp || (int) $query['return_expires'] > now()->addHour()->timestamp || ! preg_match('/^[a-f0-9]{64}$/D', $query['return_state'] ?? '')) {
+                throw new UpdateException('This checkout has expired. Choose Update Automatically again.');
+            }
         }
         if (! preg_match('/^[a-f0-9]{64}$/D', $query['quote_token'] ?? '')) {
             throw new UpdateException('Invalid automatic-update quote.');
