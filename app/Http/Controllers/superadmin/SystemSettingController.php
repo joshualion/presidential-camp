@@ -218,20 +218,21 @@ class SystemSettingController extends Controller
 
         public function SmtpSettings(){
                 $profileData = $this->getProfileData();
-                $smtpsettings = SMTPSetting::find(1);
+                $smtpsettings = SMTPSetting::firstOrFail();
                 return view('backend.'.$profileData->access_level.'.settings.smtp.update_smtp', compact('smtpsettings','profileData'));
         }
 
         public function UpdateSmtpSettings(Request $request){
             $smtp_id = $request->id;
 
-            SMTPSetting::findOrFail($smtp_id)->update([
+            $smtp = SMTPSetting::findOrFail($smtp_id);
+            $smtp->update([
 
                 'mailer' => $request->mailer,
                 'host' => $request->host,
                 'port' => $request->port,
                 'username' => $request->username,
-                'password' => $request->password,
+                'password' => $request->filled('password') ? $request->password : $smtp->password,
                 'encryption' => $request->encryption,
                 'from_address' => $request->from_address,
                 ]);

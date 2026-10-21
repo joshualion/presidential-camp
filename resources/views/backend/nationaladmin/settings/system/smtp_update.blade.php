@@ -70,7 +70,7 @@
                     <div class="form-group row">
                         <label for="password" class="col-sm-2 col-form-label"> Password</label>
                         <div class="col-sm-10">
-                          <input type="text" class="form-control @error('password') is_invalid @enderror" name="password" id="password" value="{{($smtpsettings->password)}}">
+                          <input type="password" class="form-control @error('password') is_invalid @enderror" name="password" id="password" value="" autocomplete="new-password" placeholder="Leave blank to keep the current password">
                         </div>
                         @error('password')
                             <div class="alert alert-danger">{{ $message }}</div>

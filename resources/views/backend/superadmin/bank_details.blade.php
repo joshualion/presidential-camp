@@ -90,7 +90,7 @@
                   <div class="form-group row">
                         <label for="old_password" class="col-sm-3 col-form-label">Old Password</label>
                         <div class="col-sm-9">
-                          <input type="text" class="form-control @error('old_password') is-invalid @enderror" name="old_password" id="old_password" placeholder="old password" required >
+                          <input type="password" class="form-control @error('old_password') is-invalid @enderror" name="old_password" id="old_password" placeholder="old password" required >
                         </div>
                         @error('old_password')
                           <span class="text-danger">{{$message}}</span>

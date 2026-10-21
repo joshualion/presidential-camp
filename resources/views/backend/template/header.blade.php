@@ -217,6 +217,7 @@
    @livewireStyles
 <link rel="stylesheet" href="{{ asset('assets/dist/css/campaign-ui.css') }}?v=1.1.1">
 @stack('styles')
+@include('shared.password-visibility')
 </head>
 <body class="hold-transition sidebar-mini layout-fixed">
 <script>

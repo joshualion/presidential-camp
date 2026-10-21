@@ -72,6 +72,7 @@
     }
 
   </style>
+@include('shared.password-visibility')
 </head>
 <body class="hold-transition register-page">
 
