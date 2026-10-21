@@ -309,6 +309,57 @@ test('a migration failure automatically restores the database and application be
         config(['database.default' => 'sqlite']);
     }
 });
+test('a successful worker preserves customer data verifies version and reports completion after reopening', function () {
+    [$id, $directory, $plan] = workerSafetyFixture($this);
+    $live = $this->sandbox.'/live.sqlite';
+    touch($live);
+    config(['database.default' => 'update_success_fixture', 'database.connections.update_success_fixture' => ['driver' => 'sqlite', 'database' => $live, 'prefix' => '', 'foreign_key_constraints' => true], 'queue.default' => 'sync']);
+    DB::purge('update_success_fixture');
+    DB::statement('create table customers (name text)');
+    DB::table('customers')->insert(['name' => 'Existing customer']);
+    File::put($this->sandbox.'/.env', 'APP_KEY=preserved');
+    File::ensureDirectoryExists($this->sandbox.'/public/uploads');
+    File::put($this->sandbox.'/public/uploads/customer.txt', 'preserved upload');
+    $manifest = json_encode(['version' => '1.1.1']);
+    File::put(UpdatePaths::stage($plan['stage_id']).'/application/release-manifest.json', $manifest);
+    $plan['files']['release-manifest.json'] = hash('sha256', $manifest);
+    UpdatePaths::write($directory.'/journal.json', $plan + ['id' => $id, 'state' => 'queued', 'migrations_started' => false]);
+    File::put($this->sandbox.'/artisan', <<<'PHP'
+<?php
+$base = __DIR__;
+$command = $argv[1];
+file_put_contents($base.'/commands.jsonl', json_encode($argv)."\n", FILE_APPEND);
+if ($command === 'down') file_put_contents($base.'/storage/framework/down', 'owned');
+if ($command === 'up') unlink($base.'/storage/framework/down');
+if ($command === 'migrate') (new PDO('sqlite:'.$base.'/live.sqlite'))->exec('ALTER TABLE customers ADD COLUMN upgraded INTEGER DEFAULT 1');
+if ($command === 'campaign:updates-health') {
+    $version = json_decode(file_get_contents($base.'/release-manifest.json'), true)['version'];
+    $name = (new PDO('sqlite:'.$base.'/live.sqlite'))->query('SELECT name FROM customers')->fetchColumn();
+    if ($version !== $argv[2] || $name !== 'Existing customer') exit(1);
+}
+PHP);
+    $policy = Mockery::mock(UpdatePolicy::class);
+    $policy->shouldReceive('inspect')->andReturn($plan);
+    $portal = Mockery::mock(UpdatePortalClient::class);
+    $portal->shouldReceive('authorize')->once()->andReturn(['authorized' => true]);
+    $portal->shouldReceive('finish')->once()->withArgs(fn ($job, $ok) => $ok && ! is_file(storage_path('framework/down')));
+    try {
+        (new UpdateWorker($policy, app(DatabaseSnapshot::class), $portal))->run($id);
+        $journal = json_decode(file_get_contents($directory.'/journal.json'), true);
+        expect($journal['state'])->toBe('completed')->and($journal['backup_complete'])->toBeTrue()
+            ->and($journal['installation_verified'])->toBeTrue()->and($journal['portal_receipt_pending'])->toBeFalse()
+            ->and(app(\App\Services\OfficialUpdateService::class)->installedVersion())->toBe('1.1.1')
+            ->and(file_get_contents($this->sandbox.'/.env'))->toBe('APP_KEY=preserved')
+            ->and(file_get_contents($this->sandbox.'/public/uploads/customer.txt'))->toBe('preserved upload')
+            ->and(file_get_contents($this->sandbox.'/app/Existing.php'))->toBe('new application');
+        DB::purge('update_success_fixture');
+        expect(DB::table('customers')->value('name'))->toBe('Existing customer')->and((int) DB::table('customers')->value('upgraded'))->toBe(1);
+    } finally {
+        DB::purge('update_success_fixture');
+        config(['database.default' => 'sqlite']);
+    }
+});
+
 test('backup failure stops the worker before replacing application files', function () {
     [$id,$directory,$plan] = workerSafetyFixture($this);
     $policy = Mockery::mock(UpdatePolicy::class);
@@ -347,7 +398,7 @@ test('Core requests the Portal price for its installed scope and maps chairmansh
     File::ensureDirectoryExists(storage_path('app/private'));
     $uuid = (string) Str::uuid();
     File::put(storage_path('app/private/deployment-registration.json'), Crypt::encryptString(json_encode(['id' => $uuid, 'token' => str_repeat('a', 64), 'registered' => true, 'domain' => 'campaign.example.test'])));
-    Http::fake(['campaignmanager.ng/*' => Http::response(['package_type' => 'lga', 'scope_label' => 'Local Government', 'price_minor' => 500, 'currency' => 'USD', 'entitled' => false, 'payment_available' => true, 'checkout_url' => 'https://campaignmanager.ng/clientarea/automatic-update'])]);
+    Http::fake(['campaignmanager.ng/*' => Http::response(['package_type' => 'lga', 'scope_label' => 'Local Government', 'price_minor' => 500, 'currency' => 'USD', 'entitled' => false, 'payment_available' => true, 'checkout_url' => 'https://campaignmanager.ng/clientarea/automatic-update?'.http_build_query(['installation' => $uuid, 'version' => '1.1.1', 'sha256' => str_repeat('a', 64), 'package_type' => 'lga', 'quote_token' => str_repeat('b', 64)])])]);
     $quote = app(UpdatePortalClient::class)->status('1.1.1', str_repeat('a', 64));
     expect($quote['price_minor'])->toBe(500);
     Http::assertSent(fn ($r) => $r['package_type'] === 'lga' && $r->header('Authorization') === ['Bearer '.str_repeat('a', 64)]);
@@ -361,6 +412,23 @@ test('Core refuses to authorize a job prepared for another installed scope', fun
     Http::assertNothingSent();
 });
 
+
+test('Portal API redirects are refused without forwarding installation credentials', function () {
+    SystemSetting::create(['package' => 'presidential']);
+    config(['app.url' => 'https://campaign.example.test']);
+    File::ensureDirectoryExists(storage_path('app/private'));
+    File::put(storage_path('app/private/deployment-registration.json'), Crypt::encryptString(json_encode(['id' => (string) Str::uuid(), 'token' => str_repeat('a', 64), 'registered' => true, 'domain' => 'campaign.example.test'])));
+    Http::fake(['campaignmanager.ng/*' => Http::response('', 302, ['Location' => 'https://evil.test/collect'])]);
+    expect(fn () => app(UpdatePortalClient::class)->status('1.1.6', str_repeat('a', 64)))->toThrow(\App\Services\Updates\UpdateException::class);
+    Http::assertSentCount(1);
+    Http::assertNotSent(fn ($request) => parse_url($request->url(), PHP_URL_HOST) === 'evil.test');
+});
+
+test('the proposed immutable 1.1.7 policy supports both affected current source versions', function ($version) {
+    config(['release.identity.version' => $version]);
+    $stage = safetyStage($this, sources: config('updates.supported_sources'), target: '1.1.7');
+    expect(app(UpdatePolicy::class)->inspect($stage)['target_version'])->toBe('1.1.7');
+})->with(['1.1.5', '1.1.6']);
 
 test('corrective release accepts each reviewed source without replaying installed migrations', function ($version) {
     config(['release.identity.version' => $version]);

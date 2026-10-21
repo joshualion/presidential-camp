@@ -17,18 +17,18 @@
                 @if(!empty($updateStatus['available']))
                     <div class="alert alert-info mt-3"><strong>Version {{ $updateStatus['latest_version'] }} is available.</strong></div>
                     @if(!empty($updateStatus['verified']))
-                        <a class="btn btn-primary mb-3" href="{{ route('superadmin.updates.automatic') }}">Update automatically</a>
+                        <a class="btn btn-primary mb-3" href="{{ route('superadmin.updates.automatic') }}">Option 1: Automatic Update</a>
                         <p class="cm-help">Check readiness and coverage, then back up and install the update. Payment is offered only when coverage is needed. No update package is downloaded before coverage is confirmed.</p>
                     @else
                         <p class="cm-help">This release cannot be prepared automatically because verified update metadata is unavailable. Use the official manual download.</p>
-                        <a class="btn btn-primary mb-3" href="https://github.com/joshualion/Campaign-Manager/releases" target="_blank" rel="noopener">Download from official releases</a>
+                        <a class="btn btn-primary mb-3" href="{{ !empty($updateStatus['latest_version']) && preg_match('/^\d+\.\d+\.\d+$/D', $updateStatus['latest_version']) ? 'https://github.com/joshualion/Campaign-Manager/releases/tag/v'.$updateStatus['latest_version'] : 'https://github.com/joshualion/Campaign-Manager/releases' }}" target="_blank" rel="noopener">Download from official releases</a>
                     @endif
                     @if($preparedUpdate)
                     <p class="cm-help mt-2">Previously downloaded version {{ $preparedUpdate['version'] }} is not installed. A matching package will be reused; an older unused package will be replaced automatically after coverage is confirmed.</p>
                     @endif
                 @elseif($preparedUpdate && version_compare($preparedUpdate['version'], $installedVersion, '>'))
                     <div class="alert alert-info mt-3"><strong>Version {{ $preparedUpdate['version'] }} is ready for review.</strong><p class="mb-0 mt-1">The package has been downloaded and verified. Your installed version is still {{ $installedVersion }}.</p></div>
-                    <a class="btn btn-primary" href="{{ route('superadmin.updates.automatic') }}">Update automatically</a>
+                    <a class="btn btn-primary" href="{{ route('superadmin.updates.automatic') }}">Option 1: Automatic Update</a>
                     <p class="cm-help mt-2">Check server readiness and update coverage before continuing. This prepared package has not been installed.</p>
                     @if(!empty($preparedUpdate['id']))<details class="mt-3"><summary>Prepared package options</summary><form method="post" action="{{ route('superadmin.updates.discard') }}" class="mt-2">@csrf<input type="hidden" name="stage_id" value="{{ $preparedUpdate['id'] }}"><button class="btn btn-outline-secondary btn-sm">Discard prepared package</button></form></details>@endif
                 @elseif(!empty($updateStatus['checked_at']))
@@ -39,7 +39,7 @@
                 </div>
                 <div class="cm-actions mt-3">
                     <form method="post" action="{{ route('superadmin.updates.check') }}" id="update-check-form">@csrf<button class="btn btn-outline-secondary" id="update-check-button">Check again</button></form>
-                    <a href="https://github.com/joshualion/Campaign-Manager/releases" target="_blank" rel="noopener" class="small">Free manual download and release notes <span class="sr-only">(opens in a new tab)</span></a>
+                    <a href="{{ !empty($updateStatus['latest_version']) && preg_match('/^\d+\.\d+\.\d+$/D', $updateStatus['latest_version']) ? 'https://github.com/joshualion/Campaign-Manager/releases/tag/v'.$updateStatus['latest_version'] : 'https://github.com/joshualion/Campaign-Manager/releases' }}" target="_blank" rel="noopener" class="small">Option 2: Manual Update (free) <span class="sr-only">(opens in a new tab)</span></a>
                 </div>
                 <p class="cm-help mt-3 mb-0">Last successful check: {{ !empty($updateStatus['checked_at']) && strtotime($updateStatus['checked_at']) ? \Illuminate\Support\Carbon::parse($updateStatus['checked_at'])->timezone(config('app.timezone'))->format('j M Y, H:i T') : 'Not yet checked' }}. Official software downloads are free.</p>
             </div>

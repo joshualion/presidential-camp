@@ -7,6 +7,8 @@ return [
     'portal_api_base' => rtrim(env('CAMPAIGN_PORTAL_API_BASE', 'https://campaignmanager.ng/api/v2'), '/'),
     'portal_directory_base' => rtrim(env('CAMPAIGN_PORTAL_DIRECTORY_BASE', 'https://campaignmanager.ng/api'), '/'),
     'portal_web_base' => rtrim(env('CAMPAIGN_PORTAL_WEB_BASE', 'https://campaignmanager.ng'), '/'),
+    // Explicit origins, never infer trust by stripping "www" from an arbitrary host.
+    'portal_checkout_origins' => array_values(array_filter(array_map('trim', explode(',', env('CAMPAIGN_PORTAL_CHECKOUT_ORIGINS', 'https://campaignmanager.ng,https://www.campaignmanager.ng'))))),
     'package_type' => env('CAMPAIGN_PACKAGE_TYPE', 'presidential'),
     'installer_location_chunk_size' => (int) env('INSTALLER_LOCATION_CHUNK_SIZE', 750),
     'installer_location_batch_size' => (int) env('INSTALLER_LOCATION_BATCH_SIZE', 500),

@@ -43,7 +43,7 @@ class UpdatePortalClient
     private function base(): string
     {
         $base = rtrim(config('campaign.portal_api_base') ?: 'https://campaignmanager.ng/api/v2', '/');
-        if (parse_url($base, PHP_URL_SCHEME) !== 'https' || parse_url($base, PHP_URL_USER) || parse_url($base, PHP_URL_QUERY) || parse_url($base, PHP_URL_FRAGMENT)) {
+        if (parse_url($base, PHP_URL_SCHEME) !== 'https' || ! parse_url($base, PHP_URL_HOST) || parse_url($base, PHP_URL_USER) !== null || parse_url($base, PHP_URL_PASS) !== null || (parse_url($base, PHP_URL_PORT) ?? 443) !== 443 || parse_url($base, PHP_URL_QUERY) || parse_url($base, PHP_URL_FRAGMENT)) {
             throw new RuntimeException('Automatic updates require an HTTPS Portal API.');
         }
 
@@ -53,7 +53,7 @@ class UpdatePortalClient
     public function request(string $method, string $suffix, array $data): array
     {
         $s = $this->identity();
-        $http = Http::acceptJson()->withToken($s['token'])->connectTimeout(5)->timeout(25);
+        $http = Http::acceptJson()->withToken($s['token'])->withoutRedirecting()->connectTimeout(5)->timeout(25);
         $url = $this->base().'/'.$s['id'].'/automatic-update'.$suffix;
         $response = $method === 'GET' ? $http->get($url, $data) : $http->post($url, $data);
         if (! $response->successful()) {
@@ -69,15 +69,15 @@ class UpdatePortalClient
 
     public function status(string $version, string $hash): array
     {
-        $result = $this->request('GET', '', ['version' => $version, 'sha256' => $hash, 'package_type' => $this->packageType()]);
+        $result = $this->request('GET', '', ['version' => $version, 'sha256' => $hash, 'package_type' => $this->packageType(),
+            'return_url' => rtrim(config('app.url'), '/').'/superadmin/updates/automatic']);
         if (($result['package_type'] ?? '') !== $this->packageType()) {
             throw new RuntimeException('The Portal quote does not match this campaign scope.');
         }
         $url = $result['checkout_url'] ?? '';
-        $portal = rtrim(config('campaign.portal_web_base') ?: 'https://campaignmanager.ng', '/');
-        if (parse_url($url, PHP_URL_SCHEME) !== 'https' || parse_url($url, PHP_URL_HOST) !== parse_url($portal, PHP_URL_HOST) || parse_url($url, PHP_URL_USER)) {
-            throw new RuntimeException('Invalid automatic-update checkout address.');
-        }
+        app(PortalCheckoutAddress::class)->validate((string) $url, [
+            'installation' => $this->identity()['id'], 'version' => $version, 'sha256' => $hash, 'package_type' => $this->packageType(),
+        ]);
 
         return $result;
     }

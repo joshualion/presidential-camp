@@ -44,7 +44,7 @@ Currently supported automatic hosts are Unix hosts with PHP 8.2+ CLI, `proc_open
 
 ## Failure and recovery
 
-Before any migrations start, a failed application update restores verified original files automatically. Once a migration starts, a failure leaves maintenance enabled for operator recovery rather than guessing whether data should be rolled back. Backups are not automatically deleted. Keep them outside the document root with restricted permissions and review their retention after verifying the upgraded installation.
+A failed application update restores verified original files automatically. If migrations started, the worker also restores the verified pre-update database snapshot under the update locks and checks the restored application before reopening. Failed or unverified recovery leaves maintenance enabled for operator review. The supervisor follows the same guarded recovery path after worker interruption. Once installation verification is committed, recovery never restores an old database that may have accepted new writes. Backups are not automatically deleted. Keep them outside the document root with restricted permissions and review their retention after verifying the upgraded installation.
 
 The private directory is `storage/app/updates/jobs/<job UUID>`. Its standalone recovery script works without a functioning application/vendor autoloader:
 
