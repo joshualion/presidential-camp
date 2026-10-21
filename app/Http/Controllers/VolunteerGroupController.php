@@ -29,7 +29,7 @@ class VolunteerGroupController extends Controller
     {
         $profileData = $this->getProfileData();
         $groups = SupportGroup::all();
-        return view('backend.'.$profileData->access_level.'.settings.SupportGroup.groups', compact('groups','profileData'));
+        return view('backend.'.$profileData->access_level.'.settings.supportGroup.groups', compact('groups','profileData'));
     }
 
 
@@ -39,7 +39,7 @@ class VolunteerGroupController extends Controller
     public function addVolunteerGroup()
     {
         $profileData = $this->getProfileData();
-        return view('backend.'.$profileData->access_level.'.settings.SupportGroup.create',compact('profileData'));
+        return view('backend.'.$profileData->access_level.'.settings.supportGroup.create',compact('profileData'));
     }
 
 
@@ -50,7 +50,7 @@ class VolunteerGroupController extends Controller
     {
         $request->validate([
             'name' => 'required|unique:support_groups',
-            'description' => 'string',
+            'description' => 'nullable|string',
         ]);
 
         $profileData = $this->getProfileData();
@@ -79,7 +79,7 @@ class VolunteerGroupController extends Controller
             'alert-type' => 'success'
         );
 
-        return redirect($profileData->access_level.'.volunteer.group')->with($notification);
+        return redirect()->route($profileData->access_level.'.volunteer.group')->with($notification);
     }
 
 
@@ -90,7 +90,7 @@ class VolunteerGroupController extends Controller
     {
         $profileData = $this->getProfileData();
         $group = SupportGroup::where('uuid', $uuid)->firstOrFail();
-        return view('backend.'.$profileData->access_level.'.settings.SupportGroup.edit',compact('group','profileData'));
+        return view('backend.'.$profileData->access_level.'.settings.supportGroup.edit',compact('group','profileData'));
     }
 
 
@@ -101,7 +101,7 @@ class VolunteerGroupController extends Controller
     {
         $request->validate([
             'name' => 'required',
-            'description' => 'string',
+            'description' => 'nullable|string',
         ]);
 
         $profileData = $this->getProfileData();

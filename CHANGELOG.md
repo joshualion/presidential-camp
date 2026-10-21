@@ -1,3 +1,10 @@
+# Unreleased — v1.1.7 candidate
+
+- Fix Volunteer Group Settings and Age Grade Settings returning HTTP 500 on case-sensitive hosting, including their add and edit pages.
+- Correct settings redirects, accept optional descriptions, and prevent deleting an age grade that still has associated users.
+- Improve automatic-update checkout validation for explicitly trusted Portal origins and installation-bound return links. The matching Customer Portal correction must be deployed first.
+- Automatic updates require confirmed coverage and customer consent. Manual release downloads remain free. Pending bank transfers provide coverage only after verification.
+
 # 1.1.5
 
 Coverage-first automatic updating, engine-aware consistent backups, native-tool fallback, bounded export retries, automatic rollback and independently supervised recovery. Existing 1.1.4 assets remain unchanged. See docs/releases/v1.1.5.md.

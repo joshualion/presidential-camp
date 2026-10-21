@@ -79,8 +79,18 @@ The connected GitHub tool does not expose branch deletion; the browser is not si
 
 ## Verification results
 
-- PHP 8.3.6, isolated SQLite Core tests: **539 passed, 2,315 assertions**. Latest focused updater/official-update/checkout run: **99 passed, 383 assertions**.
+- PHP 8.3.6, isolated SQLite Core tests: **556 passed, 2,380 assertions**. Latest focused updater/official-update/checkout run: **99 passed, 383 assertions**.
 - Portal, isolated MariaDB 10.11.14: **222 passed, zero failed, 1,113 assertions**. All **35** automatic-update checkout/payment tests passed. The earlier three geography failures were resolved by materializing the exact six existing Git LFS objects and verifying every object against its recorded SHA-256 and byte size. Five files required their original CRLF line endings; the polling-unit file also retained one original LF line ending. Its exact SHA-256 is `57420753f483559675f5bbce911ba4096b3d8e758659f5a40fc22686bd356938`, size 19,149,113 bytes. No dataset content, expected counts, LFS pointers or application/test logic changed. Normal full checkouts must still materialize LFS with `git lfs pull`; existing CI already requests LFS checkout.
 - Both locked Composer installations, Vite production builds, application PHP syntax checks, new-class Pint checks and Blade view compilation succeeded. Composer locked audits and npm production audits found zero advisories.
 - The separate MariaDB integration script passed native, missing-CLI and broken-CLI mixed-engine backup/restore, database objects, concurrent writers, lock cleanup, truncation, unexpected tables, permissions and InnoDB snapshot consistency. Native clients were configured explicitly for this isolated runtime.
 - The full GitHub CI matrix (PHP 8.2/8.3, MySQL 8 and additional MariaDB versions), cPanel HTTP/worker behavior, real gateway transactions, live production data and an actual full published-package upgrade were not executed. They remain explicit approval/acceptance gates.
+
+## Additional pre-release settings correction
+
+The owner reported HTTP 500 responses at `/superadmin/setting/volunteer/group` and `/superadmin/setting/agegrade`. Isolated authenticated route tests reproduced missing-view exceptions: the controllers requested `settings.SupportGroup` and `settings.agegrade`, while the actual directories are `settings.supportGroup` and `settings.ageGrade`. Listing, add and edit view references now use the exact existing directory case, including views shared by the national administration paths.
+
+The same focused correction fixes volunteer-create and age-grade-delete redirects to use the current administrator's named route, accepts the descriptions already marked optional in the forms, and returns 404 for missing age-grade records. Age-grade deletion now checks associated users server-side under a transaction and parent-row lock; the legacy foreign key cascades deletion to users, so the existing browser-only warning was insufficient. No migration, user-data change or production write is included.
+
+`ReferenceSettingsTest` adds 17 authenticated regression tests (65 assertions) for both settings pages, related add/edit/save/update/delete actions, optional descriptions, missing records, membership preservation and administrator authorization. All 17 pass after the correction; the same tests reproduced 13 failures before it. The v1.1.7 candidate changelog includes these corrections alongside the automatic-update improvements.
+
+After the additional settings correction, the full isolated Core suite passed: **556 tests, 2,380 assertions**, with zero failures. PHP syntax checks and the new regression file's Pint check passed. The live installation is unchanged until the approved release is installed.
