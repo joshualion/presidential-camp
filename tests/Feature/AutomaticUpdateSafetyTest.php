@@ -193,7 +193,7 @@ test('bootstrap packaging signs every bridge file and refuses tampering before i
     require_once $this->originalBase.'/tools/updater/build-bootstrap.php';
     app()->setBasePath($this->originalBase);
     try {
-        $zip = buildCampaignUpdaterBootstrap($this->sandbox, $this->updateKey, config('release.signing.public_key'), '1.1.1');
+        $zip = buildCampaignUpdaterBootstrap($this->sandbox, $this->updateKey, config('release.signing.public_key'), '1.1.7');
     } finally {
         app()->setBasePath($this->sandbox);
     }
@@ -225,7 +225,21 @@ test('bootstrap packaging signs every bridge file and refuses tampering before i
         ->and(glob($this->sandbox.'/storage/app/updates/bootstrap-history/*/bootstrap'))->toHaveCount(1)
         ->and(file_get_contents($this->sandbox.'/.env'))->toBe('APP_KEY=preserved');
 
-})->with(['1.0.8', '1.1.2']);
+})->with(['1.0.8', '1.1.2', '1.1.5', '1.1.6']);
+
+test('bootstrap installation rejects an unreviewed source before changing the installation', function ($sourceVersion) {
+    File::ensureDirectoryExists($this->sandbox.'/vendor');
+    File::put($this->sandbox.'/vendor/autoload.php', '<?php');
+    File::put($this->sandbox.'/.env', 'APP_KEY=preserved');
+    File::put($this->sandbox.'/release-manifest.json', json_encode(['version' => $sourceVersion]));
+    $process = new Process([PHP_BINARY, $this->originalBase.'/tools/updater/bootstrap-install.php', $this->sandbox]);
+    $process->run();
+    expect($process->getExitCode())->toBe(1)
+        ->and($process->getErrorOutput())->toContain('This bootstrap supports only')
+        ->and(is_dir($this->sandbox.'/storage/app/updates/bootstrap'))->toBeFalse()
+        ->and(is_file($this->sandbox.'/public/campaign-update-bootstrap.php'))->toBeFalse()
+        ->and(file_get_contents($this->sandbox.'/.env'))->toBe('APP_KEY=preserved');
+})->with(['1.1.7', '9.9.9']);
 
 test('authorized startup writes a valid private worker and permits cancelling only queued jobs', function () {
     $id = (string) Str::uuid();
