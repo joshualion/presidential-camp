@@ -25,7 +25,7 @@
                 </div>
             </div>
             <div class="form-group"><label for="remarks">Details</label><textarea id="remarks" name="remarks" class="form-control" rows="6" maxlength="5000" required>{{ old('remarks') }}</textarea></div>
-            <div class="form-group"><label for="pictures">Picture evidence <small class="text-muted">up to 3 images, 2 MB each</small></label><input id="pictures" type="file" name="pictures[]" class="form-control" accept=".jpg,.jpeg,.png" multiple></div>
+            @include('backend.shared.election.evidence-inputs')
         </div>
         <div class="card-footer"><button type="submit" class="btn btn-danger">Report Incident</button> <a href="{{ route('user.elections.workspace') }}" class="btn btn-default">Cancel</a></div>
     </form>

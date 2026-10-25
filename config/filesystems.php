@@ -29,6 +29,10 @@ return [
     */
 
     'disks' => [
+        'incident_evidence' => [
+            'driver' => 'local', 'root' => storage_path('app/private/incident-evidence'),
+            'visibility' => 'private', 'throw' => true,
+        ],
 
         'local' => [
             'driver' => 'local',

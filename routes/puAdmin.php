@@ -65,7 +65,7 @@ Route::post('/pu/member/store', [MembersController::class, 'storeMember'])->name
 Route::get('/pu/member/edit/{uuid}', [MembersController::class, 'editMember'])->name('puadmin.member.edit')->middleware('access_level:puadmin');
 Route::put('/pu/member/update/', [MembersController::class, 'updateMember'])->name('puadmin.member.update')->middleware('access_level:puadmin');
 Route::get('/pu/member/view/{uuid}', [MembersController::class, 'viewMember'])->name('puadmin.member.view')->middleware('access_level:puadmin');
-Route::get('/pu/member/suspend/{uuid}', [MembersController::class, 'suspendMember'])->name('puadmin.member.suspend')->middleware('access_level:puadmin');
+Route::match(['GET', 'POST'], '/pu/member/suspend/{uuid}', [MembersController::class, 'suspendMember'])->name('puadmin.member.suspend')->middleware('access_level:puadmin');
 Route::delete('/pu/member/delete/{uuid}', [MembersController::class, 'deleteMember'])->name('puadmin.member.delete')->middleware('access_level:puadmin');
 
 // Members By State

@@ -49,7 +49,7 @@ Route::middleware(['auth', 'check_onboarding'])->group(function () {
     Route::get('/senatorial/member/edit/{uuid}', [MembersController::class, 'editMember'])->name('senatorialadmin.member.edit')->middleware('access_level:senatorialadmin');
     Route::put('/senatorial/member/update/', [MembersController::class, 'updateMember'])->name('senatorialadmin.member.update')->middleware('access_level:senatorialadmin');
     Route::get('/senatorial/member/view/{uuid}', [MembersController::class, 'viewMember'])->name('senatorialadmin.member.view')->middleware('access_level:senatorialadmin');
-    Route::get('/senatorial/member/suspend/{uuid}', [MembersController::class, 'suspendMember'])->name('senatorialadmin.member.suspend')->middleware('access_level:senatorialadmin');
+    Route::match(['GET', 'POST'], '/senatorial/member/suspend/{uuid}', [MembersController::class, 'suspendMember'])->name('senatorialadmin.member.suspend')->middleware('access_level:senatorialadmin');
     Route::delete('/senatorial/member/delete/{uuid}', [MembersController::class, 'deleteMember'])->name('senatorialadmin.member.delete')->middleware('access_level:senatorialadmin');
     Route::get('/senatorial/members/bylga/{uuid?}', [MembersController::class, 'membersByLocalGovernments'])->name('senatorialadmin.members.byLga')->middleware('access_level:senatorialadmin');
     Route::get('/senatorial/members/lga/{uuid}', [MembersController::class, 'viewMembersByLocalGovernments'])->name('senatorialadmin.member.lga.view')->middleware('access_level:senatorialadmin');

@@ -179,6 +179,9 @@
         @endif
       </div>
 
+@if(Auth::user()->access_level === 'superadmin')
+<div class="px-3 py-2"><a class="nav-link" href="{{ route('superadmin.authorization.index') }}"><i class="fas fa-user-shield mr-2"></i>Roles &amp; Capabilities</a><a class="nav-link" href="{{ route('superadmin.incident-evidence.settings') }}"><i class="fas fa-camera mr-2"></i>Incident Evidence Settings</a></div>
+@endif
 <!-- super admin Menu -->
 @Include('backend.template.superadminmenu')
 <!-- /super admin Menu -->

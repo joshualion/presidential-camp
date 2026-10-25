@@ -63,7 +63,7 @@ Route::post('/regional/member/store', [MembersController::class, 'storeMember'])
 Route::get('/regional/member/edit/{uuid}', [MembersController::class, 'editMember'])->name('regionaladmin.member.edit')->middleware('access_level:regionaladmin');
 Route::put('/regional/member/update/', [MembersController::class, 'updateMember'])->name('regionaladmin.member.update')->middleware('access_level:regionaladmin');
 Route::get('/regional/member/view/{uuid}', [MembersController::class, 'viewMember'])->name('regionaladmin.member.view')->middleware('access_level:regionaladmin');
-Route::get('/regional/member/suspend/{uuid}', [MembersController::class, 'suspendMember'])->name('regionaladmin.member.suspend')->middleware('access_level:regionaladmin');
+Route::match(['GET', 'POST'], '/regional/member/suspend/{uuid}', [MembersController::class, 'suspendMember'])->name('regionaladmin.member.suspend')->middleware('access_level:regionaladmin');
 Route::delete('/regional/member/delete/{uuid}', [MembersController::class, 'deleteMember'])->name('regionaladmin.member.delete')->middleware('access_level:regionaladmin');
  //Members By region
 Route::get('/regional/members/region', [MembersController::class, 'membersByRegions'])->name('regionaladmin.members.region')->middleware('access_level:regionaladmin,regionaladmin');

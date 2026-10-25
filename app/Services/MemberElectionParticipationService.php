@@ -149,35 +149,23 @@ class MemberElectionParticipationService
         Election $election,
         PollingUnitAgentAssignment $assignment,
         array $data,
-        array $pictures = []
+        array $pictures = [],
+        array $videos = []
     ): ElectionIncident {
         $this->assertElectionOpen($election);
         abort_unless((int) $assignment->user_id === (int) $member->id && $assignment->status === PollingUnitAgentAssignment::STATUS_APPROVED, 403);
         abort_unless($this->permissions->userHasApprovedAssignmentForPollingUnit($member, $assignment->polling_unit_id), 403);
 
-        $incident = DB::transaction(function () use ($member, $election, $assignment, $data) {
-            return ElectionIncident::query()->create(array_merge($this->locationPayload($assignment), [
-                'election_id' => $election->id,
-                'polling_unit_id' => $assignment->polling_unit_id,
-                'agent_id' => $member->id,
-                'incident_type' => $data['incident_type'],
-                'severity' => $data['severity'],
-                'status' => 'open',
-                'remarks' => $data['remarks'],
-            ]));
-        });
+        $location = $this->locationPayload($assignment);
+        app(LicensedScopeQueryService::class)->assertPayloadWithinScope($location + ['polling_unit_id' => $assignment->polling_unit_id]);
+        $result = $this->permissions->activeOfficialResult($election, $assignment->polling_unit_id);
 
-        foreach ($pictures as $picture) {
-            $path = $picture->store('evidences/pictures', 'public');
-            PictureEvidence::query()->create([
-                'election_incident_id' => $incident->id,
-                'file_path' => $path,
-                'uploaded_by' => $member->id,
-                'verification_status' => 'pending',
-            ]);
-        }
-
-        return $incident;
+        return app(IncidentEvidenceService::class)->create($member, $location + [
+            'election_id' => $election->id, 'polling_unit_id' => $assignment->polling_unit_id,
+            'polling_unit_result_id' => $result?->id,
+            'incident_type' => $data['incident_type'], 'severity' => $data['severity'],
+            'status' => 'open', 'remarks' => $data['remarks'],
+        ], $pictures, $videos);
     }
 
     private function locationPayload(PollingUnitAgentAssignment $assignment): array

@@ -36,16 +36,17 @@ class CampaignPackagePermissionService
 
     public function userCan(User $actor, string $capability): bool
     {
-        if ($actor->access_level === 'superadmin') {
-            return true;
+        $service = app(CampaignCapabilityService::class);
+        if ($service->known($capability)) {
+            return $service->allows($actor, $capability);
         }
-
+        if ($actor->access_level === 'superadmin') { return true; }
+        if ($actor->capabilities_managed || $actor->roles->contains(fn ($role) => (bool) $role->capabilities_managed)) {
+            return $actor->checkPermissionTo($capability);
+        }
         foreach ($actor->roles as $role) {
-            if ($this->roleHasCapability($role, $capability)) {
-                return true;
-            }
+            if ($actor->checkPermissionTo($capability) || $this->roleHasCapability($role, $capability)) { return true; }
         }
-
         return false;
     }
 

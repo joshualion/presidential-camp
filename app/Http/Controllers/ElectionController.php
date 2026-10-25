@@ -567,7 +567,7 @@ class ElectionController extends Controller
             $redirectTo = $request->input('redirect_to'); // Fetch user decision from hidden field
             if ($redirectTo === 'incident') {
                 return redirect()
-                    ->route($profileData->access_level . '.incident.add')
+                    ->route($profileData->access_level . '.incident.add', ['election' => $election->uuid, 'polling_unit' => $targetPollingUnitId])
                     ->with('message', 'Votes recorded. Proceed to report the incident.');
             }
 
@@ -577,50 +577,32 @@ class ElectionController extends Controller
             ]);
         }
 
-        public function addIncident()
+        public function addIncident(Request $request)
         {
             $profileData = $this->getProfileData();
-                if(empty($profileData->lga_id) || empty($profileData->ward_id) || empty($profileData->polling_unit_id )){
-                    $notification =[
-                        'type'=> 'error',
-                        'message'=> 'You need to complete you Profile before accessing election data',
-                    ];
-                    return redirect()->route($profileData->access_level.'.profile')->with($notification);
-                }
-
-            // Fetch the ongoing or current election
-            $election = Election::whereDate('year', now())
-                ->orWhere('status', 'ongoing')
-                ->first();
-
-            if (!$election) {
-                $notification = [
-                    'message' => 'No ongoing or current election found.',
-                    'alert-type' => 'info',
-                ];
-                return redirect()->route($profileData->access_level . '.elections')->with($notification);
+            $permission = app(PollingUnitResultPermissionService::class);
+            $pollingUnitId = $request->integer('polling_unit') ?: ($profileData->polling_unit_id ?: $permission->firstApprovedPollingUnitId($profileData));
+            abort_unless($permission->userHasApprovedAssignmentForPollingUnit($profileData, $pollingUnitId), 403);
+            $election = $request->filled('election')
+                ? Election::where('uuid', $request->string('election')->toString())->firstOrFail()
+                : app(\App\Services\MemberElectionParticipationService::class)->openElections()->first();
+            if (! $election) {
+                return redirect()->route($profileData->access_level.'.elections')->with('message', 'No election is open for submission.');
             }
+            app(\App\Services\MemberElectionParticipationService::class)->assertElectionOpen($election);
+            $this->licensedScope()->assertPayloadWithinScope(['polling_unit_id' => $pollingUnitId]);
+            $location = $this->reportingKeysForPollingUnit($pollingUnitId);
+            $pollingUnit = PollingUnit::with('ward.localGovernmentArea.state')->findOrFail($pollingUnitId);
 
-            // Fetch the logged-in user's associated location data
-            $regionId = $profileData->region_id;
-            $stateId = $profileData->state_id;
-            $lgaId = $profileData->lga_id;
-            $wardId = $profileData->ward_id;
-            $pollingUnitId = $profileData->polling_unit_id;
-
-            return view('backend.'.$profileData->access_level.'.election.add-incident', compact(
-                'election',
-                'profileData',
-                'regionId',
-                'stateId',
-                'lgaId',
-                'wardId',
-                'pollingUnitId'
-            ));
+            return view('backend.shared.election.incident-form', [
+                'profileData' => $profileData, 'pageTitle' => 'Report Election Incident', 'election' => $election,
+                'regionId' => $pollingUnit->ward->localGovernmentArea->state->region_id,
+                'stateId' => $location['state_id'], 'lgaId' => $location['lga_id'],
+                'wardId' => $location['ward_id'], 'pollingUnitId' => $pollingUnitId,
+            ]);
         }
 
 
-        
         public function electionResult($uuid, ElectionReportService $reportService)
         {
             $pageTitle = 'Election Result';
@@ -1040,8 +1022,9 @@ class ElectionController extends Controller
             'polling_unit_id' => 'required|exists:polling_units,id',
             'incident_type' => 'nullable|string|max:255',
             'severity' => ['nullable', Rule::in(['low', 'medium', 'high', 'critical'])],
-            'remarks' => 'nullable|string|max:255',
-            'pictures.*' => 'nullable|image|max:2048',
+            'remarks' => 'nullable|string|max:5000',
+            'pictures' => 'nullable|array',
+            'videos' => 'nullable|array',
         ]);
 
         $profileData = $this->getProfileData();
@@ -1050,35 +1033,20 @@ class ElectionController extends Controller
 
         $reportingKeys = $this->reportingKeysForPollingUnit($validated['polling_unit_id']);
 
-        // Create the incident record
-        $incident = ElectionIncident::create([
-            'election_id' => $validated['election_id'],
-            'region_id' => $validated['region_id'],
-            'state_id' => $reportingKeys['state_id'] ?? $validated['state_id'],
+        $election = Election::findOrFail($validated['election_id']);
+        app(\App\Services\MemberElectionParticipationService::class)->assertElectionOpen($election);
+        $pollingUnit = PollingUnit::with('ward.localGovernmentArea.state')->findOrFail($validated['polling_unit_id']);
+        $result = app(PollingUnitResultPermissionService::class)->activeOfficialResult($election, (int) $validated['polling_unit_id']);
+        app(\App\Services\IncidentEvidenceService::class)->create($profileData, [
+            'election_id' => $election->id, 'polling_unit_result_id' => $result?->id,
+            'region_id' => $pollingUnit->ward->localGovernmentArea->state->region_id,
+            'state_id' => $reportingKeys['state_id'],
             'senatorial_district_id' => $reportingKeys['senatorial_district_id'],
             'federal_constituency_id' => $reportingKeys['federal_constituency_id'],
-            'lga_id' => $reportingKeys['lga_id'] ?? $validated['lga_id'],
-            'ward_id' => $reportingKeys['ward_id'] ?? $validated['ward_id'],
-            'polling_unit_id' => $validated['polling_unit_id'],
-            'incident_type' => $validated['incident_type'] ?? null,
-            'severity' => $validated['severity'] ?? 'medium',
-            'status' => 'open',
-            'remarks' => $validated['remarks'],
-            'agent_id' => auth()->id(), // Assuming the logged-in user is the agent
-        ]);
-
-        // Handle picture evidence uploads
-        if ($request->has('pictures')) {
-            foreach ($request->file('pictures') as $picture) {
-                $path = $picture->store('evidences/pictures', 'public');
-                PictureEvidence::create([
-                    'election_incident_id' => $incident->id,
-                    'file_path' => $path,
-                    'uploaded_by' => auth()->id(),
-                    'verification_status' => 'pending',
-                ]);
-            }
-        }
+            'lga_id' => $reportingKeys['lga_id'], 'ward_id' => $reportingKeys['ward_id'],
+            'polling_unit_id' => $pollingUnit->id, 'incident_type' => $validated['incident_type'] ?? null,
+            'severity' => $validated['severity'] ?? 'medium', 'status' => 'open', 'remarks' => $validated['remarks'] ?? null,
+        ], $request->file('pictures', []), $request->file('videos', []));
 
         return redirect()->back()->with('success', 'Incident recorded successfully.');
     }
@@ -1106,7 +1074,7 @@ class ElectionController extends Controller
             $incidents = $incidentQuery->get();
 
             // Return a view to display the incidents
-            return view('backend.'.$profileData->access_level.'.election.incident_report', [
+            return view('backend.shared.election.incident-report', [
                 'election' => $election,
                 'pollingUnit' => $pollingUnit,
                 'incidents' => $incidents,

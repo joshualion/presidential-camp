@@ -65,7 +65,7 @@ Route::post('/state/member/store', [MembersController::class, 'storeMember'])->n
 Route::get('/state/member/edit/{uuid}', [MembersController::class, 'editMember'])->name('stateadmin.member.edit')->middleware('access_level:stateadmin');
 Route::put('/state/member/update/', [MembersController::class, 'updateMember'])->name('stateadmin.member.update')->middleware('access_level:stateadmin');
 Route::get('/state/member/view/{uuid}', [MembersController::class, 'viewMember'])->name('stateadmin.member.view')->middleware('access_level:stateadmin');
-Route::get('/state/member/suspend/{uuid}', [MembersController::class, 'suspendMember'])->name('stateadmin.member.suspend')->middleware('access_level:stateadmin');
+Route::match(['GET', 'POST'], '/state/member/suspend/{uuid}', [MembersController::class, 'suspendMember'])->name('stateadmin.member.suspend')->middleware('access_level:stateadmin');
 Route::delete('/state/member/delete/{uuid}', [MembersController::class, 'deleteMember'])->name('stateadmin.member.delete')->middleware('access_level:stateadmin');
 
 // Members By State

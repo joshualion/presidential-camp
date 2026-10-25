@@ -13,7 +13,27 @@ use App\Models\Concerns\HasLocationScope;
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable, HasRoles, HasLocationScope;
+    use HasFactory, Notifiable, HasLocationScope;
+    use HasRoles {
+        checkPermissionTo as private originalCheckPermissionTo;
+        hasPermissionTo as private originalHasPermissionTo;
+    }
+
+    public function checkPermissionTo($permission, $guardName = null): bool
+    {
+        $name = is_string($permission) ? $permission : ($permission->name ?? null);
+        $service = app(\App\Services\CampaignCapabilityService::class);
+        return $name && $service->known($name)
+            ? $service->allows($this, $name) : $this->originalCheckPermissionTo($permission, $guardName);
+    }
+
+    public function hasPermissionTo($permission, $guardName = null): bool
+    {
+        $name = is_string($permission) ? $permission : ($permission->name ?? null);
+        $service = app(\App\Services\CampaignCapabilityService::class);
+        return $name && $service->known($name)
+            ? $service->allows($this, $name) : $this->originalHasPermissionTo($permission, $guardName);
+    }
 
     /**
      * Explicitly define safe mass-assignable attributes to prevent privilege escalation.

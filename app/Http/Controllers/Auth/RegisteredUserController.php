@@ -77,7 +77,8 @@ class RegisteredUserController extends Controller
         ]);
 
         // Find the role by its Name
-        $role = Role::query()->whereIn('name', ['Member', 'member'])->firstOrFail();
+        $role = app(\App\Services\CampaignCapabilityService::class)->defaultRole('user')
+            ?: Role::query()->whereIn('name', ['Member', 'member'])->firstOrFail();
         //get the default country id
         $country= SystemSetting::find(1)->system_country;
         $country_id = Country::where('name',$country)->first()->id;

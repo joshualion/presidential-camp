@@ -58,8 +58,13 @@ class CampaignPackageRoleService
             return collect();
         }
 
+        if ($actor?->access_level !== 'superadmin') {
+            $default = app(CampaignCapabilityService::class)->defaultRole($accessLevel);
+            return $default ? collect([$default]) : collect();
+        }
+        $custom = Role::where('guard_name', 'web')->where('capabilities_managed', true)->get();
         if (!$this->usesPackageRoleMap()) {
-            return Role::query()->where('group_name', $accessLevel)->orderBy('id')->get();
+            return Role::query()->where('group_name', $accessLevel)->where('guard_name', 'web')->orderBy('id')->get()->merge($custom)->unique('id');
         }
 
         $names = $this->roleNamesForAccessLevel($accessLevel);
@@ -77,11 +82,15 @@ class CampaignPackageRoleService
             $roles->push($memberRole);
         }
 
-        return $roles->unique('id')->values();
+        return $roles->merge($custom)->unique('id')->values();
     }
 
     public function assignableRoles(?User $actor, ?User $member = null): Collection
     {
+        if ($actor?->access_level !== 'superadmin') {
+            return collect(array_keys($this->assignableAccessLevels($actor)))
+                ->map(fn ($level) => app(CampaignCapabilityService::class)->defaultRole($level))->filter()->unique('id')->values();
+        }
         if (!$this->usesPackageRoleMap()) {
             $allowedGroups = array_keys($this->assignableAccessLevels($actor));
 
@@ -92,7 +101,7 @@ class CampaignPackageRoleService
             $groupOrder = array_flip(array_keys($this->accessLevelLabels()));
 
             return Role::query()
-                ->whereIn('group_name', $allowedGroups)
+                ->where(fn ($query) => $query->whereIn('group_name', $allowedGroups)->orWhere('capabilities_managed', true))
                 ->orderBy('id')
                 ->get()
                 ->sortBy(fn (Role $role) => (($groupOrder[$role->group_name] ?? 99) * 1000) + $role->id)
@@ -120,6 +129,7 @@ class CampaignPackageRoleService
 
     public function roleIsPackageAllowed(Role $role, ?string $accessLevel = null): bool
     {
+        if ($role->capabilities_managed && $role->guard_name === 'web') { return true; }
         if (!$this->usesPackageRoleMap()) {
             return true;
         }
@@ -161,6 +171,10 @@ class CampaignPackageRoleService
             return false;
         }
 
+        if ($actor?->access_level !== 'superadmin') {
+            return $role->guard_name === 'web' && (int) $role->id === (int) (app(CampaignCapabilityService::class)->defaultRole($accessLevel)?->id);
+        }
+        if ($role->guard_name === 'web' && $role->capabilities_managed) { return true; }
         if (!$this->usesPackageRoleMap()) {
             return $role->group_name === $accessLevel;
         }

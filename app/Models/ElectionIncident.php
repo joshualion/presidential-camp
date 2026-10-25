@@ -15,6 +15,7 @@ class ElectionIncident extends Model
 
     protected $casts = [
         'election_id' => 'integer',
+        'polling_unit_result_id' => 'integer',
         'agent_id' => 'integer',
         'region_id' => 'integer',
         'state_id' => 'integer',
@@ -27,12 +28,17 @@ class ElectionIncident extends Model
         'resolved_by' => 'integer',
     ];
 
+    public function pollingUnitResult()
+    {
+        return $this->belongsTo(PollingUnitResult::class);
+    }
+
     public function election(){
         return $this->belongsTo(Election::class);
     }
 
     public function user(){
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class, 'agent_id');
     }
 
     public function region(){

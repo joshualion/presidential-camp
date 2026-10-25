@@ -45,7 +45,7 @@ class OfficialUpdateController extends Controller
         return view('backend.shared.official-updates', [
             'pageTitle' => 'Official Updates', 'profileData' => $request->user(),
             'installedVersion' => $updates->installedVersion(), 'updateStatus' => $status,
-            'activeJob' => $activeJob,
+            'activeJob' => $activeJob, 'confirmationReview' => $request->attributes->get('confirmationReview'),
         ]);
     }
 
@@ -59,12 +59,12 @@ class OfficialUpdateController extends Controller
                 'Installation confirmation could not be verified. Check registration details or try again.');
         }
         // Review only: no update intent, payment navigation, preparation or installation.
-        return response()->view('backend.shared.official-updates', [
-            'pageTitle' => 'Official Updates', 'profileData' => $request->user(),
-            'installedVersion' => app(OfficialUpdateService::class)->installedVersion(),
-            'updateStatus' => [], 'activeJob' => null, 'confirmationReview' => $flow->screen(true),
-        ])->withHeaders(['Cache-Control' => 'no-store', 'Referrer-Policy' => 'no-referrer']);
+        $request->attributes->set('confirmationReview', $flow->screen(true));
+        $request->query->remove('progress');
+        return response($this->index($request, app(OfficialUpdateService::class)))
+            ->withHeaders(['Cache-Control' => 'no-store', 'Referrer-Policy' => 'no-referrer']);
     }
+
 
     public function registration(Request $request)
     {

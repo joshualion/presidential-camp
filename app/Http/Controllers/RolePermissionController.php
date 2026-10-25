@@ -21,8 +21,13 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
-class RolePermissionController extends Controller
+class RolePermissionController extends Controller implements \Illuminate\Routing\Controllers\HasMiddleware
 {
+    public static function middleware(): array
+    {
+        return ['auth', 'access_level:superadmin'];
+    }
+
 
     public function __construct()
     {

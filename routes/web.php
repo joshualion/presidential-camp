@@ -510,3 +510,7 @@ Route::get('/.well-known/campaign-manager/installation-binding', function (\Illu
     }
     return response()->json(['binding' => $binding])->header('Cache-Control', 'no-store');
 })->middleware('throttle:30,1')->name('deployment.domain-binding');
+
+Route::get('/election/evidence/{kind}/{id}', [\App\Http\Controllers\IncidentEvidenceController::class, 'show'])
+    ->whereIn('kind', ['picture', 'video'])->whereNumber('id')
+    ->middleware(['auth', 'module.enabled:elections', 'throttle:120,1'])->name('election.evidence.show');

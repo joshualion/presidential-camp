@@ -465,44 +465,8 @@ class MembersController extends Controller
             return ucfirst($member->validVoter);
         })
         ->addColumn('action', function ($member) {
-            $profileData = $this->getProfileData();
-
-            // Determine Suspend/Activate button
-            $statusButton = ($member->status === 'active')
-                ? '<a href="' . route($profileData->access_level . '.member.suspend', $member->uuid) . '">
-                       <button class="btn btn-warning btn-sm"><i class="fas fa-pause"></i> Suspend</button>
-                   </a>'
-                : '<a href="' . route($profileData->access_level . '.member.suspend', $member->uuid) . '">
-                       <button class="btn btn-success btn-sm"><i class="fas fa-play"></i> Activate</button>
-                   </a>';
-
-            // Add action buttons
-            $actionButtons = '
-                <a href="' . route($profileData->access_level . '.member.view', $member->uuid) . '">
-                    <button class="btn btn-primary btn-sm"><i class="fas fa-eye"></i> Show</button>
-                </a>' . $statusButton;
-
-            // Conditionally add Edit/Delete buttons
-            if ($profileData->hasAnyRole([
-                    'National ICT Director',
-                    'Regional ICT Director',
-                    'State ICT Director',
-                    'Senatorial ICT Director',
-                    'Federal Constituency ICT Director',
-                    'Federal ICT Director',
-                    'LGA ICT Director',
-                    'Ward ICT Director',
-                    'PU ICT Director'
-                ]) || $profileData->access_level == 'superadmin') {
-                $actionButtons .= '
-                    <a href="' . route($profileData->access_level . '.member.edit', $member->uuid) . '">
-                        <button class="btn btn-info btn-sm"><i class="fas fa-pencil-alt"></i> Edit</button>
-                    </a>';
-            }
-
-            $actionButtons .= $this->memberDeleteButton($member);
-            return $actionButtons;
-        })
+                 return $this->memberActionButtons($member);
+             })
         ->rawColumns(['role', 'action'])
         ->make(true);
 }
@@ -580,62 +544,8 @@ class MembersController extends Controller
              ->addColumn('Voter_status', function($member) {
                 return ucfirst($member->validVoter);
              })
-             ->addColumn('action', function($member) {
-                 $profileData = $this->getProfileData();
-
-                 // Check if the member is active or not for Suspend/Activate button
-                 if ($member->status == 'active') {
-                     $button = '
-                         <a href="' . route($profileData->access_level.'.member.suspend', $member->uuid) . '">
-                             <button class="btn btn-warning btn-sm">
-                                 <i class="fas fa-pause"></i> Suspend
-                             </button>
-                         </a>
-                     ';
-                 } else {
-                     $button = '
-                         <a href="' . route($profileData->access_level.'.member.suspend', $member->uuid) . '">
-                             <button class="btn btn-success btn-sm">
-                                 <i class="fas fa-play"></i> Activate
-                             </button>
-                         </a>
-                     ';
-                 }
-
-                 // Action buttons visible to all
-                 $actionButtons = '
-                     <a href="' . route($profileData->access_level.'.member.view', $member->uuid) . '">
-                         <button class="btn btn-primary btn-sm">
-                             <i class="fas fa-eye"></i> Show
-                         </button>
-                     </a>
-                     ' . $button;
-
-                 // Conditionally show Edit and Delete buttons based on roles/access_level
-                 if (
-                     $profileData->hasAnyRole([
-                         'National ICT Director',
-                         'Regional ICT Director',
-                         'State ICT Director',
-                         'Senatorial ICT Director',
-                         'Federal Constituency ICT Director',
-                         'Federal ICT Director',
-                         'LGA ICT Director',
-                         'Ward ICT Director',
-                         'PU ICT Director'
-                     ]) || $profileData->access_level == 'superadmin'
-                 ) {
-                     $actionButtons .= '
-                         <a href="' . route($profileData->access_level.'.member.edit', $member->uuid) . '">
-                             <button class="btn btn-info btn-sm">
-                                 <i class="fas fa-pencil-alt"></i> Edit
-                             </button>
-                         </a>
-                     ';
-                 }
-
-                 $actionButtons .= $this->memberDeleteButton($member);
-            return $actionButtons;
+             ->addColumn('action', function ($member) {
+                 return $this->memberActionButtons($member);
              })
              ->rawColumns(['role', 'action']) // Ensures that HTML in the 'role' and 'action' columns is rendered properly
              ->make(true);
@@ -712,62 +622,8 @@ class MembersController extends Controller
                 ->addColumn('Voter_status', function($member) {
                     return ucfirst($member->validVoter);
                 })
-             ->addColumn('action', function($member) {
-                 $profileData = $this->getProfileData();
-
-                 // Check if the member is active or not for Suspend/Activate button
-                 if ($member->status == 'active') {
-                     $button = '
-                         <a href="' . route($profileData->access_level.'.member.suspend', $member->uuid) . '">
-                             <button class="btn btn-warning btn-sm">
-                                 <i class="fas fa-pause"></i> Suspend
-                             </button>
-                         </a>
-                     ';
-                 } else {
-                     $button = '
-                         <a href="' . route($profileData->access_level.'.member.suspend', $member->uuid) . '">
-                             <button class="btn btn-success btn-sm">
-                                 <i class="fas fa-play"></i> Activate
-                             </button>
-                         </a>
-                     ';
-                 }
-
-                 // Action buttons visible to all
-                 $actionButtons = '
-                     <a href="' . route($profileData->access_level.'.member.view', $member->uuid) . '">
-                         <button class="btn btn-primary btn-sm">
-                             <i class="fas fa-eye"></i> Show
-                         </button>
-                     </a>
-                     ' . $button;
-
-                 // Conditionally show Edit and Delete buttons based on roles/access_level
-                 if (
-                     $profileData->hasAnyRole([
-                         'National ICT Director',
-                         'Regional ICT Director',
-                         'State ICT Director',
-                         'Senatorial ICT Director',
-                         'Federal Constituency ICT Director',
-                         'Federal ICT Director',
-                         'LGA ICT Director',
-                         'Ward ICT Director',
-                         'PU ICT Director'
-                     ]) || $profileData->access_level == 'superadmin'
-                 ) {
-                     $actionButtons .= '
-                         <a href="' . route($profileData->access_level.'.member.edit', $member->uuid) . '">
-                             <button class="btn btn-info btn-sm">
-                                 <i class="fas fa-pencil-alt"></i> Edit
-                             </button>
-                         </a>
-                     ';
-                 }
-
-                 $actionButtons .= $this->memberDeleteButton($member);
-            return $actionButtons;
+             ->addColumn('action', function ($member) {
+                 return $this->memberActionButtons($member);
              })
              ->rawColumns(['role', 'action']) // Ensures that HTML in the 'role' and 'action' columns is rendered properly
              ->make(true);
@@ -942,51 +798,21 @@ class MembersController extends Controller
 
      private function memberActionButtons(User $member): string
      {
-         $profileData = $this->getProfileData();
-
-         if (!$this->canAccessMember($profileData, $member)) {
-             return '';
+         $actor = $this->getProfileData();
+         if (! $this->canAccessMember($actor, $member)) { return ''; }
+         $capabilities = app(\App\Services\CampaignCapabilityService::class);
+         $buttons = '';
+         if ($capabilities->allows($actor, 'members.view') && $this->canAccessMember($actor, $member)) {
+             $buttons .= '<a class="btn btn-primary btn-sm" href="'.e(route($actor->access_level.'.member.view', $member->uuid)).'">Show</a> ';
          }
-
-         if ($member->status == 'active') {
-             $button = '
-                 <a href="' . route($profileData->access_level.'.member.suspend', $member->uuid) . '">
-                     <button class="btn btn-warning btn-sm">
-                         <i class="fas fa-pause"></i> Suspend
-                     </button>
-                 </a>
-             ';
-         } else {
-             $button = '
-                 <a href="' . route($profileData->access_level.'.member.suspend', $member->uuid) . '">
-                     <button class="btn btn-success btn-sm">
-                         <i class="fas fa-play"></i> Activate
-                     </button>
-                 </a>
-             ';
+         if ($this->canEditMember($actor, $member)) {
+             $buttons .= '<a class="btn btn-info btn-sm" href="'.e(route($actor->access_level.'.member.edit', $member->uuid)).'">Edit</a> ';
+             $buttons .= '<form method="post" style="display:inline-block" action="'.e(route($actor->access_level.'.member.suspend', $member->uuid)).'">'.csrf_field()
+                 .'<button class="btn btn-warning btn-sm">'.($member->status === 'active' ? 'Suspend' : 'Activate').'</button></form> ';
          }
-
-         $actionButtons = '
-             <a href="' . route($profileData->access_level.'.member.view', $member->uuid) . '">
-                 <button class="btn btn-primary btn-sm">
-                     <i class="fas fa-eye"></i> Show
-                 </button>
-             </a>
-             ' . $button;
-
-         if ($this->canEditMember($profileData, $member)) {
-             $actionButtons .= '
-                 <a href="' . route($profileData->access_level.'.member.edit', $member->uuid) . '">
-                     <button class="btn btn-info btn-sm">
-                         <i class="fas fa-pencil-alt"></i> Edit
-                     </button>
-                 </a>
-             ';
-         }
-
-         $actionButtons .= $this->memberDeleteButton($member);
-            return $actionButtons;
+         return $buttons.$this->memberDeleteButton($member);
      }
+
 
      public function addMember()
      {
@@ -1074,6 +900,13 @@ class MembersController extends Controller
      public function storeMember(Request $request)
      {
         $profileData = $this->getProfileData();
+         if ($profileData->access_level !== 'superadmin') {
+             abort_if($request->hasAny(['permissions', 'grants', 'restrictions', 'capabilities_managed']), 403);
+             $default = app(\App\Services\CampaignCapabilityService::class)->defaultRole((string) $request->input('access_level'));
+             abort_unless($default, 422, 'Ask Super Admin to configure a default role for this access level.');
+             abort_if($request->filled('roles') && (int) $request->input('roles') !== (int) $default->id, 403);
+             $request->merge(['roles' => $default->id]);
+         }
          $request->merge($this->locationForms()->mergeFixedPayload($request->all()));
          $request->validate([
              'username' => 'required|string|max:255|unique:users',
@@ -1114,7 +947,7 @@ class MembersController extends Controller
 
          $role = $request->filled('roles')
              ? Role::find($request->integer('roles'))
-             : $this->packageRoles()->rolesForAccessLevel($profileData, $access_level)->first();
+             : app(\App\Services\CampaignCapabilityService::class)->defaultRole($access_level);
 
          if (!$role || !$this->canAssignRole($profileData, $role, $access_level)) {
              throw ValidationException::withMessages([
@@ -1227,6 +1060,12 @@ class MembersController extends Controller
          $profileData = $this->getProfileData();
          // Find the member by ID and update
          $member = User::findOrFail($request->id);
+         if ($profileData->access_level !== 'superadmin') {
+             abort_if($request->hasAny(['permissions', 'grants', 'restrictions', 'capabilities_managed']), 403);
+             if ($request->filled('roles')) {
+                 abort_unless($member->roles->count() === 1 && (int) $member->roles->first()->id === (int) $request->input('roles'), 403);
+             }
+         }
          $request->merge($this->locationForms()->mergeFixedPayload($request->all()));
 
          if ($this->accessLevelRank($profileData->access_level) === null || $this->accessLevelRank($member->access_level) === null) {
@@ -1319,7 +1158,7 @@ class MembersController extends Controller
          }
 
          // Assign Role
-         if ($request->has('roles') && !empty($request->roles)) {
+         if ($profileData->access_level === 'superadmin' && $request->filled('roles')) {
              // Assuming you're passing only one role ID (you can adjust this for multiple roles if needed)
              $roleId = $request->roles; // Make sure $request->roles contains the correct role ID
 
@@ -1340,15 +1179,7 @@ class MembersController extends Controller
                      'roles' => 'The selected role is not available for this access level or campaign package.',
                  ]);
              }
-             } else {
-                 $defaultRole = $this->packageRoles()->defaultRole($profileData);
-
-                 if ($defaultRole) {
-                     $member->syncRoles([$defaultRole->name]);
-                 }
              }
-
-
 
          $notification = [
              'message' => 'Member updated successfully.',
@@ -1399,10 +1230,13 @@ class MembersController extends Controller
              return redirect()->back()->with($this->invalidMemberAccessNotification());
          }
 
-         if (!$this->canAccessMember($profileData, $member)) {
+         if (!$this->canEditMember($profileData, $member)) {
              return redirect()->back()->with($this->unauthorizedMemberAccessNotification('suspend'));
          }
 
+         if (request()->isMethod('get')) {
+             return view('backend.shared.member-status-confirm', ['profileData' => $profileData, 'member' => $member, 'pageTitle' => 'Confirm account status change']);
+         }
          //check status and suspend or activated accordingly
          if($member->status == 'inactive'){
              $member->status = 'active';
@@ -1540,60 +1374,9 @@ class MembersController extends Controller
                         return '<span class="badge badge-pill bg-secondary">' . $role->name . '</span>';
                     })->implode(' ');
                 })
-                ->addColumn('action', function($member) {
-                    $profileData = $this->getProfileData();
-
-                    // Check if the member is active or not for Suspend/Activate button
-                    if ($member->status == 'active') {
-                        $button = '
-                            <a href="' . route($profileData->access_level.'.member.suspend', $member->uuid) . '">
-                                <button class="btn btn-warning btn-sm">
-                                    <i class="fas fa-pause"></i> Suspend
-                                </button>
-                            </a>
-                        ';
-                    } else {
-                        $button = '
-                            <a href="' . route($profileData->access_level.'.member.suspend', $member->uuid) . '">
-                                <button class="btn btn-success btn-sm">
-                                    <i class="fas fa-play"></i> Activate
-                                </button>
-                            </a>
-                        ';
-                    }
-
-                    // Action buttons visible to all
-                    $actionButtons = '
-                        <a href="' . route($profileData->access_level.'.member.view', $member->uuid) . '">
-                            <button class="btn btn-primary btn-sm">
-                                <i class="fas fa-eye"></i> Show
-                            </button>
-                        </a>
-                        ' . $button;
-
-                    // Conditionally show Edit and Delete buttons based on roles/access_level
-                    if (
-                        $profileData->hasAnyRole([
-                            'National ICT Director',
-                            'Regional ICT Director',
-                            'State ICT Director',
-                            'LGA ICT Director',
-                            'Ward ICT Director',
-                            'PU ICT Director'
-                        ]) || $profileData->access_level == 'superadmin'
-                    ) {
-                        $actionButtons .= '
-                            <a href="' . route($profileData->access_level.'.member.edit', $member->uuid) . '">
-                                <button class="btn btn-info btn-sm">
-                                    <i class="fas fa-pencil-alt"></i> Edit
-                                </button>
-                            </a>
-                        ';
-                    }
-
-                    $actionButtons .= $this->memberDeleteButton($member);
-            return $actionButtons;
-                })
+                ->addColumn('action', function ($member) {
+                 return $this->memberActionButtons($member);
+             })
                 ->rawColumns(['role', 'action']) // Ensures that HTML in the 'role' and 'action' columns is rendered properly
                 ->make(true);
     }
@@ -1676,60 +1459,9 @@ class MembersController extends Controller
             ->addColumn('Voter_status', function($member) {
                 return ucfirst($member->validVoter);
             })
-            ->addColumn('action', function($member) {
-                $profileData = $this->getProfileData();
-
-                // Check if the member is active or not for Suspend/Activate button
-                if ($member->status == 'active') {
-                    $button = '
-                        <a href="' . route($profileData->access_level.'.member.suspend', $member->uuid) . '">
-                            <button class="btn btn-warning btn-sm">
-                                <i class="fas fa-pause"></i> Suspend
-                            </button>
-                        </a>
-                    ';
-                } else {
-                    $button = '
-                        <a href="' . route($profileData->access_level.'.member.suspend', $member->uuid) . '">
-                            <button class="btn btn-success btn-sm">
-                                <i class="fas fa-play"></i> Activate
-                            </button>
-                        </a>
-                    ';
-                }
-
-                // Action buttons visible to all
-                $actionButtons = '
-                    <a href="' . route($profileData->access_level.'.member.view', $member->uuid) . '">
-                        <button class="btn btn-primary btn-sm">
-                            <i class="fas fa-eye"></i> Show
-                        </button>
-                    </a>
-                    ' . $button;
-
-                // Conditionally show Edit and Delete buttons based on roles/access_level
-                if (
-                    $profileData->hasAnyRole([
-                        'National ICT Director',
-                        'Regional ICT Director',
-                        'State ICT Director',
-                        'LGA ICT Director',
-                        'Ward ICT Director',
-                        'PU ICT Director'
-                    ]) || $profileData->access_level == 'superadmin'
-                ) {
-                    $actionButtons .= '
-                        <a href="' . route($profileData->access_level.'.member.edit', $member->uuid) . '">
-                            <button class="btn btn-info btn-sm">
-                                <i class="fas fa-pencil-alt"></i> Edit
-                            </button>
-                        </a>
-                    ';
-                }
-
-                $actionButtons .= $this->memberDeleteButton($member);
-            return $actionButtons;
-            })
+            ->addColumn('action', function ($member) {
+                 return $this->memberActionButtons($member);
+             })
             ->rawColumns(['role', 'action']) // Ensures that HTML in the 'role' and 'action' columns is rendered properly
             ->make(true);
     }
@@ -1852,60 +1584,9 @@ class MembersController extends Controller
             ->addColumn('Voter_status', function($member) {
                 return ucfirst($member->validVoter);
             })
-            ->addColumn('action', function($member) {
-                $profileData = $this->getProfileData();
-
-                // Check if the member is active or not for Suspend/Activate button
-                if ($member->status == 'active') {
-                    $button = '
-                        <a href="' . route($profileData->access_level.'.member.suspend', $member->uuid) . '">
-                            <button class="btn btn-warning btn-sm">
-                                <i class="fas fa-pause"></i> Suspend
-                            </button>
-                        </a>
-                    ';
-                } else {
-                    $button = '
-                        <a href="' . route($profileData->access_level.'.member.suspend', $member->uuid) . '">
-                            <button class="btn btn-success btn-sm">
-                                <i class="fas fa-play"></i> Activate
-                            </button>
-                        </a>
-                    ';
-                }
-
-                // Action buttons visible to all
-                $actionButtons = '
-                    <a href="' . route($profileData->access_level.'.member.view', $member->uuid) . '">
-                        <button class="btn btn-primary btn-sm">
-                            <i class="fas fa-eye"></i> Show
-                        </button>
-                    </a>
-                    ' . $button;
-
-                // Conditionally show Edit and Delete buttons based on roles/access_level
-                if (
-                    $profileData->hasAnyRole([
-                        'National ICT Director',
-                        'Regional ICT Director',
-                        'State ICT Director',
-                        'LGA ICT Director',
-                        'Ward ICT Director',
-                        'PU ICT Director'
-                    ]) || $profileData->access_level == 'superadmin'
-                ) {
-                    $actionButtons .= '
-                        <a href="' . route($profileData->access_level.'.member.edit', $member->uuid) . '">
-                            <button class="btn btn-info btn-sm">
-                                <i class="fas fa-pencil-alt"></i> Edit
-                            </button>
-                        </a>
-                    ';
-                }
-
-                $actionButtons .= $this->memberDeleteButton($member);
-            return $actionButtons;
-            })
+            ->addColumn('action', function ($member) {
+                 return $this->memberActionButtons($member);
+             })
             ->rawColumns(['role', 'action']) // Ensures that HTML in the 'role' and 'action' columns is rendered properly
             ->make(true);
     }
@@ -2053,60 +1734,9 @@ class MembersController extends Controller
             ->addColumn('Voter_status', function($member) {
                 return ucfirst($member->validVoter);
             })
-            ->addColumn('action', function($member) {
-                $profileData = $this->getProfileData();
-
-                // Check if the member is active or not for Suspend/Activate button
-                if ($member->status == 'active') {
-                    $button = '
-                        <a href="' . route($profileData->access_level.'.member.suspend', $member->uuid) . '">
-                            <button class="btn btn-warning btn-sm">
-                                <i class="fas fa-pause"></i> Suspend
-                            </button>
-                        </a>
-                    ';
-                } else {
-                    $button = '
-                        <a href="' . route($profileData->access_level.'.member.suspend', $member->uuid) . '">
-                            <button class="btn btn-success btn-sm">
-                                <i class="fas fa-play"></i> Activate
-                            </button>
-                        </a>
-                    ';
-                }
-
-                // Action buttons visible to all
-                $actionButtons = '
-                    <a href="' . route($profileData->access_level.'.member.view', $member->uuid) . '">
-                        <button class="btn btn-primary btn-sm">
-                            <i class="fas fa-eye"></i> Show
-                        </button>
-                    </a>
-                    ' . $button;
-
-                // Conditionally show Edit and Delete buttons based on roles/access_level
-                if (
-                    $profileData->hasAnyRole([
-                        'National ICT Director',
-                        'Regional ICT Director',
-                        'State ICT Director',
-                        'LGA ICT Director',
-                        'Ward ICT Director',
-                        'PU ICT Director'
-                    ]) || $profileData->access_level == 'superadmin'
-                ) {
-                    $actionButtons .= '
-                        <a href="' . route($profileData->access_level.'.member.edit', $member->uuid) . '">
-                            <button class="btn btn-info btn-sm">
-                                <i class="fas fa-pencil-alt"></i> Edit
-                            </button>
-                        </a>
-                    ';
-                }
-
-                $actionButtons .= $this->memberDeleteButton($member);
-            return $actionButtons;
-            })
+            ->addColumn('action', function ($member) {
+                 return $this->memberActionButtons($member);
+             })
             ->rawColumns(['role', 'action']) // Ensures that HTML in the 'role' and 'action' columns is rendered properly
             ->make(true);
     }
@@ -2182,60 +1812,9 @@ class MembersController extends Controller
                 return ucfirst($member->validVoter);
             })
 
-            ->addColumn('action', function($member) {
-                $profileData = $this->getProfileData();
-
-                // Check if the member is active or not for Suspend/Activate button
-                if ($member->status == 'active') {
-                    $button = '
-                        <a href="' . route($profileData->access_level.'.member.suspend', $member->uuid) . '">
-                            <button class="btn btn-warning btn-sm">
-                                <i class="fas fa-pause"></i> Suspend
-                            </button>
-                        </a>
-                    ';
-                } else {
-                    $button = '
-                        <a href="' . route($profileData->access_level.'.member.suspend', $member->uuid) . '">
-                            <button class="btn btn-success btn-sm">
-                                <i class="fas fa-play"></i> Activate
-                            </button>
-                        </a>
-                    ';
-                }
-
-                // Action buttons visible to all
-                $actionButtons = '
-                    <a href="' . route($profileData->access_level.'.member.view', $member->uuid) . '">
-                        <button class="btn btn-primary btn-sm">
-                            <i class="fas fa-eye"></i> Show
-                        </button>
-                    </a>
-                    ' . $button;
-
-                // Conditionally show Edit and Delete buttons based on roles/access_level
-                if (
-                    $profileData->hasAnyRole([
-                        'National ICT Director',
-                        'Regional ICT Director',
-                        'State ICT Director',
-                        'LGA ICT Director',
-                        'Ward ICT Director',
-                        'PU ICT Director'
-                    ]) || $profileData->access_level == 'superadmin'
-                ) {
-                    $actionButtons .= '
-                        <a href="' . route($profileData->access_level.'.member.edit', $member->uuid) . '">
-                            <button class="btn btn-info btn-sm">
-                                <i class="fas fa-pencil-alt"></i> Edit
-                            </button>
-                        </a>
-                    ';
-                }
-
-                $actionButtons .= $this->memberDeleteButton($member);
-            return $actionButtons;
-            })
+            ->addColumn('action', function ($member) {
+                 return $this->memberActionButtons($member);
+             })
             ->rawColumns(['role', 'action']) // Ensures that HTML in the 'role' and 'action' columns is rendered properly
             ->make(true);
     }
@@ -2313,8 +1892,8 @@ class MembersController extends Controller
                 )->implode(' ');
             })
             ->addColumn('action', function ($member) {
-                return $this->memberActionButtons($member);
-            })
+                 return $this->memberActionButtons($member);
+             })
             ->rawColumns(['role', 'action'])
             ->make(true);
     }
