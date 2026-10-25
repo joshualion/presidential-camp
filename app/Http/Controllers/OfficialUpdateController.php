@@ -49,6 +49,23 @@ class OfficialUpdateController extends Controller
         ]);
     }
 
+    public function contactConfirmed(Request $request, AutomaticUpdateFlow $flow)
+    {
+        abort_unless($request->user()?->access_level === 'superadmin', 403);
+        try {
+            app(DeploymentRegistrationService::class)->refreshVerification();
+        } catch (\Throwable) {
+            return redirect()->route('superadmin.updates')->with('update_error',
+                'Installation confirmation could not be verified. Check registration details or try again.');
+        }
+        // Review only: no update intent, payment navigation, preparation or installation.
+        return response()->view('backend.shared.official-updates', [
+            'pageTitle' => 'Official Updates', 'profileData' => $request->user(),
+            'installedVersion' => app(OfficialUpdateService::class)->installedVersion(),
+            'updateStatus' => [], 'activeJob' => null, 'confirmationReview' => $flow->screen(true),
+        ])->withHeaders(['Cache-Control' => 'no-store', 'Referrer-Policy' => 'no-referrer']);
+    }
+
     public function registration(Request $request)
     {
         $service = app(DeploymentRegistrationService::class);

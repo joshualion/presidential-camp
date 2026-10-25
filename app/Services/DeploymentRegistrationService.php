@@ -255,6 +255,49 @@ class DeploymentRegistrationService
         $this->save($state);
     }
 
+    /** Read-only server-to-server confirmation. Browser input is never evidence. */
+    public function refreshVerification(): void
+    {
+        $state = $this->state();
+        if (empty($state['registered']) || ! empty($state['pending_revoke'])
+            || ($state['domain'] ?? null) !== $this->domain()
+            || parse_url(config('app.url'), PHP_URL_SCHEME) !== 'https') {
+            throw new RuntimeException('Confirm this installation and its current HTTPS domain first.');
+        }
+        $state['contact_verified'] = false;
+        $this->save($state);
+        $response = Http::withToken($state['token'])->acceptJson()->withoutRedirecting()
+            ->connectTimeout(5)->timeout(20)->get($this->base().'/'.$state['id'].'/registration-status');
+        if ($response->status() !== 200 || strlen($response->body()) > 8192) {
+            throw new RuntimeException('Installation confirmation is temporarily unavailable.');
+        }
+        $data = $response->json();
+        if (! is_array($data) || ($data['installation_id'] ?? null) !== $state['id']
+            || ($data['domain'] ?? null) !== $this->domain()
+            || ($data['contact_email'] ?? null) !== ($state['contact_email'] ?? null)
+            || ($data['registered'] ?? null) !== true || ($data['contact_verified'] ?? null) !== true
+            || ($data['domain_verified'] ?? null) !== true) {
+            throw new RuntimeException('The Portal has not confirmed this installation and domain.');
+        }
+        $state['contact_verified'] = true;
+        $this->save($state);
+    }
+
+    /** A domain-binding response has no login or update authority. */
+    public function domainBinding(string $challenge): string
+    {
+        if (! preg_match('/^[a-f0-9]{64}$/D', $challenge)) {
+            throw new RuntimeException('Invalid domain challenge.');
+        }
+        $state = $this->state();
+        if (empty($state['registered']) || ! empty($state['pending_revoke'])
+            || ($state['domain'] ?? null) !== $this->domain()) {
+            throw new RuntimeException('No active installation binding.');
+        }
+
+        return hash_hmac('sha256', "campaign-manager-domain-v1\n".$state['id']."\n".$this->domain()."\n".$challenge, hash('sha256', $state['token']));
+    }
+
     public function revoke(): void
     {
         $state = $this->state();
