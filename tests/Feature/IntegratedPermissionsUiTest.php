@@ -85,3 +85,26 @@ test('role editing maps existing edit permissions to the same standardized updat
     $this->post(route('superadmin.settings.role.permission.update', $role->id), ['permission' => [Permission::findByName('members.edit', 'web')->id]])->assertRedirect();
     expect($role->fresh()->permissions->pluck('name')->all())->toBe(['members.update']);
 });
+
+
+test('assigning an existing default role keeps the permissions shown in the role editor', function () {
+    $role = Role::create(['name' => 'State Coordinator', 'guard_name' => 'web', 'group_name' => 'stateadmin']);
+    $user = User::factory()->create(['access_level' => 'stateadmin']);
+    $before = $user->only(['access_level', 'state_id', 'lga_id']);
+    $this->actingAs($this->admin)->put(route('superadmin.authorization.users.update', $user), ['roles' => [$role->id], 'grants' => [], 'restrictions' => []])->assertRedirect();
+    $user = $user->fresh();
+    expect($user->can('members.view'))->toBeTrue()->and($user->can('members.update'))->toBeFalse()
+        ->and($user->only(array_keys($before)))->toBe($before)->and((bool) $role->fresh()->capabilities_managed)->toBeFalse();
+});
+
+test('multiple roles combine grants while individual restrictions still win', function () {
+    $existing = Role::create(['name' => 'State ICT Director', 'guard_name' => 'web', 'group_name' => 'stateadmin']);
+    $reader = Role::create(['name' => 'Reader', 'guard_name' => 'web', 'group_name' => 'user', 'capabilities_managed' => true]);
+    $reader->givePermissionTo(Permission::findOrCreate('members.view', 'web'));
+    $user = User::factory()->create(['access_level' => 'stateadmin', 'capabilities_managed' => true]);
+    $user->assignRole([$existing, $reader]);
+    expect($user->can('members.update'))->toBeTrue()->and($user->can('authorization.manage'))->toBeFalse();
+    \Illuminate\Support\Facades\DB::table('campaign_permission_restrictions')->insert(['user_id' => $user->id, 'permission_name' => 'members.update']);
+    app()->forgetScopedInstances();
+    expect($user->fresh()->can('members.update'))->toBeFalse();
+});

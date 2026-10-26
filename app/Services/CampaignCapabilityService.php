@@ -13,6 +13,7 @@ class CampaignCapabilityService
     private ?array $catalogCache = null;
     private array $standardNames = [];
     private array $restrictionCache = [];
+    private array $rolePermissionCache = [];
     private ?bool $restrictionsAvailable = null;
 
     public function catalog(): array
@@ -55,23 +56,37 @@ class CampaignCapabilityService
         $this->restrictionsAvailable ??= Schema::hasTable('campaign_permission_restrictions');
         if ($this->restrictionsAvailable) {
             $key = (string) $user->id;
-            $this->restrictionCache[$key] ??= DB::table('campaign_permission_restrictions')->where('user_id', $user->id)->pluck('permission_name')->all();
+            $this->restrictionCache[$key] ??= DB::table('campaign_permission_restrictions')->where('user_id', $user->id)->pluck('permission_name')->map(fn ($permission) => $this->canonical($permission))->all();
             if (in_array($name, $this->restrictionCache[$key], true)) {
                 return ['allowed' => false, 'reason' => 'Individual restriction'];
             }
         }
         $user->loadMissing(['permissions', 'roles.permissions']);
-        if ($user->permissions->contains(fn ($permission) => $permission->name === $name && $permission->guard_name === 'web')) {
+        if ($user->permissions->contains(fn ($permission) => $this->canonical($permission->name) === $name && $permission->guard_name === 'web')) {
             return ['allowed' => true, 'reason' => 'Individual grant'];
         }
         $roles = $user->roles->filter(fn ($role) => $role->guard_name === 'web'
-            && $role->permissions->contains('name', $name))->pluck('name')->all();
+            && $role->permissions->contains(fn ($permission) => $this->canonical($permission->name) === $name && $permission->guard_name === 'web'))->pluck('name')->all();
         if ($roles) { return ['allowed' => true, 'reason' => 'Role: '.implode(', ', $roles)]; }
+        foreach ($user->roles->where('guard_name', 'web') as $role) {
+            if (! $role->capabilities_managed && in_array($name, $this->rolePermissions($role), true)) {
+                if (in_array($name, ['election.results.create', 'election.results.update', 'incidents.create'], true)
+                    && (! $user->exists || ! app(PollingUnitResultPermissionService::class)->userHasAnyApprovedAssignment($user))) {
+                    continue;
+                }
+                return ['allowed' => true, 'reason' => 'Role: '.$role->name];
+            }
+        }
         if ($user->capabilities_managed || $user->roles->contains(fn ($role) => (bool) $role->capabilities_managed)) {
             return ['allowed' => false, 'reason' => 'No role or individual grant'];
         }
+        $allowed = $this->defaultAllows($user, $name);
+        return ['allowed' => $allowed, 'reason' => $allowed ? 'Default account permissions' : 'Permission not assigned'];
+    }
 
-        // Compatibility mode preserves customer assignments until Super Admin explicitly adopts managed capabilities.
+    private function defaultAllows(User $user, string $name): bool
+    {
+        if ($name === 'authorization.manage') { return $user->access_level === 'superadmin'; }
         $admin = in_array($user->access_level, array_diff(array_keys(config('campaign_roles.access_level_labels', [])), ['user']), true);
         if (in_array($name, ['members.update', 'members.delete'], true)) {
             $legacy = $name === 'members.update' ? 'members.edit' : $name;
@@ -86,14 +101,14 @@ class CampaignCapabilityService
                 return in_array($name, $permissions, true) || in_array('*', $permissions, true);
             });
         } elseif (in_array($name, ['election.results.create', 'election.results.update', 'incidents.create'], true)) {
-            $allowed = app(PollingUnitResultPermissionService::class)->userHasAnyApprovedAssignment($user);
+            $allowed = $user->exists && app(PollingUnitResultPermissionService::class)->userHasAnyApprovedAssignment($user);
         } else {
             $allowed = $admin || in_array($name, ['dashboard.view', 'community.view', 'community.create', 'community.update',
                 'community.delete', 'announcements.view', 'notifications.view', 'notifications.update', 'notifications.delete', 'messaging.view',
                 'messaging.create', 'messaging.update', 'election.results.view', 'incidents.view', 'agents.view', 'agents.create'], true);
         }
 
-        return ['allowed' => (bool) $allowed, 'reason' => $allowed ? 'Default role permissions' : 'Permission not assigned'];
+        return (bool) $allowed;
     }
 
     public function allows(User $user, string $name): bool
@@ -117,13 +132,16 @@ class CampaignCapabilityService
         $role->loadMissing('permissions');
         $assigned = array_values(array_unique(array_map([$this, 'canonical'], $role->permissions->pluck('name')->all())));
         if ($role->capabilities_managed) { return $assigned; }
+        if ($role->group_name === 'superadmin') { return array_values(array_unique(array_merge($assigned, $this->catalog()))); }
+        $cacheKey = hash('sha256', json_encode([$role->id, $role->name, $role->group_name, $assigned]));
+        if (isset($this->rolePermissionCache[$cacheKey])) { return $this->rolePermissionCache[$cacheKey]; }
         $representative = new User;
         $representative->forceFill(['access_level' => $role->group_name, 'status' => 'active']);
         $representative->setRelation('roles', collect([$role]));
         $representative->setRelation('permissions', collect());
-        return array_values(array_unique(array_merge($assigned,
+        return $this->rolePermissionCache[$cacheKey] = array_values(array_unique(array_merge($assigned,
             ['election.results.create', 'election.results.update', 'incidents.create'],
-            array_values(array_filter($this->catalog(), fn ($name) => $this->allows($representative, $name))))));
+            array_values(array_filter($this->catalog(), fn ($name) => $this->defaultAllows($representative, $name))))));
     }
 
     public function canVisit(?User $user, string $url, string $method = 'GET'): bool

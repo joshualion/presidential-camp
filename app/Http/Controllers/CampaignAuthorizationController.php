@@ -33,7 +33,7 @@ class CampaignAuthorizationController extends Controller
         $rolePermissions = $selectedRole ? $capabilities->rolePermissions($selectedRole) : [];
         $selectedUser = $request->filled('user') ? User::where('uuid', $request->string('user')->toString())->firstOrFail() : null;
         $effective = $selectedUser ? collect($catalog)->mapWithKeys(fn ($name) => [$name => $capabilities->known($name) ? $capabilities->decision($selectedUser, $name) : ['allowed' => $selectedUser->hasPermissionTo($name, 'web'), 'reason' => 'Assigned permissions']])->all() : [];
-        $restrictions = $selectedUser ? DB::table('campaign_permission_restrictions')->where('user_id', $selectedUser->id)->pluck('permission_name')->all() : [];
+        $restrictions = $selectedUser ? DB::table('campaign_permission_restrictions')->where('user_id', $selectedUser->id)->pluck('permission_name')->map(fn ($name) => $capabilities->canonical($name))->all() : [];
         $users = User::query()->when($request->filled('search'), fn ($q) => $q->where(function ($q) use ($request) {
             $term = mb_substr($request->string('search')->toString(), 0, 100);
             $q->where('email', 'like', '%'.$term.'%')->orWhere('firstname', 'like', '%'.$term.'%')->orWhere('lastname', 'like', '%'.$term.'%');
@@ -97,7 +97,7 @@ class CampaignAuthorizationController extends Controller
             foreach ($data['grants'] as $name) {
                 Permission::firstOrCreate(['name' => $name, 'guard_name' => 'web'], ['group_name' => 'user']);
             }
-            $legacy = $user->permissions()->whereNotIn('name', $capabilities->catalog())->pluck('name')->all();
+            $legacy = $user->permissions()->get()->filter(fn ($permission) => ! $capabilities->known($permission->name))->pluck('name')->all();
             $user->syncPermissions(array_values(array_unique(array_merge($legacy, $data['grants']))));
             DB::table('campaign_permission_restrictions')->where('user_id', $user->id)->delete();
             foreach (array_unique($data['restrictions']) as $name) {
