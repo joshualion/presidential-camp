@@ -89,7 +89,7 @@ class CampaignCapabilityService
             $allowed = app(PollingUnitResultPermissionService::class)->userHasAnyApprovedAssignment($user);
         } else {
             $allowed = $admin || in_array($name, ['dashboard.view', 'community.view', 'community.create', 'community.update',
-                'community.delete', 'notifications.view', 'notifications.update', 'notifications.delete', 'messaging.view',
+                'community.delete', 'announcements.view', 'notifications.view', 'notifications.update', 'notifications.delete', 'messaging.view',
                 'messaging.create', 'messaging.update', 'election.results.view', 'incidents.view', 'agents.view', 'agents.create'], true);
         }
 

@@ -19,7 +19,7 @@ test('v120 migrations preserve populated MyISAM tables and custom assignments', 
             });
         }
         Schema::create('permissions', function (Blueprint $table) {
-            $table->engine = 'MyISAM'; $table->id(); $table->string('name'); $table->string('guard_name');
+            $table->engine = 'MyISAM'; $table->id(); $table->string('name', 100); $table->string('guard_name', 100);
             $table->string('group_name')->default('user'); $table->timestamps(); $table->unique(['name', 'guard_name']);
         });
         Schema::create('model_has_roles', function (Blueprint $table) {
