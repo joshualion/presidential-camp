@@ -4,17 +4,6 @@
 @php($packageUi = $packageUi ?? app(\App\Services\CampaignPackageUiService::class))
 <nav class="mt-2">
       <ul class="nav nav-pills nav-sidebar flex-column sidebar-nav" data-widget="treeview" role="menu" data-accordion="false">
-<li class="nav-item">
-    @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, route('superadmin.updates')))
-<a href="{{ route('superadmin.updates') }}" class="nav-link">
-        <i class="nav-icon fas fa-cloud-download-alt"></i><p>Official Updates
-        @if(data_get(app(\App\Services\OfficialUpdateService::class)->status(), 'available'))<span class="badge badge-info">Available</span>@endif
-        </p>
-    </a>
-@endif
-</li>
-
-
             <li class="tab nav-item menu-close">
                         @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('superadmin/dashboard')))
 <a href="{{ url('superadmin/dashboard') }}" class="nav-link">
@@ -128,6 +117,7 @@
                           </a>
 @endif
                         </li>
+<li class="nav-item"><a href="{{ route('superadmin.incident-evidence.settings') }}" class="nav-link {{ request()->routeIs('superadmin.incident-evidence.*') ? 'active' : '' }}"><i class="fas fa-camera nav-icon"></i><p>Incident Evidence Settings</p></a></li>
                         <li class="nav-item">
                           @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('superadmin/election/operations-center')))
 <a href="{{ url('superadmin/election/operations-center') }}" class="nav-link">
@@ -500,6 +490,7 @@
                   </a>
 @endif
                 </li>
+
               <li class="nav-item">@if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, route('superadmin.deployment.settings')))
 <a href="{{ route('superadmin.deployment.settings') }}" class="nav-link"><i class="fas fa-server nav-icon"></i><p>Installation registration</p></a>
 @endif</li>
@@ -620,7 +611,7 @@
                     @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('superadmin/settings/add/roles/permission')))
 <a href="{{ url('superadmin/settings/add/roles/permission') }}" class="nav-link">
                       <i class="fas fa-plus-square	 nav-icon"></i>
-                      <p>Assign Roles Permission</p>
+                      <p>User Roles &amp; Permissions</p>
                     </a>
 @endif
                 </li>
@@ -645,6 +636,18 @@
 
             </li>
         {{--  End Roles & Permission Menu  --}}
+<li class="nav-item">
+    @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, route('superadmin.updates')))
+<a href="{{ route('superadmin.updates') }}" class="nav-link">
+        <i class="nav-icon fas fa-cloud-download-alt"></i><p>Official Updates
+        @if(data_get(app(\App\Services\OfficialUpdateService::class)->status(), 'available'))<span class="badge badge-danger">Available</span>@endif
+        </p>
+    </a>
+@endif
+</li>
+
+
+
             <li class="tab nav-item menu-close">
                         <a href="#" class="nav-link">
                           <i class="nav-icon fas fa-user-shield"></i>

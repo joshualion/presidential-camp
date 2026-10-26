@@ -440,55 +440,6 @@
             {{-- / Location --}}
 
         @if($profileData->can('settings.technical'))
-            {{-- Roles & Permission Menu --}}
-            {{-- <li class="tab nav-item menu-close">
-                <a href="#" class="nav-link">
-                  <i class="fas fa-tools nav-icon"></i>
-                  <p>
-                    Roles & Permission
-                    <i class="right fas fa-angle-left"></i>
-                  </p>
-                </a>
-                <ul class="nav nav-treeview">
-
-                <li class="nav-item">
-                    @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('national/settings/rolespermission')))
-<a href="{{ url('national/settings/rolespermission') }}" class="nav-link">
-                      <i class="fas fa-ban nav-icon"></i>
-                      <p>Roles Permissions</p>
-                    </a>
-@endif
-                </li>
-
-                <li class="nav-item">
-                    @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('national/settings/add/roles/permission')))
-<a href="{{ url('national/settings/add/roles/permission') }}" class="nav-link">
-                      <i class="fas fa-plus-square	 nav-icon"></i>
-                      <p>Add Roles Permission</p>
-                    </a>
-@endif
-                </li>
-
-                <li class="nav-item">
-                    @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('national/settings/permissions')))
-<a href="{{ url('national/settings/permissions') }}" class="nav-link">
-                      <i class="fas fa-door-open	 nav-icon"></i>
-                      <p>Manage Permissions</p>
-                    </a>
-@endif
-                </li>
-                <li class="nav-item">
-                    @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('national/settings/roles')))
-<a href="{{ url('national/settings/roles') }}" class="nav-link">
-                      <i class="fas fa-crown	 nav-icon"></i>
-                      <p>Manage Roles</p>
-                    </a>
-@endif
-                </li>
-              </ul>
-
-            </li> --}}
-            {{--  End Roles & Permission Menu  --}}
         @endif
 
             {{-- Profile Menu --}}

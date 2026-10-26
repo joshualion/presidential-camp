@@ -1,6 +1,6 @@
 @extends('backend.template.backend-master')
 @section('content')
-<section class="content pt-3 cm-ui"><div class="container-fluid"><div class="card"><div class="card-body"><h1 class="h3">Incident Evidence Settings</h1>
+<section class="content pt-3 cm-ui"><div class="container-fluid"><div class="card card-primary"><div class="card-header"><h3 class="card-title">Incident Evidence Settings</h3></div><div class="card-body">
 <p>Rules apply to new uploads. Historical evidence remains available to authorized users. Hosting upload limits also apply.</p>
 @if(session('message'))<div class="alert alert-success" role="status">{{ session('message') }}</div>@endif
 @if($errors->any())<div class="alert alert-danger" role="alert">{{ $errors->first() }}</div>@endif

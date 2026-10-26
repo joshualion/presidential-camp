@@ -21,24 +21,37 @@ class CampaignAuthorizationController extends Controller
     public function index(Request $request, CampaignCapabilityService $capabilities)
     {
         $this->admin($request);
-        $request->validate(['user' => ['nullable', 'uuid'], 'search' => ['nullable', 'string', 'max:100']]);
-        $catalog = $capabilities->catalog();
+        return redirect()->route('superadmin.settings.rolespermission', $request->only('user', 'search'));
+    }
+
+    public function workspace(Request $request, CampaignCapabilityService $capabilities)
+    {
+        $this->admin($request);
+        $request->validate(['user' => ['nullable', 'uuid'], 'search' => ['nullable', 'string', 'max:100'], 'role' => ['nullable', 'integer', 'min:1'], 'section' => ['nullable', 'in:users']]);
+        $catalog = $this->editablePermissions($capabilities);
+        $selectedRole = $request->filled('role') ? Role::where('guard_name', 'web')->with('permissions')->findOrFail($request->integer('role')) : null;
+        $rolePermissions = $selectedRole ? $capabilities->rolePermissions($selectedRole) : [];
         $selectedUser = $request->filled('user') ? User::where('uuid', $request->string('user')->toString())->firstOrFail() : null;
-        $effective = $selectedUser ? collect($catalog)->mapWithKeys(fn ($name) => [$name => $capabilities->decision($selectedUser, $name)])->all() : [];
-        $restrictions = $selectedUser ? DB::table('campaign_permission_restrictions')->where('user_id', $selectedUser->id)->pluck('permission_name')->all() : [];
+        $effective = $selectedUser ? collect($catalog)->mapWithKeys(fn ($name) => [$name => $capabilities->known($name) ? $capabilities->decision($selectedUser, $name) : ['allowed' => $selectedUser->hasPermissionTo($name, 'web'), 'reason' => 'Assigned permissions']])->all() : [];
+        $restrictions = $selectedUser ? DB::table('campaign_permission_restrictions')->where('user_id', $selectedUser->id)->pluck('permission_name')->map(fn ($name) => $capabilities->canonical($name))->all() : [];
         $users = User::query()->when($request->filled('search'), fn ($q) => $q->where(function ($q) use ($request) {
             $term = mb_substr($request->string('search')->toString(), 0, 100);
             $q->where('email', 'like', '%'.$term.'%')->orWhere('firstname', 'like', '%'.$term.'%')->orWhere('lastname', 'like', '%'.$term.'%');
         }))->orderBy('id')->paginate(20)->withQueryString();
 
         return view('backend.shared.authorization', [
-            'pageTitle' => 'Roles & Capabilities', 'profileData' => $request->user(),
+            'pageTitle' => 'Roles & Permission', 'profileData' => $request->user(),
             'roles' => Role::where('guard_name', 'web')->with('permissions')->orderBy('name')->get(),
-            'catalog' => $catalog, 'users' => $users, 'selectedUser' => $selectedUser,
+            'catalog' => $catalog, 'userCatalog' => $capabilities->catalog(), 'selectedRole' => $selectedRole, 'rolePermissions' => $rolePermissions, 'users' => $users, 'selectedUser' => $selectedUser,
             'effective' => $effective, 'restrictions' => $restrictions,
             'levels' => config('campaign_roles.access_level_labels', []),
             'defaults' => DB::table('campaign_default_roles')->pluck('role_id', 'access_level')->all(),
         ]);
+    }
+
+    private function editablePermissions(CampaignCapabilityService $capabilities): array
+    {
+        return array_values(array_unique(array_merge($capabilities->catalog(), array_map([$capabilities, 'canonical'], Permission::where('guard_name', 'web')->pluck('name')->all()))));
     }
 
     public function saveRole(Request $request, CampaignCapabilityService $capabilities, ?Role $role = null)
@@ -49,22 +62,18 @@ class CampaignAuthorizationController extends Controller
         }
         $data = $request->validate([
             'name' => ['required', 'string', 'max:100', Rule::unique('roles', 'name')->where('guard_name', 'web')->ignore($role?->id)],
-            'permissions' => ['present', 'array'], 'permissions.*' => ['string', Rule::in($capabilities->catalog())],
+            'permissions' => ['present', 'array'], 'permissions.*' => ['string', Rule::in($this->editablePermissions($capabilities))],
         ]);
         abort_if($role && $role->guard_name !== 'web', 422);
-        DB::transaction(function () use ($data, $role, $capabilities) {
+        $savedRole = DB::transaction(function () use ($data, $role, $capabilities) {
             $role ??= Role::create(['name' => $data['name'], 'guard_name' => 'web', 'group_name' => 'user']);
-            $role->forceFill(['name' => $data['name'], 'capabilities_managed' => true])->save();
-            foreach ($data['permissions'] as $name) {
-                Permission::firstOrCreate(['name' => $name, 'guard_name' => 'web'], ['group_name' => 'user']);
-            }
-            // Preserve legacy permission definitions and customer-specific non-catalog assignments.
-            $legacy = $role->permissions()->whereNotIn('name', $capabilities->catalog())->pluck('name')->all();
-            $role->syncPermissions(array_values(array_unique(array_merge($legacy, $data['permissions']))));
+            $role->forceFill(['name' => $data['name']])->save();
+            $capabilities->syncRolePermissions($role, $data['permissions']);
+            return $role;
         });
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
-        return back()->with('message', 'Role capabilities saved. Administrative access levels are unchanged.');
+        return redirect()->route('superadmin.settings.role.permission.edit', encrypt($savedRole->id))->with('message', 'Role permissions saved.');
     }
 
     public function saveUser(Request $request, User $user, CampaignCapabilityService $capabilities)
@@ -79,12 +88,13 @@ class CampaignAuthorizationController extends Controller
             'grants' => ['present', 'array'], 'grants.*' => ['string', Rule::in($capabilities->catalog())],
             'restrictions' => ['present', 'array'], 'restrictions.*' => ['string', Rule::in($capabilities->catalog())],
         ]);
+        abort_if($user->access_level === 'superadmin' && ! empty($data['restrictions']), 422, 'Super Admin has full system access.');
         DB::transaction(function () use ($data, $user, $capabilities) {
             $user->syncRoles(Role::whereIn('id', $data['roles'])->where('guard_name', 'web')->get());
             foreach ($data['grants'] as $name) {
                 Permission::firstOrCreate(['name' => $name, 'guard_name' => 'web'], ['group_name' => 'user']);
             }
-            $legacy = $user->permissions()->whereNotIn('name', $capabilities->catalog())->pluck('name')->all();
+            $legacy = $user->permissions()->get()->filter(fn ($permission) => ! $capabilities->known($permission->name))->pluck('name')->all();
             $user->syncPermissions(array_values(array_unique(array_merge($legacy, $data['grants']))));
             DB::table('campaign_permission_restrictions')->where('user_id', $user->id)->delete();
             foreach (array_unique($data['restrictions']) as $name) {

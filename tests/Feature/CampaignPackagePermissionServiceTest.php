@@ -126,7 +126,7 @@ test('ict director has edit user capability while coordinator does not', functio
         ->and($service->roleHasCapability('LGA Coordinator', 'members.edit'))->toBeFalse();
 });
 
-test('role management page uses package aware role list', function () {
+test('Super Admin role management shows all existing roles without changing account scope', function () {
     createRbacLicense('governorship', [
         'scope_type' => 'state',
         'state_id' => 9,
@@ -134,6 +134,7 @@ test('role management page uses package aware role list', function () {
         'scope_name' => 'Cross River',
     ]);
     Role::create(['name' => 'Presidential Candidate', 'guard_name' => 'web', 'group_name' => 'nationaladmin']);
+    Role::create(['name' => 'Governorship Candidate', 'guard_name' => 'web', 'group_name' => 'stateadmin']);
     $actor = rbacActor();
     createRbacSystemSetting();
 
@@ -142,11 +143,12 @@ test('role management page uses package aware role list', function () {
         ->get(route('superadmin.settings.roles'))
         ->assertOk()
         ->assertSee('Governorship Candidate')
-        ->assertSee('Showing roles available')
-        ->assertDontSee('Presidential Candidate');
+        ->assertSee('Presidential Candidate')
+        ->assertDontSee('Showing roles available');
+    expect($actor->fresh()->access_level)->toBe('superadmin');
 });
 
-test('out of package role permission assignment is rejected', function () {
+test('Super Admin can edit permissions for every existing web role', function () {
     createRbacLicense('governorship', [
         'scope_type' => 'state',
         'state_id' => 9,
@@ -164,6 +166,8 @@ test('out of package role permission assignment is rejected', function () {
             'role_id' => $role->id,
             'permission' => [$permission->id],
         ])
-        ->assertRedirect(route('superadmin.settings.addrole.permission'))
-        ->assertSessionHasErrors('role');
+        ->assertRedirect(route('superadmin.settings.rolespermission'))
+        ->assertSessionHasNoErrors();
+    expect($role->fresh()->permissions->pluck('id')->all())->toBe([$permission->id])
+        ->and($role->fresh()->group_name)->toBe('nationaladmin');
 });
