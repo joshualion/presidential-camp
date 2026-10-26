@@ -112,6 +112,10 @@ class MemberElectionController extends Controller
             $request->file('result_sheet')
         );
 
+        if ($request->input('redirect_to') === 'incident') {
+            return redirect()->route('user.elections.incident.form', [$election->uuid, $assignment->uuid])
+                ->with('success', 'Polling-unit result saved. You can now report the incident.');
+        }
         return redirect()->route('user.elections.workspace')
             ->with('success', 'Polling-unit result submitted successfully.');
     }
@@ -131,8 +135,8 @@ class MemberElectionController extends Controller
             'incident_type' => ['required', Rule::in(['violence', 'intimidation', 'equipment_failure', 'late_opening', 'result_dispute', 'other'])],
             'severity' => ['required', Rule::in(['low', 'medium', 'high', 'critical'])],
             'remarks' => ['required', 'string', 'max:5000'],
-            'pictures' => ['nullable', 'array', 'max:3'],
-            'pictures.*' => ['image', 'mimes:jpg,jpeg,png', 'max:2048'],
+            'pictures' => ['nullable', 'array'],
+            'videos' => ['nullable', 'array'],
         ]);
 
         $this->participation->reportIncident(
@@ -140,7 +144,8 @@ class MemberElectionController extends Controller
             $election,
             $assignment,
             $validated,
-            $request->file('pictures', [])
+            $request->file('pictures', []),
+            $request->file('videos', [])
         );
 
         return redirect()->route('user.elections.workspace')

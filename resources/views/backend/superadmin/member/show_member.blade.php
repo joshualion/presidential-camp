@@ -85,9 +85,11 @@
 
                  <h3 class="card-title"> Member's Infomation</h3>
                  <div class="card-tools">
-                    @if(($profileData->hasRole('National ICT Director')) || ($profileData->hasRole('Regional ICT Director')) || ($profileData->hasAnyRole('State ICT Director')) || ($profileData->hasAnyRole('LGA ICT Director')) || ($profileData->hasAnyRole('Ward ICT Director')) || ($profileData->hasAnyRole('PU ICT Director')) || ( $profileData->access_level == 'superadmin'))
+                    @if($profileData->can('members.update'))
 
-                        <a href="{{ route($profileData->access_level.'.member.edit', $member->uuid) }}"><button class="btn btn-default"> <i class="fas fa-pencil"></i> Edit Member</button></a>
+                        @if(app(\App\Services\CampaignCapabilityService::class)->canVisit($profileData, route($profileData->access_level.'.member.edit', $member->uuid)))
+<a href="{{ route($profileData->access_level.'.member.edit', $member->uuid) }}"><button class="btn btn-default"> <i class="fas fa-pencil"></i> Edit Member</button></a>
+@endif
                         <!-- Button to trigger modal -->
                         <button type="button" class="btn btn-success" data-toggle="modal" data-target="#vinModal">
                           Verify Voter Status
@@ -337,7 +339,7 @@
 <div class="form-group row">
     <label for="roles" class="col-sm-2 col-form-label">Role</label>
     <div class="col-sm-10">
-        <select class="form-control @error('roles') is-invalid @enderror" name="roles" id="roles" required>
+        <select class="form-control @error('roles') is-invalid @enderror" name="roles" id="roles" required @disabled(isset($member) || $profileData->access_level !== 'superadmin')>
             <option value="" disabled selected>Select Role</option>
             @foreach($roles as $role)
                 <option value="{{ $role->id }}" {{ $member->roles->contains('id', $role->id) ? 'selected' : '' }}>{{ $role->name }}</option>

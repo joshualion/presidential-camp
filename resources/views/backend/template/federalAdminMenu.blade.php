@@ -2,10 +2,12 @@
 <nav class="mt-2">
     <ul class="nav nav-pills nav-sidebar flex-column sidebar-nav" data-widget="treeview" role="menu" data-accordion="false">
         <li class="tab nav-item menu-close">
-            <a href="{{ url('federal/dashboard') }}" class="nav-link">
+            @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('federal/dashboard')))
+<a href="{{ url('federal/dashboard') }}" class="nav-link">
                 <i class="nav-icon fas fa-home"></i>
                 <p>Dashboard</p>
             </a>
+@endif
         </li>
         {{-- Members --}}
         <li class="tab nav-item menu-close">
@@ -58,29 +60,37 @@
             </a>
             <ul class="nav nav-treeview">
                 <li class="nav-item">
-                    <a href="{{ url('federal/elections') }}" class="nav-link">
+                    @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('federal/elections')))
+<a href="{{ url('federal/elections') }}" class="nav-link">
                         <i class="fas fa-award nav-icon"></i>
                         <p>Manage Elections</p>
                     </a>
+@endif
                 </li>
                 <li class="nav-item">
-                    <a href="{{ url('federal/election/operations-center') }}" class="nav-link">
+                    @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('federal/election/operations-center')))
+<a href="{{ url('federal/election/operations-center') }}" class="nav-link">
                         <i class="fas fa-broadcast-tower nav-icon"></i>
                         <p>Situation Room</p>
                     </a>
+@endif
                 </li>
                 @if(app(\App\Services\PollingUnitResultPermissionService::class)->userHasAnyApprovedAssignment($profileData))
                 <li class="nav-item">
-                    <a href="{{ url('federal/vote/add') }}" class="nav-link">
+                    @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('federal/vote/add')))
+<a href="{{ url('federal/vote/add') }}" class="nav-link">
                         <i class="fa fa-cloud nav-icon"></i>
                         <p>Upload Polls Result</p>
                     </a>
+@endif
                 </li>
                 <li class="nav-item">
-                    <a href="{{ url('federal/incident/add') }}" class="nav-link">
+                    @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('federal/incident/add')))
+<a href="{{ url('federal/incident/add') }}" class="nav-link">
                         <i class="fa fa-book nav-icon"></i>
                         <p>Report Incidents</p>
                     </a>
+@endif
                 </li>
                 @endif
             </ul>
@@ -97,10 +107,12 @@
             </a>
             <ul class="nav nav-treeview">
                 <li class="nav-item">
-                    <a href="{{ url('messages') }}" class="nav-link">
+                    @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('messages')))
+<a href="{{ url('messages') }}" class="nav-link">
                         <i class="fas fa-comments nav-icon"></i>
                         <p>Messenger</p>
                     </a>
+@endif
                 </li>
                 @include('backend.template.partials.email-notifications-menu-item')
 @include('backend.template.partials.sms-menu')
@@ -121,22 +133,28 @@
             </a>
             <ul class="nav nav-treeview">
                 <li class="nav-item">
-                    <a href="{{ url('federal/location/localgovernments') }}" class="nav-link">
+                    @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('federal/location/localgovernments')))
+<a href="{{ url('federal/location/localgovernments') }}" class="nav-link">
                         <i class="fas fa-map-pin nav-icon"></i>
                         <p>LGA's</p>
                     </a>
+@endif
                 </li>
                 <li class="nav-item">
-                    <a href="{{ url('federal/location/wards') }}" class="nav-link">
+                    @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('federal/location/wards')))
+<a href="{{ url('federal/location/wards') }}" class="nav-link">
                         <i class="fas fa-map-marked-alt nav-icon"></i>
                         <p>Wards</p>
                     </a>
+@endif
                 </li>
                 <li class="nav-item">
-                    <a href="{{ url('federal/location/pollingunits') }}" class="nav-link">
+                    @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('federal/location/pollingunits')))
+<a href="{{ url('federal/location/pollingunits') }}" class="nav-link">
                         <i class="fas fa-monument nav-icon"></i>
                         <p>Polling Units</p>
                     </a>
+@endif
                 </li>
             </ul>
         </li>
@@ -151,16 +169,20 @@
             </a>
             <ul class="nav nav-treeview">
                 <li class="nav-item">
-                    <a href="{{ url('federal/profile') }}" class="nav-link">
+                    @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('federal/profile')))
+<a href="{{ url('federal/profile') }}" class="nav-link">
                         <i class="fas fa-file nav-icon"></i>
                         <p>Manage Profile</p>
                     </a>
+@endif
                 </li>
                 <li class="nav-item">
-                    <a href="{{ url('federal/change/password') }}" class="nav-link">
+                    @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('federal/change/password')))
+<a href="{{ url('federal/change/password') }}" class="nav-link">
                         <i class="fas fa-lock nav-icon"></i>
                         <p>Change Password</p>
                     </a>
+@endif
                 </li>
             </ul>
         </li>
@@ -168,10 +190,12 @@
 
         {{-- Logout --}}
         <li class="nav-item">
-            <a href="{{ url('federal/logout') }}" class="nav-link">
+            @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('federal/logout')))
+<a href="{{ url('federal/logout') }}" class="nav-link">
                 <i class="fas fa-power-off nav-icon"></i>
                 <p>Logout</p>
             </a>
+@endif
         </li>
         {{-- End Logout --}}
     </ul>

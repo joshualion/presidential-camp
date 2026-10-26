@@ -279,7 +279,7 @@ class MemberImportService
         $accessLevel = strtolower($this->clean($context['access_level'] ?? 'user'));
         $role = !empty($context['role_id'])
             ? Role::query()->find($context['role_id'])
-            : $this->roles->rolesForAccessLevel($actor, $accessLevel)->first();
+            : app(CampaignCapabilityService::class)->defaultRole($accessLevel);
         $errors = [];
 
         if ($accessLevel === '' || $accessLevel === 'superadmin' || !$this->roles->canAssignAccessLevel($actor, $accessLevel)) {

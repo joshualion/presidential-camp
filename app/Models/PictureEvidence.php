@@ -10,6 +10,7 @@ class PictureEvidence extends Model
     protected $fillable = [
         'election_incident_id',
         'file_path',
+        'disk', 'mime_type', 'original_name', 'size_bytes',
         'uploaded_by',
         'verification_status',
         'verified_at',
@@ -19,6 +20,7 @@ class PictureEvidence extends Model
     protected $casts = [
         'election_incident_id' => 'integer',
         'uploaded_by' => 'integer',
+        'size_bytes' => 'integer',
         'verified_at' => 'datetime',
         'verified_by' => 'integer',
     ];

@@ -31,7 +31,9 @@
                     </h3>
                     <div class="card-tools">
                         @if(app(\App\Services\PollingUnitResultPermissionService::class)->userHasAnyApprovedAssignment($profileData))
-                        <a href="{{ route($profileData->access_level.'.vote.add') }}"><button class="btn btn-default btn-sm"> <i class="fa fa-plus-square"></i> Add Vote Records </button></a>
+                        @if(app(\App\Services\CampaignCapabilityService::class)->canVisit($profileData, route($profileData->access_level.'.vote.add')))
+<a href="{{ route($profileData->access_level.'.vote.add') }}"><button class="btn btn-default btn-sm"> <i class="fa fa-plus-square"></i> Add Vote Records </button></a>
+@endif
                         @endif
                     </div>
                 </div>

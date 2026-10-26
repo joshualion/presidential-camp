@@ -11,30 +11,16 @@
                 <div class="card-header">
                     <h3 class="card-title">Eligible voters</h3>
                     <div class="card-tools">
-                        @if(
-                            $profileData->hasAnyRole([
-                                'National ICT Director',
-                                'Regional ICT Director',
-                                'State ICT Director',
-                                'LGA ICT Director',
-                                'Ward ICT Director',
-                                'PU ICT Director',
-                                'Pu Agent',
-                                'State Coordinator',
-                                'LGA Coordinator',
-                                'Ward Coordinator',
-                                'PU Coordinator',
-                                'State Secretary',
-                                'LGA Secretary',
-                                'Ward Secretary',
-                                'PU Secretary'
-
-                            ]) || $profileData->access_level == 'superadmin')
-                                <a href="{{ route($profileData->access_level.'.member.add') }}"><button class="btn btn-default"> <i class="fa fa-plus-square"></i> Add New Member</button></a>
+                        @if($profileData->can('members.create'))
+                                @if(app(\App\Services\CampaignCapabilityService::class)->canVisit($profileData, route($profileData->access_level.'.member.add')))
+<a href="{{ route($profileData->access_level.'.member.add') }}"><button class="btn btn-default"> <i class="fa fa-plus-square"></i> Add New Member</button></a>
+@endif
                         @endif
-                        <button class="btn btn-success" data-toggle="modal" data-target="#exportModal">
+                        @if($profileData->can('members.export'))
+<button class="btn btn-success" data-toggle="modal" data-target="#exportModal">
                             <i class="fa fa-file-excel"></i> Export Members
                         </button>
+@endif
                     </div>
                 </div>
                 <!-- /.card-header -->

@@ -21,8 +21,13 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
-class RolePermissionController extends Controller
+class RolePermissionController extends Controller implements \Illuminate\Routing\Controllers\HasMiddleware
 {
+    public static function middleware(): array
+    {
+        return ['auth', 'access_level:superadmin'];
+    }
+
 
     public function __construct()
     {
@@ -74,6 +79,19 @@ class RolePermissionController extends Controller
          }
 
          return $role;
+     }
+
+     private function syncSelectedRolePermissions(Role $role, array $ids): void
+     {
+         $selected = Permission::where('guard_name', 'web')->whereIn('id', $ids)->get();
+         $capabilities = app(\App\Services\CampaignCapabilityService::class);
+         $managed = $role->capabilities_managed || $selected->contains(fn ($permission) => $capabilities->known($permission->name));
+         $names = $selected->pluck('name')->all();
+         if ($managed) {
+             $names = array_values(array_unique(array_merge($names, $role->permissions()->whereNotIn('name', $capabilities->catalog())->pluck('name')->all())));
+             $role->forceFill(['capabilities_managed' => true])->save();
+         }
+         $role->syncPermissions($names);
      }
 
      private function permissionGroups()
@@ -365,7 +383,7 @@ class RolePermissionController extends Controller
             ]);
             $role = $this->manageableRoleOrFail($validated['role_id'], $profileData);
             
-            $role->syncPermissions($validated['permission'] ?? []);
+            $this->syncSelectedRolePermissions($role, $validated['permission'] ?? []);
 
                 $notification = array(
                     'message' => 'Role Permission Assigned Successfully',
@@ -400,7 +418,7 @@ class RolePermissionController extends Controller
                 'permission' => 'array',
                 'permission.*' => 'integer|exists:permissions,id',
             ]);
-            $role->syncPermissions($validated['permission'] ?? []);
+            $this->syncSelectedRolePermissions($role, $validated['permission'] ?? []);
             $notification = array(
                 'message' => 'Role Permission Updated Successfully',
                 'alert-type' => 'success'
@@ -414,7 +432,8 @@ class RolePermissionController extends Controller
         public function deleteRolePermission($id){
             $profileData = $this->getProfileData();
             $role = $this->manageableRoleOrFail(decrypt($id), $profileData);
-            DB::table('role_has_permissions')->where('role_id', $role->id)->delete();
+            $role->forceFill(['capabilities_managed' => true])->save();
+            $role->syncPermissions($role->permissions()->whereNotIn('name', app(\App\Services\CampaignCapabilityService::class)->catalog())->pluck('name')->all());
             $notification = array(
                 'message' => 'Role Permission Deleted Successfully',
                 'alert-type' => 'success'

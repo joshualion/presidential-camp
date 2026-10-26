@@ -36,6 +36,8 @@ class DirectSmsAccess
 
     public function canSend(User $user): bool
     {
+        if (! app(\App\Services\CampaignCapabilityService::class)->allows($user, 'direct-sms.create')) { return false; }
+
         return $user->status === 'active' && $this->enabled($user) && (bool) SystemSetting::first()?->direct_sms_enabled;
     }
 

@@ -37,6 +37,11 @@ class SendEmailNotificationCampaignJob implements ShouldQueue, ShouldBeUnique
             return;
         }
 
+        if (! $campaign->sender || ! app(\App\Services\CampaignCapabilityService::class)->allows($campaign->sender, 'email.notifications.create')) {
+            $campaign->forceFill(['status' => 'failed', 'completed_at' => now()])->save();
+            return;
+        }
+
         if ($campaign->status === 'sending') {
             // A previous attempt stopped after claiming these rows. Do not resend them:
             // SMTP may have accepted the message before the worker was interrupted.

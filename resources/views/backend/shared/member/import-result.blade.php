@@ -75,12 +75,16 @@
                 @endif
             </div>
             <div class="card-footer d-flex justify-content-between">
-                <a href="{{ route($profileData->access_level.'.members') }}" class="btn btn-default">
+                @if(app(\App\Services\CampaignCapabilityService::class)->canVisit($profileData, route($profileData->access_level.'.members')))
+<a href="{{ route($profileData->access_level.'.members') }}" class="btn btn-default">
                     <i class="fa fa-arrow-left"></i> Back to Members
                 </a>
-                <a href="{{ route($profileData->access_level.'.member.import') }}" class="btn btn-primary text-white">
+@endif
+                @if(app(\App\Services\CampaignCapabilityService::class)->canVisit($profileData, route($profileData->access_level.'.member.import')))
+<a href="{{ route($profileData->access_level.'.member.import') }}" class="btn btn-primary text-white">
                     <i class="fa fa-upload"></i> Import Another File
                 </a>
+@endif
             </div>
         </div>
     </div>

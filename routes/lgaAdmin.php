@@ -65,7 +65,7 @@ Route::post('/lga/member/store', [MembersController::class, 'storeMember'])->nam
 Route::get('/lga/member/edit/{uuid}', [MembersController::class, 'editMember'])->name('lgaadmin.member.edit')->middleware('access_level:lgaadmin');
 Route::put('/lga/member/update/', [MembersController::class, 'updateMember'])->name('lgaadmin.member.update')->middleware('access_level:lgaadmin');
 Route::get('/lga/member/view/{uuid}', [MembersController::class, 'viewMember'])->name('lgaadmin.member.view')->middleware('access_level:lgaadmin');
-Route::get('/lga/member/suspend/{uuid}', [MembersController::class, 'suspendMember'])->name('lgaadmin.member.suspend')->middleware('access_level:lgaadmin');
+Route::match(['GET', 'POST'], '/lga/member/suspend/{uuid}', [MembersController::class, 'suspendMember'])->name('lgaadmin.member.suspend')->middleware('access_level:lgaadmin');
 Route::delete('/lga/member/delete/{uuid}', [MembersController::class, 'deleteMember'])->name('lgaadmin.member.delete')->middleware('access_level:lgaadmin');
 
 // Members By State

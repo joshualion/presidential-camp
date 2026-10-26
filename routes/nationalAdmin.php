@@ -180,7 +180,7 @@ Route::post('/national/member/store', [MembersController::class, 'storeMember'])
 Route::get('/national/member/edit/{uuid}', [MembersController::class, 'editMember'])->name('nationaladmin.member.edit')->middleware('access_level:nationaladmin');
 Route::put('/national/member/update/', [MembersController::class, 'updateMember'])->name('nationaladmin.member.update')->middleware('access_level:nationaladmin');
 Route::get('/national/member/view/{uuid}', [MembersController::class, 'viewMember'])->name('nationaladmin.member.view')->middleware('access_level:nationaladmin');
-Route::get('/national/member/suspend/{uuid}', [MembersController::class, 'suspendMember'])->name('nationaladmin.member.suspend')->middleware('access_level:nationaladmin');
+Route::match(['GET', 'POST'], '/national/member/suspend/{uuid}', [MembersController::class, 'suspendMember'])->name('nationaladmin.member.suspend')->middleware('access_level:nationaladmin');
 Route::delete('/national/member/delete/{uuid}', [MembersController::class, 'deleteMember'])->name('nationaladmin.member.delete')->middleware('access_level:nationaladmin');
  //Members By region
 Route::get('/national/members/region', [MembersController::class, 'membersByRegions'])->name('nationaladmin.members.region')->middleware('access_level:nationaladmin,nationaladmin');

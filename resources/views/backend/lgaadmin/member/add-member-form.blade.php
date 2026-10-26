@@ -132,7 +132,7 @@
             <label for="roles" class="col-sm-3 col-form-label">Role</label>
             <div class="col-sm-9">
                     <div class=" input-group mb-3">
-                        <select  class="form-control  @error('roles') is-invalid @enderror" name="roles" id="roles">
+                        <select  class="form-control  @error('roles') is-invalid @enderror" name="roles" id="roles" @disabled(isset($member) || $profileData->access_level !== 'superadmin')>
                             <option value="" disabled selected>Select Role</option>
                             {{-- populate dynamically --}}
                         </select>

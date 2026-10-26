@@ -59,6 +59,13 @@ class AuthenticatedSessionController extends Controller
         ];
 
 
+        $intended = $request->session()->pull('url.intended');
+        $confirmation = route('superadmin.updates.contact-confirmed');
+        if (Auth::user()->access_level === 'superadmin' && is_string($intended)
+            && $intended === $confirmation) {
+            return redirect()->route('superadmin.updates.contact-confirmed')->with($notification);
+        }
+
         return ($url ? redirect($url) : redirect()->route($dashboardRoute))->with($notification);
 
     }

@@ -12,7 +12,9 @@
                 <div class="card-header">
                     <h3 class="card-title">Members By Senatorial District</h3>
                     <div class="card-tools">
-                        <a href="{{ route($profileData->access_level.'.member.add') }}"><button class="btn btn-default"> <i class="fa fa-plus-square"></i> Add New Member</button></a>
+                        @if(app(\App\Services\CampaignCapabilityService::class)->canVisit($profileData, route($profileData->access_level.'.member.add')))
+<a href="{{ route($profileData->access_level.'.member.add') }}"><button class="btn btn-default"> <i class="fa fa-plus-square"></i> Add New Member</button></a>
+@endif
                     </div>
                 </div>
                 <!-- /.card-header -->
@@ -39,8 +41,12 @@
                                                     </span>
                                                 </td>
                                                 <td>
-                                                    <a href="{{ route($profileData->access_level.'.members', $district->uuid) }}"><button class="btn btn-secondary"><i class="fas fa-eye"></i> View Members</button></a>
-                                                    <a href="{{ route($profileData->access_level.'.location.senatorial-district.dashboard', $district->uuid) }}"><button class="btn btn-success"><i class="fas fa-chart-line"></i> Senatorial District Dashboard</button></a>
+                                                    @if(app(\App\Services\CampaignCapabilityService::class)->canVisit($profileData, route($profileData->access_level.'.members', $district->uuid)))
+<a href="{{ route($profileData->access_level.'.members', $district->uuid) }}"><button class="btn btn-secondary"><i class="fas fa-eye"></i> View Members</button></a>
+@endif
+                                                    @if(app(\App\Services\CampaignCapabilityService::class)->canVisit($profileData, route($profileData->access_level.'.location.senatorial-district.dashboard', $district->uuid)))
+<a href="{{ route($profileData->access_level.'.location.senatorial-district.dashboard', $district->uuid) }}"><button class="btn btn-success"><i class="fas fa-chart-line"></i> Senatorial District Dashboard</button></a>
+@endif
                                                 </td>
                                             </tr>
                                         @endforeach

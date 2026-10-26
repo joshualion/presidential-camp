@@ -49,7 +49,7 @@ Route::middleware(['auth', 'check_onboarding'])->group(function () {
     Route::get('/federal/member/edit/{uuid}', [MembersController::class, 'editMember'])->name('federaladmin.member.edit')->middleware('access_level:federaladmin');
     Route::put('/federal/member/update/', [MembersController::class, 'updateMember'])->name('federaladmin.member.update')->middleware('access_level:federaladmin');
     Route::get('/federal/member/view/{uuid}', [MembersController::class, 'viewMember'])->name('federaladmin.member.view')->middleware('access_level:federaladmin');
-    Route::get('/federal/member/suspend/{uuid}', [MembersController::class, 'suspendMember'])->name('federaladmin.member.suspend')->middleware('access_level:federaladmin');
+    Route::match(['GET', 'POST'], '/federal/member/suspend/{uuid}', [MembersController::class, 'suspendMember'])->name('federaladmin.member.suspend')->middleware('access_level:federaladmin');
     Route::delete('/federal/member/delete/{uuid}', [MembersController::class, 'deleteMember'])->name('federaladmin.member.delete')->middleware('access_level:federaladmin');
     Route::get('/federal/members/bylga/{uuid?}', [MembersController::class, 'membersByLocalGovernments'])->name('federaladmin.members.byLga')->middleware('access_level:federaladmin');
     Route::get('/federal/members/lga/{uuid}', [MembersController::class, 'viewMembersByLocalGovernments'])->name('federaladmin.member.lga.view')->middleware('access_level:federaladmin');

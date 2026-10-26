@@ -17,8 +17,13 @@ use Illuminate\Support\Facades\DB;
 
 use Illuminate\Http\Request;
 
-class NationalRolePermissionController extends Controller
+class NationalRolePermissionController extends Controller implements \Illuminate\Routing\Controllers\HasMiddleware
 {
+    public static function middleware(): array
+    {
+        return ['auth', 'access_level:superadmin'];
+    }
+
 
     public function __construct()
     {

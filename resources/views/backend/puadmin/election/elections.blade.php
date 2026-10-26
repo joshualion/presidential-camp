@@ -22,7 +22,9 @@ $badgeClasses = [
                     <h3 class="card-title">All Elections</h3>
                     <div class="card-tools">
                         @if($profileData->access_level == 'superadmin')
-                        <a href="{{ route($profileData->access_level.'.election.add') }}"><button class="btn btn-default"> <i class="fa fa-plus-square"></i> Create Election</button></a>
+                        @if(app(\App\Services\CampaignCapabilityService::class)->canVisit($profileData, route($profileData->access_level.'.election.add')))
+<a href="{{ route($profileData->access_level.'.election.add') }}"><button class="btn btn-default"> <i class="fa fa-plus-square"></i> Create Election</button></a>
+@endif
                         @endif
                     </div>
                 </div>
@@ -57,10 +59,16 @@ $badgeClasses = [
                         </td>
 
                         <td>
-                            <a href="{{ route($profileData->access_level.'.election.results',  ($election->uuid))}}" ><button class="btn btn-success btn-sm"><i class="fas fa-chart-line"></i>  Results</button></a>
-                        <a href="{{ route($profileData->access_level.'.election.votesByPu',  ($election->uuid))}}" ><button class="btn btn-dark btn-sm"><i class="fas fa-eye"></i>  Reports</button></a>
+                            @if(app(\App\Services\CampaignCapabilityService::class)->canVisit($profileData, route($profileData->access_level.'.election.results',  ($election->uuid))))
+<a href="{{ route($profileData->access_level.'.election.results',  ($election->uuid))}}" ><button class="btn btn-success btn-sm"><i class="fas fa-chart-line"></i>  Results</button></a>
+@endif
+                        @if(app(\App\Services\CampaignCapabilityService::class)->canVisit($profileData, route($profileData->access_level.'.election.votesByPu',  ($election->uuid))))
+<a href="{{ route($profileData->access_level.'.election.votesByPu',  ($election->uuid))}}" ><button class="btn btn-dark btn-sm"><i class="fas fa-eye"></i>  Reports</button></a>
+@endif
                     @if($profileData->access_level == 'superadmin')
-                        <a href="{{ route($profileData->access_level.'.election.edit',  ($election->uuid))}}" ><button class="btn btn-primary btn-sm"><i class="fas fa-pencil-alt"></i> Edit</button></a>
+                        @if(app(\App\Services\CampaignCapabilityService::class)->canVisit($profileData, route($profileData->access_level.'.election.edit',  ($election->uuid))))
+<a href="{{ route($profileData->access_level.'.election.edit',  ($election->uuid))}}" ><button class="btn btn-primary btn-sm"><i class="fas fa-pencil-alt"></i> Edit</button></a>
+@endif
                         <form action="{{ route($profileData->access_level.'.election.delete',  ($election->uuid)) }}" method="POST" style="display: inline-block;">
                             @csrf
                             @method('DELETE')

@@ -21,6 +21,7 @@ use App\Livewire\SuperAdminDashboard;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth', 'access_level:superadmin'])->group(function () {
+    Route::get('/superadmin/updates/contact-confirmed', [\App\Http\Controllers\OfficialUpdateController::class, 'contactConfirmed'])->middleware('throttle:6,1')->name('superadmin.updates.contact-confirmed');
     Route::get('/superadmin/settings/installation-registration', [\App\Http\Controllers\OfficialUpdateController::class, 'registration'])->name('superadmin.deployment.settings');
     Route::get('/superadmin/updates', [\App\Http\Controllers\OfficialUpdateController::class, 'index'])->name('superadmin.updates');
     Route::post('/superadmin/deployment/domain-change',[\App\Http\Controllers\DeploymentRegistrationController::class,'domainChange'])->middleware('throttle:3,60')->name('superadmin.deployment.domain-change');
@@ -213,7 +214,7 @@ Route::post('/superadmin/member/store', [MembersController::class, 'storeMember'
 Route::get('/superadmin/member/edit/{uuid}', [MembersController::class, 'editMember'])->name('superadmin.member.edit')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
 Route::put('/superadmin/member/update/', [MembersController::class, 'updateMember'])->name('superadmin.member.update')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
 Route::get('/superadmin/member/view/{uuid}', [MembersController::class, 'viewMember'])->name('superadmin.member.view')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
-Route::get('/superadmin/member/suspend/{uuid}', [MembersController::class, 'suspendMember'])->name('superadmin.member.suspend')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
+Route::match(['GET', 'POST'], '/superadmin/member/suspend/{uuid}', [MembersController::class, 'suspendMember'])->name('superadmin.member.suspend')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
 Route::delete('/superadmin/member/delete/{uuid}', [MembersController::class, 'deleteMember'])->name('superadmin.member.delete')->middleware(['access_level:superadmin', 'kuyak_eyen_ino']);
  //Members By region
 Route::get('/superadmin/members/region', [MembersController::class, 'membersByRegions'])->name('superadmin.members.region')->middleware('access_level:superadmin,superadmin');
@@ -419,3 +420,16 @@ Route::post('/superadmin/incident/store', [ElectionController::class, 'storeIcid
 });
 
 
+
+Route::middleware(['auth', 'access_level:superadmin'])->prefix('superadmin/authorization')->name('superadmin.authorization.')->group(function () {
+    Route::get('/', [\App\Http\Controllers\CampaignAuthorizationController::class, 'index'])->name('index');
+    Route::post('/roles', [\App\Http\Controllers\CampaignAuthorizationController::class, 'saveRole'])->name('roles.store');
+    Route::put('/roles/{role}', [\App\Http\Controllers\CampaignAuthorizationController::class, 'saveRole'])->name('roles.update');
+    Route::put('/users/{user}', [\App\Http\Controllers\CampaignAuthorizationController::class, 'saveUser'])->name('users.update');
+    Route::post('/defaults', [\App\Http\Controllers\CampaignAuthorizationController::class, 'saveDefault'])->name('defaults');
+});
+
+Route::middleware(['auth', 'access_level:superadmin'])->group(function () {
+    Route::get('/superadmin/settings/incident-evidence', [\App\Http\Controllers\IncidentEvidenceController::class, 'settings'])->name('superadmin.incident-evidence.settings');
+    Route::put('/superadmin/settings/incident-evidence', [\App\Http\Controllers\IncidentEvidenceController::class, 'updateSettings'])->name('superadmin.incident-evidence.update');
+});

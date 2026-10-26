@@ -19,6 +19,13 @@ if ($signer->verify($manifest, $key) !== true || $manifest['version'] !== $versi
     || (version_compare($version, '1.1.7', '>=') && ! in_array('1.1.6', $manifest['upgrade']['supported_sources'], true))) {
     throw new RuntimeException('Published application metadata or signature verification failed.');
 }
+if (version_compare($version, '1.2.0', '>=')) {
+    foreach (['1.1.7', '1.1.8', '1.1.9'] as $source) {
+        if (! in_array($source, $manifest['upgrade']['supported_sources'], true)) {
+            throw new RuntimeException('Published manifest lacks a reviewed upgrade source.');
+        }
+    }
+}
 $release = json_decode(file_get_contents('github-release.json'), true, 64, JSON_THROW_ON_ERROR);
 if ($release['tag_name'] !== 'v'.$version || $release['draft'] || $release['prerelease']) {
     throw new RuntimeException('The published release is not stable.');

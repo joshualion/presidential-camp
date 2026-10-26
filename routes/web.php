@@ -496,3 +496,21 @@ require __DIR__.'/memberAdmin.php';
 //Require Auth Routes file
 require __DIR__.'/auth.php';
 
+
+
+// Public challenge response is scoped to the configured domain and has no session authority.
+Route::get('/.well-known/campaign-manager/installation-binding', function (\Illuminate\Http\Request $request) {
+    $service = app(\App\Services\DeploymentRegistrationService::class);
+    abort_unless($request->isSecure() && strtolower($request->getHost()) === $service->domain(), 404);
+    $data = $request->validate(['challenge' => ['required', 'regex:/^[a-f0-9]{64}$/D']]);
+    try {
+        $binding = $service->domainBinding($data['challenge']);
+    } catch (\RuntimeException) {
+        abort(404);
+    }
+    return response()->json(['binding' => $binding])->header('Cache-Control', 'no-store');
+})->middleware('throttle:30,1')->name('deployment.domain-binding');
+
+Route::get('/election/evidence/{kind}/{id}', [\App\Http\Controllers\IncidentEvidenceController::class, 'show'])
+    ->whereIn('kind', ['picture', 'video'])->whereNumber('id')
+    ->middleware(['auth', 'module.enabled:elections', 'throttle:120,1'])->name('election.evidence.show');

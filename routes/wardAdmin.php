@@ -63,7 +63,7 @@ Route::post('/ward/member/store', [MembersController::class, 'storeMember'])->na
 Route::get('/ward/member/edit/{uuid}', [MembersController::class, 'editMember'])->name('wardadmin.member.edit')->middleware('access_level:wardadmin');
 Route::put('/ward/member/update/', [MembersController::class, 'updateMember'])->name('wardadmin.member.update')->middleware('access_level:wardadmin');
 Route::get('/ward/member/view/{uuid}', [MembersController::class, 'viewMember'])->name('wardadmin.member.view')->middleware('access_level:wardadmin');
-Route::get('/ward/member/suspend/{uuid}', [MembersController::class, 'suspendMember'])->name('wardadmin.member.suspend')->middleware('access_level:wardadmin');
+Route::match(['GET', 'POST'], '/ward/member/suspend/{uuid}', [MembersController::class, 'suspendMember'])->name('wardadmin.member.suspend')->middleware('access_level:wardadmin');
 Route::delete('/ward/member/delete/{uuid}', [MembersController::class, 'deleteMember'])->name('wardadmin.member.delete')->middleware('access_level:wardadmin');
 
 // Members By State

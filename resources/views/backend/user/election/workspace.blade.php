@@ -26,9 +26,13 @@
                             <td>{{ $incidentCounts->get($key, 0) }}</td>
                             <td class="text-nowrap">
                                 @if($editable)
-                                    <a href="{{ route('user.elections.result.form', [$election->uuid, $assignment->uuid]) }}" class="btn btn-success btn-sm"><i class="fas fa-poll"></i> {{ $result ? 'Amend Result' : 'Submit Result' }}</a>
+                                    @if(app(\App\Services\CampaignCapabilityService::class)->canVisit($profileData, route('user.elections.result.form', [$election->uuid, $assignment->uuid])))
+<a href="{{ route('user.elections.result.form', [$election->uuid, $assignment->uuid]) }}" class="btn btn-success btn-sm"><i class="fas fa-poll"></i> {{ $result ? 'Amend Result' : 'Submit Result' }}</a>
+@endif
                                 @endif
-                                <a href="{{ route('user.elections.incident.form', [$election->uuid, $assignment->uuid]) }}" class="btn btn-danger btn-sm"><i class="fas fa-exclamation-triangle"></i> Report Incident</a>
+                                @if(app(\App\Services\CampaignCapabilityService::class)->canVisit($profileData, route('user.elections.incident.form', [$election->uuid, $assignment->uuid])))
+<a href="{{ route('user.elections.incident.form', [$election->uuid, $assignment->uuid]) }}" class="btn btn-danger btn-sm"><i class="fas fa-exclamation-triangle"></i> Report Incident</a>
+@endif
                             </td>
                         </tr>
                     @endforeach

@@ -12,10 +12,14 @@
                 <div class="card-header">
                     <h3 class="card-title">{{ $state->name }} State Members</h3>
                     <div class="card-tools">
-                        <a href="{{ route($profileData->access_level.'.member.add') }}"><button class="btn btn-default"> <i class="fa fa-plus-square"></i> Add New Member</button></a>
-                        <button class="btn btn-success" data-toggle="modal" data-target="#exportModal">
+                        @if(app(\App\Services\CampaignCapabilityService::class)->canVisit($profileData, route($profileData->access_level.'.member.add')))
+<a href="{{ route($profileData->access_level.'.member.add') }}"><button class="btn btn-default"> <i class="fa fa-plus-square"></i> Add New Member</button></a>
+@endif
+                        @if($profileData->can('members.export'))
+<button class="btn btn-success" data-toggle="modal" data-target="#exportModal">
                             <i class="fa fa-file-excel"></i> Export Members
                         </button>
+@endif
                     </div>
                 </div>
                 <!-- /.card-header -->

@@ -1,0 +1,36 @@
+// Component browser smoke: executes the actual Blade script against its file-input DOM.
+// Server authentication, private delivery and policy are covered by feature/integration tests.
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import os from 'node:os';
+import path from 'node:path';
+const {chromium} = await import(process.env.PLAYWRIGHT_MODULE || 'playwright');
+const source=fs.readFileSync('resources/views/backend/shared/election/evidence-inputs.blade.php','utf8');
+const script=source.match(/<script>([\s\S]*?)<\/script>/)[1];
+const directory=fs.mkdtempSync(path.join(os.tmpdir(),'incident-browser-'));
+const videoPath=path.join(directory,'evidence.mp4');
+fs.writeFileSync(videoPath, Buffer.from(fs.readFileSync('tests/Fixtures/evidence-video.mp4.base64','utf8'),'base64'));
+const browser=await chromium.launch({headless:true});
+const page=await browser.newPage();
+const errors=[];page.on('pageerror',e=>errors.push(e.message));
+await page.setContent('<fieldset data-evidence-inputs><input type="file" name="pictures[]" multiple><input type="file" name="videos[]" multiple><div data-evidence-preview></div></fieldset><script>'+script+'</script>');
+const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC','base64');
+await page.locator('[name="pictures[]"]').setInputFiles({name:'<img src=x onerror=alert(1)>.png',mimeType:'image/png',buffer:png});
+await page.waitForFunction(()=>document.querySelector('[data-evidence-preview] img')?.naturalWidth===1);
+assert.equal(await page.locator('[data-evidence-preview] img').count(),1);
+assert.match(await page.locator('[data-evidence-preview] p').textContent(),/onerror/);
+assert.equal(await page.locator('[data-evidence-preview] p img').count(),0);
+await page.locator('[name="videos[]"]').setInputFiles(videoPath);
+await page.waitForFunction(()=>document.querySelector('video')?.readyState>=1);
+assert.equal(await page.locator('video').evaluate(v=>v.videoWidth),32);
+await page.locator('video').evaluate(v=>v.play());
+await page.waitForFunction(()=>document.querySelector('video').currentTime>0);
+await page.locator('[name="pictures[]"]').setInputFiles([]);
+assert.equal(await page.locator('[data-evidence-preview] img').count(),0);
+assert.equal(await page.locator('[data-evidence-preview] video').count(),1);
+await page.locator('[name="videos[]"]').setInputFiles([]);
+assert.equal(await page.locator('[data-evidence-preview]').textContent(),'');
+assert.deepEqual(errors,[]);
+console.log(JSON.stringify({browser:await browser.version(),checks:['image loads','filename text safety','MP4 metadata','MP4 playback','replacement retains other selection','clearing releases preview'],pageErrors:errors}));
+await browser.close();
+fs.rmSync(directory,{recursive:true});

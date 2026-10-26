@@ -45,9 +45,26 @@ class OfficialUpdateController extends Controller
         return view('backend.shared.official-updates', [
             'pageTitle' => 'Official Updates', 'profileData' => $request->user(),
             'installedVersion' => $updates->installedVersion(), 'updateStatus' => $status,
-            'activeJob' => $activeJob,
+            'activeJob' => $activeJob, 'confirmationReview' => $request->attributes->get('confirmationReview'),
         ]);
     }
+
+    public function contactConfirmed(Request $request, AutomaticUpdateFlow $flow)
+    {
+        abort_unless($request->user()?->access_level === 'superadmin', 403);
+        try {
+            app(DeploymentRegistrationService::class)->refreshVerification();
+        } catch (\Throwable) {
+            return redirect()->route('superadmin.updates')->with('update_error',
+                'Installation confirmation could not be verified. Check registration details or try again.');
+        }
+        // Review only: no update intent, payment navigation, preparation or installation.
+        $request->attributes->set('confirmationReview', $flow->screen(true));
+        $request->query->remove('progress');
+        return response($this->index($request, app(OfficialUpdateService::class)))
+            ->withHeaders(['Cache-Control' => 'no-store', 'Referrer-Policy' => 'no-referrer']);
+    }
+
 
     public function registration(Request $request)
     {

@@ -41,6 +41,7 @@ return Application::configure(basePath: dirname(__DIR__))
             UseInstallerSafeDrivers::class,
         ]);
         $middleware->web(append: [
+            \App\Http\Middleware\EnsureCampaignCapability::class,
             EnsureActiveUser::class,
             RedirectIfNotInstalled::class,
         ]);

@@ -10,7 +10,9 @@
                 <div class="card-header">
                     <h3 class="card-title"> Create Election</h3>
                     <div class="card-tools">
-                        <a href="{{ route($profileData->access_level.'.elections') }}"><button class="btn btn-default"> <i class="fa fa-eye"></i> All Elections</button></a>
+                        @if(app(\App\Services\CampaignCapabilityService::class)->canVisit($profileData, route($profileData->access_level.'.elections')))
+<a href="{{ route($profileData->access_level.'.elections') }}"><button class="btn btn-default"> <i class="fa fa-eye"></i> All Elections</button></a>
+@endif
                     </div>
                 </div>
                 <!-- /.card-header -->

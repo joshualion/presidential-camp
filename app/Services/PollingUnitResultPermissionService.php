@@ -80,13 +80,10 @@ class PollingUnitResultPermissionService
             return false;
         }
 
-        if (!$election) {
-            return true;
-        }
-
-        $activeResult = $this->activeOfficialResult($election, $pollingUnitId);
-
-        return !$activeResult || $this->canEditPollingUnitResult($user, $activeResult);
+        $activeResult = $election ? $this->activeOfficialResult($election, $pollingUnitId) : null;
+        $capability = $activeResult ? 'election.results.update' : 'election.results.create';
+        return app(CampaignCapabilityService::class)->allows($user, $capability)
+            && (! $activeResult || $this->canEditPollingUnitResult($user, $activeResult));
     }
 
     public function canEditPollingUnitResult(?User $user, ?PollingUnitResult $result): bool
@@ -95,7 +92,8 @@ class PollingUnitResultPermissionService
             return false;
         }
 
-        return in_array($result->result_status ?: $result->verification_status ?: 'submitted', self::EDITABLE_RESULT_STATUSES, true)
+        return app(CampaignCapabilityService::class)->allows($user, 'election.results.update')
+            && in_array($result->result_status ?: $result->verification_status ?: 'submitted', self::EDITABLE_RESULT_STATUSES, true)
             && in_array($result->verification_status ?: 'submitted', self::EDITABLE_RESULT_STATUSES, true);
     }
 
@@ -135,7 +133,8 @@ class PollingUnitResultPermissionService
 
     private function canReviewPollingUnitResult(?User $user, ?PollingUnitResult $result): bool
     {
-        if (!$this->canReviewResultsWithinScope($user) || !$result) {
+        if (!$this->canReviewResultsWithinScope($user) || !$result
+            || ! app(CampaignCapabilityService::class)->allows($user, 'election.results.update')) {
             return false;
         }
 

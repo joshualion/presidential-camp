@@ -1,5 +1,6 @@
 @extends('backend.template.backend-master')
 @section('content')
+<div class="alert alert-info m-3">Legacy permission definitions are retained for compatibility. Review independent module/action permissions and effective user access in <a href="{{ route('superadmin.authorization.index') }}">Roles &amp; Capabilities</a>. Selecting a standardized action adopts managed capabilities for that role.</div>
 
 
   <!-- Main content -->
