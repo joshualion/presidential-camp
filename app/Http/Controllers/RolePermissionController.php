@@ -83,16 +83,8 @@ class RolePermissionController extends Controller implements \Illuminate\Routing
 
      private function syncSelectedRolePermissions(Role $role, array $ids): void
      {
-         $selected = Permission::where('guard_name', 'web')->whereIn('id', $ids)->get();
-         $capabilities = app(\App\Services\CampaignCapabilityService::class);
-         $managed = $role->capabilities_managed || $selected->contains(fn ($permission) => $capabilities->known($permission->name));
-         $names = $selected->pluck('name')->map(fn ($name) => $capabilities->canonical($name))->unique()->all();
-         foreach ($names as $name) { Permission::firstOrCreate(['name' => $name, 'guard_name' => 'web'], ['group_name' => 'user']); }
-         if ($managed) {
-             $names = array_values(array_unique(array_merge($names, $role->permissions()->whereNotIn('name', $capabilities->catalog())->pluck('name')->map(fn ($name) => $capabilities->canonical($name))->all())));
-             $role->forceFill(['capabilities_managed' => true])->save();
-         }
-         $role->syncPermissions($names);
+         $names = Permission::where('guard_name', 'web')->whereIn('id', $ids)->pluck('name')->all();
+         app(\App\Services\CampaignCapabilityService::class)->syncRolePermissions($role, $names);
      }
 
      private function permissionGroups()
@@ -425,8 +417,7 @@ class RolePermissionController extends Controller implements \Illuminate\Routing
         public function deleteRolePermission($id){
             $profileData = $this->getProfileData();
             $role = $this->manageableRoleOrFail(decrypt($id), $profileData);
-            $role->forceFill(['capabilities_managed' => true])->save();
-            $role->syncPermissions($role->permissions()->whereNotIn('name', app(\App\Services\CampaignCapabilityService::class)->catalog())->pluck('name')->all());
+            app(\App\Services\CampaignCapabilityService::class)->syncRolePermissions($role, []);
             $notification = array(
                 'message' => 'Role Permission Deleted Successfully',
                 'alert-type' => 'success'

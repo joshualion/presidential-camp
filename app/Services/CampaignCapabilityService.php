@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\Models\Permission;
 
 /** Action permission decisions never replace record/location policies. */
 class CampaignCapabilityService
@@ -142,6 +143,18 @@ class CampaignCapabilityService
         return $this->rolePermissionCache[$cacheKey] = array_values(array_unique(array_merge($assigned,
             ['election.results.create', 'election.results.update', 'incidents.create'],
             array_values(array_filter($this->catalog(), fn ($name) => $this->defaultAllows($representative, $name))))));
+    }
+
+    public function syncRolePermissions(Role $role, array $permissions): void
+    {
+        $names = array_values(array_unique(array_map([$this, 'canonical'], $permissions)));
+        DB::transaction(function () use ($role, $names) {
+            foreach ($names as $name) {
+                Permission::firstOrCreate(['name' => $name, 'guard_name' => 'web'], ['group_name' => 'user']);
+            }
+            $role->forceFill(['capabilities_managed' => true])->save();
+            $role->syncPermissions($names);
+        });
     }
 
     public function canVisit(?User $user, string $url, string $method = 'GET'): bool

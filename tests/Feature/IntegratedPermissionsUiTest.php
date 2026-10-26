@@ -109,3 +109,13 @@ test('multiple roles combine grants while individual restrictions still win', fu
     app()->forgetScopedInstances();
     expect($user->fresh()->can('members.update'))->toBeFalse();
 });
+
+
+test('the existing permission update route clears defaults using the same role save operation', function () {
+    $role = Role::create(['name' => 'State Coordinator', 'guard_name' => 'web', 'group_name' => 'stateadmin']);
+    $user = User::factory()->create(['access_level' => 'stateadmin']); $user->assignRole($role);
+    expect($user->can('members.view'))->toBeTrue();
+    $this->actingAs($this->admin)->post(route('superadmin.settings.role.permission.update', $role->id), ['permission' => []])->assertRedirect();
+    expect((bool) $role->fresh()->capabilities_managed)->toBeTrue()->and($role->fresh()->permissions)->toHaveCount(0)
+        ->and($user->fresh()->can('members.view'))->toBeFalse()->and($user->fresh()->roles->pluck('id')->all())->toBe([$role->id]);
+});

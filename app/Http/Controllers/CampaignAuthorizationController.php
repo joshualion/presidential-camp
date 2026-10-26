@@ -67,11 +67,8 @@ class CampaignAuthorizationController extends Controller
         abort_if($role && $role->guard_name !== 'web', 422);
         $savedRole = DB::transaction(function () use ($data, $role, $capabilities) {
             $role ??= Role::create(['name' => $data['name'], 'guard_name' => 'web', 'group_name' => 'user']);
-            $role->forceFill(['name' => $data['name'], 'capabilities_managed' => true])->save();
-            foreach ($data['permissions'] as $name) {
-                Permission::firstOrCreate(['name' => $name, 'guard_name' => 'web'], ['group_name' => 'user']);
-            }
-            $role->syncPermissions($data['permissions']);
+            $role->forceFill(['name' => $data['name']])->save();
+            $capabilities->syncRolePermissions($role, $data['permissions']);
             return $role;
         });
         app(PermissionRegistrar::class)->forgetCachedPermissions();
