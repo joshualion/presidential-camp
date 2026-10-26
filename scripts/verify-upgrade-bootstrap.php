@@ -93,6 +93,10 @@ DB::table('political_parties')->insert([
     'logo' => 'owner-custom-logo.png', 'created_at' => now(), 'updated_at' => now(),
 ]);
 $beforeUser = (array) DB::table('users')->where('username', 'upgrade-fixture')->first();
+$customRole = DB::table('roles')->insertGetId(['name' => 'Customer upgrade role', 'guard_name' => 'web', 'group_name' => 'user']);
+$customPermission = DB::table('permissions')->insertGetId(['name' => 'customer.upgrade.view', 'guard_name' => 'web', 'group_name' => 'user']);
+DB::table('role_has_permissions')->insert(['role_id' => $customRole, 'permission_id' => $customPermission]);
+DB::table('model_has_roles')->insert(['role_id' => $customRole, 'model_id' => $beforeUser['id'], 'model_type' => App\Models\User::class]);
 $beforeEnv = hash_file('sha256', $root.'/.env');
 $uploads = $root.'/public/uploads/member_images';
 if (! is_dir($uploads)) { mkdir($uploads, 0755, true); }
@@ -147,7 +151,14 @@ $assert(\Illuminate\Support\Facades\Http::recorded(fn ($request) => str_ends_wit
 $policy = app(UpdatePolicy::class); // The policy from the verified installed bootstrap.
 $plan = $policy->inspect($stageId);
 $assert($plan['source_version'] === $sourceVersion && $plan['target_version'] === $targetVersion, 'Unexpected upgrade plan.');
-$assert(array_keys($plan['pending_migrations']) === ($sourceVersion === '1.1.3' ? ['2026_10_20_000001_add_nigeria_democratic_congress'] : []), 'Unexpected pending migrations.');
+$expectedMigrations = $sourceVersion === '1.1.3' ? ['2026_10_20_000001_add_nigeria_democratic_congress'] : [];
+if (version_compare($targetVersion, '1.2.0', '>=')) {
+    $expectedMigrations[] = '2026_10_25_000001_add_managed_campaign_capabilities';
+    $expectedMigrations[] = '2026_10_25_000002_add_incident_evidence_metadata';
+}
+$actualMigrations = array_keys($plan['pending_migrations']);
+sort($expectedMigrations); sort($actualMigrations);
+$assert($actualMigrations === $expectedMigrations, 'Unexpected pending migrations.');
 $id = (string) Str::uuid();
 UpdatePaths::write(UpdatePaths::job($id).'/journal.json', $plan + ['id' => $id, 'state' => 'queued', 'migrations_started' => false]);
 // Only entitlement calls are replaced in this isolated test. Signature checking,
@@ -174,7 +185,16 @@ if ($journal['state'] !== 'completed') {
 }
 DB::purge();
 $assert(app(OfficialUpdateService::class)->installedVersion() === $targetVersion, 'Installed version did not change.');
-$assert((array) DB::table('users')->where('username', 'upgrade-fixture')->first() === $beforeUser, 'Existing user data changed.');
+$afterUser = (array) DB::table('users')->where('username', 'upgrade-fixture')->first();
+$assert(array_intersect_key($afterUser, $beforeUser) === $beforeUser, 'Existing user data changed.');
+$assert(DB::table('roles')->where('id', $customRole)->value('name') === 'Customer upgrade role', 'Customer role changed.');
+$assert(DB::table('permissions')->where('id', $customPermission)->value('name') === 'customer.upgrade.view', 'Customer permission changed.');
+$assert(DB::table('role_has_permissions')->where(['role_id' => $customRole, 'permission_id' => $customPermission])->exists(), 'Customer role grant removed.');
+$assert(DB::table('model_has_roles')->where(['role_id' => $customRole, 'model_id' => $beforeUser['id'], 'model_type' => App\Models\User::class])->exists(), 'Customer role assignment removed.');
+if (version_compare($targetVersion, '1.2.0', '>=')) {
+    $assert(array_key_exists('capabilities_managed', $afterUser) && ! (bool) $afterUser['capabilities_managed'], 'Existing user was silently adopted into managed mode.');
+    $assert(! (bool) DB::table('roles')->where('id', $customRole)->value('capabilities_managed'), 'Existing role was silently adopted into managed mode.');
+}
 $assert(hash_file('sha256', $root.'/.env') === $beforeEnv, 'Environment or APP_KEY changed.');
 $assert(hash_file('sha256', $uploads.'/upgrade-preservation.txt') === $beforeUpload, 'Existing upload changed.');
 $assert(DB::table('political_parties')->where('acronym', 'OWN')->value('logo') === 'owner-custom-logo.png', 'Custom party changed.');
@@ -190,7 +210,7 @@ $result = [
     'state' => 'completed', 'obsolete_stage_superseded' => true, 'matching_package_reused' => true, 'signed_bootstrap_engine_used' => true,
     'signatures_verified' => true, 'backup_verified' => true,
     'environment_preserved' => true, 'existing_users_preserved' => true,
-    'existing_uploads_preserved' => true, 'custom_parties_preserved' => true,
+    'existing_uploads_preserved' => true, 'custom_role_assignments_preserved' => true, 'custom_parties_preserved' => true,
     'ndc_installed' => true, 'credentials_verified' => true,
     'authorization' => 'isolated entitlement stub; no payment or customer installation used',
 ];
