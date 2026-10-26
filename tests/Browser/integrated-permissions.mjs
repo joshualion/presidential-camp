@@ -32,7 +32,7 @@ assert.equal(await save.evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(
 await page.screenshot({path:'storage/framework/testing/permissions-dark.png',fullPage:true});
 await page.setViewportSize({width:390,height:844});
 assert.equal(await save.isVisible(),true);
-assert.equal(await page.locator('section.content').evaluate(el=>el.scrollWidth<=el.clientWidth+1),true);
+assert.equal(await page.locator('section.content.pt-3').evaluate(el=>el.scrollWidth<=el.clientWidth+1),true);
 await page.screenshot({path:'storage/framework/testing/permissions-mobile.png',fullPage:true});
 console.log('PASS: actual rendered role editor, branded headers/buttons, dark mode, mobile layout, independent actions and select-all.');
 await browser.close();
