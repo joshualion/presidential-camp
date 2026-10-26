@@ -42,7 +42,7 @@ class CampaignAuthorizationController extends Controller
         return view('backend.shared.authorization', [
             'pageTitle' => 'Roles & Permission', 'profileData' => $request->user(),
             'roles' => Role::where('guard_name', 'web')->with('permissions')->orderBy('name')->get(),
-            'catalog' => $catalog, 'selectedRole' => $selectedRole, 'rolePermissions' => $rolePermissions, 'users' => $users, 'selectedUser' => $selectedUser,
+            'catalog' => $catalog, 'userCatalog' => $capabilities->catalog(), 'selectedRole' => $selectedRole, 'rolePermissions' => $rolePermissions, 'users' => $users, 'selectedUser' => $selectedUser,
             'effective' => $effective, 'restrictions' => $restrictions,
             'levels' => config('campaign_roles.access_level_labels', []),
             'defaults' => DB::table('campaign_default_roles')->pluck('role_id', 'access_level')->all(),
@@ -51,7 +51,7 @@ class CampaignAuthorizationController extends Controller
 
     private function editablePermissions(CampaignCapabilityService $capabilities): array
     {
-        return array_values(array_unique(array_merge($capabilities->catalog(), Permission::where('guard_name', 'web')->pluck('name')->all())));
+        return array_values(array_unique(array_merge($capabilities->catalog(), array_map([$capabilities, 'canonical'], Permission::where('guard_name', 'web')->pluck('name')->all()))));
     }
 
     public function saveRole(Request $request, CampaignCapabilityService $capabilities, ?Role $role = null)

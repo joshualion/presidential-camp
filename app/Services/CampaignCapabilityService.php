@@ -115,12 +115,13 @@ class CampaignCapabilityService
     public function rolePermissions(Role $role): array
     {
         $role->loadMissing('permissions');
-        if ($role->capabilities_managed) { return $role->permissions->pluck('name')->all(); }
+        $assigned = array_values(array_unique(array_map([$this, 'canonical'], $role->permissions->pluck('name')->all())));
+        if ($role->capabilities_managed) { return $assigned; }
         $representative = new User;
         $representative->forceFill(['access_level' => $role->group_name, 'status' => 'active']);
         $representative->setRelation('roles', collect([$role]));
         $representative->setRelation('permissions', collect());
-        return array_values(array_unique(array_merge($role->permissions->pluck('name')->all(),
+        return array_values(array_unique(array_merge($assigned,
             ['election.results.create', 'election.results.update', 'incidents.create'],
             array_values(array_filter($this->catalog(), fn ($name) => $this->allows($representative, $name))))));
     }

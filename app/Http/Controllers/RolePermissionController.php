@@ -86,7 +86,8 @@ class RolePermissionController extends Controller implements \Illuminate\Routing
          $selected = Permission::where('guard_name', 'web')->whereIn('id', $ids)->get();
          $capabilities = app(\App\Services\CampaignCapabilityService::class);
          $managed = $role->capabilities_managed || $selected->contains(fn ($permission) => $capabilities->known($permission->name));
-         $names = $selected->pluck('name')->all();
+         $names = $selected->pluck('name')->map(fn ($name) => $capabilities->canonical($name))->unique()->all();
+         foreach ($names as $name) { Permission::firstOrCreate(['name' => $name, 'guard_name' => 'web'], ['group_name' => 'user']); }
          if ($managed) {
              $names = array_values(array_unique(array_merge($names, $role->permissions()->whereNotIn('name', $capabilities->catalog())->pluck('name')->all())));
              $role->forceFill(['capabilities_managed' => true])->save();

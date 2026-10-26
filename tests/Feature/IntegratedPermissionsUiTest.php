@@ -75,3 +75,13 @@ test('existing role defaults retain assignment-gated election actions before edi
     expect(app(CampaignCapabilityService::class)->rolePermissions($role))->toContain('election.results.create', 'election.results.update', 'incidents.create');
     expect((bool) $role->fresh()->capabilities_managed)->toBeFalse();
 });
+
+
+test('role editing maps existing edit permissions to the same standardized update action', function () {
+    $role = Role::create(['name' => 'Existing Editor', 'guard_name' => 'web', 'group_name' => 'user', 'capabilities_managed' => true]);
+    $role->givePermissionTo(Permission::findOrCreate('members.edit', 'web'));
+    $response = $this->actingAs($this->admin)->get(route('superadmin.settings.role.permission.edit', encrypt($role->id)))->assertOk();
+    $response->assertSee('value="members.update" checked', false)->assertDontSee('value="members.edit"', false);
+    $this->post(route('superadmin.settings.role.permission.update', $role->id), ['permission' => [Permission::findByName('members.edit', 'web')->id]])->assertRedirect();
+    expect($role->fresh()->permissions->pluck('name')->all())->toBe(['members.update']);
+});
