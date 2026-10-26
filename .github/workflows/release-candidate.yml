@@ -1,7 +1,6 @@
 name: Prepare private release candidate
 on:
   pull_request:
-    paths: [".github/workflows/community-release.yml", "config/release.php", "config/updates.php", "docs/releases/v1.2.0.md"]
   workflow_dispatch:
     inputs:
       version:
@@ -10,6 +9,9 @@ on:
         type: string
 permissions:
   contents: read
+concurrency:
+  group: candidate-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   application-checks:
     uses: ./.github/workflows/quality.yml

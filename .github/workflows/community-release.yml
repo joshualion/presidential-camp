@@ -1,8 +1,6 @@
 name: Publish verified Community v1.2.0
 on:
   workflow_dispatch:
-  pull_request:
-    paths: [".github/workflows/community-release.yml", "config/release.php", "config/updates.php", "docs/releases/v1.2.0.md"]
   push:
     branches: [main]
     paths: [".github/workflows/community-release.yml", "config/release.php", "config/updates.php", "docs/releases/v1.2.0.md"]
