@@ -89,7 +89,7 @@ class RolePermissionController extends Controller implements \Illuminate\Routing
          $names = $selected->pluck('name')->map(fn ($name) => $capabilities->canonical($name))->unique()->all();
          foreach ($names as $name) { Permission::firstOrCreate(['name' => $name, 'guard_name' => 'web'], ['group_name' => 'user']); }
          if ($managed) {
-             $names = array_values(array_unique(array_merge($names, $role->permissions()->whereNotIn('name', $capabilities->catalog())->pluck('name')->all())));
+             $names = array_values(array_unique(array_merge($names, $role->permissions()->whereNotIn('name', $capabilities->catalog())->pluck('name')->map(fn ($name) => $capabilities->canonical($name))->all())));
              $role->forceFill(['capabilities_managed' => true])->save();
          }
          $role->syncPermissions($names);
