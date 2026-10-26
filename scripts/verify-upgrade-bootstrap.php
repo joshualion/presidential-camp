@@ -18,6 +18,7 @@ $reviewedSources = match ($targetVersion) {
     '1.1.6' => ['1.1.3', '1.1.4', '1.1.5'],
     '1.1.7' => ['1.1.3', '1.1.4', '1.1.5', '1.1.6'],
     '1.1.8' => ['1.1.3', '1.1.4', '1.1.5', '1.1.6', '1.1.7'],
+    '1.2.1' => ['1.1.3', '1.1.4', '1.1.5', '1.1.6', '1.1.7', '1.1.8', '1.1.9', '1.2.0'],
     '1.2.0' => ['1.1.3', '1.1.4', '1.1.5', '1.1.6', '1.1.7', '1.1.8', '1.1.9'],
     '1.1.9' => ['1.1.3', '1.1.4', '1.1.5', '1.1.6', '1.1.7', '1.1.8'],
     default => [],
@@ -152,7 +153,7 @@ $policy = app(UpdatePolicy::class); // The policy from the verified installed bo
 $plan = $policy->inspect($stageId);
 $assert($plan['source_version'] === $sourceVersion && $plan['target_version'] === $targetVersion, 'Unexpected upgrade plan.');
 $expectedMigrations = $sourceVersion === '1.1.3' ? ['2026_10_20_000001_add_nigeria_democratic_congress'] : [];
-if (version_compare($targetVersion, '1.2.0', '>=')) {
+if (version_compare($targetVersion, '1.2.0', '>=') && version_compare($sourceVersion, '1.2.0', '<')) {
     $expectedMigrations[] = '2026_10_25_000001_add_managed_campaign_capabilities';
     $expectedMigrations[] = '2026_10_25_000002_add_incident_evidence_metadata';
 }

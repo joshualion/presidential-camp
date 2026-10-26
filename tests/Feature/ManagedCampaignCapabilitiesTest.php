@@ -97,12 +97,12 @@ test('migration is additive idempotent and preserves customer roles and permissi
         ->and((bool) $role->fresh()->capabilities_managed)->toBeFalse();
 });
 
-test('Super Admin operational capabilities can be restricted while authorization recovery remains available', function () {
+test('Super Admin retains full system control including when old restrictions exist', function () {
     $user = User::factory()->create(['access_level' => 'superadmin']);
     foreach (['members.delete', 'authorization.manage'] as $name) {
         DB::table('campaign_permission_restrictions')->insert(['user_id' => $user->id, 'permission_name' => $name]);
     }
-    expect($user->can('members.delete'))->toBeFalse()->and($user->can('authorization.manage'))->toBeTrue();
+    expect($user->can('members.delete'))->toBeTrue()->and($user->can('authorization.manage'))->toBeTrue();
 });
 
 test('read-only custom role cannot invoke member mutations exports or Ajax list endpoints for other modules', function () {

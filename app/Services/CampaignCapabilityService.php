@@ -51,6 +51,7 @@ class CampaignCapabilityService
         if ($name === 'authorization.manage') {
             return ['allowed' => $user->access_level === 'superadmin', 'reason' => 'Only Super Admin can manage authorization'];
         }
+        if ($user->access_level === 'superadmin') { return ['allowed' => true, 'reason' => 'Super Admin has full system access']; }
         $this->restrictionsAvailable ??= Schema::hasTable('campaign_permission_restrictions');
         if ($this->restrictionsAvailable) {
             $key = (string) $user->id;
@@ -93,7 +94,7 @@ class CampaignCapabilityService
                 'messaging.create', 'messaging.update', 'election.results.view', 'incidents.view', 'agents.view', 'agents.create'], true);
         }
 
-        return ['allowed' => (bool) $allowed, 'reason' => $allowed ? 'Legacy compatibility; existing scope and module gates still apply' : 'Legacy capability unavailable'];
+        return ['allowed' => (bool) $allowed, 'reason' => $allowed ? 'Default role permissions' : 'Permission not assigned'];
     }
 
     public function allows(User $user, string $name): bool
@@ -110,6 +111,18 @@ class CampaignCapabilityService
 
         return Role::where('guard_name', 'web')->where('group_name', $accessLevel)->oldest('id')->first()
             ?: Role::where('guard_name', 'web')->where('name', 'Member')->first();
+    }
+
+    public function rolePermissions(Role $role): array
+    {
+        $role->loadMissing('permissions');
+        if ($role->capabilities_managed) { return $role->permissions->pluck('name')->all(); }
+        $representative = new User;
+        $representative->forceFill(['access_level' => $role->group_name, 'status' => 'active']);
+        $representative->setRelation('roles', collect([$role]));
+        $representative->setRelation('permissions', collect());
+        return array_values(array_unique(array_merge($role->permissions->pluck('name')->all(),
+            array_values(array_filter($this->catalog(), fn ($name) => $this->allows($representative, $name))))));
     }
 
     public function canVisit(?User $user, string $url, string $method = 'GET'): bool

@@ -72,7 +72,7 @@ class RolePermissionController extends Controller implements \Illuminate\Routing
      {
          $role = Role::findOrFail($id);
 
-         if (!$this->packagePermissions()->canManageRole($profileData, $role)) {
+         if ($profileData->access_level !== 'superadmin' || $role->guard_name !== 'web') {
              throw ValidationException::withMessages([
                  'role' => 'This role is not available for the current campaign package.',
              ]);
@@ -121,7 +121,7 @@ class RolePermissionController extends Controller implements \Illuminate\Routing
 
      public function storePermission(Request $request){
         $profileData = $this->getProfileData();
-        
+
         try{
         $permission = Permission::create([
             'name' => $request->name,
@@ -235,17 +235,16 @@ class RolePermissionController extends Controller implements \Illuminate\Routing
     // Role Routes
 
     public function allrole(){
-        $profileData = $this->getProfileData();
-        $roles = $this->packageRoles()->manageableRoles($profileData);
-        $pageTitle = 'Roles';
-        return view('backend.'.$profileData->access_level.'.settings.role.roles', $this->roleManagementViewData($profileData, compact('roles', 'pageTitle')));
-     }
+            $request = request();
+
+            return app(CampaignAuthorizationController::class)->workspace($request, app(\App\Services\CampaignCapabilityService::class));
+        }
 
      public function addrole(){
-        $profileData = $this->getProfileData();
-        $pageTitle = 'Add Role';
-        return view('backend.'.$profileData->access_level.'.settings.role.add_role', $this->roleManagementViewData($profileData, compact('pageTitle')));
-     }
+            $request = request();
+            $request->merge(['create' => true]);
+            return app(CampaignAuthorizationController::class)->workspace($request, app(\App\Services\CampaignCapabilityService::class));
+        }
 
      public function storerole(Request $request){
 
@@ -295,10 +294,9 @@ class RolePermissionController extends Controller implements \Illuminate\Routing
     }
 
         public function editrole($id){
-            $profileData = $this->getProfileData();
-            $role = $this->manageableRoleOrFail(decrypt($id), $profileData);
-            $pageTitle = 'Edit Role';
-            return view('backend.'.$profileData->access_level.'.settings.role.edit_role', $this->roleManagementViewData($profileData, compact('role', 'pageTitle')));
+            $request = request();
+            $request->merge(['role' => decrypt($id)]);
+            return app(CampaignAuthorizationController::class)->workspace($request, app(\App\Services\CampaignCapabilityService::class));
         }
 
 
@@ -318,7 +316,7 @@ class RolePermissionController extends Controller implements \Illuminate\Routing
                     'group_name' => 'This access level is not available for the current campaign package.',
                 ]);
             }
-            
+
             try {
                 $role_id = $validated['id'];
                 Role::findOrfail($role_id)->update([
@@ -366,11 +364,9 @@ class RolePermissionController extends Controller implements \Illuminate\Routing
 
         // Role & Permission Functions
         public function addRolePermission(){
-            $profileData = $this->getProfileData();
-            $roles = $this->packageRoles()->manageableRoles($profileData);
-            $permissions = Permission::all();
-            $permission_groups = $this->permissionGroups();
-            return view('backend.'.$profileData->access_level.'.settings.rolespermission.add_role_permission', $this->roleManagementViewData($profileData, compact('roles', 'permissions', 'permission_groups')));
+            $request = request();
+            $request->merge(['section' => 'users']);
+            return app(CampaignAuthorizationController::class)->workspace($request, app(\App\Services\CampaignCapabilityService::class));
         }
 
 
@@ -382,7 +378,7 @@ class RolePermissionController extends Controller implements \Illuminate\Routing
                 'permission.*' => 'integer|exists:permissions,id',
             ]);
             $role = $this->manageableRoleOrFail($validated['role_id'], $profileData);
-            
+
             $this->syncSelectedRolePermissions($role, $validated['permission'] ?? []);
 
                 $notification = array(
@@ -395,20 +391,16 @@ class RolePermissionController extends Controller implements \Illuminate\Routing
 
 
         public function allRolesPermission(){
-            $profileData = $this->getProfileData();
-            $roles = $this->packageRoles()
-                ->manageableRoles($profileData)
-                ->each(fn (Role $role) => $role->loadMissing('permissions'));
-            return view('backend.'.$profileData->access_level.'.settings.rolespermission.rolespermission', $this->roleManagementViewData($profileData, compact('roles')));
+            $request = request();
+
+            return app(CampaignAuthorizationController::class)->workspace($request, app(\App\Services\CampaignCapabilityService::class));
         }
 
 
         public function editRolePermission($id){
-            $profileData = $this->getProfileData();
-            $role = $this->manageableRoleOrFail(decrypt($id), $profileData);
-            $permissions = Permission::all();
-            $permission_groups = $this->permissionGroups();
-            return view('backend.'.$profileData->access_level.'.settings.rolespermission.edit_role_permission', $this->roleManagementViewData($profileData, compact('role', 'permissions', 'permission_groups')));
+            $request = request();
+            $request->merge(['role' => decrypt($id)]);
+            return app(CampaignAuthorizationController::class)->workspace($request, app(\App\Services\CampaignCapabilityService::class));
         }
 
         public function updateRolePermission(Request $request, $id){

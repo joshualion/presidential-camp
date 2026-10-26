@@ -26,6 +26,9 @@ if (version_compare($version, '1.2.0', '>=')) {
         }
     }
 }
+if (version_compare($version, '1.2.1', '>=') && ! in_array('1.2.0', $manifest['upgrade']['supported_sources'], true)) {
+    throw new RuntimeException('Published manifest lacks the 1.2.0 upgrade source.');
+}
 $release = json_decode(file_get_contents('github-release.json'), true, 64, JSON_THROW_ON_ERROR);
 if ($release['tag_name'] !== 'v'.$version || $release['draft'] || $release['prerelease']) {
     throw new RuntimeException('The published release is not stable.');

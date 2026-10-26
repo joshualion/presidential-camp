@@ -1,3 +1,11 @@
+# 1.2.1
+
+- Integrate roles, module/action permissions, user assignments and defaults into the existing Roles & Permission workflow.
+- Show every existing role in the same editor; preserve role IDs and existing assignments, with independently editable permissions.
+- Restore full Super Admin control and branded navigation: Dashboard first, evidence rules under Elections, Official Updates before Profile.
+- Show red available-update notifications throughout Super Admin pages. Remove duplicate navigation and compatibility notices.
+- No new database migration. Signed upgrades support 1.2.0 and the reviewed earlier sources.
+
 # 1.2.0
 
 - Secure verified-registration return through normal login and server-to-server installation checks.

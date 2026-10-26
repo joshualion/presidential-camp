@@ -12,6 +12,7 @@
             
             
                  
+             @include('backend.shared.update-notification')
              @yield('content')
 
 

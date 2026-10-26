@@ -5,12 +5,18 @@ return [
         'name' => 'Campaign Manager Core',
         'package' => 'campaign-manager-core',
         'channel' => env('RELEASE_CHANNEL', 'self-hosted'),
-        'version' => env('APP_VERSION', '1.2.0'),
+        'version' => env('APP_VERSION', '1.2.1'),
         'build_date' => env('RELEASE_BUILD_DATE', null),
         'minimum_php' => '8.2.0',
     ],
 
     'release_notes' => [
+        '1.2.1' => [
+            'Integrates all role and action controls into the existing Roles & Permission screens and existing role records.',
+            'Restores branded navigation with Dashboard first, Super Admin-only evidence settings under Elections, and Official Updates before Profile.',
+            'Adds red available-update notifications across Super Admin pages and preserves full Super Admin control.',
+            'Preserves customer role assignments, geographic scope, private evidence and signed owner-initiated updates. No new migrations.',
+        ],
         '1.2.0' => [
             'Returns verified registration contacts securely to their registered installation through normal authentication.',
             'Adds reusable managed roles, independent action permissions, user grants and restrictions without expanding geographical scope.',

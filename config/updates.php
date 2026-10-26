@@ -11,7 +11,7 @@ return [
     'mysql_dump' => env('CAMPAIGN_UPDATE_MYSQL_DUMP'),
     'mysql_client' => env('CAMPAIGN_UPDATE_MYSQL_CLIENT'),
     // Explicit compatibility review; an unknown source version fails closed.
-    'supported_sources' => ['1.0.8', '1.0.9', '1.1.0', '1.1.1', '1.1.2', '1.1.3', '1.1.4', '1.1.5', '1.1.6', '1.1.7', '1.1.8', '1.1.9'],
+    'supported_sources' => ['1.0.8', '1.0.9', '1.1.0', '1.1.1', '1.1.2', '1.1.3', '1.1.4', '1.1.5', '1.1.6', '1.1.7', '1.1.8', '1.1.9', '1.2.0'],
     // Names are added only after reviewing their up() implementation and compatibility.
     'approved_migrations' => [
         '2026_10_25_000001_add_managed_campaign_capabilities' => '477066dfed6bd774e5f52e82216981212abba501d41b6b0992a34801c64e8b55',
