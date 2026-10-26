@@ -84,10 +84,12 @@ function campaignAuthUser(string $accessLevel, array $roles = [], ?int $pollingU
     $user->setRelation('roles', collect(array_map(function (string $roleName) {
         $role = new Role();
         $role->name = $roleName;
+        $role->setRelation('permissions', collect());
 
         return $role;
     }, $roles)));
 
+    $user->setRelation('permissions', collect());
     return $user;
 }
 

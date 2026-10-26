@@ -12,7 +12,9 @@
                 <div class="card-header">
                     <h3 class="card-title">Members By Region</h3>
                     <div class="card-tools">
-                        <a href="{{ route($profileData->access_level.'.member.add') }}"><button class="btn btn-default"> <i class="fa fa-plus-square"></i> Add New Member</button></a>
+                        @if(app(\App\Services\CampaignCapabilityService::class)->canVisit($profileData, route($profileData->access_level.'.member.add')))
+<a href="{{ route($profileData->access_level.'.member.add') }}"><button class="btn btn-default"> <i class="fa fa-plus-square"></i> Add New Member</button></a>
+@endif
                     </div>
                 </div>
                 <!-- /.card-header -->
@@ -38,9 +40,13 @@
                                                     
                                                 </td>
                                                 <td>
-                                                    <a href="{{ route($profileData->access_level.'.member.region.view', $region->uuid) }}"><button class="btn btn-danger"><i class="fas fa-eye"></i> View Members</button></a>
+                                                    @if(app(\App\Services\CampaignCapabilityService::class)->canVisit($profileData, route($profileData->access_level.'.member.region.view', $region->uuid)))
+<a href="{{ route($profileData->access_level.'.member.region.view', $region->uuid) }}"><button class="btn btn-danger"><i class="fas fa-eye"></i> View Members</button></a>
+@endif
                                                 
-                                                    <a href="{{ route($profileData->access_level.'.location.region.dashboard', $region->uuid) }}" > <button class="btn btn-success "><i class="fas fa-chart-line"></i> Goto Region Dashboard</button></a>
+                                                    @if(app(\App\Services\CampaignCapabilityService::class)->canVisit($profileData, route($profileData->access_level.'.location.region.dashboard', $region->uuid)))
+<a href="{{ route($profileData->access_level.'.location.region.dashboard', $region->uuid) }}" > <button class="btn btn-success "><i class="fas fa-chart-line"></i> Goto Region Dashboard</button></a>
+@endif
                                                 </td>
                                             </tr>
                                         @endforeach

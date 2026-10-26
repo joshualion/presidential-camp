@@ -191,6 +191,7 @@ class CampaignPackageRoleService
 
     public function invalidRoleMessage(Role $role, ?string $accessLevel = null): ?string
     {
+        if ($role->capabilities_managed && $role->guard_name === 'web') { return null; }
         if (!$this->usesPackageRoleMap()) {
             return null;
         }

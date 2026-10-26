@@ -317,7 +317,7 @@
 <div class="form-group row">
     <label for="roles" class="col-sm-2 col-form-label">Role</label>
     <div class="col-sm-10">
-        <select class="form-control @error('roles') is-invalid @enderror" name="roles" id="roles" >
+        <select class="form-control @error('roles') is-invalid @enderror" name="roles" id="roles"  @disabled(isset($member) || $profileData->access_level !== 'superadmin')>
             <option value="" disabled selected>Select Role</option>
             @foreach($roles as $role)
                 <option value="{{ $role->id }}" {{ $member->roles->contains('id', $role->id) ? 'selected' : '' }}>{{ $role->name }}</option>

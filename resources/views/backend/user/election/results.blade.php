@@ -25,7 +25,9 @@
                 </tbody>
             </table>
         </div>
-        <a href="{{ route('user.elections') }}" class="btn btn-default">Back to Elections</a>
+        @if(app(\App\Services\CampaignCapabilityService::class)->canVisit($profileData, route('user.elections')))
+<a href="{{ route('user.elections') }}" class="btn btn-default">Back to Elections</a>
+@endif
     </div>
 </div>
 @endsection

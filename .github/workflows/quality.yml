@@ -47,9 +47,62 @@ jobs:
         run: |
           cp .env.example .env
           php artisan key:generate --force
+          php artisan route:list --json > route-list.json
+          php artisan view:cache
+          find storage/framework/views -type f -name '*.php' -print0 | xargs -0 -r -n 1 php -l
+          php artisan view:clear
           php artisan test --log-junit test-results.xml
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: test-results-php-${{ matrix.php }}
           path: test-results.xml
+
+  database-compatibility:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        database: ['mysql:8.0', 'mariadb:10.11']
+    services:
+      mysql:
+        image: ${{ matrix.database }}
+        env:
+          MYSQL_ROOT_PASSWORD: synthetic-v120-test-password
+          MYSQL_DATABASE: campaign_v120_test
+          MYSQL_ROOT_HOST: '%'
+        ports: ['3306/tcp']
+        options: >-
+          --health-cmd="if command -v mysqladmin >/dev/null; then mysqladmin ping -h localhost -psynthetic-v120-test-password; else mariadb-admin ping -h localhost -psynthetic-v120-test-password; fi"
+          --health-interval=10s --health-timeout=5s --health-retries=10
+    env:
+      APP_ENV: testing
+      APP_URL: http://localhost
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_DATABASE: campaign_v120_test
+      DB_USERNAME: root
+      DB_PASSWORD: synthetic-v120-test-password
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, xml, curl, zip, gd, bcmath, intl, pdo_mysql
+          tools: composer:v2
+          coverage: none
+      - run: composer install --prefer-dist --no-interaction
+      - name: Authorization, evidence, registration and migration regressions
+        env:
+          DB_PORT: ${{ job.services.mysql.ports[3306] }}
+        run: |
+          cp .env.example .env
+          php artisan key:generate --force
+          php artisan test --filter='ManagedCampaignCapabilities|IncidentEvidence|ContactConfirmationReturn|V120MigrationCompatibility|MemberImport|LicensedScopeQuery|PollingUnitAgentScope|MemberElectionParticipation' --log-junit database-results.xml
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: v120-database-${{ strategy.job-index }}
+          path: database-results.xml

@@ -12,7 +12,9 @@
                 <div class="card-header">
                     <h3 class="card-title">{{ $state->name }} State Members</h3>
                     <div class="card-tools">
-                        <a href="{{ route($profileData->access_level.'.member.add') }}"><button class="btn btn-default"> <i class="fa fa-plus-square"></i> Add New Member</button></a>
+                        @if(app(\App\Services\CampaignCapabilityService::class)->canVisit($profileData, route($profileData->access_level.'.member.add')))
+<a href="{{ route($profileData->access_level.'.member.add') }}"><button class="btn btn-default"> <i class="fa fa-plus-square"></i> Add New Member</button></a>
+@endif
                     </div>
                 </div>
                 <!-- /.card-header -->

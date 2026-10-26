@@ -135,9 +135,11 @@
                             @endif
                             <span class="badge badge-info">{{ $packageContext['label'] ?? 'Campaign Package' }}</span>
                             @if($canUploadPollingUnitResults)
-                                <a href="{{ route($profileData->access_level.'.vote.add') }}" class="btn btn-default btn-sm">
+                                @if(app(\App\Services\CampaignCapabilityService::class)->canVisit($profileData, route($profileData->access_level.'.vote.add')))
+<a href="{{ route($profileData->access_level.'.vote.add') }}" class="btn btn-default btn-sm">
                                     <i class="fa fa-plus-square"></i> Add Vote Records
                                 </a>
+@endif
                             @endif
                         </div>
                     </div>

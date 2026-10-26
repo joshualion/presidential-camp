@@ -5,7 +5,7 @@
 <nav class="mt-2">
       <ul class="nav nav-pills nav-sidebar flex-column sidebar-nav" data-widget="treeview" role="menu" data-accordion="false">
 <li class="nav-item">
-    @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), route('superadmin.updates')))
+    @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, route('superadmin.updates')))
 <a href="{{ route('superadmin.updates') }}" class="nav-link">
         <i class="nav-icon fas fa-cloud-download-alt"></i><p>Official Updates
         @if(data_get(app(\App\Services\OfficialUpdateService::class)->status(), 'available'))<span class="badge badge-info">Available</span>@endif
@@ -16,7 +16,7 @@
 
 
             <li class="tab nav-item menu-close">
-                        @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('superadmin/dashboard')))
+                        @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('superadmin/dashboard')))
 <a href="{{ url('superadmin/dashboard') }}" class="nav-link">
                           <i class="nav-icon fas fa-home"></i>
                           <p>
@@ -41,7 +41,7 @@
               <ul class="nav nav-treeview">
 
                 <li class="nav-item">
-                  @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('superadmin/members/fetch')))
+                  @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('superadmin/members/fetch')))
 <a href="{{ url('superadmin/members/fetch') }}" class="nav-link">
                     <i class="fas fa-user nav-icon"></i>
                     <p>All Members</p>
@@ -51,7 +51,7 @@
 
                 @if($packageUi->supportsMemberNavigationLevel('regions'))
                 <li class="nav-item">
-                  @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), route('superadmin.members.region')))
+                  @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, route('superadmin.members.region')))
 <a href="{{ route('superadmin.members.region') }}" class="nav-link">
                     <i class="fas fa-globe-africa nav-icon"></i>
                     <p>Members by Regions</p>
@@ -62,7 +62,7 @@
 
                 @if($packageUi->supportsMemberNavigationLevel('states'))
                 <li class="nav-item">
-                  @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), route('superadmin.members.byState')))
+                  @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, route('superadmin.members.byState')))
 <a href="{{ route('superadmin.members.byState') }}" class="nav-link">
                     <i class="fas fa-map nav-icon"></i>
                     <p>Members by States</p>
@@ -72,7 +72,7 @@
                 @endif
                 @if($packageUi->supportsMemberNavigationLevel('lgas'))
                 <li class="nav-item">
-                  @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('superadmin/members/bylga')))
+                  @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('superadmin/members/bylga')))
 <a href="{{ url('superadmin/members/bylga') }}" class="nav-link">
                   <i class="fas fa-user nav-icon"></i>
                     <p>Members by LGA</p>
@@ -83,7 +83,7 @@
 
                 @if($packageUi->supportsMemberNavigationLevel('wards'))
                 <li class="nav-item">
-                  @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('superadmin/members/byward')))
+                  @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('superadmin/members/byward')))
 <a href="{{ url('superadmin/members/byward') }}" class="nav-link">
                   <i class="fas fa-user nav-icon"></i>
                     <p>Members By Wards</p>
@@ -94,7 +94,7 @@
 
                 @if($packageUi->supportsMemberNavigationLevel('polling_units'))
                 <li class="nav-item">
-                  @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('superadmin/members/bypu')))
+                  @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('superadmin/members/bypu')))
 <a href="{{ url('superadmin/members/bypu') }}" class="nav-link">
                   <i class="fas fa-user nav-icon"></i>
                     <p>Members By PU</p>
@@ -121,7 +121,7 @@
                       <ul class="nav nav-treeview">
 
                         <li class="nav-item">
-                          @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('superadmin/elections')))
+                          @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('superadmin/elections')))
 <a href="{{ url('superadmin/elections') }}" class="nav-link">
                             <i class="fas fa-award nav-icon"></i>
                             <p>Manage Elections</p>
@@ -129,7 +129,7 @@
 @endif
                         </li>
                         <li class="nav-item">
-                          @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('superadmin/election/operations-center')))
+                          @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('superadmin/election/operations-center')))
 <a href="{{ url('superadmin/election/operations-center') }}" class="nav-link">
                             <i class="fas fa-broadcast-tower nav-icon"></i>
                             <p>Situation Room</p>
@@ -138,7 +138,7 @@
                         </li>
                         @if(app(\App\Services\PollingUnitResultPermissionService::class)->userHasAnyApprovedAssignment($profileData))
                         <li class="nav-item">
-                          @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('superadmin/vote/add')))
+                          @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('superadmin/vote/add')))
 <a href="{{ url('superadmin/vote/add') }}" class="nav-link">
                           <i class="fa fa-cloud nav-icon"></i>
                             <p>Upload Polls Result</p>
@@ -147,7 +147,7 @@
                         </li>
 
                         <li class="nav-item">
-                          @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('superadmin/incident/add')))
+                          @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('superadmin/incident/add')))
 <a href="{{ url('superadmin/incident/add') }}" class="nav-link">
                           <i class="fa fa-book nav-icon"></i>
                             <p>Report  Incidents</p>
@@ -171,7 +171,7 @@
               <ul class="nav nav-treeview">
 
               <li class="nav-item">
-                  @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('superadmin/dashboard')))
+                  @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('superadmin/dashboard')))
 <a href="{{ url('superadmin/dashboard') }}" class="nav-link">
                     <i class="fas fa-award nav-icon"></i>
                     <p>Elections</p>
@@ -180,7 +180,7 @@
                 </li>
 
                 <li class="nav-item">
-                  @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('superadmin/dashboard')))
+                  @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('superadmin/dashboard')))
 <a href="{{ url('superadmin/dashboard') }}" class="nav-link">
                     <i class="fas fa-vote-yea nav-icon"></i>
                     <p>Members</p>
@@ -189,7 +189,7 @@
                 </li>
 
                 <li class="nav-item">
-                  @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('superadmin/state/dashboard')))
+                  @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('superadmin/state/dashboard')))
 <a href="{{ url('superadmin/state/dashboard') }}" class="nav-link">
                   <i class="fa fa-thumbs-up nav-icon"></i>
                     <p>Finances</p>
@@ -212,7 +212,7 @@
       <ul class="nav nav-treeview">
 
         <li class="nav-item">
-          @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('superadmin/products')))
+          @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('superadmin/products')))
 <a href="{{ url('superadmin/products') }}" class="nav-link">
             <i class="fas fa-shopping-cart nav-icon"></i>
             <p>Funding Sources</p>
@@ -221,7 +221,7 @@
       </li>
 
       <li class="nav-item">
-          @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('superadmin/dashboard')))
+          @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('superadmin/dashboard')))
 <a href="{{ url('superadmin/dashboard') }}" class="nav-link">
             <i class="fas fa-hand-holding-usd nav-icon"></i>
             <p>Income</p>
@@ -232,7 +232,7 @@
 
 
         <li class="nav-item">
-          @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('superadmin/dashboard')))
+          @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('superadmin/dashboard')))
 <a href="{{ url('superadmin/dashboard') }}" class="nav-link">
             <i class="fas fa-credit-card nav-icon"></i>
             <p>Expenses</p>
@@ -241,7 +241,7 @@
         </li>
 
         {{-- <li class="nav-item">
-          @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('superadmin/dashboard')))
+          @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('superadmin/dashboard')))
 <a href="{{ url('superadmin/dashboard') }}" class="nav-link">
             <i class="fas fa-shopping-cart nav-icon"></i>
             <p>Sales Records</p>
@@ -250,7 +250,7 @@
         </li>
 
         <li class="nav-item">
-          @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('superadmin/state/dashboard')))
+          @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('superadmin/state/dashboard')))
 <a href="{{ url('superadmin/state/dashboard') }}" class="nav-link">
           <i class="fas fa-dollar-sign nav-icon"></i>
             <p>Funding Request</p>
@@ -275,7 +275,7 @@
       <ul class="nav nav-treeview">
 
       <li class="nav-item">
-          @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('superadmin/events')))
+          @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('superadmin/events')))
 <a href="{{ url('superadmin/events') }}" class="nav-link">
             <i class="fas fa-award nav-icon"></i>
             <p>All Events</p>
@@ -284,7 +284,7 @@
         </li>
 
         <li class="nav-item">
-          @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('superadmin/event/add')))
+          @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('superadmin/event/add')))
 <a href="{{ url('superadmin/event/add') }}" class="nav-link">
             <i class="fas fa-plus nav-icon"></i>
             <p>Add Event</p>
@@ -310,7 +310,7 @@
               <ul class="nav nav-treeview">
 
                   <li class="nav-item">
-                    @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), route($profileData->access_level.'.messages.page')))
+                    @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, route($profileData->access_level.'.messages.page')))
 <a href="{{ route($profileData->access_level.'.messages.page') }}" class="nav-link">
                       <i class="fas fa-comments nav-icon"></i>
                       <p>Messenger</p>
@@ -354,7 +354,7 @@
       </a>
       <ul class="nav nav-treeview" style="display: none;">
           <li class="nav-item">
-            @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('admin/products')))
+            @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('admin/products')))
 <a href="{{ url('admin/products') }}" class="nav-link">
             <i class="fas fa-gem nav-icon"></i>
               <p>Products </p>
@@ -362,7 +362,7 @@
 @endif
           </li>
           <li class="nav-item">
-            @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('admin/product/categories')))
+            @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('admin/product/categories')))
 <a href="{{ url('admin/product/categories') }}" class="nav-link">
             <i class="fas fa-shopping-basket nav-icon"></i>
               <p>Categories </p>
@@ -371,7 +371,7 @@
           </li>
 
           <li class="nav-item">
-            @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('admin/product/add')))
+            @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('admin/product/add')))
 <a href="{{ url('admin/product/add') }}" class="nav-link">
             <i class="fas fa-upload nav-icon"></i>
               <p> Upload Product </p>
@@ -380,7 +380,7 @@
           </li>
 
           <li class="nav-item">
-            @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('admin/product/category/add')))
+            @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('admin/product/category/add')))
 <a href="{{ url('admin/product/category/add') }}" class="nav-link">
             <i class="fas fa-plus  nav-icon"></i>
               <p> Add Category </p>
@@ -404,7 +404,7 @@
 
                 @if($packageVisibility->canSeeRegionalModules())
                   <li class="nav-item">
-                    @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('superadmin/location/regions')))
+                    @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('superadmin/location/regions')))
 <a href="{{ url('superadmin/location/regions') }}" class="nav-link">
                       <i class="	fas fa-map-marker	 nav-icon"></i>
                       <p>Regions</p>
@@ -415,7 +415,7 @@
 
                 @if($packageVisibility->canSeeStateModules())
                   <li class="nav-item">
-                    @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('superadmin/location/states')))
+                    @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('superadmin/location/states')))
 <a href="{{ url('superadmin/location/states') }}" class="nav-link">
                     <i class="fas fa-map-marker-alt nav-icon"></i>
                       <p>States</p>
@@ -425,7 +425,7 @@
                 @endif
                 @if($packageVisibility->canSeeSenatorialModules())
                 <li class="nav-item">
-                  @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('superadmin/location/senatorial-districts')))
+                  @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('superadmin/location/senatorial-districts')))
 <a href="{{ url('superadmin/location/senatorial-districts') }}" class="nav-link">
                   <i class="fas fa-map nav-icon"></i>
                     <p>Senatorial Districts</p>
@@ -435,7 +435,7 @@
                 @endif
                 @if($packageVisibility->canSeeFederalModules())
                 <li class="nav-item">
-                  @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('superadmin/location/federal-constituencies')))
+                  @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('superadmin/location/federal-constituencies')))
 <a href="{{ url('superadmin/location/federal-constituencies') }}" class="nav-link">
                   <i class="fas fa-landmark nav-icon"></i>
                     <p>Federal Constituencies</p>
@@ -445,7 +445,7 @@
                 @endif
                 @if($packageVisibility->canSeeLgaModules())
                 <li class="nav-item">
-                  @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('superadmin/location/localgovernments')))
+                  @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('superadmin/location/localgovernments')))
 <a href="{{ url('superadmin/location/localgovernments') }}" class="nav-link">
                   <i class="fas fa-map-pin nav-icon"></i>
                     <p>LGA's</p>
@@ -456,7 +456,7 @@
 
                 @if($packageVisibility->canSeeWardModules())
                 <li class="nav-item">
-                  @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('superadmin/location/wards')))
+                  @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('superadmin/location/wards')))
 <a href="{{ url('superadmin/location/wards') }}" class="nav-link">
                   <i class="fas fa-map-marked-alt nav-icon"></i>
                     <p> Wards</p>
@@ -466,7 +466,7 @@
                 @endif
                 @if($packageVisibility->canSeePollingUnitModules())
                 <li class="nav-item">
-                  @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('superadmin/location/pollingunits')))
+                  @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('superadmin/location/pollingunits')))
 <a href="{{ url('superadmin/location/pollingunits') }}" class="nav-link">
                   <i class="fas fa-monument nav-icon"></i>
                     <p> Polling Units</p>
@@ -490,23 +490,23 @@
               </a>
               <ul class="nav nav-treeview">
 @include('backend.template.partials.sms-provider-menu-item')
-          @if(($profileData->hasRole('National ICT Director')) || ( $profileData->access_level == 'superadmin'))
+          @if($profileData->can('settings.technical'))
 
                 <li class="nav-item">
-                  @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('superadmin/system/settings')))
+                  @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('superadmin/system/settings')))
 <a href="{{ url('superadmin/system/settings') }}" class="nav-link">
                     <i class="fas fa-tools	 nav-icon"></i>
                     <p>General Settings</p>
                   </a>
 @endif
                 </li>
-              <li class="nav-item">@if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), route('superadmin.deployment.settings')))
+              <li class="nav-item">@if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, route('superadmin.deployment.settings')))
 <a href="{{ route('superadmin.deployment.settings') }}" class="nav-link"><i class="fas fa-server nav-icon"></i><p>Installation registration</p></a>
 @endif</li>
                 @endif
 
                 <li class="nav-item">
-                  @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), route('admin.license.show')))
+                  @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, route('admin.license.show')))
 <a href="{{ route('admin.license.show') }}" class="nav-link">
                     <i class="fas fa-certificate nav-icon"></i>
                     <p>License Status</p>
@@ -516,7 +516,7 @@
 
                 @if(config('direct_sms.portal_visible') && app(\App\Services\ModuleGateService::class)->enabled('sms'))
                 <li class="nav-item">
-                  @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), route('superadmin.sms.settings.index')))
+                  @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, route('superadmin.sms.settings.index')))
 <a href="{{ route('superadmin.sms.settings.index') }}" class="nav-link">
                     <i class="fas fa-sms nav-icon"></i>
                     <p>Portal SMS Settings</p>
@@ -526,7 +526,7 @@
                 @endif
 
                 <li class="nav-item">
-                  @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('superadmin/settings/smtp')))
+                  @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('superadmin/settings/smtp')))
 <a href="{{ url('superadmin/settings/smtp') }}" class="nav-link">
                   <i class="fas fa-award nav-icon"></i>
                     <p> SMTP Settings</p>
@@ -536,7 +536,7 @@
 
                 {{-- Payment Settings temporarily disabled pending finance module completion.
                 <li class="nav-item">
-                  @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('superadmin/settings/paymentgateway')))
+                  @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('superadmin/settings/paymentgateway')))
 <a href="{{ url('superadmin/settings/paymentgateway') }}" class="nav-link">
                   <i class="fas fa-credit-card nav-icon"></i>
                     <p> Payment Settings</p>
@@ -546,7 +546,7 @@
                 --}}
 
                 <li class="nav-item">
-                  @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), route('superadmin.settings.email-notifications.edit')))
+                  @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, route('superadmin.settings.email-notifications.edit')))
 <a href="{{ route('superadmin.settings.email-notifications.edit') }}" class="nav-link">
                     <i class="fas fa-envelope-open-text nav-icon"></i>
                     <p>Email Notification</p>
@@ -555,7 +555,7 @@
                 </li>
 
                 <li class="nav-item">
-                  @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('superadmin/setting/volunteer/group')))
+                  @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('superadmin/setting/volunteer/group')))
 <a href="{{ url('superadmin/setting/volunteer/group') }}" class="nav-link">
                   <i class="fas fa-handshake nav-icon"></i>
                     <p> Volunteer Group Settings</p>
@@ -566,7 +566,7 @@
 
 
                 <li class="nav-item">
-                  @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('superadmin/election/setting/politicalparty')))
+                  @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('superadmin/election/setting/politicalparty')))
 <a href="{{ url('superadmin/election/setting/politicalparty') }}" class="nav-link">
                     <i class="fas fa-vote-yea nav-icon"></i>
                     <p>Political Parties</p>
@@ -575,7 +575,7 @@
                 </li>
 
                 <li class="nav-item">
-                  @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('superadmin/setting/agegrade')))
+                  @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('superadmin/setting/agegrade')))
 <a href="{{ url('superadmin/setting/agegrade') }}" class="nav-link">
                   <i class="fas fa-user-graduate nav-icon"></i>
                     <p> Age Grade Settings</p>
@@ -584,7 +584,7 @@
                 </li>
 
                 <li class="nav-item">
-                  @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('superadmin/setting/religion')))
+                  @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('superadmin/setting/religion')))
 <a href="{{ url('superadmin/setting/religion') }}" class="nav-link">
                   <i class="fas fa-praying-hands nav-icon"></i>
                     <p> Religion Settings</p>
@@ -608,7 +608,7 @@
                 <ul class="nav nav-treeview">
 
                 <li class="nav-item">
-                    @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('superadmin/settings/rolespermission')))
+                    @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('superadmin/settings/rolespermission')))
 <a href="{{ url('superadmin/settings/rolespermission') }}" class="nav-link">
                       <i class="fas fa-eye nav-icon"></i>
                       <p>Roles Permissions</p>
@@ -617,7 +617,7 @@
                 </li>
 
                 <li class="nav-item">
-                    @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('superadmin/settings/add/roles/permission')))
+                    @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('superadmin/settings/add/roles/permission')))
 <a href="{{ url('superadmin/settings/add/roles/permission') }}" class="nav-link">
                       <i class="fas fa-plus-square	 nav-icon"></i>
                       <p>Assign Roles Permission</p>
@@ -626,7 +626,7 @@
                 </li>
 
                 <li class="nav-item">
-                    @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('superadmin/settings/permissions')))
+                    @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('superadmin/settings/permissions')))
 <a href="{{ url('superadmin/settings/permissions') }}" class="nav-link">
                       <i class="fas fa-door-open	 nav-icon"></i>
                       <p>Manage Permissions</p>
@@ -634,7 +634,7 @@
 @endif
                 </li>
                 <li class="nav-item">
-                    @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('superadmin/settings/roles')))
+                    @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('superadmin/settings/roles')))
 <a href="{{ url('superadmin/settings/roles') }}" class="nav-link">
                       <i class="fas fa-crown	 nav-icon"></i>
                       <p>Manage Roles</p>
@@ -656,7 +656,7 @@
                         <ul class="nav nav-treeview">
 
                           <li class="nav-item">
-                            @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('superadmin/profile')))
+                            @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('superadmin/profile')))
 <a href="{{ url('superadmin/profile') }}" class="nav-link">
                               <i class="fas fa-file nav-icon"></i>
                               <p> Manage Profile</p>
@@ -665,7 +665,7 @@
                           </li>
 
                           <li class="nav-item">
-                            @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('superadmin/change/password')))
+                            @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('superadmin/change/password')))
 <a href="{{ url('superadmin/change/password') }}" class="nav-link">
                             <i class="fas fa-lock nav-icon"></i>
                               <p>Change Password</p>
@@ -678,7 +678,7 @@
                         </ul>
             </li>
             <li class="nav-item">
-                            @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('superadmin/logout')))
+                            @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('superadmin/logout')))
 <a href="{{ url('superadmin/logout') }}" class="nav-link">
                             <i class="fas fa-power-off nav-icon"></i>
                               <p>Logout</p>

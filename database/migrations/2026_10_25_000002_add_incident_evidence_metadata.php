@@ -14,6 +14,7 @@ return new class extends Migration
         if (! Schema::hasColumn('election_incidents', 'polling_unit_result_id')) {
             Schema::table('election_incidents', fn (Blueprint $table) => $table->unsignedBigInteger('polling_unit_result_id')->nullable()->index());
         }
+        Schema::table('election_incidents', fn (Blueprint $table) => $table->text('remarks')->nullable()->change());
         foreach (['picture_evidences', 'video_evidences'] as $name) {
             Schema::table($name, function (Blueprint $table) use ($name) {
                 if (! Schema::hasColumn($name, 'legacy_public_path')) { $table->string('legacy_public_path')->nullable(); }

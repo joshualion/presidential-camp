@@ -112,10 +112,11 @@ class CampaignCapabilityService
             ?: Role::where('guard_name', 'web')->where('name', 'Member')->first();
     }
 
-    public function canVisit(User $user, string $url): bool
+    public function canVisit(?User $user, string $url, string $method = 'GET'): bool
     {
+        if (! $user) { return false; }
         try {
-            $route = app('router')->getRoutes()->match(\Illuminate\Http\Request::create($url, 'GET'));
+            $route = app('router')->getRoutes()->match(\Illuminate\Http\Request::create($url, strtoupper($method)));
             $permission = $this->routePermission($route);
             return ! $permission || collect(explode('|', $permission))->contains(fn ($name) => $this->allows($user, $name));
         } catch (\Symfony\Component\HttpKernel\Exception\HttpExceptionInterface) { return false; }

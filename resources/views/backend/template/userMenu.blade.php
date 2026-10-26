@@ -5,7 +5,7 @@
   <ul class="nav nav-pills nav-sidebar flex-column sidebar-nav" data-widget="treeview" role="menu" data-accordion="false">
     @if($memberCapabilities->allows($profileData, \App\Services\MemberCapabilityService::DASHBOARD))
     <li class="nav-item">
-      @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), route('user.dashboard')))
+      @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, route('user.dashboard')))
 <a href="{{ route('user.dashboard') }}" class="nav-link {{ request()->routeIs('user.dashboard') ? 'active' : '' }}">
         <i class="nav-icon fas fa-home"></i>
         <p>Dashboard</p>
@@ -33,7 +33,7 @@
       <ul class="nav nav-treeview">
         @if($memberCapabilities->allows($profileData, \App\Services\MemberCapabilityService::COMMUNITY))
         <li class="nav-item">
-          @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), route('timeline')))
+          @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, route('timeline')))
 <a href="{{ route('timeline') }}" class="nav-link {{ request()->routeIs('timeline') ? 'active' : '' }}">
             <i class="fas fa-users nav-icon"></i>
             <p>Community Forum</p>
@@ -44,7 +44,7 @@
 
         @if($memberCapabilities->allows($profileData, \App\Services\MemberCapabilityService::MESSAGING))
         <li class="nav-item">
-          @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), route($profileData->access_level.'.messages.page')))
+          @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, route($profileData->access_level.'.messages.page')))
 <a href="{{ route($profileData->access_level.'.messages.page') }}" class="nav-link {{ request()->routeIs($profileData->access_level.'.messages.*') ? 'active' : '' }}">
             <i class="fas fa-envelope nav-icon"></i>
             <p>Messenger</p>
@@ -68,7 +68,7 @@
       <ul class="nav nav-treeview">
         @if($memberCapabilities->allows($profileData, \App\Services\MemberCapabilityService::ELECTION_REPORTS))
         <li class="nav-item">
-          @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), route('user.elections')))
+          @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, route('user.elections')))
 <a href="{{ route('user.elections') }}" class="nav-link {{ request()->routeIs('user.elections') || request()->routeIs('user.elections.results') ? 'active' : '' }}">
             <i class="fas fa-chart-bar nav-icon"></i><p>Election Results</p>
           </a>
@@ -77,7 +77,7 @@
         @endif
         @if($memberCapabilities->allows($profileData, \App\Services\MemberCapabilityService::ELECTION_SUBMISSION))
         <li class="nav-item">
-          @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), route('user.elections.workspace')))
+          @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, route('user.elections.workspace')))
 <a href="{{ route('user.elections.workspace') }}" class="nav-link {{ request()->routeIs('user.elections.workspace', 'user.elections.result.*', 'user.elections.incident.*') ? 'active' : '' }}">
             <i class="fas fa-clipboard-check nav-icon"></i><p>Agent Workspace</p>
           </a>
@@ -90,7 +90,7 @@
 
     @if($memberCapabilities->allows($profileData, \App\Services\MemberCapabilityService::NOTICE_BOARD))
     <li class="nav-item">
-      @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), route('user.notices')))
+      @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, route('user.notices')))
 <a href="{{ route('user.notices') }}" class="nav-link {{ request()->routeIs('user.notices*') ? 'active' : '' }}">
         <i class="fas fa-bullhorn nav-icon"></i>
         <p>Notice Board</p>
@@ -114,7 +114,7 @@
       <ul class="nav nav-treeview">
         @if($memberCapabilities->allows($profileData, \App\Services\MemberCapabilityService::VOTING_BLOCK))
         <li class="nav-item">
-          @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), route('user.block')))
+          @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, route('user.block')))
 <a href="{{ route('user.block') }}" class="nav-link {{ request()->routeIs('user.block') ? 'active' : '' }}">
             <i class="fas fa-sitemap nav-icon"></i>
             <p>My Voting Bloc</p>
@@ -124,7 +124,7 @@
         @endif
         @if($memberCapabilities->allows($profileData, \App\Services\MemberCapabilityService::REFERRALS))
         <li class="nav-item">
-          @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), route('user.referrals')))
+          @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, route('user.referrals')))
 <a href="{{ route('user.referrals') }}" class="nav-link {{ request()->routeIs('user.referrals') ? 'active' : '' }}">
             <i class="fas fa-user-plus nav-icon"></i>
             <p>Direct Referrals</p>
@@ -151,7 +151,7 @@
       <ul class="nav nav-treeview">
         @if($memberCapabilities->allows($profileData, \App\Services\MemberCapabilityService::PROFILE))
         <li class="nav-item">
-          @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), route('user.profile')))
+          @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, route('user.profile')))
 <a href="{{ route('user.profile') }}" class="nav-link {{ request()->routeIs('user.profile') ? 'active' : '' }}">
             <i class="fas fa-file nav-icon"></i>
             <p>Manage Profile</p>
@@ -162,7 +162,7 @@
 
         @if($memberCapabilities->allows($profileData, \App\Services\MemberCapabilityService::ACCOUNT_SECURITY))
         <li class="nav-item">
-          @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), route('user.change.password')))
+          @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, route('user.change.password')))
 <a href="{{ route('user.change.password') }}" class="nav-link {{ request()->routeIs('user.change.password') ? 'active' : '' }}">
             <i class="fas fa-lock nav-icon"></i>
             <p>Change Password</p>

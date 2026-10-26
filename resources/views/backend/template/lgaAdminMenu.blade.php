@@ -14,7 +14,7 @@ $lga = \App\Models\LocalGovernmentArea::find(Auth::user()->lga_id);
       <ul class="nav nav-pills nav-sidebar flex-column sidebar-nav" data-widget="treeview" role="menu" data-accordion="false">
 
             <li class="tab nav-item menu-close">
-                        @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('lga/dashboard')))
+                        @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('lga/dashboard')))
 <a href="{{ url('lga/dashboard') }}" class="nav-link">
                           <i class="nav-icon fas fa-home"></i>
                           <p>
@@ -81,7 +81,7 @@ $lga = \App\Models\LocalGovernmentArea::find(Auth::user()->lga_id);
           <ul class="nav nav-treeview">
 
           <li class="nav-item">
-              @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('lga/elections')))
+              @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('lga/elections')))
 <a href="{{ url('lga/elections') }}" class="nav-link">
                 <i class="fas fa-award nav-icon"></i>
                 <p>Manage Elections</p>
@@ -89,7 +89,7 @@ $lga = \App\Models\LocalGovernmentArea::find(Auth::user()->lga_id);
 @endif
             </li>
             <li class="nav-item">
-              @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('lga/election/operations-center')))
+              @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('lga/election/operations-center')))
 <a href="{{ url('lga/election/operations-center') }}" class="nav-link">
                 <i class="fas fa-broadcast-tower nav-icon"></i>
                 <p>Situation Room</p>
@@ -98,7 +98,7 @@ $lga = \App\Models\LocalGovernmentArea::find(Auth::user()->lga_id);
             </li>
             @if(app(\App\Services\PollingUnitResultPermissionService::class)->userHasAnyApprovedAssignment($profileData))
             <li class="nav-item">
-              @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('lga/vote/add')))
+              @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('lga/vote/add')))
 <a href="{{ url('lga/vote/add') }}" class="nav-link">
               <i class="fa fa-cloud nav-icon"></i>
                 <p>Upload Polls Result</p>
@@ -107,7 +107,7 @@ $lga = \App\Models\LocalGovernmentArea::find(Auth::user()->lga_id);
             </li>
 
             <li class="nav-item">
-              @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('lga/incident/add')))
+              @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('lga/incident/add')))
 <a href="{{ url('lga/incident/add') }}" class="nav-link">
               <i class="fa fa-book nav-icon"></i>
                 <p>Report  Incidents</p>
@@ -133,7 +133,7 @@ $lga = \App\Models\LocalGovernmentArea::find(Auth::user()->lga_id);
                 <ul class="nav nav-treeview">
 
                 <li class="nav-item">
-                    @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('lga/dashboard')))
+                    @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('lga/dashboard')))
 <a href="{{ url('lga/dashboard') }}" class="nav-link">
                       <i class="fas fa-credit-card nav-icon"></i>
                       <p>Expenses</p>
@@ -144,7 +144,7 @@ $lga = \App\Models\LocalGovernmentArea::find(Auth::user()->lga_id);
 
 
                   <li class="nav-item">
-                    @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('lga/lga/dashboard')))
+                    @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('lga/lga/dashboard')))
 <a href="{{ url('lga/lga/dashboard') }}" class="nav-link">
                     <i class="fas fa-dollar-sign nav-icon"></i>
                       <p>Funding Request</p>
@@ -169,7 +169,7 @@ $lga = \App\Models\LocalGovernmentArea::find(Auth::user()->lga_id);
                 <ul class="nav nav-treeview">
 
                 <li class="nav-item">
-                    @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('lga/events')))
+                    @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('lga/events')))
 <a href="{{ url('lga/events') }}" class="nav-link">
                       <i class="fas fa-award nav-icon"></i>
                       <p>All Events</p>
@@ -178,7 +178,7 @@ $lga = \App\Models\LocalGovernmentArea::find(Auth::user()->lga_id);
                   </li>
 
                   <li class="nav-item">
-                    @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('lga/event/add')))
+                    @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('lga/event/add')))
 <a href="{{ url('lga/event/add') }}" class="nav-link">
                       <i class="fas fa-plus nav-icon"></i>
                       <p>Add Event</p>
@@ -204,7 +204,7 @@ $lga = \App\Models\LocalGovernmentArea::find(Auth::user()->lga_id);
                         <ul class="nav nav-treeview">
 
                           <li class="nav-item">
-                            @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('messages')))
+                            @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('messages')))
 <a href="{{ url('messages') }}" class="nav-link">
                               <i class="fas fa-comments nav-icon"></i>
                               <p>Messenger</p>
@@ -253,7 +253,7 @@ $lga = \App\Models\LocalGovernmentArea::find(Auth::user()->lga_id);
                         </a>
                         <ul class="nav nav-treeview">
                           <li class="nav-item">
-                            @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('lga/location/wards')))
+                            @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('lga/location/wards')))
 <a href="{{ url('lga/location/wards') }}" class="nav-link">
                             <i class="fas fa-map-marked-alt nav-icon"></i>
                               <p>Wards</p>
@@ -262,7 +262,7 @@ $lga = \App\Models\LocalGovernmentArea::find(Auth::user()->lga_id);
                           </li>
 
                           <li class="nav-item">
-                            @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('lga/location/pollingunits')))
+                            @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('lga/location/pollingunits')))
 <a href="{{ url('lga/location/pollingunits') }}" class="nav-link">
                             <i class="fas fa-monument nav-icon"></i>
                               <p>Polling Units</p>
@@ -288,7 +288,7 @@ $lga = \App\Models\LocalGovernmentArea::find(Auth::user()->lga_id);
                         <ul class="nav nav-treeview">
 
                           <li class="nav-item">
-                            @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('lga/profile')))
+                            @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('lga/profile')))
 <a href="{{ url('lga/profile') }}" class="nav-link">
                               <i class="fas fa-file nav-icon"></i>
                               <p> Manage Profile</p>
@@ -299,7 +299,7 @@ $lga = \App\Models\LocalGovernmentArea::find(Auth::user()->lga_id);
 
 
                           <li class="nav-item">
-                            @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('lga/change/password')))
+                            @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('lga/change/password')))
 <a href="{{ url('lga/change/password') }}" class="nav-link">
                             <i class="fas fa-lock nav-icon"></i>
                               <p>Change Password</p>
@@ -315,7 +315,7 @@ $lga = \App\Models\LocalGovernmentArea::find(Auth::user()->lga_id);
 
             {{-- Logout --}}
             <li class="nav-item">
-                            @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('lga/logout')))
+                            @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('lga/logout')))
 <a href="{{ url('lga/logout') }}" class="nav-link">
                             <i class="fas fa-power-off nav-icon"></i>
                               <p>Logout</p>

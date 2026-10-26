@@ -78,7 +78,7 @@
                                 <div class="col-md-6">
                                     <div class="form-group">
                                         <label for="role_id">Role <span class="text-danger">*</span></label>
-                                        <select name="role_id" id="role_id" class="form-control" required>
+                                        <select name="role_id" id="role_id" class="form-control" required @disabled(isset($member) || $profileData->access_level !== 'superadmin')>
                                             <option value="">Select role</option>
                                             @foreach($roles as $role)
                                                 <option value="{{ $role->id }}" data-access-level="{{ $role->group_name }}" @selected((string) old('role_id') === (string) $role->id)>{{ $role->name }}</option>
@@ -96,9 +96,11 @@
                             </div>
 
                             <div class="mb-3 mt-2">
-                                <a href="{{ route($profileData->access_level.'.member.import.template') }}" class="btn btn-success">
+                                @if(app(\App\Services\CampaignCapabilityService::class)->canVisit($profileData, route($profileData->access_level.'.member.import.template')))
+<a href="{{ route($profileData->access_level.'.member.import.template') }}" class="btn btn-success">
                                     <i class="fa fa-download"></i> Download CSV Template
                                 </a>
+@endif
                             </div>
 
                             <div class="form-group">
@@ -114,9 +116,11 @@
                             </div>
                         </div>
                         <div class="card-footer d-flex justify-content-between">
-                            <a href="{{ route($profileData->access_level.'.members') }}" class="btn btn-default">
+                            @if(app(\App\Services\CampaignCapabilityService::class)->canVisit($profileData, route($profileData->access_level.'.members')))
+<a href="{{ route($profileData->access_level.'.members') }}" class="btn btn-default">
                                 <i class="fa fa-arrow-left"></i> Back to Members
                             </a>
+@endif
                             <button type="submit" class="btn btn-primary">
                                 <i class="fa fa-upload"></i> Upload and Import
                             </button>

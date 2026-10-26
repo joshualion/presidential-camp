@@ -27,7 +27,9 @@
             <div class="form-group"><label for="remarks">Details</label><textarea id="remarks" name="remarks" class="form-control" rows="6" maxlength="5000" required>{{ old('remarks') }}</textarea></div>
             @include('backend.shared.election.evidence-inputs')
         </div>
-        <div class="card-footer"><button type="submit" class="btn btn-danger">Report Incident</button> <a href="{{ route('user.elections.workspace') }}" class="btn btn-default">Cancel</a></div>
+        <div class="card-footer"><button type="submit" class="btn btn-danger">Report Incident</button> @if(app(\App\Services\CampaignCapabilityService::class)->canVisit($profileData, route('user.elections.workspace')))
+<a href="{{ route('user.elections.workspace') }}" class="btn btn-default">Cancel</a>
+@endif</div>
     </form>
 </div>
 @endsection

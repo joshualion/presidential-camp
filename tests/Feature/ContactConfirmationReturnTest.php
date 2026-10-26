@@ -31,7 +31,7 @@ test('normal Super Admin login resumes the confirmation screen only for its fixe
     $admin = User::factory()->create(['access_level' => 'superadmin', 'password' => bcrypt('test-password')]);
     $destination = route('superadmin.updates.contact-confirmed');
     $this->withSession(['url.intended' => $destination])->post(route('login'), [
-        'email' => $admin->email, 'password' => 'test-password',
+        'login' => $admin->email, 'password' => 'test-password',
     ])->assertRedirect($destination);
 });
 

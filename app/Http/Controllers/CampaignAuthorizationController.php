@@ -21,6 +21,7 @@ class CampaignAuthorizationController extends Controller
     public function index(Request $request, CampaignCapabilityService $capabilities)
     {
         $this->admin($request);
+        $request->validate(['user' => ['nullable', 'uuid'], 'search' => ['nullable', 'string', 'max:100']]);
         $catalog = $capabilities->catalog();
         $selectedUser = $request->filled('user') ? User::where('uuid', $request->string('user')->toString())->firstOrFail() : null;
         $effective = $selectedUser ? collect($catalog)->mapWithKeys(fn ($name) => [$name => $capabilities->decision($selectedUser, $name)])->all() : [];

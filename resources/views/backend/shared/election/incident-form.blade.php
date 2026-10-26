@@ -12,6 +12,8 @@
 <div class="col-md-6 form-group"><label for="incident-severity">Severity</label><select id="incident-severity" name="severity" class="form-control">@foreach(['low', 'medium', 'high', 'critical'] as $level)<option value="{{ $level }}" @selected(old('severity', 'medium') === $level)>{{ ucfirst($level) }}</option>@endforeach</select></div></div>
 <div class="form-group"><label for="incident-details">What happened?</label><textarea id="incident-details" name="remarks" class="form-control" rows="5" maxlength="5000" required>{{ old('remarks') }}</textarea></div>
 @include('backend.shared.election.evidence-inputs')
-</div><div class="card-footer"><button class="btn btn-primary">Submit incident report</button> <a class="btn btn-outline-secondary" href="{{ route($profileData->access_level.'.elections') }}">Back to elections</a></div>
+</div><div class="card-footer"><button class="btn btn-primary">Submit incident report</button> @if(app(\App\Services\CampaignCapabilityService::class)->canVisit($profileData, route($profileData->access_level.'.elections')))
+<a class="btn btn-outline-secondary" href="{{ route($profileData->access_level.'.elections') }}">Back to elections</a>
+@endif</div>
 </form></div></div></section>
 @endsection

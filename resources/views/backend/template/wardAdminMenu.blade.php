@@ -14,7 +14,7 @@ $ward = \App\Models\Ward::find(Auth::user()->ward_id);
       <ul class="nav nav-pills nav-sidebar flex-column sidebar-nav" data-widget="treeview" role="menu" data-accordion="false">
 
             <li class="tab nav-item menu-close">
-                        @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('ward/dashboard')))
+                        @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('ward/dashboard')))
 <a href="{{ url('ward/dashboard') }}" class="nav-link">
                           <i class="nav-icon fas fa-home"></i>
                           <p>
@@ -74,7 +74,7 @@ $ward = \App\Models\Ward::find(Auth::user()->ward_id);
           <ul class="nav nav-treeview">
 
           <li class="nav-item">
-              @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('ward/elections')))
+              @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('ward/elections')))
 <a href="{{ url('ward/elections') }}" class="nav-link">
                 <i class="fas fa-award nav-icon"></i>
                 <p>Manage Elections</p>
@@ -82,7 +82,7 @@ $ward = \App\Models\Ward::find(Auth::user()->ward_id);
 @endif
             </li>
             <li class="nav-item">
-              @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('ward/election/operations-center')))
+              @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('ward/election/operations-center')))
 <a href="{{ url('ward/election/operations-center') }}" class="nav-link">
                 <i class="fas fa-broadcast-tower nav-icon"></i>
                 <p>Situation Room</p>
@@ -91,7 +91,7 @@ $ward = \App\Models\Ward::find(Auth::user()->ward_id);
             </li>
             @if(app(\App\Services\PollingUnitResultPermissionService::class)->userHasAnyApprovedAssignment($profileData))
             <li class="nav-item">
-              @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('ward/vote/add')))
+              @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('ward/vote/add')))
 <a href="{{ url('ward/vote/add') }}" class="nav-link">
               <i class="fa fa-cloud nav-icon"></i>
                 <p>Upload Polls Result</p>
@@ -100,7 +100,7 @@ $ward = \App\Models\Ward::find(Auth::user()->ward_id);
             </li>
 
             <li class="nav-item">
-              @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('ward/incident/add')))
+              @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('ward/incident/add')))
 <a href="{{ url('ward/incident/add') }}" class="nav-link">
               <i class="fa fa-book nav-icon"></i>
                 <p>Report  Incidents</p>
@@ -126,7 +126,7 @@ $ward = \App\Models\Ward::find(Auth::user()->ward_id);
                 <ul class="nav nav-treeview">
 
                 <li class="nav-item">
-                    @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('ward/dashboard')))
+                    @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('ward/dashboard')))
 <a href="{{ url('ward/dashboard') }}" class="nav-link">
                       <i class="fas fa-credit-card nav-icon"></i>
                       <p>Expenses</p>
@@ -137,7 +137,7 @@ $ward = \App\Models\Ward::find(Auth::user()->ward_id);
 
 
                   <li class="nav-item">
-                    @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('ward/lga/dashboard')))
+                    @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('ward/lga/dashboard')))
 <a href="{{ url('ward/lga/dashboard') }}" class="nav-link">
                     <i class="fas fa-dollar-sign nav-icon"></i>
                       <p>Funding Request</p>
@@ -162,7 +162,7 @@ $ward = \App\Models\Ward::find(Auth::user()->ward_id);
                 <ul class="nav nav-treeview">
 
                 <li class="nav-item">
-                    @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('ward/events')))
+                    @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('ward/events')))
 <a href="{{ url('ward/events') }}" class="nav-link">
                       <i class="fas fa-award nav-icon"></i>
                       <p>All Events</p>
@@ -171,7 +171,7 @@ $ward = \App\Models\Ward::find(Auth::user()->ward_id);
                   </li>
 
                   <li class="nav-item">
-                    @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('ward/event/add')))
+                    @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('ward/event/add')))
 <a href="{{ url('ward/event/add') }}" class="nav-link">
                       <i class="fas fa-plus nav-icon"></i>
                       <p>Add Event</p>
@@ -197,7 +197,7 @@ $ward = \App\Models\Ward::find(Auth::user()->ward_id);
                         <ul class="nav nav-treeview">
 
                           <li class="nav-item">
-                            @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('messages')))
+                            @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('messages')))
 <a href="{{ url('messages') }}" class="nav-link">
                               <i class="fas fa-comments nav-icon"></i>
                               <p>Messenger</p>
@@ -246,7 +246,7 @@ $ward = \App\Models\Ward::find(Auth::user()->ward_id);
                         </a>
                         <ul class="nav nav-treeview">
                           <li class="nav-item">
-                            @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('ward/location/pollingunits')))
+                            @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('ward/location/pollingunits')))
 <a href="{{ url('ward/location/pollingunits') }}" class="nav-link">
                             <i class="fas fa-monument nav-icon"></i>
                               <p>Polling Units</p>
@@ -272,7 +272,7 @@ $ward = \App\Models\Ward::find(Auth::user()->ward_id);
                         <ul class="nav nav-treeview">
 
                           <li class="nav-item">
-                            @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('ward/profile')))
+                            @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('ward/profile')))
 <a href="{{ url('ward/profile') }}" class="nav-link">
                               <i class="fas fa-file nav-icon"></i>
                               <p> Manage Profile</p>
@@ -283,7 +283,7 @@ $ward = \App\Models\Ward::find(Auth::user()->ward_id);
 
 
                           <li class="nav-item">
-                            @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('ward/change/password')))
+                            @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('ward/change/password')))
 <a href="{{ url('ward/change/password') }}" class="nav-link">
                             <i class="fas fa-lock nav-icon"></i>
                               <p>Change Password</p>
@@ -299,7 +299,7 @@ $ward = \App\Models\Ward::find(Auth::user()->ward_id);
 
             {{-- Logout --}}
             <li class="nav-item">
-                            @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user(), url('ward/logout')))
+                            @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('ward/logout')))
 <a href="{{ url('ward/logout') }}" class="nav-link">
                             <i class="fas fa-power-off nav-icon"></i>
                               <p>Logout</p>

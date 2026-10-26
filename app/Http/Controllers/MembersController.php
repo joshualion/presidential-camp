@@ -882,6 +882,13 @@ class MembersController extends Controller
      {
          $profileData = $this->getProfileData();
 
+         if ($profileData->access_level !== 'superadmin') {
+             $default = app(\App\Services\CampaignCapabilityService::class)->defaultRole((string) $request->input('access_level', 'user'));
+             abort_unless($default, 422, 'Ask Super Admin to configure a default role for this access level.');
+             abort_if($request->filled('role_id') && (int) $request->input('role_id') !== (int) $default->id, 403);
+             $request->merge(['role_id' => $default->id]);
+         }
+
          $validated = $request->validate([
              'import_file' => 'required|file|mimes:csv,txt,xlsx,xls|max:5120',
              'region_id' => 'nullable|integer|exists:regions,id',

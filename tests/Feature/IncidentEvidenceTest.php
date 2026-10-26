@@ -39,7 +39,7 @@ test('image evidence is private has disk metadata and is linked to the matching 
 });
 
 test('video evidence stores validated MP4 and supports authorized retrieval', function () {
-    $video = UploadedFile::fake()->createWithContent('evidence.mp4', hex2bin('000000186674797069736f6d0000020069736f6d69736f32'));
+    $video = UploadedFile::fake()->createWithContent('evidence.mp4', base64_decode(file_get_contents(base_path('tests/Fixtures/evidence-video.mp4.base64')), true));
     $incident = app(IncidentEvidenceService::class)->create($this->evidenceAgent, $this->evidencePayload, [], [$video]);
     $evidence = $incident->videoEvidences()->firstOrFail();
     expect($evidence->mime_type)->toBe('video/mp4');
@@ -152,7 +152,7 @@ test('result creation does not implicitly grant result amendment', function () {
 test('images-only policy rejects video evidence and total count limits remain independent', function () {
     $service = app(IncidentEvidenceService::class);
     SystemSetting::first()->forceFill(['incident_evidence_rules' => json_encode(['mode' => 'images_only'])])->save();
-    $video = UploadedFile::fake()->createWithContent('evidence.mp4', hex2bin('000000186674797069736f6d0000020069736f6d69736f32'));
+    $video = UploadedFile::fake()->createWithContent('evidence.mp4', base64_decode(file_get_contents(base_path('tests/Fixtures/evidence-video.mp4.base64')), true));
     expect(fn () => $service->validate([], [$video]))->toThrow(ValidationException::class);
     SystemSetting::first()->forceFill(['incident_evidence_rules' => json_encode(['mode' => 'images_and_videos', 'max_files' => 1])])->save();
     expect(fn () => $service->validate([UploadedFile::fake()->image('a.png'), UploadedFile::fake()->image('b.png')], []))

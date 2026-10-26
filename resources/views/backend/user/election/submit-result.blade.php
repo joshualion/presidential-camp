@@ -21,7 +21,9 @@
             </div>
             <div class="form-group"><label for="after-result">After saving the result</label><select id="after-result" name="redirect_to" class="form-control"><option value="return">No incident to report</option><option value="incident">Report an incident</option></select></div>
         </div>
-        <div class="card-footer"><button type="submit" class="btn btn-primary">Submit Result</button> <a href="{{ route('user.elections.workspace') }}" class="btn btn-default">Cancel</a></div>
+        <div class="card-footer"><button type="submit" class="btn btn-primary">Submit Result</button> @if(app(\App\Services\CampaignCapabilityService::class)->canVisit($profileData, route('user.elections.workspace')))
+<a href="{{ route('user.elections.workspace') }}" class="btn btn-default">Cancel</a>
+@endif</div>
     </form>
 </div>
 @endsection
