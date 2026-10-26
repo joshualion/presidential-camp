@@ -42,7 +42,8 @@ test('saving an existing role applies independently editable permissions across 
 test('custom permission definitions are visible and editable with the same role', function () {
     $role = Role::create(['name' => 'Custom Role', 'guard_name' => 'web', 'group_name' => 'user']);
     $role->givePermissionTo(Permission::findOrCreate('custom.reporting', 'web'));
-    $this->actingAs($this->admin)->get(route('superadmin.settings.role.permission.edit', encrypt($role->id)))->assertOk()->assertSee('value="custom.reporting"', false);
+    Permission::findOrCreate('custom reporting', 'web');
+    $this->actingAs($this->admin)->get(route('superadmin.settings.role.permission.edit', encrypt($role->id)))->assertOk()->assertSee('value="custom.reporting"', false)->assertSee('> Custom Reporting</label>', false);
     $this->put(route('superadmin.authorization.roles.update', $role), ['name' => $role->name, 'permissions' => ['custom.reporting', 'members.view']])->assertRedirect();
     expect($role->fresh()->permissions->pluck('name')->all())->toContain('custom.reporting', 'members.view');
 });

@@ -2,7 +2,7 @@
 <div class="form-group"><label><input type="checkbox" data-permission-all> Select All Permissions</label></div>
 @foreach(collect($catalog)->groupBy(fn ($name) => substr($name, 0, strrpos($name, '.') ?: strlen($name))) as $module => $permissions)
 <fieldset class="border rounded p-3 mb-3"><legend class="h5 px-2 w-auto">{{ ucwords(str_replace(['.', '-'], ' ', $module)) }}</legend><div class="row">
-@foreach($permissions as $permission)<div class="col-sm-6 col-lg-3 mb-2"><label class="font-weight-normal"><input type="checkbox" name="permissions[]" value="{{ $permission }}" @checked(in_array($permission, is_array($selectedPermissions) ? $selectedPermissions : [], true))> {{ ucwords(str_replace(['.', '-'], ' ', substr($permission, strrpos($permission, '.') + 1))) }}</label></div>@endforeach
+@foreach($permissions as $permission)<div class="col-sm-6 col-lg-3 mb-2"><label class="font-weight-normal"><input type="checkbox" name="permissions[]" value="{{ $permission }}" @checked(in_array($permission, is_array($selectedPermissions) ? $selectedPermissions : [], true))> {{ ucwords(str_replace(['.', '-'], ' ', \Illuminate\Support\Str::afterLast($permission, '.'))) }}</label></div>@endforeach
 </div></fieldset>@endforeach
 <script>
 document.querySelectorAll('[data-permission-all]').forEach(toggle => {
