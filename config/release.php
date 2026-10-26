@@ -5,12 +5,18 @@ return [
         'name' => 'Campaign Manager Core',
         'package' => 'campaign-manager-core',
         'channel' => env('RELEASE_CHANNEL', 'self-hosted'),
-        'version' => env('APP_VERSION', '1.1.9'),
+        'version' => env('APP_VERSION', '1.2.0'),
         'build_date' => env('RELEASE_BUILD_DATE', null),
         'minimum_php' => '8.2.0',
     ],
 
     'release_notes' => [
+        '1.2.0' => [
+            'Returns verified registration contacts securely to their registered installation through normal authentication.',
+            'Adds reusable managed roles, independent action permissions, user grants and restrictions without expanding geographical scope.',
+            'Delivers incident evidence privately with validated media, configurable upload rules and preserved historical records.',
+            'Retains signed updates, payment coverage, explicit installation consent and verified private backups.',
+        ],
         '1.1.9' => [
             'Adds accessible Show/Hide Password controls to authentication, account and administrator password forms.',
             'Keeps passwords hidden by default and conceals revealed fields before form submission or page exit.',

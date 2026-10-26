@@ -1,3 +1,10 @@
+# 1.2.0
+
+- Secure verified-registration return through normal login and server-to-server installation checks.
+- Reusable roles, independent action permissions and user restrictions with existing geographical boundaries preserved.
+- Private, validated incident evidence, configurable upload rules and reliable media delivery.
+- Additive migrations preserve customer assignments and historical election records. See docs/releases/v1.2.0.md.
+
 # 1.1.9
 
 - Add accessible Show/Hide Password controls across authentication, account and administrator forms. Passwords remain hidden by default.
