@@ -2,7 +2,7 @@
 @section('content')
 <section class="content pt-3"><div class="container-fluid">
 @if(session('message'))<div class="alert alert-success" role="status">{{ session('message') }}</div>@endif
-@if($errors->any())<div class="alert alert-danger" role="alert">{{ $errors->first() }}</div>@endif
+@if(isset($errors) && $errors->any())<div class="alert alert-danger" role="alert">{{ $errors->first() }}</div>@endif
 <div class="card card-primary">
 <div class="card-header"><h3 class="card-title">Roles &amp; Permission</h3><div class="card-tools">
 <a class="btn btn-default btn-sm" href="{{ route('superadmin.settings.roles') }}">Manage Roles</a>

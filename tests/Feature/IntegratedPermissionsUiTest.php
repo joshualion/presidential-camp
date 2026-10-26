@@ -68,3 +68,10 @@ test('sidebar starts with dashboard and places branded evidence and update links
     $this->actingAs(User::factory()->create(['access_level' => 'stateadmin']));
     expect(View::make('backend.shared.update-notification')->render())->not->toContain('Review Update');
 });
+
+
+test('existing role defaults retain assignment-gated election actions before editing', function () {
+    $role = Role::create(['name' => 'Polling Unit Agent', 'guard_name' => 'web', 'group_name' => 'puadmin']);
+    expect(app(CampaignCapabilityService::class)->rolePermissions($role))->toContain('election.results.create', 'election.results.update', 'incidents.create');
+    expect((bool) $role->fresh()->capabilities_managed)->toBeFalse();
+});
