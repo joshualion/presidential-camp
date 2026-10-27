@@ -80,7 +80,29 @@
 
   <style>
 
-    :root { --cm-primary: {{ $SystemSetting->dark_theme_color ?? '#008751' }}; }
+    @php
+      // Derive a readable foreground for the configured brand colour.
+      $brandHex = trim((string) ($SystemSetting->dark_theme_color ?? '#008751'));
+      if (preg_match('/^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/D', $brandHex)) {
+          $brandHex = '#'.ltrim($brandHex, '#');
+          if (strlen($brandHex) === 4) {
+              $brandHex = '#'.$brandHex[1].$brandHex[1].$brandHex[2].$brandHex[2].$brandHex[3].$brandHex[3];
+          }
+      } else {
+          $brandHex = '#008751';
+      }
+      $channels = array_map('hexdec', str_split(substr($brandHex, 1), 2));
+      $linear = array_map(static function ($channel) {
+          $value = $channel / 255;
+          return $value <= 0.04045 ? $value / 12.92 : (($value + 0.055) / 1.055) ** 2.4;
+      }, $channels);
+      $luminance = 0.2126 * $linear[0] + 0.7152 * $linear[1] + 0.0722 * $linear[2];
+      $brandForeground = (1.05 / ($luminance + 0.05)) >= (($luminance + 0.05) / 0.05) ? '#ffffff' : '#000000';
+    @endphp
+    :root {
+      --cm-primary: {{ $brandHex }};
+      --cm-primary-foreground: {{ $brandForeground }};
+    }
     .main-header.navbar-white .nav-link,
     .main-header.navbar-white .btn-navbar,
     .page-item:not(.active) .page-link,
@@ -119,12 +141,12 @@
 
 
     .page-item.active .page-link{
-      color: #fff !important;
+      color: var(--cm-primary-foreground) !important;
       background-color: {{ $SystemSetting->dark_theme_color ?? ' #008751'}} !important;
       border-color: {{ $SystemSetting->dark_theme_color ?? ' #008751'}} !important;
     }
     .dataTables_paginate .paginate_button:hover {
-      color: #fff !important;
+      color: var(--cm-primary-foreground) !important;
       background-color: {{ $SystemSetting->dark_theme_color ?? ' #008751'}} !important;
       border-color: {{ $SystemSetting->dark_theme_color ?? ' #008751'}} !important;
     }
@@ -142,8 +164,9 @@
     }
 
     .btn-primary{
-      background: {{ $SystemSetting->dark_theme_color ?? ' #008751'}} !important;
-      border: {{ $SystemSetting->dark_theme_color ?? '#008751'}} !important;
+      background: var(--cm-primary) !important;
+      border: 1px solid var(--cm-primary) !important;
+      color: var(--cm-primary-foreground) !important;
 
     }
 
@@ -183,14 +206,14 @@
     }
 
     .nav-pills .nav-link.active {
-      color: #fff !important;
+      color: var(--cm-primary-foreground) !important;
       border-color: {{ $SystemSetting->dark_theme_color ?? ' #008751'}} !important;
       background-color: {{ $SystemSetting->dark_theme_color ?? ' #008751'}} !important;
 
     }
 
     .nav-pills .nav-link:hover {
-        color: {{ $SystemSetting->light_theme_color ?? ' #dff1ea'}} !important;
+        color: var(--cm-primary-foreground) !important;
         background-color:  {{ $SystemSetting->dark_theme_color ?? ' #008751'}} !important; /* Darker green for hover */
 
     }
