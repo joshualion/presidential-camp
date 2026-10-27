@@ -46,3 +46,29 @@
  .cm-ui .cm-download-meta { grid-template-columns:1fr; }
  .cm-ui .cm-actions { align-items:stretch; }
 }
+
+
+/* Shared admin action contrast: retain readable labels in all button states.
+   The primary background is configured in backend/template/header.blade.php. */
+.content-wrapper .btn-primary,
+.content-wrapper .btn-primary:hover,
+.content-wrapper .btn-primary:focus,
+.content-wrapper .btn-primary:active,
+.content-wrapper .btn-primary:disabled,
+.content-wrapper .btn-primary.disabled,
+.content-wrapper .btn-primary .text-primary {
+  color: #fff !important;
+}
+.content-wrapper .btn-primary:focus-visible,
+.content-wrapper .btn-secondary:focus-visible,
+.content-wrapper .btn-light:focus-visible {
+  outline: 2px solid #182a20;
+  outline-offset: 2px;
+}
+/* The existing .datable-print-buttons rule combines #fafafa with white text.
+   Keep light button backgrounds legible without affecting filled action buttons. */
+.content-wrapper .datable-print-buttons,
+.content-wrapper .dt-buttons .btn-light,
+.content-wrapper .dt-buttons .btn-default {
+  color: #243b30 !important;
+}
