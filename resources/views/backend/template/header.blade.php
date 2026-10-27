@@ -129,14 +129,16 @@
       border-color: {{ $SystemSetting->dark_theme_color ?? ' #008751'}} !important;
     }
 
-    .datable-print-buttons,dt-buttons{
-    text-align: center !important;
-    margin-left: 15% !important;
-    background: #ccc !important;
-    color: #fff;
-    background-color: #fafafa !important;
-    border-color: {{ $SystemSetting->dark_theme_color ?? ' #008751'}} !important;
-    box-shadow: none;
+    /* Keep toolbar layout separate from the individual button appearance. */
+    .dt-buttons {
+      text-align: center;
+      margin-left: 15%;
+    }
+    .datable-print-buttons {
+      background-color: #fafafa !important;
+      color: #243b30 !important;
+      border: 1px solid var(--cm-primary) !important;
+      box-shadow: none;
     }
 
     .btn-primary{
@@ -181,7 +183,7 @@
     }
 
     .nav-pills .nav-link.active {
-      color: {{ $SystemSetting->light_theme_color ?? ' #008751'}} !important;
+      color: #fff !important;
       border-color: {{ $SystemSetting->dark_theme_color ?? ' #008751'}} !important;
       background-color: {{ $SystemSetting->dark_theme_color ?? ' #008751'}} !important;
 
