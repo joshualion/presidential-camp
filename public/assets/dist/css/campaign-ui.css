@@ -57,7 +57,7 @@
 .content-wrapper .btn-primary:disabled,
 .content-wrapper .btn-primary.disabled,
 .content-wrapper .btn-primary .text-primary {
-  color: #fff !important;
+  color: var(--cm-primary-foreground, #fff) !important;
 }
 .content-wrapper .btn-primary:focus-visible,
 .content-wrapper .btn-secondary:focus-visible,
