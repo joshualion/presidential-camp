@@ -21,6 +21,7 @@ class CampaignCapabilityService
     {
         if ($this->catalogCache !== null) { return $this->catalogCache; }
         $names = ['authorization.manage'];
+        $names = array_merge($names, config('enterprise.permissions', []));
         foreach (array_unique(array_values(config('capability_routes.actions', []))) as $name) {
             foreach (explode('|', $name) as $part) { if ($part) { $names[] = $part; } }
         }
@@ -69,6 +70,9 @@ class CampaignCapabilityService
         $roles = $user->roles->filter(fn ($role) => $role->guard_name === 'web'
             && $role->permissions->contains(fn ($permission) => $this->canonical($permission->name) === $name && $permission->guard_name === 'web'))->pluck('name')->all();
         if ($roles) { return ['allowed' => true, 'reason' => 'Role: '.implode(', ', $roles)]; }
+        if (in_array($name, config('enterprise.permissions', []), true)) {
+            return ['allowed' => false, 'reason' => 'Enterprise capability requires an explicit grant'];
+        }
         foreach ($user->roles->where('guard_name', 'web') as $role) {
             if (! $role->capabilities_managed && in_array($name, $this->rolePermissions($role), true)) {
                 if (in_array($name, ['election.results.create', 'election.results.update', 'incidents.create'], true)
@@ -87,6 +91,7 @@ class CampaignCapabilityService
 
     private function defaultAllows(User $user, string $name): bool
     {
+        if (in_array($name, config('enterprise.permissions', []), true)) { return false; }
         if ($name === 'authorization.manage') { return $user->access_level === 'superadmin'; }
         $admin = in_array($user->access_level, array_diff(array_keys(config('campaign_roles.access_level_labels', [])), ['user']), true);
         if (in_array($name, ['members.update', 'members.delete'], true)) {

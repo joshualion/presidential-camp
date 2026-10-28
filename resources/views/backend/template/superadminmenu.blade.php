@@ -636,6 +636,7 @@
 
             </li>
         {{--  End Roles & Permission Menu  --}}
+            <li class="nav-item"><a href="{{ route('superadmin.addons.index') }}" class="nav-link {{ request()->routeIs('superadmin.addons.*') ? 'active' : '' }}"><i class="nav-icon fas fa-puzzle-piece"></i><p>Add-ons</p></a></li>
 <li class="nav-item">
     @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, route('superadmin.updates')))
 <a href="{{ route('superadmin.updates') }}" class="nav-link">

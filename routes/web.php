@@ -1,5 +1,7 @@
 <?php
 
+
+
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AjaxController;
 use App\Http\Controllers\HomeController;
@@ -514,3 +516,9 @@ Route::get('/.well-known/campaign-manager/installation-binding', function (\Illu
 Route::get('/election/evidence/{kind}/{id}', [\App\Http\Controllers\IncidentEvidenceController::class, 'show'])
     ->whereIn('kind', ['picture', 'video'])->whereNumber('id')
     ->middleware(['auth', 'module.enabled:elections', 'throttle:120,1'])->name('election.evidence.show');
+
+// Catalogue management is exclusively Super Admin; enterprise module routes use both entitlement and capability gates.
+Route::middleware(['auth', 'check_onboarding', 'access_level:superadmin'])->group(function () {
+    Route::get('/superadmin/addons', [\App\Http\Controllers\EnterpriseAddonController::class, 'index'])->name('superadmin.addons.index');
+    Route::post('/superadmin/addons/refresh', [\App\Http\Controllers\EnterpriseAddonController::class, 'refresh'])->middleware('throttle:6,1')->name('superadmin.addons.refresh');
+});

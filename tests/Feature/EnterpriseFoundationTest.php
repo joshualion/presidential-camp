@@ -1,0 +1,63 @@
+<?php
+
+use App\Models\User;
+use App\Services\CampaignCapabilityService;
+use App\Services\Enterprise\EntitlementService;
+use App\Http\Middleware\EnsureEnterpriseFeature;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Spatie\Permission\Models\Permission;
+
+test('enterprise permissions are never inherited from geographic administrative rank', function (string $level) {
+    $user = User::factory()->create(['access_level' => $level, 'status' => 'active']);
+    foreach (config('enterprise.permissions') as $name) {
+        expect(app(CampaignCapabilityService::class)->allows($user, $name))->toBeFalse();
+    }
+})->with(['nationaladmin', 'regionaladmin', 'stateadmin', 'senatorialadmin', 'federaladmin', 'lgaadmin', 'wardadmin', 'puadmin', 'user']);
+
+test('explicit enterprise grants reuse existing restrictions', function () {
+    $user = User::factory()->create(['access_level' => 'stateadmin', 'status' => 'active']);
+    $user->givePermissionTo(Permission::findOrCreate('finance.view', 'web'));
+    expect(app(CampaignCapabilityService::class)->allows($user, 'finance.view'))->toBeTrue();
+    DB::table('campaign_permission_restrictions')->insert(['user_id' => $user->id, 'permission_name' => 'finance.view']);
+    expect((new CampaignCapabilityService)->allows($user->fresh(), 'finance.view'))->toBeFalse();
+});
+
+test('even a permitted user needs an installation entitlement at the server boundary', function () {
+    $user = User::factory()->create(['access_level' => 'stateadmin', 'status' => 'active']);
+    $user->givePermissionTo(Permission::findOrCreate('finance.view', 'web'));
+    $request = Request::create('/synthetic-finance'); $request->setUserResolver(fn () => $user);
+    $this->mock(EntitlementService::class)->shouldReceive('active')->with('campaign_finance')->once()->andReturn(false);
+    try {
+        (new EnsureEnterpriseFeature)->handle($request, fn () => throw new RuntimeException('Should not execute'), 'campaign_finance', 'finance.view');
+        $this->fail('Unpaid request was accepted.');
+    } catch (\Symfony\Component\HttpKernel\Exception\HttpException $exception) { expect($exception->getStatusCode())->toBe(402); }
+});
+
+test('the Add-ons catalogue routes are Super Admin only', function () {
+    foreach (['superadmin.addons.index', 'superadmin.addons.refresh'] as $name) {
+        $route = app('router')->getRoutes()->getByName($name);
+        expect($route)->not->toBeNull();
+        expect($route->gatherMiddleware())->toContain('auth', 'access_level:superadmin');
+    }
+});
+
+test('the Add-ons catalogue renders a useful locked screen without Portal access', function (string $brand) {
+    \App\Models\SystemSetting::create(['package' => 'presidential', 'system_name' => 'Campaign Test', 'system_country' => 'Nigeria', 'dark_theme_color' => $brand]);
+    $this->withoutMiddleware([\App\Http\Middleware\CheckUserOnboarding::class]);
+    $admin = User::factory()->create(['access_level' => 'superadmin', 'status' => 'active']);
+    $response = $this->actingAs($admin)->get(route('superadmin.addons.index'))->assertOk()
+        ->assertSee('Advanced Reports and AI Intelligence')->assertSee('Locked')->assertSee('Refresh licence status');
+    if ($path = getenv('ENTERPRISE_BROWSER_OUTPUT')) {
+        \Illuminate\Support\Facades\File::ensureDirectoryExists(dirname(base_path($path)));
+        file_put_contents(base_path(str_replace('.html', '-'.ltrim($brand, '#').'.html', $path)), $response->getContent());
+    }
+})->with(['#008751', '#ffffff', '#ffc107', '#6f42c1', '#000000']);
+
+test('ordinary administrators cannot access the Add-ons catalogue by URL', function (string $level) {
+    \App\Models\SystemSetting::create(['package' => 'presidential', 'system_name' => 'Campaign Test', 'system_country' => 'Nigeria']);
+    $this->withoutMiddleware([\App\Http\Middleware\CheckUserOnboarding::class]);
+    $this->actingAs(User::factory()->create(['access_level' => $level, 'status' => 'active']))
+        ->get(route('superadmin.addons.index'))->assertForbidden();
+    $this->post(route('superadmin.addons.refresh'))->assertForbidden();
+})->with(['nationaladmin', 'regionaladmin', 'stateadmin', 'senatorialadmin', 'federaladmin', 'lgaadmin', 'wardadmin', 'puadmin', 'user']);

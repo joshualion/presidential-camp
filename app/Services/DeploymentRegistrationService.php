@@ -298,6 +298,18 @@ class DeploymentRegistrationService
         return hash_hmac('sha256', "campaign-manager-domain-v1\n".$state['id']."\n".$this->domain()."\n".$challenge, hash('sha256', $state['token']));
     }
 
+    /** Reuse existing installation credentials without exposing them to controllers or views. */
+    public function enterpriseEntitlements(): \Illuminate\Http\Client\Response
+    {
+        $state = $this->state();
+        if (empty($state['registered']) || ! empty($state['pending_revoke'])
+            || ($state['domain'] ?? null) !== $this->domain()) {
+            throw new RuntimeException('Register this installation before synchronizing add-ons.');
+        }
+        return Http::withToken($state['token'])->acceptJson()->withoutRedirecting()->connectTimeout(5)->timeout(15)
+            ->get($this->base().'/'.$state['id'].'/enterprise-entitlements');
+    }
+
     public function revoke(): void
     {
         $state = $this->state();
