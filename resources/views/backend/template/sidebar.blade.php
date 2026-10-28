@@ -1,7 +1,7 @@
 
   @php
-    $sidebarDarkColor = $SystemSetting->dark_theme_color ?? '#008751';
-    $sidebarLightColor = $SystemSetting->light_theme_color ?? '#f7f7f7';
+    $sidebarDarkColor = \App\Support\ThemeColor::normalize($SystemSetting->dark_theme_color ?? null);
+    $sidebarLightColor = \App\Support\ThemeColor::normalize($SystemSetting->light_theme_color ?? null, '#f7f7f7');
     $sidebarMode = $SystemSetting->sidebar_theme_mode ?? 'light';
   @endphp
 
@@ -9,11 +9,11 @@
   <style>
     #app-sidebar {
       --sidebar-light-bg: {{ $sidebarLightColor }};
-      --sidebar-light-text: {{ $sidebarDarkColor }};
+      --sidebar-light-text: {{ \App\Support\ThemeColor::foreground($sidebarLightColor) }};
       --sidebar-dark-bg: {{ $sidebarDarkColor }};
-      --sidebar-dark-text: #ffffff;
-      /* Derive a softer tint from the dark color instead of using the light theme */
-      --sidebar-link-tint: color-mix(in srgb, {{ $sidebarDarkColor }} 35%, white 65%);
+      --sidebar-dark-text: {{ \App\Support\ThemeColor::foreground($sidebarDarkColor) }};
+      /* Use the foreground calculated for the actual brand background. */
+      --sidebar-link-tint: var(--sidebar-dark-text);
     }
 
     .sidebar-themed {
@@ -30,7 +30,8 @@
     }
     .sidebar-themed .sidebar-nav .nav-link.active,
     .sidebar-themed .sidebar-nav .nav-link:hover {
-      background: rgba(255,255,255,0.08) !important;
+      background: var(--sidebar-dark-bg) !important;
+      box-shadow: inset 3px 0 var(--sidebar-dark-text);
       color: var(--sidebar-link-tint) !important;
     }
     /* Light mode uses light background with brand text color */
@@ -48,7 +49,7 @@
     }
     /* Only affect dropdown (treeview) items in dark mode */
     .sidebar-themed .nav-sidebar .nav-treeview {
-      background: rgba(255,255,255,0.04) !important;
+      background: transparent !important;
     }
     .sidebar-themed .nav-sidebar .nav-treeview>.nav-item>.nav-link {
       background: transparent !important;
@@ -56,7 +57,8 @@
     }
     .sidebar-themed .nav-sidebar .nav-treeview>.nav-item>.nav-link.active,
     .sidebar-themed .nav-sidebar .nav-treeview>.nav-item>.nav-link:hover {
-      background: rgba(255,255,255,0.08) !important;
+      background: var(--sidebar-dark-bg) !important;
+      box-shadow: inset 3px 0 var(--sidebar-dark-text);
       color: var(--sidebar-link-tint) !important;
     }
     .main-sidebar:not(.sidebar-themed) .sidebar-nav .nav-link,
@@ -69,13 +71,14 @@
     }
     .main-sidebar:not(.sidebar-themed) .sidebar-nav .nav-link.active,
     .main-sidebar:not(.sidebar-themed) .sidebar-nav .nav-link:hover {
-      background: rgba(0,0,0,0.04) !important;
+      background: var(--sidebar-light-bg) !important;
+      box-shadow: inset 3px 0 var(--sidebar-light-text);
       color: var(--sidebar-light-text) !important;
     }
     /* Card headers using the dark theme color get tinted text for contrast */
     .card-header[style*="{{ $sidebarDarkColor }}"],
     .card-header[style*="dark_theme_color"] {
-      color: var(--sidebar-link-tint) !important;
+      color: {{ \App\Support\ThemeColor::foreground($sidebarDarkColor) }} !important;
     }
     /* Nudge brand logo upward and keep it crisp */
     .main-sidebar .brand-link {

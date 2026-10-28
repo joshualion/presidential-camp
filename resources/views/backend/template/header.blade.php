@@ -81,33 +81,23 @@
   <style>
 
     @php
-      // Derive a readable foreground for the configured brand colour.
-      $brandHex = trim((string) ($SystemSetting->dark_theme_color ?? '#008751'));
-      if (preg_match('/^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/D', $brandHex)) {
-          $brandHex = '#'.ltrim($brandHex, '#');
-          if (strlen($brandHex) === 4) {
-              $brandHex = '#'.$brandHex[1].$brandHex[1].$brandHex[2].$brandHex[2].$brandHex[3].$brandHex[3];
-          }
-      } else {
-          $brandHex = '#008751';
-      }
-      $channels = array_map('hexdec', str_split(substr($brandHex, 1), 2));
-      $linear = array_map(static function ($channel) {
-          $value = $channel / 255;
-          return $value <= 0.04045 ? $value / 12.92 : (($value + 0.055) / 1.055) ** 2.4;
-      }, $channels);
-      $luminance = 0.2126 * $linear[0] + 0.7152 * $linear[1] + 0.0722 * $linear[2];
-      $brandForeground = (1.05 / ($luminance + 0.05)) >= (($luminance + 0.05) / 0.05) ? '#ffffff' : '#000000';
+      $brandHex = \App\Support\ThemeColor::normalize($SystemSetting->dark_theme_color ?? null);
+      $lightHex = \App\Support\ThemeColor::normalize($SystemSetting->light_theme_color ?? null, '#f7f7f7');
+      $brandForeground = \App\Support\ThemeColor::foreground($brandHex);
+      $brandText = \App\Support\ThemeColor::contrast($brandHex, '#f4f6f9') >= 4.5 ? $brandHex : '#000000';
+      $brandDarkText = \App\Support\ThemeColor::contrast($brandHex, '#343a40') >= 4.5 ? $brandHex : '#ffffff';
     @endphp
     :root {
       --cm-primary: {{ $brandHex }};
       --cm-primary-foreground: {{ $brandForeground }};
+      --cm-primary-text: {{ $brandText }};
+      --cm-primary-text-dark: {{ $brandDarkText }};
     }
     .main-header.navbar-white .nav-link,
     .main-header.navbar-white .btn-navbar,
     .page-item:not(.active) .page-link,
     .nav-tabs .nav-link:not(.active),
-    .content-wrapper .text-primary { color: var(--cm-primary) !important; }
+    .content-wrapper .text-primary { color: var(--cm-primary-text) !important; }
     /* Override the general link rule on dashboard widgets, including hover/focus. */
     .content-wrapper .small-box:not(.bg-white):not(.bg-light) a,
     .content-wrapper .info-box:not(.bg-white):not(.bg-light) a { color: #fff !important; }
@@ -115,40 +105,40 @@
     .content-wrapper .small-box.bg-light a,
     .content-wrapper .info-box.bg-white a,
     .content-wrapper .info-box.bg-light a,
-    .content-wrapper .info-box:not([class*="bg-"]) a { color: var(--cm-primary) !important; }
+    .content-wrapper .info-box:not([class*="bg-"]) a { color: var(--cm-primary-text) !important; }
     h1{
-      color: {{ $SystemSetting->dark_theme_color ?? ' #008751'}} !important;
+      color: var(--cm-primary-text) !important;
     }
 
     .os-scrollbar{
-     background-color: {{ $SystemSetting->dark_theme_color ?? ' #008751'}} !important;
+     background-color: {{ $brandHex }} !important;
 
     }
 
     a:not(.btn):not(.nav-link):not(.page-link){
-      color: {{ $SystemSetting->dark_theme_color ?? ' #008751'}} !important;
+      color: var(--cm-primary-text) !important;
     }
 
     .sidebar-light-primary{
-      color: {{ $SystemSetting->light_theme_color ?? '#dff1ea'}} !important;
+      color: {{ $lightHex }} !important;
     }
 
     /* Specifically targeting the card-outline */
     .card.card-primary  .card-header{
-    background-color: {{ $SystemSetting->dark_theme_color ?? '#008751' }} !important;
-    border-color: {{ $SystemSetting->dark_theme_color ?? '#008751' }} !important;
+    background-color: {{ $brandHex }} !important;
+    border-color: {{ $brandHex }} !important;
    }
 
 
     .page-item.active .page-link{
       color: var(--cm-primary-foreground) !important;
-      background-color: {{ $SystemSetting->dark_theme_color ?? ' #008751'}} !important;
-      border-color: {{ $SystemSetting->dark_theme_color ?? ' #008751'}} !important;
+      background-color: {{ $brandHex }} !important;
+      border-color: {{ $brandHex }} !important;
     }
     .dataTables_paginate .paginate_button:hover {
       color: var(--cm-primary-foreground) !important;
-      background-color: {{ $SystemSetting->dark_theme_color ?? ' #008751'}} !important;
-      border-color: {{ $SystemSetting->dark_theme_color ?? ' #008751'}} !important;
+      background-color: {{ $brandHex }} !important;
+      border-color: {{ $brandHex }} !important;
     }
 
     /* Keep toolbar layout separate from the individual button appearance. */
@@ -175,7 +165,7 @@
     }
 
     .navbar-bg{
-    background: {{ $SystemSetting->dark_theme_color ?? '#008751'}} !important;
+    background: {{ $brandHex }} !important;
     }
 
 
@@ -199,22 +189,22 @@
     }
 
     .nav-pills {
-      color: {{ $SystemSetting->dark_theme_color ?? ' #008751'}} !important;
-      border-color: {{ $SystemSetting->dark_theme_color ?? ' #dff1ea'}} !important;
-      background-color: {{ $SystemSetting->light_theme_color ?? ' #dff1ea'}} !important;
+      color: var(--cm-primary-text) !important;
+      border-color: {{ $brandHex }} !important;
+      background-color: {{ $lightHex }} !important;
 
     }
 
     .nav-pills .nav-link.active {
       color: var(--cm-primary-foreground) !important;
-      border-color: {{ $SystemSetting->dark_theme_color ?? ' #008751'}} !important;
-      background-color: {{ $SystemSetting->dark_theme_color ?? ' #008751'}} !important;
+      border-color: {{ $brandHex }} !important;
+      background-color: {{ $brandHex }} !important;
 
     }
 
     .nav-pills .nav-link:hover {
         color: var(--cm-primary-foreground) !important;
-        background-color:  {{ $SystemSetting->dark_theme_color ?? ' #008751'}} !important; /* Darker green for hover */
+        background-color:  {{ $brandHex }} !important; /* Darker green for hover */
 
     }
 

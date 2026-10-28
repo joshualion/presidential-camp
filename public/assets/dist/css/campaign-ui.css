@@ -72,3 +72,27 @@
 .content-wrapper .dt-buttons .btn-default {
   color: #243b30 !important;
 }
+
+/* Filled Bootstrap variants: each foreground/background pair exceeds AA for normal text.
+   Outline and link buttons keep their separate Bootstrap behavior. */
+.content-wrapper .btn-success { --cm-button-bg: #176c2b; --cm-button-fg: #fff; }
+.content-wrapper .btn-danger { --cm-button-bg: #b21f2d; --cm-button-fg: #fff; }
+.content-wrapper .btn-info { --cm-button-bg: #0b6574; --cm-button-fg: #fff; }
+.content-wrapper .btn-warning { --cm-button-bg: #ffc107; --cm-button-fg: #000; }
+.content-wrapper .btn-secondary { --cm-button-bg: #596168; --cm-button-fg: #fff; }
+.content-wrapper .btn-dark { --cm-button-bg: #343a40; --cm-button-fg: #fff; }
+.content-wrapper .btn-light, .content-wrapper .btn-default { --cm-button-bg: #f8f9fa; --cm-button-fg: #000; }
+.content-wrapper :is(.btn-success,.btn-danger,.btn-info,.btn-warning,.btn-secondary,.btn-dark,.btn-light,.btn-default),
+.content-wrapper :is(.btn-success,.btn-danger,.btn-info,.btn-warning,.btn-secondary,.btn-dark,.btn-light,.btn-default):is(:hover,:focus,:active,:disabled,.disabled) {
+  color: var(--cm-button-fg) !important;
+  background-color: var(--cm-button-bg) !important;
+  border-color: var(--cm-button-bg) !important;
+}
+.content-wrapper .btn:focus-visible { outline: 2px solid #000; outline-offset: 3px; box-shadow: 0 0 0 3px #fff !important; }
+.content-wrapper .btn:is(:disabled,.disabled) { opacity: 1; border-style: dashed; cursor: not-allowed; }
+.content-wrapper .datable-print-buttons { background-color: #fafafa !important; }
+.content-wrapper :is(.btn-primary,.btn-success,.btn-danger,.btn-info,.btn-warning,.btn-secondary,.btn-dark,.btn-light,.btn-default) :is(.text-primary,.text-success,.text-danger,.text-info,.text-warning,.text-secondary,.text-dark,.text-light) { color: inherit !important; }
+.content-wrapper .dropdown-item:is(:active,.active) { color: var(--cm-primary-foreground) !important; background-color: var(--cm-primary) !important; }
+body.dark-mode .content-wrapper :is(h1,.text-primary) { color: var(--cm-primary-text-dark) !important; }
+body.dark-mode .content-header .breadcrumb a { color: var(--cm-primary-text-dark) !important; }
+body.dark-mode .content-wrapper :is(.btn-primary,.btn-success,.btn-danger,.btn-info,.btn-warning,.btn-secondary,.btn-dark,.btn-light,.btn-default) :is(.text-primary,.text-success,.text-danger,.text-info,.text-warning,.text-secondary,.text-dark,.text-light) { color: inherit !important; }
