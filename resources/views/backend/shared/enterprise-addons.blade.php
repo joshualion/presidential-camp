@@ -9,8 +9,8 @@
   <div class="row">
   @foreach($features as $key => $label)
     @php($grant = $entitlement['features'][$key] ?? null)
-    <div class="col-12 col-lg-4 mb-3"><article class="card h-100"><div class="card-body">
-      <h2 class="h5">{{ $label }}</h2>
+    <div class="col-12 col-lg-4 mb-3"><article class="card card-outline card-primary h-100"><div class="card-body">
+      <h2 class="h5 text-primary">{{ $label }}</h2>
       <p>{{ $entitlement['catalogue'][$key]['description'] ?? config('enterprise.descriptions.'.$key) }}</p>
       <p><strong>{{ $grant && (!isset($grant['expires_at']) || $grant['expires_at'] > time()) ? 'Licence recorded' : 'Locked' }}</strong></p>
       @if(isset($grant['expires_at']))<p>Licence expiry: {{ gmdate('Y-m-d H:i', $grant['expires_at']) }} UTC</p>@endif

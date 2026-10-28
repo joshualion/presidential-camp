@@ -9,7 +9,7 @@
   <style>
     #app-sidebar {
       --sidebar-light-bg: {{ $sidebarLightColor }};
-      --sidebar-light-text: {{ \App\Support\ThemeColor::foreground($sidebarLightColor) }};
+      --sidebar-light-text: var(--cm-primary, {{ $sidebarDarkColor }});
       --sidebar-dark-bg: {{ $sidebarDarkColor }};
       --sidebar-dark-text: {{ \App\Support\ThemeColor::foreground($sidebarDarkColor) }};
       /* Use the foreground calculated for the actual brand background. */

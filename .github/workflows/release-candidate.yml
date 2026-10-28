@@ -27,7 +27,7 @@ jobs:
       APP_URL: http://localhost
       DB_CONNECTION: sqlite
       DB_DATABASE: ':memory:'
-      CANDIDATE_VERSION: "${{ inputs.version || '1.2.2' }}"
+      CANDIDATE_VERSION: "${{ inputs.version || '1.2.3' }}"
     steps:
       - uses: actions/checkout@v4
         with:
@@ -56,10 +56,10 @@ jobs:
           CAMPAIGN_RELEASE_PRIVATE_KEY_PATH: '${{ runner.temp }}/campaign-release-private.pem'
           CAMPAIGN_RELEASE_PUBLIC_KEY_PATH: config/release-public.pem
         run: php scripts/prepare-release.php
-      - name: Rehearse signed bootstrap upgrades from official 1.1.3 through 1.2.1 archives
+      - name: Rehearse signed bootstrap upgrades from official 1.1.3 through 1.2.2 archives
         run: |
           set -Eeuo pipefail
-          for source_version in 1.1.3 1.1.4 1.1.5 1.1.6 1.1.7 1.1.8 1.1.9 1.2.0 1.2.1; do
+          for source_version in 1.1.3 1.1.4 1.1.5 1.1.6 1.1.7 1.1.8 1.1.9 1.2.0 1.2.1 1.2.2; do
             source_dir="$RUNNER_TEMP/campaign-upgrade-$source_version"
             mkdir -p "$source_dir/core"
             curl --fail --location --retry 3 --silent --show-error "https://github.com/joshualion/Campaign-Manager/releases/download/v$source_version/campaign-manager.zip" -o "$source_dir/campaign-manager.zip"
@@ -76,7 +76,7 @@ jobs:
           done
       - uses: actions/upload-artifact@v4
         with:
-          name: campaign-manager-candidate-${{ inputs.version || '1.2.2' }}
+          name: campaign-manager-candidate-${{ inputs.version || '1.2.3' }}
           path: |
             builds/candidate/campaign-manager.zip
             builds/candidate/release-manifest.json
@@ -92,4 +92,5 @@ jobs:
       - name: Remove signing material
         if: always()
         run: rm -f "$RUNNER_TEMP/campaign-release-private.pem"
+
 

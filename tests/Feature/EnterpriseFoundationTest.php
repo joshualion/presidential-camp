@@ -65,8 +65,24 @@ test('the Add-ons catalogue renders a useful locked screen without Portal access
     if ($path = getenv('ENTERPRISE_BROWSER_OUTPUT')) {
         \Illuminate\Support\Facades\File::ensureDirectoryExists(dirname(base_path($path)));
         file_put_contents(base_path(str_replace('.html', '-'.ltrim($brand, '#').'.html', $path)), $response->getContent());
+        // Exercise the real dashboard partial alongside the Add-ons page in browser regressions.
+        $widgets = view('backend.shared.dashboard-metrics-cards', [
+            'profileData' => $admin,
+            'dashboardMetrics' => ['active_election' => ['uuid' => 'theme-fixture-election']],
+            'expandedMetricsCollapsed' => false,
+        ])->render();
+        file_put_contents(base_path(str_replace('.html', '-widgets-'.ltrim($brand, '#').'.html', $path)), $widgets);
     }
-})->with(['#008751', '#ffffff', '#ffc107', '#6f42c1', '#000000']);
+})->with(['#008751', '#0d6efd', '#ffffff', '#ffc107', '#6f42c1', '#000000']);
+
+test('changing the saved brand is reflected on the next page render', function () {
+    $settings = \App\Models\SystemSetting::create(['package' => 'presidential', 'system_name' => 'Campaign Test', 'system_country' => 'Nigeria', 'dark_theme_color' => '#008751']);
+    $this->withoutMiddleware([\App\Http\Middleware\CheckUserOnboarding::class]);
+    $admin = User::factory()->create(['access_level' => 'superadmin', 'status' => 'active']);
+    $this->actingAs($admin)->get(route('superadmin.addons.index'))->assertOk()->assertSee('--cm-primary: #008751;', false);
+    $settings->update(['dark_theme_color' => '#0d6efd']);
+    $this->get(route('superadmin.addons.index'))->assertOk()->assertSee('--cm-primary: #0d6efd;', false)->assertDontSee('--cm-primary: #008751;', false);
+});
 
 test('ordinary administrators cannot access the Add-ons catalogue by URL', function (string $level) {
     \App\Models\SystemSetting::create(['package' => 'presidential', 'system_name' => 'Campaign Test', 'system_country' => 'Nigeria']);
@@ -75,3 +91,4 @@ test('ordinary administrators cannot access the Add-ons catalogue by URL', funct
         ->get(route('superadmin.addons.index'))->assertForbidden();
     $this->post(route('superadmin.addons.refresh'))->assertForbidden();
 })->with(['nationaladmin', 'regionaladmin', 'stateadmin', 'senatorialadmin', 'federaladmin', 'lgaadmin', 'wardadmin', 'puadmin', 'user']);
+

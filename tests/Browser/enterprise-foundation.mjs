@@ -20,13 +20,16 @@ async function findFile(directory, name) {
   return null;
 }
 const variants = ['primary', 'secondary', 'success', 'danger', 'warning', 'info', 'light', 'default', 'dark'];
-let scenarios = 0, checks = 0;
+let scenarios = 0, checks = 0, brandingChecks = 0, widgetChecks = 0;
 try {
-  for (const brand of ['008751', 'ffffff', 'ffc107', '6f42c1', '000000']) {
+  for (const brand of ['008751', '0d6efd', 'ffffff', 'ffc107', '6f42c1', '000000']) {
     const fixture = await findFile(artifact, `enterprise-addons-${brand}.html`);
     assert(fixture, `Missing rendered Blade fixture for ${brand}`);
     // Isolate presentation checks from unrelated application JS; CSS and Blade markup are unchanged.
     const html = (await fs.readFile(fixture, 'utf8')).replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '');
+    const widgetFixture = await findFile(artifact, `enterprise-addons-widgets-${brand}.html`);
+    assert(widgetFixture, `Missing actual dashboard widgets for ${brand}`);
+    const widgets = await fs.readFile(widgetFixture, 'utf8');
     for (const width of [1280, 390]) for (const dark of [false, true]) {
       const page = await browser.newPage({ viewport: { width, height: 900 } });
       await page.route('**/*', async route => {
@@ -39,13 +42,39 @@ try {
         return route.fulfill({ status: 204, body: '' });
       });
       await page.goto('http://localhost/__enterprise_fixture');
-      await page.evaluate(({ dark, variants }) => {
+      await page.evaluate(({ dark, variants, widgets }) => {
         document.body.classList.toggle('dark-mode', dark);
         document.querySelector('#app-sidebar')?.classList.toggle('sidebar-themed', dark);
         const container = document.createElement('div'); container.id = 'enterprise-button-fixture';
         container.innerHTML = variants.map(variant => `<button class="btn btn-${variant}" data-variant="${variant}"><span class="text-${variant}">${variant} action</span></button>`).join(' ');
         document.querySelector('.content-wrapper').append(container);
-      }, { dark, variants });
+        const regression = document.createElement('div'); regression.id = 'brand-regression-fixture';
+        regression.innerHTML = `<a href="#" class="text-primary">Primary text</a><button class="btn btn-link">Link action</button><button class="btn btn-outline-primary">Outline action</button><ul class="nav nav-tabs"><li class="nav-item"><a class="nav-link active" href="#">Active tab</a></li><li class="nav-item"><a class="nav-link" href="#">Inactive tab</a></li></ul><div class="card card-primary"><div class="card-header"><h2 class="card-title">Filled primary card</h2><a href="#">Card action</a></div></div><div class="info-box bg-info"><a href="#">Widget link</a></div>` + widgets;
+        document.querySelector('.content-wrapper').append(regression);
+      }, { dark, variants, widgets });
+      const expectedBrand = `rgb(${[0, 2, 4].map(i => parseInt(brand.slice(i, i + 2), 16)).join(', ')})`;
+      for (const selector of ['.content-header h1', '.main-header .nav-link', 'article h2.text-primary', '#brand-regression-fixture > .text-primary', '#brand-regression-fixture .btn-link', '#brand-regression-fixture .nav-tabs .nav-link']) {
+        const colours = await page.locator(selector).evaluateAll(elements => elements.map(el => getComputedStyle(el).color));
+        assert(colours.length > 0, `Missing primary component ${selector}`);
+        assert(colours.every(colour => colour === expectedBrand), `${brand}/${width}/${dark}/${selector}: ${colours}`);
+        brandingChecks += colours.length;
+      }
+      if (!dark) {
+        const links = await page.locator('#app-sidebar .sidebar-nav .nav-link').evaluateAll(elements => elements.map(el => getComputedStyle(el).color));
+        assert(links.length > 0 && links.every(colour => colour === expectedBrand), `Sidebar lost the saved brand ${brand}`);
+      }
+      assert.equal(await page.locator('article.card-outline').first().evaluate(el => getComputedStyle(el).borderTopColor), expectedBrand);
+      // Real dashboard footer links and coloured widget links must stay white in every brand/mode.
+      const widgetLinks = page.locator('#brand-regression-fixture .small-box a, #brand-regression-fixture .info-box a');
+      assert(await widgetLinks.count() > 1, 'Missing dashboard links');
+      for (const state of ['normal', 'hover', 'focus']) {
+        for (const link of await widgetLinks.all()) {
+          if (state === 'hover') await link.hover();
+          if (state === 'focus') await link.focus();
+          assert.equal(await link.evaluate(el => getComputedStyle(el).color), 'rgb(255, 255, 255)', `${brand}/${width}/${dark}/widget/${state}`);
+          widgetChecks++;
+        }
+      }
       for (const state of ['normal', 'hover', 'focus', 'disabled']) {
         for (const variant of variants) {
           const button = page.locator(`[data-variant="${variant}"]`);
@@ -67,11 +96,12 @@ try {
       assert(await page.locator('body').innerText().then(text => text.includes('Locked')));
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1);
       assert.equal(overflow, false, `Horizontal overflow at ${brand}/${width}/${dark}`);
-      if (brand === 'ffffff' || brand === '008751') {
+      if (['ffffff', '008751', '0d6efd'].includes(brand)) {
         await page.screenshot({ path: path.join(root, `storage/framework/testing/enterprise-${brand}-${width}-${dark ? 'dark' : 'light'}.png`), fullPage: true });
       }
       scenarios++; await page.close();
     }
   }
-  console.log(JSON.stringify({ renderedScenarios: scenarios, buttonContrastChecks: checks, minimumContrast: 4.5 }));
+  console.log(JSON.stringify({ renderedScenarios: scenarios, buttonContrastChecks: checks, brandingChecks, whiteWidgetLinkChecks: widgetChecks, minimumContrast: 4.5 }));
 } finally { await browser.close(); }
+

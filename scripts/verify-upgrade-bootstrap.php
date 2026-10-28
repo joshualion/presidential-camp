@@ -15,6 +15,7 @@ use Illuminate\Support\Str;
 [$script, $root, $archive, $metadata, $report, $bootstrapArchive, $sourceVersion] = $argv;
 $targetVersion = json_decode(file_get_contents($metadata), true, 64, JSON_THROW_ON_ERROR)['version'];
 $reviewedSources = match ($targetVersion) {
+    '1.2.3' => ['1.1.3', '1.1.4', '1.1.5', '1.1.6', '1.1.7', '1.1.8', '1.1.9', '1.2.0', '1.2.1', '1.2.2'],
     '1.2.2' => ['1.1.3', '1.1.4', '1.1.5', '1.1.6', '1.1.7', '1.1.8', '1.1.9', '1.2.0', '1.2.1'],
     '1.1.6' => ['1.1.3', '1.1.4', '1.1.5'],
     '1.1.7' => ['1.1.3', '1.1.4', '1.1.5', '1.1.6'],
@@ -230,4 +231,5 @@ $result = [
 ];
 file_put_contents($report, json_encode($result, JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR)."\n");
 echo json_encode($result, JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR)."\n";
+
 
