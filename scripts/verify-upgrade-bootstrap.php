@@ -15,6 +15,7 @@ use Illuminate\Support\Str;
 [$script, $root, $archive, $metadata, $report, $bootstrapArchive, $sourceVersion] = $argv;
 $targetVersion = json_decode(file_get_contents($metadata), true, 64, JSON_THROW_ON_ERROR)['version'];
 $reviewedSources = match ($targetVersion) {
+    '1.2.2' => ['1.1.3', '1.1.4', '1.1.5', '1.1.6', '1.1.7', '1.1.8', '1.1.9', '1.2.0', '1.2.1'],
     '1.1.6' => ['1.1.3', '1.1.4', '1.1.5'],
     '1.1.7' => ['1.1.3', '1.1.4', '1.1.5', '1.1.6'],
     '1.1.8' => ['1.1.3', '1.1.4', '1.1.5', '1.1.6', '1.1.7'],
@@ -157,9 +158,12 @@ if (version_compare($targetVersion, '1.2.0', '>=') && version_compare($sourceVer
     $expectedMigrations[] = '2026_10_25_000001_add_managed_campaign_capabilities';
     $expectedMigrations[] = '2026_10_25_000002_add_incident_evidence_metadata';
 }
+if (version_compare($targetVersion, '1.2.2', '>=') && version_compare($sourceVersion, '1.2.2', '<')) {
+    $expectedMigrations[] = '2026_10_28_000001_register_enterprise_capabilities';
+}
 $actualMigrations = array_keys($plan['pending_migrations']);
 sort($expectedMigrations); sort($actualMigrations);
-$assert($actualMigrations === $expectedMigrations, 'Unexpected pending migrations.');
+$assert($actualMigrations === $expectedMigrations, 'Unexpected pending migrations. Expected '.json_encode($expectedMigrations).'; received '.json_encode($actualMigrations));
 $id = (string) Str::uuid();
 UpdatePaths::write(UpdatePaths::job($id).'/journal.json', $plan + ['id' => $id, 'state' => 'queued', 'migrations_started' => false]);
 // Only entitlement calls are replaced in this isolated test. Signature checking,
@@ -196,6 +200,14 @@ if (version_compare($targetVersion, '1.2.0', '>=')) {
     $assert(array_key_exists('capabilities_managed', $afterUser) && ! (bool) $afterUser['capabilities_managed'], 'Existing user was silently adopted into managed mode.');
     $assert(! (bool) DB::table('roles')->where('id', $customRole)->value('capabilities_managed'), 'Existing role was silently adopted into managed mode.');
 }
+$enterpriseCapabilitiesRegistered = false;
+if (version_compare($targetVersion, '1.2.2', '>=')) {
+    $expectedCapabilities = (require $root.'/config/enterprise.php')['permissions'];
+    $registeredCapabilities = DB::table('permissions')->where('guard_name', 'web')->whereIn('name', $expectedCapabilities)->pluck('name')->all();
+    sort($expectedCapabilities); sort($registeredCapabilities);
+    $assert($registeredCapabilities === $expectedCapabilities, 'Enterprise capabilities were not registered during the real upgrade.');
+    $enterpriseCapabilitiesRegistered = true;
+}
 $assert(hash_file('sha256', $root.'/.env') === $beforeEnv, 'Environment or APP_KEY changed.');
 $assert(hash_file('sha256', $uploads.'/upgrade-preservation.txt') === $beforeUpload, 'Existing upload changed.');
 $assert(DB::table('political_parties')->where('acronym', 'OWN')->value('logo') === 'owner-custom-logo.png', 'Custom party changed.');
@@ -212,6 +224,7 @@ $result = [
     'signatures_verified' => true, 'backup_verified' => true,
     'environment_preserved' => true, 'existing_users_preserved' => true,
     'existing_uploads_preserved' => true, 'custom_role_assignments_preserved' => true, 'custom_parties_preserved' => true,
+    'enterprise_capabilities_registered' => $enterpriseCapabilitiesRegistered,
     'ndc_installed' => true, 'credentials_verified' => true,
     'authorization' => 'isolated entitlement stub; no payment or customer installation used',
 ];

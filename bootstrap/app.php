@@ -36,6 +36,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
+        $middleware->alias(['enterprise.feature' => \App\Http\Middleware\EnsureEnterpriseFeature::class]);
         $middleware->trustProxies(at: '*');
         $middleware->web(prepend: [
             UseInstallerSafeDrivers::class,

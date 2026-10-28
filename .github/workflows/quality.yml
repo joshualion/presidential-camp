@@ -33,7 +33,7 @@ jobs:
       - name: Lint application, updater, recovery and test PHP
         run: |
           set -euo pipefail
-          find app config routes tools scripts tests -type f -name '*.php' -print0 | xargs -0 -r -n 1 php -l
+          find app config database routes tools scripts tests -type f -name '*.php' -print0 | xargs -0 -r -n 1 php -l
       - run: composer audit --locked --no-interaction
       - run: npm ci
       - run: npm run build
@@ -45,6 +45,7 @@ jobs:
           DB_CONNECTION: sqlite
           DB_DATABASE: ':memory:'
           V121_BROWSER_OUTPUT: storage/framework/testing/v121-role-editor.html
+          ENTERPRISE_BROWSER_OUTPUT: storage/framework/testing/enterprise-addons.html
         run: |
           cp .env.example .env
           php artisan key:generate --force
@@ -60,6 +61,7 @@ jobs:
           path: |
             test-results.xml
             storage/framework/testing/v121-role-editor.html
+            storage/framework/testing/enterprise-addons-*.html
             public/build/
 
   database-compatibility:
@@ -104,7 +106,7 @@ jobs:
         run: |
           cp .env.example .env
           php artisan key:generate --force
-          php artisan test --filter='IntegratedPermissionsUi|ManagedCampaignCapabilities|IncidentEvidence|ContactConfirmationReturn|V120MigrationCompatibility|MemberImport|LicensedScopeQuery|PollingUnitAgentScope|MemberElectionParticipation' --log-junit database-results.xml
+          php artisan test --filter='EnterpriseFoundation|EnterpriseOfflineEntitlement|IntegratedPermissionsUi|ManagedCampaignCapabilities|IncidentEvidence|ContactConfirmationReturn|V120MigrationCompatibility|MemberImport|LicensedScopeQuery|PollingUnitAgentScope|MemberElectionParticipation' --log-junit database-results.xml
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -154,8 +156,15 @@ jobs:
           PLAYWRIGHT_MODULE: ${{ runner.temp }}/role-browser/node_modules/playwright/index.mjs
           ROLE_UI_ARTIFACT: ${{ runner.temp }}/role-ui
         run: node tests/Browser/integrated-permissions.mjs
+      - name: Verify rendered add-on catalogue and semantic button contrast
+        env:
+          PLAYWRIGHT_MODULE: ${{ runner.temp }}/role-browser/node_modules/playwright/index.mjs
+          ENTERPRISE_UI_ARTIFACT: ${{ runner.temp }}/role-ui
+        run: node tests/Browser/enterprise-foundation.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: permissions-browser-previews
-          path: storage/framework/testing/permissions-*.png
+          path: |
+            storage/framework/testing/permissions-*.png
+            storage/framework/testing/enterprise-*.png
