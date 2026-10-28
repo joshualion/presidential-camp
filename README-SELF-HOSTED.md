@@ -1,44 +1,35 @@
-> v1.1.0 candidate: new installations require a free registration receipt after licence/privacy acceptance. The portal receives only installation contact email, configured domain, UUID, version, status and terms acknowledgement through an encrypted-local registration credential. No campaign records, voters, political activity, operator phone or administrator passwords are sent. Marketing is separately optional. Existing installations use Official Updates for their transition and remain operational during portal outages. Final licence/privacy review and the established signing identity are required before publication.
-
 # Campaign Manager Self-Hosted Package
 
-This package supports free Community self-hosted installations, with optional licensed provisioning services.
+Community self-hosted installation is free. Optional geography provisioning and automatic-update coverage are separate services. A new installation requires an installation-registration receipt after licence/privacy acceptance; no payment or existing Portal customer account is required for that registration.
 
-## Production Deployment
+## New installation
 
-- Do not expose the Laravel root publicly.
-- Point the domain document root directly to the package `public` directory.
-- The production URL should look like `https://clientdomain.com`, not `https://clientdomain.com/public`.
-- On shared hosting, use the bridge sample in `docs/self-hosted-shared-hosting-guide.md` when the core app must live outside `public_html`.
-- Prefer a `public_html` symbolic link to the package `public` directory when the host supports it.
-- Real `.htaccess` files are excluded from customer ZIPs; `.htaccess.example` is the safe optional template.
+1. Upload the complete `campaign-manager.zip` release asset. It contains production PHP dependencies and built frontend assets; Composer, npm and Vite are not needed on the customer server.
+2. Point the domain document root to this application's `public` directory. Keep `.env`, `vendor` and `storage/app` outside the public document root. Use the supplied `.htaccess.example` only where required by your host.
+3. Select PHP 8.2 or newer for this domain and enable the required extensions. CLI PHP and the domain's website PHP can use different settings. Do not change PHP globally for unrelated domains.
+4. If SSH is available, run `php tools/install/diagnose.php` from the application folder before setup. This read-only command works without booting Laravel or connecting to a database and prints no environment values, passwords, keys or setup tokens. `--json` produces a support-friendly report.
+5. Open `/install/access`. Obtain the private setup code from `storage/app/installer/access-token` using your hosting file manager or SSH and enter it locally. Do not share the code. This is hosting ownership proof, not a paid provisioning key.
+6. Complete the installer using a new, empty database and the site's correct HTTPS `APP_URL`. Select the campaign type and geography. For a House of Representatives campaign, choose **Federal Constituency** and the candidate's constituency.
+7. Manual geography setup is free. QuickStart geography provisioning is optional and requires its own purchased provisioning code.
+8. Enter the Super Administrator details, accept the licence/privacy notice and run installation. Keep the browser session open until completion. Confirm the contact email afterward when the verification message arrives.
 
-## Install
+The installer generates a unique `APP_KEY` when `.env` is writable. Retain that key throughout installation and afterward. Changing it invalidates encrypted registration, credentials and sessions.
 
-1. Upload and extract the ZIP on the server.
-2. Copy `.env.example` to `.env`.
-3. Set database credentials and `APP_URL`.
-4. Open the browser installer.
-5. Confirm installer ownership, complete configuration and Super Administrator details, accept licence/privacy terms and obtain the required free registration receipt. Manual geography setup is free; paid QuickStart provisioning is optional.
+## If setup is interrupted
 
-The package includes `vendor` and built frontend assets, so customers should not need Composer, Node.js, npm, or Vite for a normal install.
+- Preserve `.env`, `APP_KEY`, the database, `storage/app/installer`, registration state, uploads and backups. Do not delete files to bypass a setup or update lock.
+- A registration outage must stop before database migrations. Retry the saved installation step once the official Portal is reachable; the existing installation identity is reused.
+- Failure to send the final completion-status report does not invalidate an already accepted registration receipt. Its status can be retried later.
+- The Super Administrator password stays in the browser session and is not saved in installer progress files. A lost session can require ownership confirmation and re-entering the administrator password.
+- If the database already contains campaign records or users, stop and diagnose the existing installation. Do not use `migrate:fresh`, `db:wipe`, database deletion or a new `APP_KEY` to repair it.
+- When requesting support, send the release version, exact error, current installer step and the diagnostic output. Never send `.env`, database passwords, setup codes, bearer tokens or registration credentials.
 
-`APP_KEY` is generated uniquely by the browser installer when `.env` is writable. Do not change it after installation.
+## Existing installations and updates
 
-## Optional Features
+Do not run the new-install wizard to upgrade an existing installation. Use **Super Admin -> Official Updates** and the established signed update process, or the free manual upgrade procedure for the release. Automatic installation requires the applicable update coverage, authenticated Super Admin consent and a verified private backup. A verification-email return does not itself purchase, download or install an update.
 
-- Community Forum is optional and disabled by default.
-- Community realtime uses polling by default.
-- Reverb is an optional advanced mode that requires additional server setup.
+Keep the original application key, environment, customer records, uploads, registration identity, role grants and backups. The public distribution repository supplies the downloadable release assets; the source repositories can remain private after verification.
 
-See `docs/self-hosted-installation-guide.md` for the full customer install process.
+## Enterprise scope
 
-### Confirm hosting ownership before setup
-
-The installer now requires a local server setup code before accepting configuration. Open `/install/access`, then read `storage/app/installer/access-token` through your own hosting file manager or SSH and enter that code. Do not share it or expose the storage directory through the web server. Alternatively, set a random `CAMPAIGN_INSTALLER_ACCESS_TOKEN` of at least 32 characters in the server environment before setup. This protects installation from visitors; it is not a licence key, paid service or remote activation. Existing completed installations keep the installer closed.
-
-### Update and support foundation (not yet a production upgrade runner)
-
-Super Admin → Official Updates checks the official GitHub release and verifies signed metadata against the installed trusted public key. Preparation downloads and verifies a package into private staging without replacing application files or running migrations. An apply/backup/rollback runner is not enabled in this implementation checkpoint. Releases older than this updater require an initial manual upgrade.
-
-Portal registration is optional and explains the deployment ID, domain, administrator contact email, installed version and status before submission. Marketing has a separate opt-in and requires email confirmation. Revocation disables local polling immediately and retries remote deletion if the Portal is unavailable. No supporter, voter, password or campaign records are transmitted by this registration service. Public Community ZIP downloads remain free. Paid assistance credits are separate from software activation.
+The Add-ons catalogue and licensing foundation do not constitute working Reports/PDF, AI billing, Finance, donations, Merchandise, paid activation or provisioning modules. Unfinished enterprise functionality remains disabled. Existing Community functionality and update coverage remain independent.

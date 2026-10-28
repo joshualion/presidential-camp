@@ -3,6 +3,7 @@
 namespace App\Services\Installer;
 
 use App\Services\ReleaseReadinessService;
+use App\Support\InstallationRuntime;
 use Illuminate\Support\Facades\File;
 
 class RequirementCheckService
@@ -19,11 +20,9 @@ class RequirementCheckService
             $this->check('PHP '.PHP_VERSION, version_compare(PHP_VERSION, '8.2.0', '>='), true, 'PHP 8.2 or newer is required.'),
         ];
 
-        foreach (['pdo', 'pdo_mysql', 'openssl', 'mbstring', 'tokenizer', 'xml', 'ctype', 'json', 'bcmath', 'curl', 'fileinfo', 'zip'] as $extension) {
+        foreach (InstallationRuntime::requiredExtensions() as $extension) {
             $checks[] = $this->check("PHP extension: {$extension}", extension_loaded($extension), true, "{$extension} extension is required.");
         }
-
-        $checks[] = $this->check('PHP extension: gd or imagick', extension_loaded('gd') || extension_loaded('imagick'), true, 'Either gd or imagick is required.');
 
         foreach ([storage_path(), storage_path('app'), storage_path('framework'), storage_path('logs'), base_path('bootstrap/cache')] as $path) {
             $checks[] = $this->check("Writable: {$path}", File::isWritable($path), true, 'Folder must be writable.');

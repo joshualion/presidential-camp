@@ -1,5 +1,7 @@
 # Enterprise expansion implementation report — 28 October 2026
 
+> Historical foundation snapshot: the statements below describe the initial draft, not current merge, release or deployment status. See [the dated status addendum](STATUS_2026_10_28.md) for subsequent validation, shipped scope and remaining work.
+
 **Status: PARTIAL IMPLEMENTATION. Draft foundation increment; not a release candidate.**
 
 The full master assignment is not complete. This increment implements a reviewable entitlement boundary, explicit capabilities, Super Admin catalogue, existing-panel pricing configuration, and shared theme corrections. Reports, AI billing, Finance, donations, Merchandise, purchase orchestration and provisioning still need implementation. Do not merge or deploy this increment as a finished enterprise release.

@@ -1,0 +1,48 @@
+name: Remove verified merged branches
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'List eligible branches without deleting them'
+        type: boolean
+        default: true
+permissions:
+  contents: read
+concurrency:
+  group: merged-branch-maintenance
+  cancel-in-progress: false
+jobs:
+  validate:
+    if: github.event_name == 'pull_request' && github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test tests/maintenance/merged-branch-cleanup.test.mjs
+  cleanup:
+    if: github.event_name == 'workflow_dispatch' || (github.event.pull_request.merged == true && github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test tests/maintenance/merged-branch-cleanup.test.mjs
+      - name: Preserve active work and delete only verified merged branches
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          CLEANUP_DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && 'true' || 'false' }}
+        run: node scripts/cleanup-merged-branches.mjs

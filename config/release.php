@@ -302,6 +302,8 @@ return [
     ],
 
     'required_files' => [
+        'app/Support/InstallationRuntime.php',
+        'tools/install/diagnose.php',
         'app/Services/Updates/AutomaticUpdateFlow.php',
         'app/Services/Updates/DatabaseSnapshot.php',
         'app/Services/Updates/MysqlBackup.php',
@@ -549,6 +551,7 @@ return [
     ],
 
     'include_roots' => [
+        'tools/install',
         'tools/updater',
         'app',
         'bootstrap',
