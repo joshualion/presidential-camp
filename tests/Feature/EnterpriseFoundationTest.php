@@ -42,6 +42,20 @@ test('the Add-ons catalogue routes are Super Admin only', function () {
     }
 });
 
+test('an existing permission schema can register enterprise capabilities with cached preceding-release configuration', function () {
+    $names = config('enterprise.permissions');
+    Permission::whereIn('name', $names)->delete();
+    $legacy = Permission::findOrCreate('customer.legacy.reporting', 'web');
+    $role = \Spatie\Permission\Models\Role::create(['name' => 'Existing customer role', 'guard_name' => 'web', 'group_name' => 'user']);
+    $role->givePermissionTo($legacy);
+    config(['enterprise.permissions' => []]);
+    $migration = require database_path('migrations/2026_10_28_000001_register_enterprise_capabilities.php');
+    $migration->up(); $migration->up();
+    expect(Permission::whereIn('name', $names)->count())->toBe(count($names));
+    expect(Permission::whereIn('name', $names)->pluck('group_name')->unique()->all())->toBe(['user']);
+    expect($role->fresh()->permissions->pluck('name')->all())->toBe(['customer.legacy.reporting']);
+});
+
 test('the Add-ons catalogue renders a useful locked screen without Portal access', function (string $brand) {
     \App\Models\SystemSetting::create(['package' => 'presidential', 'system_name' => 'Campaign Test', 'system_country' => 'Nigeria', 'dark_theme_color' => $brand]);
     $this->withoutMiddleware([\App\Http\Middleware\CheckUserOnboarding::class]);

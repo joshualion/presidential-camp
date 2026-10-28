@@ -10,7 +10,8 @@ return new class extends Migration {
         // An updater worker may still hold the preceding release's config cache.
         $enterprise = require config_path('enterprise.php');
         foreach ($enterprise['permissions'] as $name) {
-            Permission::firstOrCreate(['name' => $name, 'guard_name' => 'web'], ['group_name' => 'enterprise']);
+            // Existing installations constrain this legacy group column; module names live in the capability catalogue.
+            Permission::firstOrCreate(['name' => $name, 'guard_name' => 'web'], ['group_name' => 'user']);
         }
         app(PermissionRegistrar::class)->forgetCachedPermissions();
     }
