@@ -5,12 +5,19 @@ return [
         'name' => 'Campaign Manager Core',
         'package' => 'campaign-manager-core',
         'channel' => env('RELEASE_CHANNEL', 'self-hosted'),
-        'version' => env('APP_VERSION', '1.2.1'),
+        'version' => env('APP_VERSION', '1.2.2'),
         'build_date' => env('RELEASE_BUILD_DATE', null),
         'minimum_php' => '8.2.0',
     ],
 
     'release_notes' => [
+        '1.2.2' => [
+            'Improves shared button, navigation and configurable theme contrast across light and dark interfaces.',
+            'Adds a Super Admin-only Add-ons catalogue and installation-bound signed entitlement foundation.',
+            'Registers explicit enterprise capabilities without granting financial access based on geographic rank.',
+            'Updates vulnerable dependencies and retains signed updates, verified backups and existing Community functions.',
+            'Reports, AI billing, Finance, donations, Merchandise and paid activation remain unavailable pending their implementation.',
+        ],
         '1.2.1' => [
             'Integrates all role and action controls into the existing Roles & Permission screens and existing role records.',
             'Restores branded navigation with Dashboard first, Super Admin-only evidence settings under Elections, and Official Updates before Profile.',
