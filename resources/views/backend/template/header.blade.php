@@ -84,19 +84,19 @@
       $brandHex = \App\Support\ThemeColor::normalize($SystemSetting->dark_theme_color ?? null);
       $lightHex = \App\Support\ThemeColor::normalize($SystemSetting->light_theme_color ?? null, '#f7f7f7');
       $brandForeground = \App\Support\ThemeColor::foreground($brandHex);
-      $brandText = \App\Support\ThemeColor::contrast($brandHex, '#f4f6f9') >= 4.5 ? $brandHex : '#000000';
-      $brandDarkText = \App\Support\ThemeColor::contrast($brandHex, '#343a40') >= 4.5 ? $brandHex : '#ffffff';
     @endphp
     :root {
       --cm-primary: {{ $brandHex }};
       --cm-primary-foreground: {{ $brandForeground }};
-      --cm-primary-text: {{ $brandText }};
-      --cm-primary-text-dark: {{ $brandDarkText }};
+      /* Brand text follows the saved primary colour; contrast foregrounds belong on filled surfaces. */
+      --cm-primary-text: var(--cm-primary);
+      --cm-primary-text-dark: var(--cm-primary);
     }
     .main-header.navbar-white .nav-link,
     .main-header.navbar-white .btn-navbar,
     .page-item:not(.active) .page-link,
-    .nav-tabs .nav-link:not(.active),
+    .nav-tabs .nav-link,
+    .content-wrapper .nav-pills .nav-link:not(.active):not(:hover):not(:focus),
     .content-wrapper .text-primary { color: var(--cm-primary-text) !important; }
     /* Override the general link rule on dashboard widgets, including hover/focus. */
     .content-wrapper .small-box:not(.bg-white):not(.bg-light) a,
@@ -230,7 +230,7 @@
 
 </style>
    @livewireStyles
-<link rel="stylesheet" href="{{ asset('assets/dist/css/campaign-ui.css') }}?v=1.1.1">
+<link rel="stylesheet" href="{{ asset('assets/dist/css/campaign-ui.css') }}?v=1.2.3">
 @stack('styles')
 @include('shared.password-visibility')
 </head>

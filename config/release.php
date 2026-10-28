@@ -5,12 +5,18 @@ return [
         'name' => 'Campaign Manager Core',
         'package' => 'campaign-manager-core',
         'channel' => env('RELEASE_CHANNEL', 'self-hosted'),
-        'version' => env('APP_VERSION', '1.2.2'),
+        'version' => env('APP_VERSION', '1.2.3'),
         'build_date' => env('RELEASE_BUILD_DATE', null),
         'minimum_php' => '8.2.0',
     ],
 
     'release_notes' => [
+        '1.2.3' => [
+            'Restores the configured brand colour to primary text, page headings and navigation instead of substituting black.',
+            'Applies the saved colour to Add-ons card accents and primary link/outline actions.',
+            'Preserves white dashboard widget links and automatic readable foregrounds on filled controls.',
+            'Appearance-only maintenance release: no new migrations or operational Finance, Merchandise or AI modules.',
+        ],
         '1.2.2' => [
             'Improves shared button, navigation and configurable theme contrast across light and dark interfaces.',
             'Adds a Super Admin-only Add-ons catalogue and installation-bound signed entitlement foundation.',
@@ -296,6 +302,8 @@ return [
     ],
 
     'required_files' => [
+        'app/Support/InstallationRuntime.php',
+        'tools/install/diagnose.php',
         'app/Services/Updates/AutomaticUpdateFlow.php',
         'app/Services/Updates/DatabaseSnapshot.php',
         'app/Services/Updates/MysqlBackup.php',
@@ -543,6 +551,7 @@ return [
     ],
 
     'include_roots' => [
+        'tools/install',
         'tools/updater',
         'app',
         'bootstrap',

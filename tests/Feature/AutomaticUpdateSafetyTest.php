@@ -225,7 +225,7 @@ test('bootstrap packaging signs every bridge file and refuses tampering before i
         ->and(glob($this->sandbox.'/storage/app/updates/bootstrap-history/*/bootstrap'))->toHaveCount(1)
         ->and(file_get_contents($this->sandbox.'/.env'))->toBe('APP_KEY=preserved');
 
-})->with(['1.0.8', '1.1.2', '1.1.5', '1.1.6', '1.1.7', '1.1.8', '1.1.9', '1.2.0', '1.2.1']);
+})->with(['1.0.8', '1.1.2', '1.1.5', '1.1.6', '1.1.7', '1.1.8', '1.1.9', '1.2.0', '1.2.1', '1.2.2']);
 
 test('bootstrap installation rejects an unreviewed source before changing the installation', function ($sourceVersion) {
     File::ensureDirectoryExists($this->sandbox.'/vendor');
@@ -239,7 +239,7 @@ test('bootstrap installation rejects an unreviewed source before changing the in
         ->and(is_dir($this->sandbox.'/storage/app/updates/bootstrap'))->toBeFalse()
         ->and(is_file($this->sandbox.'/public/campaign-update-bootstrap.php'))->toBeFalse()
         ->and(file_get_contents($this->sandbox.'/.env'))->toBe('APP_KEY=preserved');
-})->with(['1.2.2', '9.9.9']);
+})->with(['1.2.3', '9.9.9']);
 
 test('authorized startup writes a valid private worker and permits cancelling only queued jobs', function () {
     $id = (string) Str::uuid();
@@ -545,11 +545,12 @@ test('recovery never rolls back a verified update that may have accepted new wri
 
 
 
-test('1.2.1 accepts each recent reviewed source through the signed update policy', function ($version) {
+test('1.2.3 accepts each recent reviewed source through the signed update policy', function ($version) {
     config(['release.identity.version' => $version]);
-    $stage = safetyStage($this, sources: config('updates.supported_sources'), target: '1.2.1');
+    $stage = safetyStage($this, sources: config('updates.supported_sources'), target: '1.2.3');
     $plan = app(UpdatePolicy::class)->inspect($stage);
     expect($plan['source_version'])->toBe($version)
-        ->and($plan['target_version'])->toBe('1.2.1')
+        ->and($plan['target_version'])->toBe('1.2.3')
         ->and($plan['pending_migrations'])->toBe([]);
-})->with(['1.1.3', '1.1.4', '1.1.5', '1.1.6', '1.1.7', '1.1.8', '1.1.9', '1.2.0']);
+})->with(['1.1.3', '1.1.4', '1.1.5', '1.1.6', '1.1.7', '1.1.8', '1.1.9', '1.2.0', '1.2.1', '1.2.2']);
+

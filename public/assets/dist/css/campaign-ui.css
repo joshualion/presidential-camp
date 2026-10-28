@@ -38,6 +38,14 @@
 .cm-brand-preview img { max-width:100%; max-height:110px; object-fit:contain; }
 .main-sidebar .brand-link { display:flex; justify-content:center; align-items:center; min-height:65px; padding:.65rem 1rem; }
 .main-sidebar .brand-link .brand-image { float:none; margin:0; width:auto; height:auto; max-width:100%; max-height:44px; object-fit:contain; opacity:1; }
+/* Primary accents use the installation's saved brand, including on the Add-ons catalogue.
+   Dashboard widgets retain their separate white-link rules in the shared header. */
+.content-wrapper .card.card-primary.card-outline { border-top: 3px solid var(--cm-primary, #008751); }
+.content-wrapper .card.card-primary:not(.card-outline) > .card-header,
+.content-wrapper .card.card-primary:not(.card-outline) > .card-header :is(.card-title,a,.btn-tool) { color: var(--cm-primary-foreground, #fff) !important; }
+.content-wrapper .btn-link { color: var(--cm-primary, #008751); }
+.content-wrapper .btn-outline-primary { color: var(--cm-primary, #008751); border-color: var(--cm-primary, #008751); }
+.content-wrapper .btn-outline-primary:is(:hover,:focus,:active,.active) { background-color: var(--cm-primary, #008751); color: var(--cm-primary-foreground, #fff); }
 @media(max-width:767px) {
  .cm-ui .cm-toolbar { align-items:flex-start; }
  .cm-ui .cm-table th,.cm-ui .cm-table td { padding:.75rem; }
