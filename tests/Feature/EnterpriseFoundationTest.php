@@ -61,7 +61,7 @@ test('the Add-ons catalogue renders a useful locked screen without Portal access
     $this->withoutMiddleware([\App\Http\Middleware\CheckUserOnboarding::class]);
     $admin = User::factory()->create(['access_level' => 'superadmin', 'status' => 'active']);
     $response = $this->actingAs($admin)->get(route('superadmin.addons.index'))->assertOk()
-        ->assertSee('Advanced Reports and AI Intelligence')->assertSee('Locked')->assertSee('Refresh licence status');
+        ->assertSee('Advanced Reports and AI Intelligence')->assertSee('SMS Messaging')->assertSee('Locked')->assertSee('Refresh licence status');
     if ($path = getenv('ENTERPRISE_BROWSER_OUTPUT')) {
         \Illuminate\Support\Facades\File::ensureDirectoryExists(dirname(base_path($path)));
         file_put_contents(base_path(str_replace('.html', '-'.ltrim($brand, '#').'.html', $path)), $response->getContent());
