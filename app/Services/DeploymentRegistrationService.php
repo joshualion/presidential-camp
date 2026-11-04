@@ -306,8 +306,18 @@ class DeploymentRegistrationService
             || ($state['domain'] ?? null) !== $this->domain()) {
             throw new RuntimeException('Register this installation before synchronizing add-ons.');
         }
-        return Http::withToken($state['token'])->acceptJson()->withoutRedirecting()->connectTimeout(5)->timeout(15)
-            ->get($this->base().'/'.$state['id'].'/enterprise-entitlements');
+        $package = (string) config('campaign.package_type');
+        if (! in_array($package, ['presidential', 'governorship', 'senatorial', 'federal_constituency', 'lga'], true)) {
+            throw new RuntimeException('Configure the correct installation campaign scope before purchasing an add-on.');
+        }
+        // Authenticated server-to-server scope binding is separate from the
+        // customer-editable checkout URL. Once recorded, it cannot be lowered.
+        $client = Http::withToken($state['token'])->acceptJson()->withoutRedirecting()->connectTimeout(5)->timeout(15);
+        $bound = $client->post($this->base().'/'.$state['id'].'/enterprise-scope', ['package_type' => $package]);
+        if ($bound->status() !== 200) {
+            throw new RuntimeException('Could not confirm the registered campaign scope for premium pricing. Contact Portal support if the scope was changed.');
+        }
+        return $client->get($this->base().'/'.$state['id'].'/enterprise-entitlements');
     }
 
     public function revoke(): void
