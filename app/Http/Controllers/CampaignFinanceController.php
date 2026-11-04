@@ -16,11 +16,12 @@ class CampaignFinanceController extends Controller
         $id = $account?->id;
         return response()->view('backend.finance.index', [
             'profileData' => $request->user(), 'pageTitle' => 'Campaign Finance', 'accounts' => $accounts, 'account' => $account,
-            'documents' => DB::table('campaign_finance_documents')->where('account_id', $id ?? 0)->latest('id')->limit(100)->get(),
+            'documents' => DB::table('campaign_finance_documents')->where('account_id', $id ?? 0)->latest('id')->paginate(25, ['*'], 'documents_page')->withQueryString(),
             'budgets' => DB::table('campaign_finance_budgets')->where('account_id', $id ?? 0)->orderBy('id')->get(),
-            'requests' => DB::table('campaign_finance_requests')->where('account_id', $id ?? 0)->latest('id')->limit(100)->get(),
-            'entries' => DB::table('campaign_finance_entries')->where('account_id', $id ?? 0)->latest('id')->limit(100)->get(),
-            'audits' => DB::table('campaign_finance_audits')->where('account_id', $id ?? 0)->latest('id')->limit(100)->get(),
+            'requests' => DB::table('campaign_finance_requests')->where('account_id', $id ?? 0)->latest('id')->paginate(25, ['*'], 'requests_page')->withQueryString(),
+            'entries' => DB::table('campaign_finance_entries')->where('account_id', $id ?? 0)->latest('id')->paginate(25, ['*'], 'entries_page')->withQueryString(),
+            'audits' => DB::table('campaign_finance_audits')->where('account_id', $id ?? 0)->latest('id')->paginate(25, ['*'], 'audits_page')->withQueryString(),
+            'monthlyTotals' => DB::table('campaign_finance_entries')->where('account_id', $id ?? 0)->where('created_at', '>=', now()->startOfMonth())->selectRaw('kind, SUM(amount_minor) AS total')->groupBy('kind')->pluck('total', 'kind'),
             'totals' => DB::table('campaign_finance_entries')->where('account_id', $id ?? 0)->selectRaw('kind, SUM(amount_minor) AS total')->groupBy('kind')->pluck('total', 'kind'),
         ])->header('Cache-Control', 'no-store');
     }

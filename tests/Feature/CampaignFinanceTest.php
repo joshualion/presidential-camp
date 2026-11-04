@@ -18,8 +18,8 @@ beforeEach(function () {
     $entitlements->shouldReceive('cached')->andReturn(null)->byDefault();
     $country = \App\Models\Country::create(['name' => 'Nigeria', 'uuid' => (string) Str::uuid()]);
     $region = \App\Models\Region::create(['name' => 'Region', 'country_id' => $country->id]);
-    \App\Models\State::create(['name' => 'First', 'region_id' => $region->id]);
-    \App\Models\State::create(['name' => 'Second', 'region_id' => $region->id]);
+    \App\Models\State::create(['id' => 1, 'name' => 'First', 'region_id' => $region->id]);
+    \App\Models\State::create(['id' => 2, 'name' => 'Second', 'region_id' => $region->id]);
     $this->finance = app(CampaignFinanceService::class);
     $this->requester = User::factory()->create(['access_level' => 'stateadmin', 'state_id' => 1, 'status' => 'active']);
     $this->approver = User::factory()->create(['access_level' => 'stateadmin', 'state_id' => 1, 'status' => 'active']);
@@ -85,6 +85,9 @@ test('pending and rejected requests cannot be recorded and balances cannot go ne
     expect(fn () => $this->finance->record($this->requester, $this->account->id, 'expenditure', 10000, 'No funds', (string) Str::uuid(), $request))->toThrow(ValidationException::class);
     expect($this->account->fresh()->balance_minor)->toBe(0);
     expect(DB::table('campaign_finance_entries')->count())->toBe(0);
+    $rejected = $this->finance->request($this->requester, $this->account->id, null, 1000, 'Rejected request');
+    $this->finance->decide($this->approver, $rejected, false);
+    expect(fn () => $this->finance->record($this->requester, $this->account->id, 'expenditure', 1000, 'Rejected', (string) Str::uuid(), $rejected))->toThrow(ValidationException::class);
 });
 
 test('financial account data and writes remain geographically isolated', function () {
@@ -232,4 +235,27 @@ test('finance HTTP routes enforce decision permission and retain independent dec
     expect(json_decode($event->details, true)['request_id'])->toBe($request);
     expect((int)DB::table('campaign_finance_requests')->where('id', $request)->value('decided_by'))->toBe($this->approver->id);
     expect(DB::table('campaign_finance_audits')->where('action', 'request.created')->count())->toBe(1);
+});
+
+test('finance provides older transaction history and current month summaries', function () {
+    if (!app('router')->getRoutes()->getByName('finance.index')) { \Illuminate\Support\Facades\Route::middleware('web')->group(base_path('routes/enterprise-finance.php')); app('router')->getRoutes()->refreshNameLookups(); }
+    $this->withoutMiddleware([\App\Http\Middleware\CheckUserOnboarding::class]);
+    $old = $this->finance->record($this->requester, $this->account->id, 'income', 100, 'Prior month income', (string) Str::uuid());
+    DB::table('campaign_finance_entries')->where('id', $old)->update(['created_at' => now()->subMonthNoOverflow()->startOfMonth()]);
+    for ($n = 1; $n <= 30; $n++) { $this->finance->record($this->requester, $this->account->id, 'income', 100, 'Current month entry '.$n, (string) Str::uuid()); }
+    $response = $this->actingAs($this->requester)->get(route('finance.index', ['account' => $this->account->id, 'entries_page' => 2]))->assertOk()->assertSee('Prior month income');
+    $response->assertViewHas('monthlyTotals', fn ($totals) => (int)$totals['income'] === 3000);
+    $response->assertViewHas('entries', fn ($entries) => $entries->total() === 31 && $entries->currentPage() === 2);
+    $response->assertViewHas('audits', fn ($audits) => $audits->total() === 32);
+});
+
+test('finance document downloads enforce scope and integrity before returning attachments', function () {
+    if (!app('router')->getRoutes()->getByName('finance.index')) { \Illuminate\Support\Facades\Route::middleware('web')->group(base_path('routes/enterprise-finance.php')); app('router')->getRoutes()->refreshNameLookups(); }
+    \Illuminate\Support\Facades\Storage::fake('local');
+    $id = $this->finance->attachDocument($this->requester, $this->account->id, null, \Illuminate\Http\UploadedFile::fake()->image('receipt.png'));
+    $document = DB::table('campaign_finance_documents')->where('id', $id)->first();
+    $this->actingAs($this->requester)->get(route('finance.documents.download', $id))->assertOk()->assertHeader('Content-Type', 'application/octet-stream');
+    $this->actingAs($this->outsider)->get(route('finance.documents.download', $id))->assertNotFound();
+    \Illuminate\Support\Facades\Storage::disk('local')->put($document->path, 'tampered');
+    $this->actingAs($this->requester)->get(route('finance.documents.download', $id))->assertNotFound();
 });
