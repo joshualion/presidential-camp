@@ -1,4 +1,4 @@
-name: Remove verified merged branches
+name: Clean verified merged branches
 on:
   pull_request:
     types: [opened, synchronize, reopened, closed]
