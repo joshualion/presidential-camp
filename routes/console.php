@@ -61,3 +61,37 @@ Schedule::call(function () {
         \App\Services\Updates\UpdateSupervisor::kick(dirname($journal));
     }
 })->everyMinute()->name('automatic-update-recovery')->withoutOverlapping()->evenInMaintenanceMode();
+
+Artisan::command('campaign:enterprise:readiness', function () {
+    $checks = [];
+    $scope = app(\App\Services\PackageScopeService::class)->current();
+    $package = $scope->package_type === 'chairmanship' ? 'lga' : $scope->package_type;
+    $checks['Installation package scope known'] = ! $scope->fallback_used
+        && in_array($package, ['presidential', 'governorship', 'senatorial', 'federal_constituency', 'lga'], true);
+
+    $state = app(\App\Services\DeploymentRegistrationService::class)->summary();
+    $checks['Registered verified installation'] = ! empty($state['registered'])
+        && empty($state['pending_revoke']) && ! empty($state['contact_verified']);
+
+    $portal = rtrim((string) config('campaign.portal_web_base'), '/');
+    $parsed = parse_url($portal);
+    $origin = (($parsed['scheme'] ?? '') === 'https' && ! empty($parsed['host']))
+        ? 'https://'.$parsed['host'].(isset($parsed['port']) ? ':'.$parsed['port'] : '')
+        : '';
+    $checks['Trusted Portal checkout origin'] = $origin !== ''
+        && in_array($origin, config('campaign.portal_checkout_origins', []), true);
+
+    $pem = (string) config('enterprise.public_key');
+    $key = $pem !== '' ? openssl_pkey_get_public($pem) : false;
+    $details = $key ? openssl_pkey_get_details($key) : false;
+    $checks['Dedicated RSA entitlement verification key'] = is_array($details)
+        && $details['type'] === OPENSSL_KEYTYPE_RSA && $details['bits'] >= 2048;
+
+    foreach ($checks as $label => $passed) {
+        $this->line(($passed ? 'PASS' : 'FAIL').'  '.$label);
+    }
+    $this->line('Portal price scope: '.($package ?: 'unknown'));
+    $this->line('SMS premium enforcement: '.(config('enterprise.sms_enforcement_enabled') ? 'enabled' : 'disabled'));
+    $this->line('Portal SMS wallet launch: not part of this licence readiness check.');
+    return in_array(false, $checks, true) ? 1 : 0;
+})->purpose('Read-only premium module installation readiness check without enabling SMS sending or purchase');
