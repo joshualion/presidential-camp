@@ -92,3 +92,27 @@ test('SMS access is rechecked rather than retaining a prior grant in a long runn
     expect($access->allowed())->toBeTrue();
     expect($access->allowed())->toBeFalse();
 });
+
+
+test('SMS navigation uses verified cache without refreshing over the network', function () {
+    $mock = $this->mock(EntitlementService::class);
+    $mock->shouldReceive('active')->never();
+    $mock->shouldReceive('cached')->once()->andReturn(['valid_until' => time() + 500, 'features' => [
+        'sms_messaging' => ['active' => true, 'starts_at' => time() - 500, 'expires_at' => time() + 500],
+    ]]);
+    expect((new SmsAddonAccess)->allowed(false))->toBeTrue();
+});
+
+test('SMS navigation refuses expired or future cached feature grants without network requests', function () {
+    $mock = $this->mock(EntitlementService::class);
+    $mock->shouldReceive('active')->never();
+    $mock->shouldReceive('cached')->once()->ordered()->andReturn(['valid_until' => time() + 500, 'features' => [
+        'sms_messaging' => ['active' => true, 'starts_at' => time() - 500, 'expires_at' => time() - 1],
+    ]]);
+    $mock->shouldReceive('cached')->once()->ordered()->andReturn(['valid_until' => time() + 500, 'features' => [
+        'sms_messaging' => ['active' => true, 'starts_at' => time() + 100, 'expires_at' => time() + 500],
+    ]]);
+    $access = new SmsAddonAccess;
+    expect($access->allowed(false))->toBeFalse();
+    expect($access->allowed(false))->toBeFalse();
+});
