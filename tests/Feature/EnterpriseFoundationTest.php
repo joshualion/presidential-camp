@@ -8,6 +8,17 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Permission;
 
+test('read-only premium installation readiness fails closed without registration and signing trust', function () {
+    \App\Models\SystemSetting::create([
+        'package' => 'governorship', 'system_name' => 'Scope Fixture', 'system_country' => 'Nigeria',
+    ]);
+    config(['enterprise.public_key' => null, 'enterprise.sms_enforcement_enabled' => false]);
+    $this->artisan('campaign:enterprise:readiness')
+        ->expectsOutputToContain('FAIL  Registered verified installation')
+        ->expectsOutputToContain('FAIL  Dedicated RSA entitlement verification key')
+        ->assertExitCode(1);
+});
+
 test('enterprise permissions are never inherited from geographic administrative rank', function (string $level) {
     $user = User::factory()->create(['access_level' => $level, 'status' => 'active']);
     foreach (config('enterprise.permissions') as $name) {
