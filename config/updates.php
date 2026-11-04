@@ -14,10 +14,10 @@ return [
     'supported_sources' => ['1.0.8', '1.0.9', '1.1.0', '1.1.1', '1.1.2', '1.1.3', '1.1.4', '1.1.5', '1.1.6', '1.1.7', '1.1.8', '1.1.9', '1.2.0', '1.2.1', '1.2.2', '1.2.3', '1.2.4'],
     // Names are added only after reviewing their up() implementation and compatibility.
     'approved_migrations' => [
-        '2026_11_04_000010_create_campaign_finance_tables' => 'fac9103b021f7cda66ff597c1c965a385ddfedbaa91c9634ceaeb39c3c29fde8',
-        '2026_11_04_125003_create_campaign_inventory' => '287aa5cebfb17b77de788db2dd1929ef70ce3ca33fb1056a126f052e98f52c64',
-        '2026_11_04_125004_capture_legacy_sms_access' => '238347070692763f083273e2676396325234a7cc6bf4537b68dd79449f1bf172',
-        '2026_11_04_125004_create_enterprise_ai_tables' => '5b5973666b2589c9f732b1d8202b96d9b0eff9a4525fb4908d8a474f05ea514e',
+        '2026_11_04_000010_create_campaign_finance_tables' => '26e4786966fe069d0b513e909d81a8a6d60766a3a232e6194d2204bbe5ef38f2',
+        '2026_11_04_125003_create_campaign_inventory' => '4a7847dc3c006578e90b11ac944c692f6c92f351c5cbe01f88f42f977b6a284a',
+        '2026_11_04_125004_capture_legacy_sms_access' => 'aea680253c2c65813ccb741718052f435ed5fa978bbbeb947f20dd7483a5ca21',
+        '2026_11_04_125004_create_enterprise_ai_tables' => 'bf6c2a49bdfc64cf981d185c5d563dac8485b2e6c48b62539c023a2d0b93fc33',
         '2026_10_28_000001_register_enterprise_capabilities' => '4a71e508d7befb9fcf7a39351079753609e0cd4f5dd4350b9fcce9587b4c0128',
         '2026_10_25_000001_add_managed_campaign_capabilities' => '477066dfed6bd774e5f52e82216981212abba501d41b6b0992a34801c64e8b55',
         '2026_10_25_000002_add_incident_evidence_metadata' => '54337f8482162a3b96c8638a5549c131816e9efab526db61838463daeb5ab66a',
