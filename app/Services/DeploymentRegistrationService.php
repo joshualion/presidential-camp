@@ -306,8 +306,10 @@ class DeploymentRegistrationService
             || ($state['domain'] ?? null) !== $this->domain()) {
             throw new RuntimeException('Register this installation before synchronizing add-ons.');
         }
-        $package = (string) config('campaign.package_type');
-        if (! in_array($package, ['presidential', 'governorship', 'senatorial', 'federal_constituency', 'lga'], true)) {
+        $package = app(\App\Services\PackageScopeService::class)->packageType();
+        $package = $package === 'chairmanship' ? 'lga' : $package;
+        if (app(\App\Services\PackageScopeService::class)->fallbackUsed()
+            || ! in_array($package, ['presidential', 'governorship', 'senatorial', 'federal_constituency', 'lga'], true)) {
             throw new RuntimeException('Configure the correct installation campaign scope before purchasing an add-on.');
         }
         // Authenticated server-to-server scope binding is separate from the
