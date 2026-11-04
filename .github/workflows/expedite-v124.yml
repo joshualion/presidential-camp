@@ -1,0 +1,111 @@
+name: Publish signed v1.2.4 promptly
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/expedite-v124.yml']
+permissions:
+  contents: read
+concurrency:
+  group: expedite-v124
+  cancel-in-progress: false
+jobs:
+  signed-release:
+    if: github.ref == 'refs/heads/main'
+    environment: community-release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      CANDIDATE_VERSION: '1.2.4'
+      APP_ENV: testing
+      APP_URL: http://localhost
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ':memory:'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+          persist-credentials: false
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, xml, curl, zip, gd, bcmath, intl, pdo_sqlite, pdo_mysql
+          tools: composer:v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Check production prerequisites and signed manifest identity
+        env:
+          LEGAL_READY: ${{ vars.COMMUNITY_LEGAL_REVIEW_APPROVED }}
+        run: |
+          set -Eeuo pipefail
+          test "$LEGAL_READY" = true
+          test -s config/release-public.pem
+          grep -q "'version' => env('APP_VERSION', '1.2.4')" config/release.php
+          if git lfs ls-files | grep ' - '; then exit 1; fi
+      - name: Install and audit PHP/JS dependencies
+        run: |
+          composer install --prefer-dist --no-interaction
+          composer audit --locked --no-interaction
+          npm ci
+          npm run build
+          npm audit --omit=dev
+          cp .env.example .env
+          php artisan key:generate --force
+          composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction
+          composer check-platform-reqs --no-dev
+      - name: Build established-key signed release
+        env:
+          CAMPAIGN_RELEASE_PRIVATE_KEY: ${{ secrets.CAMPAIGN_RELEASE_PRIVATE_KEY }}
+          CAMPAIGN_RELEASE_PRIVATE_KEY_PATH: ${{ runner.temp }}/campaign-release-private.pem
+          CAMPAIGN_RELEASE_PUBLIC_KEY_PATH: config/release-public.pem
+        run: php scripts/prepare-release.php
+      - name: Verify signatures and immutable asset integrity
+        run: |
+          set -Eeuo pipefail
+          cd builds/candidate
+          sha256sum --check campaign-manager.zip.sha256
+          sha256sum --check campaign-manager-updater-bootstrap.zip.sha256
+          unzip -tq campaign-manager.zip
+          unzip -tq campaign-manager-updater-bootstrap.zip
+          jq -e '.version == "1.2.4"' release-manifest.json
+      - name: Upload fallback signed archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: signed-v124-for-presentation
+          path: |
+            builds/candidate/campaign-manager.zip
+            builds/candidate/campaign-manager.zip.sha256
+            builds/candidate/release-manifest.json
+            builds/candidate/campaign-manager-updater-bootstrap.zip
+            builds/candidate/campaign-manager-updater-bootstrap.zip.sha256
+          if-no-files-found: error
+      - name: Publish only the tested main source to official distribution
+        env:
+          GH_TOKEN: ${{ secrets.COMMUNITY_DISTRIBUTION_TOKEN }}
+        run: |
+          set -Eeuo pipefail
+          test -n "$GH_TOKEN"
+          current_head="$(GH_TOKEN="${{ github.token }}" gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)"
+          test "$current_head" = "$GITHUB_SHA" || { echo "Superseded source"; exit 1; }
+          if gh release view v1.2.4 --repo joshualion/Campaign-Manager >/dev/null 2>&1; then
+            echo "Release v1.2.4 already published; refuse to replace"; exit 0
+          fi
+          gh release create v1.2.4 --repo joshualion/Campaign-Manager --latest --title 'Campaign Manager v1.2.4' --notes-file docs/releases/v1.2.4.md \
+            builds/candidate/campaign-manager.zip builds/candidate/release-manifest.json builds/candidate/campaign-manager.zip.sha256 builds/candidate/campaign-manager-updater-bootstrap.zip builds/candidate/campaign-manager-updater-bootstrap.zip.sha256
+      - name: Validate public assets
+        run: |
+          set -Eeuo pipefail
+          base="https://github.com/joshualion/Campaign-Manager/releases/download/v1.2.4"
+          mkdir -p "$RUNNER_TEMP/public-release"
+          cd "$RUNNER_TEMP/public-release"
+          for file in campaign-manager.zip campaign-manager.zip.sha256 release-manifest.json campaign-manager-updater-bootstrap.zip campaign-manager-updater-bootstrap.zip.sha256; do
+            curl -fL --retry 4 --retry-delay 2 "$base/$file" -o "$file"
+          done
+          sha256sum --check campaign-manager.zip.sha256
+          sha256sum --check campaign-manager-updater-bootstrap.zip.sha256
+          unzip -tq campaign-manager.zip
+          jq -e '.version == "1.2.4"' release-manifest.json
+      - name: Remove temporary signing material
+        if: always()
+        run: rm -f "$RUNNER_TEMP/campaign-release-private.pem"
