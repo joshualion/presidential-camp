@@ -48,6 +48,12 @@
 .content-wrapper .card.card-primary > .card-header :is(.card-title,.btn-tool,a,button,i,svg) {
   color: var(--cm-primary-foreground, #fff) !important;
 }
+/* AdminLTE's secondary metric panels also use filled headers, but do not
+   inherit the primary theme token. They need their own light foreground. */
+.content-wrapper .card.card-secondary:not(.card-outline) > .card-header,
+.content-wrapper .card.card-secondary:not(.card-outline) > .card-header :is(.card-title,.btn-tool,a,button,i,svg) {
+  color: #fff !important;
+}
 .content-wrapper .btn-link { color: var(--cm-primary, #008751); }
 .content-wrapper .btn-outline-primary { color: var(--cm-primary, #008751); border-color: var(--cm-primary, #008751); }
 .content-wrapper .btn-outline-primary:is(:hover,:focus,:active,.active) { background-color: var(--cm-primary, #008751); color: var(--cm-primary-foreground, #fff); }
