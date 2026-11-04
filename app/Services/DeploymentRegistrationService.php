@@ -315,6 +315,14 @@ class DeploymentRegistrationService
         // Authenticated server-to-server scope binding is separate from the
         // customer-editable checkout URL. Once recorded, it cannot be lowered.
         $client = Http::withToken($state['token'])->acceptJson()->withoutRedirecting()->connectTimeout(5)->timeout(15);
+        // Recover version reporting after an interrupted updater receipt. Browser
+        // query parameters never supply the version used for checkout readiness.
+        $reported = $client->post($this->base().'/'.$state['id'].'/heartbeat', [
+            'event' => 'update_checked', 'installed_version' => app(OfficialUpdateService::class)->installedVersion(),
+        ]);
+        if ($reported->status() !== 200 || $reported->json('accepted') !== true) {
+            return $reported; // EntitlementService applies its normal rejection/outage policy.
+        }
         $bound = $client->post($this->base().'/'.$state['id'].'/enterprise-scope', ['package_type' => $package]);
         if ($bound->status() !== 200) {
             throw new RuntimeException('Could not confirm the registered campaign scope for premium pricing. Contact Portal support if the scope was changed.');

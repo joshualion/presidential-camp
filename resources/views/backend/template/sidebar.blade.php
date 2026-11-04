@@ -240,6 +240,7 @@
   @Include('backend.template.userMenu')
 @endif
 <!-- /Member Menu -->
+@include('backend.template.partials.enterprise-menu')
 
 
 

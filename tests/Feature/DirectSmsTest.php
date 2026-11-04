@@ -20,6 +20,9 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 beforeEach(function () {
+    $entitlements = $this->mock(\App\Services\Enterprise\EntitlementService::class);
+    $entitlements->shouldReceive('active')->with('sms_messaging')->andReturn(true);
+    $entitlements->shouldReceive('cached')->andReturn(null);
     config(['campaign.deployment_mode' => 'self_hosted', 'queue.default' => 'database', 'cache.default' => 'array']);
     SystemSetting::create(['package' => 'presidential', 'direct_sms_enabled' => true, 'direct_sms_levels' => ['nationaladmin', 'regionaladmin', 'stateadmin', 'lgaadmin']]);
     Country::firstOrCreate(['id' => 1], ['uuid' => (string) Str::uuid(), 'name' => 'Nigeria']);

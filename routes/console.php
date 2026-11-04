@@ -91,7 +91,7 @@ Artisan::command('campaign:enterprise:readiness', function () {
         $this->line(($passed ? 'PASS' : 'FAIL').'  '.$label);
     }
     $this->line('Portal price scope: '.($package ?: 'unknown'));
-    $this->line('SMS premium enforcement: '.(config('enterprise.sms_enforcement_enabled') ? 'enabled' : 'disabled'));
+    $this->line('SMS premium enforcement: required (eligible pre-upgrade configured providers retain bound legacy access).');
     $this->line('Portal SMS wallet launch: not part of this licence readiness check.');
     return in_array(false, $checks, true) ? 1 : 0;
 })->purpose('Read-only premium module installation readiness check without enabling SMS sending or purchase');

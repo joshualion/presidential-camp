@@ -81,6 +81,7 @@ class UpdateWorker
                 $this->progress('migrating', 'Running only reviewed, pending upgrade migrations.');
                 UpdateProcess::artisan(['migrate', '--force', '--no-interaction', '--realpath', '--path='.$migrationDir]);
             }
+            UpdateProcess::artisan(['campaign:enterprise:bootstrap']);
             $this->progress('verifying', 'Checking the upgraded application, database and installed version.');
             UpdateProcess::artisan(['campaign:updates-health', $this->job['target_version']]);
             UpdateProcess::artisan(['config:cache']);

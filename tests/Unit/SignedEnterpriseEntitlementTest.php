@@ -15,7 +15,7 @@ class SignedEnterpriseEntitlementTest extends TestCase
             'protocol' => 1, 'installation_id' => 'installation-a', 'domain' => 'campaign.example.test',
             'issued_at' => 1000, 'refresh_after' => 1900, 'valid_until' => 87400,
             'features' => ['advanced_reports' => ['active' => true, 'starts_at' => 900, 'expires_at' => 5000]],
-            'catalogue' => [],
+            'catalogue' => [], 'package_type' => 'governorship',
         ], $changes);
         $payload = json_encode($claims, JSON_THROW_ON_ERROR);
         openssl_sign($payload, $signature, $key, OPENSSL_ALGO_SHA256);
@@ -75,5 +75,27 @@ class SignedEnterpriseEntitlementTest extends TestCase
         [, $key] = $this->envelope();
         $this->expectException(RuntimeException::class);
         (new SignedEntitlement)->verify($envelope, $key, 'installation-a', 'campaign.example.test', 1100);
+    }
+
+    public function test_signed_scope_is_verified_for_every_supported_package(): void
+    {
+        foreach (['presidential', 'governorship', 'senatorial', 'federal_constituency', 'lga'] as $package) {
+            [$envelope, $key] = $this->envelope(['package_type' => $package]);
+            $claims = (new SignedEntitlement)->verify($envelope, $key, 'installation-a', 'campaign.example.test', 1100, $package);
+            $this->assertSame($package, $claims['package_type']);
+        }
+    }
+
+    public function test_valid_signature_cannot_authorize_another_campaign_scope(): void
+    {
+        foreach (['presidential', null, 1, 'unknown'] as $package) {
+            [$envelope, $key] = $this->envelope(['package_type' => $package]);
+            try {
+                (new SignedEntitlement)->verify($envelope, $key, 'installation-a', 'campaign.example.test', 1100, 'governorship');
+                $this->fail('A missing or mismatched signed campaign scope was accepted.');
+            } catch (RuntimeException) {
+                $this->addToAssertionCount(1);
+            }
+        }
     }
 }

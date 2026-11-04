@@ -28,7 +28,19 @@ class EntitlementService
     private function verify(array $envelope): array
     {
         [$id, $domain] = $this->identity();
-        return $this->verifier->verify($envelope, (string) config('enterprise.public_key'), $id, $domain, time());
+        $scope = app(\App\Services\PackageScopeService::class)->current();
+        if ($scope->fallback_used) {
+            throw new RuntimeException('Configure the installation campaign scope before using add-ons.');
+        }
+        $package = $scope->package_type === 'chairmanship' ? 'lga' : $scope->package_type;
+        $keys = array_merge([(string) config('enterprise.public_key')], (array) config('enterprise.previous_public_keys', []));
+        foreach (array_slice($keys, 0, 3) as $key) {
+            if (!is_string($key) || $key === '') { continue; }
+            try {
+                return $this->verifier->verify($envelope, $key, $id, $domain, time(), $package);
+            } catch (\Throwable) { /* Never trust keys supplied by the API response. */ }
+        }
+        throw new RuntimeException('The entitlement could not be verified with an installed trust anchor.');
     }
 
     public function cached(): ?array

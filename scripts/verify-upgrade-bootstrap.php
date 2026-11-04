@@ -15,6 +15,7 @@ use Illuminate\Support\Str;
 [$script, $root, $archive, $metadata, $report, $bootstrapArchive, $sourceVersion] = $argv;
 $targetVersion = json_decode(file_get_contents($metadata), true, 64, JSON_THROW_ON_ERROR)['version'];
 $reviewedSources = match ($targetVersion) {
+    '1.2.5' => ['1.1.3', '1.1.4', '1.1.5', '1.1.6', '1.1.7', '1.1.8', '1.1.9', '1.2.0', '1.2.1', '1.2.2', '1.2.3', '1.2.4'],
     '1.2.4' => ['1.1.3', '1.1.4', '1.1.5', '1.1.6', '1.1.7', '1.1.8', '1.1.9', '1.2.0', '1.2.1', '1.2.2', '1.2.3'],
     '1.2.3' => ['1.1.3', '1.1.4', '1.1.5', '1.1.6', '1.1.7', '1.1.8', '1.1.9', '1.2.0', '1.2.1', '1.2.2'],
     '1.2.2' => ['1.1.3', '1.1.4', '1.1.5', '1.1.6', '1.1.7', '1.1.8', '1.1.9', '1.2.0', '1.2.1'],
@@ -163,6 +164,9 @@ if (version_compare($targetVersion, '1.2.0', '>=') && version_compare($sourceVer
 if (version_compare($targetVersion, '1.2.2', '>=') && version_compare($sourceVersion, '1.2.2', '<')) {
     $expectedMigrations[] = '2026_10_28_000001_register_enterprise_capabilities';
 }
+if (version_compare($targetVersion, '1.2.5', '>=') && version_compare($sourceVersion, '1.2.5', '<')) {
+    $expectedMigrations = array_merge($expectedMigrations, ['2026_11_04_000010_create_campaign_finance_tables', '2026_11_04_125003_create_campaign_inventory', '2026_11_04_125004_capture_legacy_sms_access', '2026_11_04_125004_create_enterprise_ai_tables']);
+}
 $actualMigrations = array_keys($plan['pending_migrations']);
 sort($expectedMigrations); sort($actualMigrations);
 $assert($actualMigrations === $expectedMigrations, 'Unexpected pending migrations. Expected '.json_encode($expectedMigrations).'; received '.json_encode($actualMigrations));
@@ -210,6 +214,19 @@ if (version_compare($targetVersion, '1.2.2', '>=')) {
     $assert($registeredCapabilities === $expectedCapabilities, 'Enterprise capabilities were not registered during the real upgrade.');
     $enterpriseCapabilitiesRegistered = true;
 }
+$enterpriseInfrastructureInitialized = false;
+$automaticEntitlementTrust = false;
+if (version_compare($targetVersion, '1.2.5', '>=')) {
+    foreach (['campaign_finance_accounts', 'campaign_finance_budgets', 'campaign_finance_requests', 'campaign_finance_entries', 'campaign_finance_audits', 'campaign_finance_documents', 'campaign_material_categories', 'campaign_materials', 'campaign_material_stocks', 'campaign_material_requests', 'campaign_material_request_events', 'campaign_material_movements', 'campaign_enterprise_legacy_access', 'enterprise_ai_settings', 'enterprise_ai_usage', 'enterprise_ai_audits'] as $table) { $assert(\Illuminate\Support\Facades\Schema::hasTable($table), 'Missing enterprise table after update: '.$table); }
+    $verification = require $root.'/config/enterprise.php';
+    $pem = (string) ($verification['public_key'] ?? '');
+    $key = openssl_pkey_get_public($pem);
+    $details = $key ? openssl_pkey_get_details($key) : false;
+    $assert($details && $details['type'] === OPENSSL_KEYTYPE_RSA && $details['bits'] >= 2048, 'Automatic enterprise verification trust is missing.');
+    $assert(hash_file('sha256', $root.'/config/enterprise-public.pem') === hash_file('sha256', __DIR__.'/../config/enterprise-public.pem'), 'Updated trust anchor differs from reviewed release source.');
+    $assert(is_file($root.'/app/Console/Commands/CampaignEnterpriseBootstrap.php'), 'Enterprise initializer was not installed.');
+    $enterpriseInfrastructureInitialized = true; $automaticEntitlementTrust = true;
+}
 $assert(hash_file('sha256', $root.'/.env') === $beforeEnv, 'Environment or APP_KEY changed.');
 $assert(hash_file('sha256', $uploads.'/upgrade-preservation.txt') === $beforeUpload, 'Existing upload changed.');
 $assert(DB::table('political_parties')->where('acronym', 'OWN')->value('logo') === 'owner-custom-logo.png', 'Custom party changed.');
@@ -227,10 +244,12 @@ $result = [
     'environment_preserved' => true, 'existing_users_preserved' => true,
     'existing_uploads_preserved' => true, 'custom_role_assignments_preserved' => true, 'custom_parties_preserved' => true,
     'enterprise_capabilities_registered' => $enterpriseCapabilitiesRegistered,
+    'enterprise_infrastructure_initialized' => $enterpriseInfrastructureInitialized, 'automatic_entitlement_trust' => $automaticEntitlementTrust,
     'ndc_installed' => true, 'credentials_verified' => true,
     'authorization' => 'isolated entitlement stub; no payment or customer installation used',
 ];
 file_put_contents($report, json_encode($result, JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR)."\n");
 echo json_encode($result, JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR)."\n";
+
 
 

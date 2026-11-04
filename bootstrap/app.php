@@ -36,7 +36,6 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-        $middleware->alias(['enterprise.feature' => \App\Http\Middleware\EnsureEnterpriseFeature::class]);
         $middleware->trustProxies(at: '*');
         $middleware->web(prepend: [
             UseInstallerSafeDrivers::class,
@@ -48,6 +47,7 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $middleware->alias([
+                         'enterprise.feature' => \App\Http\Middleware\EnsureEnterpriseFeature::class,
                          'access_level' => Accesslevel::class,
                          'check_onboarding' => CheckUserOnboarding::class, // Add this alias
                          'kuyak_eyen_ino' => KuyakEyenIno::class,

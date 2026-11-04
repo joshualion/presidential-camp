@@ -230,7 +230,7 @@
 
 </style>
    @livewireStyles
-<link rel="stylesheet" href="{{ asset('assets/dist/css/campaign-ui.css') }}?v=1.2.4">
+<link rel="stylesheet" href="{{ asset('assets/dist/css/campaign-ui.css') }}?v=1.2.5">
 @stack('styles')
 @include('shared.password-visibility')
 </head>
