@@ -14,6 +14,7 @@ use App\Services\Enterprise\WorkforceReportService;
 use Illuminate\Support\Str;
 use Spatie\Permission\Models\Permission;
 
+
 function workforceReportFixture(): array
 {
     config(['campaign.deployment_mode' => 'managed']);
@@ -83,7 +84,10 @@ test('workforce report routes reject unlicensed and unauthorized users', functio
     $user = User::factory()->create(['access_level' => 'stateadmin']);
     $this->actingAs($user)->get(route('enterprise.reports.workforce'))->assertForbidden();
     $user->givePermissionTo(Permission::findOrCreate('reports.view', 'web'));
-    $this->mock(EntitlementService::class)->shouldReceive('active')->with('advanced_reports')->andReturn(false);
+    $entitlements = $this->mock(EntitlementService::class);
+    $entitlements->shouldReceive('active')->with('sms_messaging')->andReturn(false);
+    $entitlements->shouldReceive('cached')->andReturn(null);
+    $entitlements->shouldReceive('active')->with('advanced_reports')->andReturn(false);
     $this->get(route('enterprise.reports.workforce'))->assertStatus(402);
     $this->get(route('enterprise.reports.workforce.export'))->assertStatus(402);
 });
@@ -94,7 +98,10 @@ test('CSV requires export permission separately and contains only authorized agg
     $this->withoutMiddleware([\App\Http\Middleware\CheckUserOnboarding::class]);
     $user = User::factory()->create(['access_level' => 'stateadmin', 'state_id' => $allowed['state']->id]);
     $user->givePermissionTo(Permission::findOrCreate('reports.view', 'web'));
-    $this->mock(EntitlementService::class)->shouldReceive('active')->with('advanced_reports')->andReturn(true);
+    $entitlements = $this->mock(EntitlementService::class);
+    $entitlements->shouldReceive('active')->with('sms_messaging')->andReturn(false);
+    $entitlements->shouldReceive('cached')->andReturn(null);
+    $entitlements->shouldReceive('active')->with('advanced_reports')->andReturn(true);
     $this->actingAs($user)->get(route('enterprise.reports.workforce.export'))->assertForbidden();
     $user->givePermissionTo(Permission::findOrCreate('reports.export', 'web'));
     $response = $this->get(route('enterprise.reports.workforce.export'))->assertOk();
@@ -107,7 +114,10 @@ test('workforce report validates grouping and date range and renders a useful da
     SystemSetting::create(['package' => 'presidential', 'system_name' => 'Reports', 'system_country' => 'Nigeria']);
     $this->withoutMiddleware([\App\Http\Middleware\CheckUserOnboarding::class]);
     $user = User::factory()->create(['access_level' => 'superadmin']);
-    $this->mock(EntitlementService::class)->shouldReceive('active')->with('advanced_reports')->andReturn(true);
+    $entitlements = $this->mock(EntitlementService::class);
+    $entitlements->shouldReceive('active')->with('sms_messaging')->andReturn(false);
+    $entitlements->shouldReceive('cached')->andReturn(null);
+    $entitlements->shouldReceive('active')->with('advanced_reports')->andReturn(true);
     $this->actingAs($user)->get(route('enterprise.reports.workforce', ['group' => 'users.email']))
         ->assertSessionHasErrors('group');
     $this->get(route('enterprise.reports.workforce', ['from' => '2026-11-01', 'to' => '2026-10-01']))
@@ -115,3 +125,19 @@ test('workforce report validates grouping and date range and renders a useful da
     $this->get(route('enterprise.reports.workforce', ['to' => '2026-10-02']))->assertOk()
         ->assertSee('Campaign workforce reports')->assertSee('Authorized State')->assertSee('Export CSV');
 });
+
+test('workforce PDF requires export permission and contains only scoped aggregate records', function () {
+    [$allowed, $other] = workforceReportFixture();
+    SystemSetting::create(['package' => 'presidential', 'system_name' => 'Reports', 'system_country' => 'Nigeria']);
+    $this->withoutMiddleware([\App\Http\Middleware\CheckUserOnboarding::class]);
+    $user = User::factory()->create(['access_level' => 'stateadmin', 'state_id' => $allowed['state']->id]);
+    $user->givePermissionTo(Permission::findOrCreate('reports.view', 'web'));
+    $entitlements = $this->mock(EntitlementService::class);
+    $entitlements->shouldReceive('active')->with('advanced_reports')->andReturn(true);
+    $this->actingAs($user)->get(route('enterprise.reports.workforce.pdf'))->assertForbidden();
+    $user->givePermissionTo(Permission::findOrCreate('reports.export', 'web'));
+    $response = $this->get(route('enterprise.reports.workforce.pdf'))->assertOk()->assertHeader('Content-Type', 'application/pdf');
+    expect($response->getContent())->toStartWith('%PDF-1.4')->toContain('Authorized State')->not->toContain('Other State')
+        ->not->toContain($allowed['member']->email)->not->toContain($other['member']->email);
+});
+
