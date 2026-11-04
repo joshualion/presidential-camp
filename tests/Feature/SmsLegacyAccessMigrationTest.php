@@ -12,7 +12,8 @@ use Illuminate\Support\Facades\Schema;
 
 function captureSmsLegacyFixture(): void
 {
-    Schema::dropIfExists('campaign_enterprise_legacy_access');
+    // Simulate the pre-migration snapshot without DDL inside transactional tests.
+    DB::table('campaign_enterprise_legacy_access')->delete();
     $migration = require database_path('migrations/2026_11_04_125004_capture_legacy_sms_access.php');
     $migration->up();
 }
