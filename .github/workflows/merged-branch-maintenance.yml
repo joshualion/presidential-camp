@@ -3,6 +3,9 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, closed]
     branches: [main]
+  push:
+    branches: [main]
+    paths: ['.github/workflows/merged-branch-maintenance.yml']
   workflow_dispatch:
     inputs:
       dry_run:
@@ -27,7 +30,7 @@ jobs:
           node-version: '22'
       - run: node --test tests/maintenance/merged-branch-cleanup.test.mjs
   cleanup:
-    if: github.event_name == 'workflow_dispatch' || (github.event.pull_request.merged == true && github.event.pull_request.head.repo.full_name == github.repository)
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && contains(github.event.head_commit.message, '[cleanup-branches]')) || (github.event.pull_request.merged == true && github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-latest
     permissions:
       contents: write
