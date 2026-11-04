@@ -5,12 +5,21 @@ return [
         'name' => 'Campaign Manager Core',
         'package' => 'campaign-manager-core',
         'channel' => env('RELEASE_CHANNEL', 'self-hosted'),
-        'version' => env('APP_VERSION', '1.2.3'),
+        'version' => env('APP_VERSION', '1.2.4'),
         'build_date' => env('RELEASE_BUILD_DATE', null),
         'minimum_php' => '8.2.0',
     ],
 
     'release_notes' => [
+        '1.2.4' => [
+            'Fixes text and action-icon contrast on branded primary and secondary dashboard headers across supported theme colours.',
+            'Adds installation-bound add-on price review and signed entitlement refresh, with verified purchases processed by the Campaign Manager Portal.',
+            'Registers SMS Messaging as an independently licenced module for the existing Termii and BulkSMSNigeria direct-provider integration.',
+            'Protects direct-provider SMS screens, endpoints and queued sending when module enforcement is enabled without changing Portal SMS wallet billing.',
+            'Retains the current messaging, community features, SMS provider settings and existing customer data until an administrator enables the premium module rollout.',
+            'Applies audited Symfony MIME and mbstring security updates and preserves signed updates and database recovery procedures.',
+            'Advanced Reports and AI, Finance, and Merchandise remain unavailable for purchase until their operational implementations are separately verified.',
+        ],
         '1.2.3' => [
             'Restores the configured brand colour to primary text, page headings and navigation instead of substituting black.',
             'Applies the saved colour to Add-ons card accents and primary link/outline actions.',
