@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 
 beforeEach(function () {
+    \App\Models\SystemSetting::create(['package' => 'governorship', 'system_name' => 'Scope test', 'system_country' => 'Nigeria']);
     $this->enterpriseTestDirectory = storage_path('framework/testing/enterprise-'.Str::uuid());
 });
 afterEach(function () { File::deleteDirectory($this->enterpriseTestDirectory); });
@@ -24,7 +25,7 @@ function enterpriseOfflineFixture(string $directory, array $changes = []): array
     $claims = array_replace(['protocol' => 1, 'installation_id' => 'installation-a', 'domain' => 'campaign.example.test',
         'issued_at' => time() - 1000, 'refresh_after' => time() - 100, 'valid_until' => time() + 1000,
         'features' => ['advanced_reports' => ['active' => true, 'starts_at' => time() - 5000, 'expires_at' => time() + 500]],
-        'catalogue' => []], $changes);
+        'catalogue' => [], 'package_type' => 'governorship'], $changes);
     $payload = json_encode($claims, JSON_THROW_ON_ERROR); openssl_sign($payload, $signature, $key, OPENSSL_ALGO_SHA256);
     $response = new Response(new \GuzzleHttp\Psr7\Response(200, [], json_encode(['payload' => base64_encode($payload), 'signature' => base64_encode($signature)])));
     $service = new class($registration, new SignedEntitlement, $directory.'/cache.json') extends EntitlementService {
@@ -68,4 +69,13 @@ test('expiry is enforced independently for each feature during an outage', funct
     $service->refresh();
     $registration->shouldReceive('enterpriseEntitlements')->twice()->ordered()->andThrow(new ConnectionException('Offline'));
     expect($service->active('advanced_reports'))->toBeFalse()->and($service->active('campaign_finance'))->toBeTrue();
+});
+
+test('cached entitlements cannot survive a change in the installation campaign scope', function () {
+    [$service, $registration, $response] = enterpriseOfflineFixture($this->enterpriseTestDirectory);
+    $registration->shouldReceive('enterpriseEntitlements')->once()->andReturn($response);
+    $service->refresh();
+    expect($service->cached())->not->toBeNull();
+    \App\Models\SystemSetting::query()->update(['package' => 'presidential']);
+    expect($service->cached())->toBeNull();
 });

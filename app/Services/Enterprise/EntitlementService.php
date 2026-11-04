@@ -28,7 +28,12 @@ class EntitlementService
     private function verify(array $envelope): array
     {
         [$id, $domain] = $this->identity();
-        return $this->verifier->verify($envelope, (string) config('enterprise.public_key'), $id, $domain, time());
+        $scope = app(\App\Services\PackageScopeService::class)->current();
+        if ($scope->fallback_used) {
+            throw new RuntimeException('Configure the installation campaign scope before using add-ons.');
+        }
+        $package = $scope->package_type === 'chairmanship' ? 'lga' : $scope->package_type;
+        return $this->verifier->verify($envelope, (string) config('enterprise.public_key'), $id, $domain, time(), $package);
     }
 
     public function cached(): ?array
