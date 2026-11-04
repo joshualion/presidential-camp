@@ -1,4 +1,4 @@
-name: Publish signed v1.2.4 promptly
+name: Publish signed v1.2.4 promptly for presentation
 on:
   push:
     branches: [main]
