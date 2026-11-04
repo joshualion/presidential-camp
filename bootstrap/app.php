@@ -64,6 +64,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'announcement.manager' => EnsureAnnouncementManager::class,
             'election.report.access' => EnsureElectionReportAccess::class,
             'sms.access' => EnsureSmsAccess::class,
+            'sms.addon' => \App\Http\Middleware\EnsureSmsAddon::class,
                         ]);
 
     })
