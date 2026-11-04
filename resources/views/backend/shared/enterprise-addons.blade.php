@@ -11,7 +11,8 @@
     @php
       $grant = $entitlement['features'][$key] ?? null;
       $catalogue = $entitlement['catalogue'][$key] ?? [];
-      $scope = config('campaign.package_type', 'presidential');
+      $scope = app(\App\Services\PackageScopeService::class)->packageType();
+      $scope = $scope === 'chairmanship' ? 'lga' : $scope;
       $prices = collect($catalogue['prices'] ?? [])->where('scope', $scope);
       $canPurchase = !empty($catalogue['purchasable']) && $prices->isNotEmpty()
         && !empty($entitlement['installation_id']);
