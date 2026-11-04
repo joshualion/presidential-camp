@@ -112,7 +112,7 @@ class DirectSmsService
         if (! $batch || ($batch->scheduled_at && $batch->scheduled_at->isFuture())) {
             return;
         }
-        if (! $batch->account?->is_active || ! $batch->sender || ! $this->access->canSend($batch->sender)) {
+        if (! app(\App\Services\Sms\SmsAddonAccess::class)->allowed() || ! $batch->account?->is_active || ! $batch->sender || ! $this->access->canSend($batch->sender)) {
             $batch->messages()->where('status', 'queued')->update(['status' => 'cancelled', 'diagnostic_code' => 'sending_disabled']);
             $batch->messages()->where('status', 'submitting')->update(['status' => 'unconfirmed', 'diagnostic_code' => 'sending_disabled_uncertain']);
             $batch->update(['status' => $batch->messages()->where('status', 'unconfirmed')->exists() ? 'reconciliation_required' : 'cancelled']);
