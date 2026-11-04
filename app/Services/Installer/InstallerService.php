@@ -163,6 +163,7 @@ class InstallerService
 
                 app(DeploymentRegistrationService::class)->assertInstallationReceipt($admin['email']);
                 app(DeploymentRegistrationService::class)->reportInstallationCompleted();
+            $this->runStep('enterprise bootstrap', fn () => app(\App\Services\Enterprise\EnterpriseBootstrapService::class)->initialize());
                 $this->runStep('install lock write', fn () => $this->installationState->create([
                     'installation_mode' => 'community',
                     'source' => 'local',
@@ -295,6 +296,7 @@ class InstallerService
 
             app(DeploymentRegistrationService::class)->assertInstallationReceipt($admin['email']);
             app(DeploymentRegistrationService::class)->reportInstallationCompleted();
+            $this->runStep('enterprise bootstrap', fn () => app(\App\Services\Enterprise\EnterpriseBootstrapService::class)->initialize());
             $this->runStep('install lock write', fn () => $this->installationState->create([
                 'deployment_mode' => 'self_hosted',
                 'package_type' => $localLicense->package_type,
