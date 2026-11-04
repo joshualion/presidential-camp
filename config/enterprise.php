@@ -24,6 +24,6 @@ return [
         'advanced_reports' => 'Understand campaign activity and geographic coverage through management reports, with optional AI assistance billed separately.',
         'campaign_finance' => 'Manage campaign income, budgets, payment requests and approvals with financial accountability.',
         'campaign_merchandise' => 'Manage campaign materials, store inventory, orders and distribution between campaign offices.',
-        'sms_messaging' => 'Unlock SMS messaging for the installation. Message delivery and wallet charges remain separate.',
+        'sms_messaging' => 'Unlock the SMS module for your installation to use your own configured BulkSMSNigeria or Termii provider. Provider delivery charges are paid separately to your chosen provider; Portal SMS wallet payments are not required.',
     ],
 ];
