@@ -1,0 +1,22 @@
+name: Cancel superseded 1.2.4 publication run
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/cancel-superseded-release.yml'
+permissions:
+  contents: read
+  actions: write
+jobs:
+  cancel-obsolete:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cancel obsolete release workflow only
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          run_id=41783718537
+          state="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id" --jq .status)"
+          if [[ "$state" == "completed" ]]; then echo "Already finished"; exit 0; fi
+          gh api -X POST "repos/$GITHUB_REPOSITORY/actions/runs/$run_id/cancel"
