@@ -101,6 +101,7 @@ jobs:
         run: |
           set -Eeuo pipefail
           for source_version in 1.1.3 1.1.4 1.1.5 1.1.6 1.1.7 1.1.8 1.1.9 1.2.0 1.2.1 1.2.2 1.2.3 1.2.4; do
+            df -h "$RUNNER_TEMP"
             source_dir="$RUNNER_TEMP/campaign-upgrade-$source_version"
             mkdir -p "$source_dir/core"
             curl --fail --location --retry 3 --retry-all-errors --retry-delay 2 --connect-timeout 10 --max-time 180 --silent --show-error "https://github.com/joshualion/Campaign-Manager/releases/download/v$source_version/campaign-manager.zip" -o "$source_dir/campaign-manager.zip"
@@ -114,6 +115,8 @@ jobs:
             php scripts/verify-upgrade-bootstrap.php "$source_dir/core" "$PWD/builds/candidate/campaign-manager.zip" "$PWD/builds/candidate/release-manifest.json" "$PWD/builds/candidate/upgrade-$source_version-report.json" "$PWD/builds/candidate/campaign-manager-updater-bootstrap.zip" "$source_version"
             test -s "$PWD/builds/candidate/upgrade-$source_version-report.json"
             jq -e '.state == "completed" and .signed_bootstrap_engine_used == true and .signatures_verified == true and .backup_verified == true and .environment_preserved == true and .existing_users_preserved == true and .existing_uploads_preserved == true and .enterprise_capabilities_registered == true and .enterprise_infrastructure_initialized == true and .automatic_entitlement_trust == true' "$PWD/builds/candidate/upgrade-$source_version-report.json"
+            # Reports are outside this isolated source directory. Do not retain twelve archives, installs and backups on the runner.
+            rm -rf "$source_dir"
           done
       - uses: actions/upload-artifact@v4
         with:
