@@ -522,3 +522,6 @@ Route::middleware(['auth', 'check_onboarding', 'access_level:superadmin'])->grou
     Route::get('/superadmin/addons', [\App\Http\Controllers\EnterpriseAddonController::class, 'index'])->name('superadmin.addons.index');
     Route::post('/superadmin/addons/refresh', [\App\Http\Controllers\EnterpriseAddonController::class, 'refresh'])->middleware('throttle:6,1')->name('superadmin.addons.refresh');
 });
+
+// Internal inventory retains existing campaign and user geographic boundaries.
+require __DIR__.'/enterprise-inventory.php';
