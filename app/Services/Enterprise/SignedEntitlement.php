@@ -7,7 +7,7 @@ use RuntimeException;
 /** Versioned Portal contract. Validate before persisting or using any claim. */
 class SignedEntitlement
 {
-    public function verify(array $envelope, string $publicKey, string $installation, string $domain, int $now): array
+    public function verify(array $envelope, string $publicKey, string $installation, string $domain, int $now, ?string $expectedPackage = null): array
     {
         $payload = $envelope['payload'] ?? null;
         $signature = $envelope['signature'] ?? null;
@@ -32,6 +32,10 @@ class SignedEntitlement
             || $claims['valid_until'] > $claims['issued_at'] + 86400
             || ! is_array($claims['features'] ?? null) || ! is_array($claims['catalogue'] ?? null)) {
             throw new RuntimeException('Entitlement identity or validity is invalid.');
+        }
+        if ($expectedPackage !== null && (! in_array($expectedPackage, ['presidential', 'governorship', 'senatorial', 'federal_constituency', 'lga'], true)
+            || ($claims['package_type'] ?? null) !== $expectedPackage)) {
+            throw new RuntimeException('Entitlement campaign scope does not match this installation. Refresh the licence status.');
         }
         foreach ($claims['features'] as $feature => $grant) {
             if (! is_string($feature) || ! is_array($grant) || ($grant['active'] ?? null) !== true

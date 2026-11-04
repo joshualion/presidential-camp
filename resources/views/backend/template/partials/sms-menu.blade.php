@@ -1,11 +1,11 @@
 @php
  $directSmsAccess = app(\App\Services\Sms\Direct\DirectSmsAccess::class);
 @endphp
-@if($directSmsAccess->enabled($profileData) && app(\App\Services\Sms\SmsAddonAccess::class)->allowed())
+@if($directSmsAccess->enabled($profileData) && app(\App\Services\Sms\SmsAddonAccess::class)->allowed(false))
 <li class="nav-item"><a class="nav-link" href="{{ route($profileData->access_level.'.direct-sms.index') }}"><i class="nav-icon fas fa-sms"></i><p>SMS messages</p></a></li>
 
 @endif
-@if(config('direct_sms.portal_visible') && app(\App\Services\Sms\SmsAddonAccess::class)->allowed())
+@if(config('direct_sms.portal_visible') && app(\App\Services\Sms\SmsAddonAccess::class)->allowed(false))
 @php
     $smsAccess = app(\App\Services\Sms\SmsAccessService::class);
     $smsConfigured = \Illuminate\Support\Facades\Schema::hasColumn('system_settings', 'portal_sms_enabled')

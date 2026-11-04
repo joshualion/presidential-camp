@@ -9,9 +9,16 @@ class EnterpriseAddonController extends Controller
 {
     public function index(Request $request, EntitlementService $entitlements)
     {
+        $syncError = null;
+        try {
+            // Browser payment claims never authorize activation.
+            $entitlements->refresh();
+        } catch (\Throwable) {
+            $syncError = 'The Portal could not be reached or the licence could not be verified. Check registration and retry. Previously verified licences remain subject to their signed expiry.';
+        }
         return response()->view('backend.shared.enterprise-addons', [
             'profileData' => $request->user(), 'pageTitle' => 'Add-ons',
-            'features' => config('enterprise.features'), 'entitlement' => $entitlements->cached(),
+            'features' => config('enterprise.features'), 'entitlement' => $entitlements->cached(), 'syncError' => $syncError,
         ])->header('Cache-Control', 'no-store');
     }
 

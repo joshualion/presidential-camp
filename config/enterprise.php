@@ -2,8 +2,10 @@
 
 return [
     // This is a trust anchor, never an installation bearer token or an AI key.
-    'public_key' => env('ENTERPRISE_ENTITLEMENT_PUBLIC_KEY'),
-    // Keep existing SMS operational until purchase, provisioning and upgrade checks pass.
+    'public_key' => env('ENTERPRISE_ENTITLEMENT_PUBLIC_KEY', is_file(__DIR__.'/enterprise-public.pem') ? file_get_contents(__DIR__.'/enterprise-public.pem') : null),
+    // Only reviewed public PEM values shipped in signed updates may be added here.
+    'previous_public_keys' => [],
+    // Deprecated rollout flag; signed or migration-bound access is now required.
     'sms_enforcement_enabled' => (bool) env('CAMPAIGN_SMS_ADDON_ENFORCEMENT', false),
     'features' => [
         'advanced_reports' => 'Advanced Reports and AI Intelligence',

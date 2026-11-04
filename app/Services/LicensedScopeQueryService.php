@@ -410,7 +410,14 @@ class LicensedScopeQueryService
             $value = $scope->scope_type === 'senatorial_district' ? $scope->senatorial_district_id : $scope->federal_constituency_id;
 
             if ($value && $this->hasColumn('polling_units', $column)) {
-                return $this->whereColumn($query, $table, $column, $value);
+                return $query->where(function ($boundary) use ($table, $column, $value) {
+                    $boundary->where($table.'.'.$column, $value)
+                        ->orWhere(function ($fallback) use ($table, $column, $value) {
+                            // Legacy units may have only ward/LGA geography. Never override a conflicting explicit boundary.
+                            $fallback->whereNull($table.'.'.$column);
+                            $this->constrainPollingUnitsThroughLga($fallback, $table, $column, $value);
+                        });
+                });
             }
         }
 

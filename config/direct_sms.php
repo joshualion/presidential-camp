@@ -2,7 +2,7 @@
 
 return [
     // Only the application owner can expose the existing hosted SMS integration.
-    'portal_visible' => (bool) env('CAMPAIGN_PORTAL_SMS_VISIBLE', false),
+    'portal_visible' => false, // Portal credit resale is outside v1.2.5.
     'batch_size' => 50,
     'requests_per_minute' => 60,
     'maximum_recipients' => 50000,

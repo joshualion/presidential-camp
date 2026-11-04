@@ -1,0 +1,65 @@
+@extends('backend.template.backend-master')
+@section('content')
+<section class="content cm-ui"><div class="container-fluid">
+    <h1 class="h3 text-primary">Campaign workforce reports</h1>
+    <p>Membership and polling-unit coverage within your campaign jurisdiction. Date filters select members by their registration date.</p>
+    <form method="GET" class="card card-body mb-3">
+        <div class="row">
+            <div class="col-md-3 mb-2"><label for="report-group">Group by</label><select id="report-group" name="group" class="form-control">
+                @foreach(['state' => 'State', 'lga' => 'Local government', 'ward' => 'Ward', 'polling_unit' => 'Polling unit'] as $key => $label)
+                    <option value="{{ $key }}" @selected(($filters['group'] ?? 'state') === $key)>{{ $label }}</option>
+                @endforeach
+            </select></div>
+            <div class="col-md-3 mb-2"><label for="report-from">Registered from</label><input id="report-from" class="form-control" type="date" name="from" value="{{ $filters['from'] ?? '' }}"></div>
+            <div class="col-md-3 mb-2"><label for="report-to">Registered through</label><input id="report-to" class="form-control" type="date" name="to" value="{{ $filters['to'] ?? '' }}"></div>
+            <div class="col-md-3 mb-2 align-self-end"><button class="btn btn-primary">Apply filters</button> <a class="btn btn-outline-secondary" href="{{ route('enterprise.reports.workforce') }}">Reset</a></div>
+        </div>
+        @foreach(['state_id', 'lga_id', 'ward_id', 'polling_unit_id'] as $key)
+            @if(!empty($filters[$key]))<input type="hidden" name="{{ $key }}" value="{{ $filters[$key] }}">@endif
+        @endforeach
+        @if($errors->any())<div class="alert alert-danger" role="alert">{{ $errors->first() }}</div>@endif
+    </form>
+    <div class="row">
+        @foreach(['members' => 'Members', 'active' => 'Active accounts', 'registered_voters' => 'Registered voters', 'covered_polling_units' => 'Covered polling units', 'uncovered_polling_units' => 'Uncovered polling units'] as $key => $label)
+            <div class="col-6 col-lg mb-3"><article class="card h-100"><div class="card-body"><h2 class="h6">{{ $label }}</h2><strong class="h3 text-primary">{{ number_format($summary[$key]) }}</strong></div></article></div>
+        @endforeach
+    </div>
+    <p>Choose a location in the table to inspect its next geographic level.</p>
+    <p>{{ $summary['coverage_percent'] }}% coverage: {{ number_format($summary['covered_polling_units']) }} of {{ number_format($summary['polling_units']) }} authorized polling units have a member matching these filters.</p>
+    @if($summary['uncovered_polling_units'] > 0)<p class="alert alert-info">Prioritize recruiting at polling units that have no matching members. Coverage counts membership presence, not verified operational readiness.</p>@endif
+    @if($canExport)<a class="btn btn-primary mb-3" href="{{ route('enterprise.reports.workforce.export', $filters) }}">Export CSV</a>
+        <a class="btn btn-outline-primary mb-3" href="{{ route('enterprise.reports.workforce.pdf', $filters) }}">Export PDF</a>@endif
+    <div class="card"><div class="card-header"><h2 class="card-title">Geographic distribution</h2></div><div class="card-body">
+        <div class="table-responsive"><table class="table table-striped"><thead><tr><th scope="col">Location</th><th scope="col">Members</th><th scope="col">Active accounts</th><th scope="col">Registered voters</th></tr></thead><tbody>
+            @php
+                $drilldown = ['state' => ['state_id', 'lga'], 'lga' => ['lga_id', 'ward'], 'ward' => ['ward_id', 'polling_unit']];
+                $next = $drilldown[$filters['group'] ?? 'state'] ?? null;
+            @endphp
+            @forelse($rows as $row)<tr><td>
+                @if($next && $row->location_id)
+                    <a href="{{ route('enterprise.reports.workforce', array_merge($filters, [$next[0] => $row->location_id, 'group' => $next[1]])) }}">{{ $row->location_name ?? 'Unassigned' }}</a>
+                @else
+                    {{ $row->location_name ?? 'Unassigned' }}
+                @endif
+            </td><td>{{ number_format($row->members) }}</td><td>{{ number_format($row->active_members) }}</td><td>{{ number_format($row->registered_voters) }}</td></tr>
+            @empty<tr><td colspan="4">No members match these filters in your authorized jurisdiction.</td></tr>@endforelse
+        </tbody></table></div>
+        {{ $rows->links() }}
+    </div></div>
+    <div class="card card-outline card-primary"><div class="card-body">
+        <h2 class="h5 text-primary">AI operational analysis</h2>
+        <p>Optional AI analysis uses your installation's OpenAI account. Provider charges are separate from the add-on licence.</p>
+        @if($canConfigureAi)<a href="{{ route('enterprise.reports.ai.settings') }}">Configure AI provider and usage limits</a>@endif
+        @if($aiError)<p class="alert alert-warning" role="alert">{{ $aiError }}</p>@endif
+        @if($canAnalyze && $aiConfigured)
+            <form method="POST" action="{{ route('enterprise.reports.workforce.analyze') }}">@csrf
+                @foreach($filters as $key => $value)<input type="hidden" name="{{ $key }}" value="{{ $value }}">@endforeach
+                <div class="form-check my-3"><input class="form-check-input" type="checkbox" name="share_aggregates" value="1" id="ai-share" required><label for="ai-share" class="form-check-label">Send this report's aggregate counts and up to 50 geographic location labels to OpenAI for analysis. Member names and contact details are excluded.</label></div>
+                <button class="btn btn-primary">Generate analysis</button>
+            </form>
+        @elseif(!$aiConfigured)<p class="text-muted mt-3">AI is not configured. Standard reports and exports remain available.</p>@endif
+        @if($analysis)<h3 class="h6 mt-3">Generated analysis — review against your records</h3><div class="border rounded p-3" style="white-space: pre-wrap">{{ $analysis }}</div>@endif
+    </div></div>
+</div></section>
+@endsection
+
