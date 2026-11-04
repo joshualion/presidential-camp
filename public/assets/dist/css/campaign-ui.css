@@ -41,8 +41,13 @@
 /* Primary accents use the installation's saved brand, including on the Add-ons catalogue.
    Dashboard widgets retain their separate white-link rules in the shared header. */
 .content-wrapper .card.card-primary.card-outline { border-top: 3px solid var(--cm-primary, #008751); }
-.content-wrapper .card.card-primary:not(.card-outline) > .card-header,
-.content-wrapper .card.card-primary:not(.card-outline) > .card-header :is(.card-title,a,.btn-tool) { color: var(--cm-primary-foreground, #fff) !important; }
+/* The shared header paints primary card headers even when the card uses card-outline.
+   Cover the heading, action buttons, icons and links together so no black labels
+   remain on brand-coloured dashboard bars. Use the contrast-aware theme token. */
+.content-wrapper .card.card-primary > .card-header,
+.content-wrapper .card.card-primary > .card-header :is(.card-title,.btn-tool,a,button,i,svg) {
+  color: var(--cm-primary-foreground, #fff) !important;
+}
 .content-wrapper .btn-link { color: var(--cm-primary, #008751); }
 .content-wrapper .btn-outline-primary { color: var(--cm-primary, #008751); border-color: var(--cm-primary, #008751); }
 .content-wrapper .btn-outline-primary:is(:hover,:focus,:active,.active) { background-color: var(--cm-primary, #008751); color: var(--cm-primary-foreground, #fff); }
