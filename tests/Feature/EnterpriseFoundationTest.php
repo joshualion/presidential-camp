@@ -45,10 +45,10 @@ test('even a permitted user needs an installation entitlement at the server boun
     } catch (\Symfony\Component\HttpKernel\Exception\HttpException $exception) { expect($exception->getStatusCode())->toBe(402); }
 });
 
-test('SMS entitlement gate stays backward compatible until explicitly enabled', function () {
+test('the legacy rollout flag cannot bypass the SMS entitlement gate', function () {
     config(['enterprise.sms_enforcement_enabled' => false]);
-    $access = new \App\Services\Sms\SmsAddonAccess;
-    expect($access->allowed())->toBeTrue();
+    $this->mock(EntitlementService::class)->shouldReceive('active')->with('sms_messaging')->once()->andReturn(false);
+    expect((new \App\Services\Sms\SmsAddonAccess)->allowed())->toBeFalse();
 });
 
 test('both hosted and direct SMS routes carry the staged entitlement middleware', function () {

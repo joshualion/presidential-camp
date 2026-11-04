@@ -12,6 +12,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 beforeEach(function () {
+    $entitlements = $this->mock(\App\Services\Enterprise\EntitlementService::class);
+    $entitlements->shouldReceive('active')->with('sms_messaging')->andReturn(true);
+    $entitlements->shouldReceive('cached')->andReturn(null);
     config(['direct_sms.portal_visible' => false, 'campaign.deployment_mode' => 'self_hosted']);
     SystemSetting::create(['package' => 'presidential', 'direct_sms_enabled' => true, 'direct_sms_levels' => DirectSmsAccess::LEVELS]);
     Country::firstOrCreate(['id' => 1], ['uuid' => (string) Str::uuid(), 'name' => 'Nigeria']);
