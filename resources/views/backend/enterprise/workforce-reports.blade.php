@@ -24,12 +24,23 @@
             <div class="col-6 col-lg mb-3"><article class="card h-100"><div class="card-body"><h2 class="h6">{{ $label }}</h2><strong class="h3 text-primary">{{ number_format($summary[$key]) }}</strong></div></article></div>
         @endforeach
     </div>
+    <p>Choose a location in the table to inspect its next geographic level.</p>
     <p>{{ $summary['coverage_percent'] }}% coverage: {{ number_format($summary['covered_polling_units']) }} of {{ number_format($summary['polling_units']) }} authorized polling units have a member matching these filters.</p>
     @if($summary['uncovered_polling_units'] > 0)<p class="alert alert-info">Prioritize recruiting at polling units that have no matching members. Coverage counts membership presence, not verified operational readiness.</p>@endif
     @if($canExport)<a class="btn btn-primary mb-3" href="{{ route('enterprise.reports.workforce.export', $filters) }}">Export CSV</a>@endif
     <div class="card"><div class="card-header"><h2 class="card-title">Geographic distribution</h2></div><div class="card-body">
         <div class="table-responsive"><table class="table table-striped"><thead><tr><th scope="col">Location</th><th scope="col">Members</th><th scope="col">Active accounts</th><th scope="col">Registered voters</th></tr></thead><tbody>
-            @forelse($rows as $row)<tr><td>{{ $row->location_name ?? 'Unassigned' }}</td><td>{{ number_format($row->members) }}</td><td>{{ number_format($row->active_members) }}</td><td>{{ number_format($row->registered_voters) }}</td></tr>
+            @php
+                $drilldown = ['state' => ['state_id', 'lga'], 'lga' => ['lga_id', 'ward'], 'ward' => ['ward_id', 'polling_unit']];
+                $next = $drilldown[$filters['group'] ?? 'state'] ?? null;
+            @endphp
+            @forelse($rows as $row)<tr><td>
+                @if($next && $row->location_id)
+                    <a href="{{ route('enterprise.reports.workforce', array_merge($filters, [$next[0] => $row->location_id, 'group' => $next[1]])) }}">{{ $row->location_name ?? 'Unassigned' }}</a>
+                @else
+                    {{ $row->location_name ?? 'Unassigned' }}
+                @endif
+            </td><td>{{ number_format($row->members) }}</td><td>{{ number_format($row->active_members) }}</td><td>{{ number_format($row->registered_voters) }}</td></tr>
             @empty<tr><td colspan="4">No members match these filters in your authorized jurisdiction.</td></tr>@endforelse
         </tbody></table></div>
         {{ $rows->links() }}
