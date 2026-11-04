@@ -34,6 +34,33 @@ test('even a permitted user needs an installation entitlement at the server boun
     } catch (\Symfony\Component\HttpKernel\Exception\HttpException $exception) { expect($exception->getStatusCode())->toBe(402); }
 });
 
+test('SMS entitlement gate stays backward compatible until explicitly enabled', function () {
+    config(['enterprise.sms_enforcement_enabled' => false]);
+    $access = new \App\Services\Sms\SmsAddonAccess;
+    expect($access->allowed())->toBeTrue();
+});
+
+test('both hosted and direct SMS routes carry the staged entitlement middleware', function () {
+    foreach (['superadmin.sms.compose.send', 'superadmin.sms.settings.index', 'superadmin.direct-sms.send'] as $name) {
+        $route = app('router')->getRoutes()->getByName($name);
+        expect($route)->not->toBeNull();
+        expect($route->gatherMiddleware())->toContain('sms.addon');
+    }
+});
+
+test('SMS enforcement refuses installation access without an active entitlement', function () {
+    config(['enterprise.sms_enforcement_enabled' => true]);
+    $this->mock(EntitlementService::class)->shouldReceive('active')
+        ->with('sms_messaging')->once()->andReturn(false);
+    $request = Request::create('/synthetic-sms');
+    try {
+        (new \App\Http\Middleware\EnsureSmsAddon)->handle($request, fn () => throw new RuntimeException('Unlicensed SMS passed'));
+        $this->fail('Unlicensed SMS passed.');
+    } catch (\Symfony\Component\HttpKernel\Exception\HttpException $exception) {
+        expect($exception->getStatusCode())->toBe(402);
+    }
+});
+
 test('the Add-ons catalogue routes are Super Admin only', function () {
     foreach (['superadmin.addons.index', 'superadmin.addons.refresh'] as $name) {
         $route = app('router')->getRoutes()->getByName($name);
