@@ -61,6 +61,20 @@ test('SMS enforcement refuses installation access without an active entitlement'
     }
 });
 
+test('SMS premium entitlement restores route access without changing existing SMS permissions', function () {
+    config(['enterprise.sms_enforcement_enabled' => true]);
+    $this->mock(EntitlementService::class)->shouldReceive('active')
+        ->with('sms_messaging')->once()->andReturn(true);
+    $middleware = new \App\Http\Middleware\EnsureSmsAddon;
+    $called = false;
+    $response = $middleware->handle(Request::create('/synthetic-sms'), function () use (&$called) {
+        $called = true;
+        return new \Illuminate\Http\Response('licensed');
+    });
+    expect($called)->toBeTrue();
+    expect($response->getContent())->toBe('licensed');
+});
+
 test('the Add-ons catalogue routes are Super Admin only', function () {
     foreach (['superadmin.addons.index', 'superadmin.addons.refresh'] as $name) {
         $route = app('router')->getRoutes()->getByName($name);
