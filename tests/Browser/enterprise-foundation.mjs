@@ -92,7 +92,8 @@ try {
         }
       }
       assert.equal(await page.locator('h1').filter({ hasText: 'Add-ons' }).count(), 1);
-      assert.equal(await page.locator('article').count(), 3);
+      assert.equal(await page.locator('article.card-outline').count(), 4, 'Expected reports, finance, inventory and SMS add-ons');
+      assert.equal(await page.locator('article.card-outline').filter({ hasText: 'SMS Messaging' }).count(), 1);
       assert(await page.locator('body').innerText().then(text => text.includes('Locked')));
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1);
       assert.equal(overflow, false, `Horizontal overflow at ${brand}/${width}/${dark}`);
