@@ -5,12 +5,20 @@ return [
         'name' => 'Campaign Manager Core',
         'package' => 'campaign-manager-core',
         'channel' => env('RELEASE_CHANNEL', 'self-hosted'),
-        'version' => env('APP_VERSION', '1.2.4'),
+        'version' => env('APP_VERSION', '1.2.5'),
         'build_date' => env('RELEASE_BUILD_DATE', null),
         'minimum_php' => '8.2.0',
     ],
 
     'release_notes' => [
+        '1.2.5' => [
+            'Adds scoped workforce reporting, geographic coverage, CSV/PDF export and optional customer-configured AI with encrypted credentials and usage limits.',
+            'Adds campaign finance accounts, budgets, independent approvals, private evidence, statements and immutable financial history.',
+            'Adds campaign materials, stock receipts, audited adjustments, requests, distribution and low-stock monitoring.',
+            'Bundles the existing official entitlement public key, initializes permissions automatically and refreshes verified access after purchase.',
+            'Binds entitlements to installation, domain and campaign package, and preserves configured legacy direct-provider SMS access.',
+            'Keeps Portal SMS credit resale disabled; customers use their own BulkSMSNigeria or Termii account.',
+        ],
         '1.2.4' => [
             'Fixes text and action-icon contrast on branded primary and secondary dashboard headers across supported theme colours.',
             'Adds installation-bound add-on price review and signed entitlement refresh, with verified purchases processed by the Campaign Manager Portal.',
@@ -311,6 +319,15 @@ return [
     ],
 
     'required_files' => [
+        'routes/enterprise-inventory.php',
+        'routes/enterprise-finance.php',
+        'routes/enterprise.php',
+        'app/Http/Controllers/EnterpriseWorkforceReportController.php',
+        'app/Http/Controllers/CampaignInventoryController.php',
+        'app/Http/Controllers/CampaignFinanceController.php',
+        'app/Console/Commands/CampaignEnterpriseBootstrap.php',
+        'app/Services/Enterprise/EnterpriseBootstrapService.php',
+        'config/enterprise-public.pem',
         'app/Support/InstallationRuntime.php',
         'tools/install/diagnose.php',
         'app/Services/Updates/AutomaticUpdateFlow.php',

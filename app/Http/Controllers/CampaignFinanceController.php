@@ -11,11 +11,22 @@ class CampaignFinanceController extends Controller
     public function index(Request $request, CampaignFinanceService $finance)
     {
         $finance->authorize($request->user(), 'finance.view');
+        $search = $request->validate(['custodian_search' => 'nullable|string|max:100'])['custodian_search'] ?? '';
+        $custodians = collect();
+        if (app(\App\Services\CampaignCapabilityService::class)->allows($request->user(), 'finance.accounts.manage')) {
+            $query = app(\App\Services\LocationScopeService::class)->applyScope(\App\Models\User::query()->where('status', 'active'), $request->user(), 'users');
+            if ($search !== '') {
+                $query->where(function ($query) use ($search) {
+                    $query->where('firstname', 'like', '%'.$search.'%')->orWhere('lastname', 'like', '%'.$search.'%')->orWhere('username', 'like', '%'.$search.'%');
+                });
+            }
+            $custodians = $query->orderBy('firstname')->limit(100)->get(['id', 'firstname', 'lastname', 'username']);
+        }
         $accounts = $finance->accounts($request->user())->orderBy('name')->get();
         $account = $request->filled('account') ? $finance->account($request->user(), (int) $request->input('account')) : $accounts->first();
         $id = $account?->id;
         return response()->view('backend.finance.index', [
-            'profileData' => $request->user(), 'pageTitle' => 'Campaign Finance', 'accounts' => $accounts, 'account' => $account,
+            'profileData' => $request->user(), 'pageTitle' => 'Campaign Finance', 'custodians' => $custodians, 'custodianSearch' => $search, 'accounts' => $accounts, 'account' => $account,
             'documents' => DB::table('campaign_finance_documents')->where('account_id', $id ?? 0)->latest('id')->paginate(25, ['*'], 'documents_page')->withQueryString(),
             'budgets' => DB::table('campaign_finance_budgets')->where('account_id', $id ?? 0)->orderBy('id')->get(),
             'requests' => DB::table('campaign_finance_requests')->where('account_id', $id ?? 0)->latest('id')->paginate(25, ['*'], 'requests_page')->withQueryString(),
@@ -107,3 +118,4 @@ class CampaignFinanceController extends Controller
         return (int) $whole * 100 + (int) str_pad($fraction, 2, '0');
     }
 }
+

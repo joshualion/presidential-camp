@@ -259,3 +259,13 @@ test('finance document downloads enforce scope and integrity before returning at
     \Illuminate\Support\Facades\Storage::disk('local')->put($document->path, 'tampered');
     $this->actingAs($this->requester)->get(route('finance.documents.download', $id))->assertNotFound();
 });
+
+
+
+test('finance custodian search exposes names only within the authorized jurisdiction', function () {
+    $this->withoutMiddleware(\App\Http\Middleware\CheckUserOnboarding::class);
+    $this->actingAs($this->requester)->get(route('finance.index'))
+        ->assertOk()->assertSee($this->approver->username)->assertDontSee($this->outsider->username);
+    $this->get(route('finance.index', ['custodian_search' => $this->outsider->username]))
+        ->assertOk()->assertDontSee('<option value="'.$this->outsider->id.'">', false);
+});

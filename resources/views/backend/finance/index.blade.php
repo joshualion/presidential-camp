@@ -1,14 +1,16 @@
 @extends('backend.template.backend-master')
 @section('content')
 <section class="content cm-ui"><div class="container-fluid">
-<h1 class="text-primary">Campaign Finance</h1>
+
 <p>Record campaign funds, allocate budgets and approve payment requests. Amounts are in Nigerian naira. These records do not initiate bank transfers.</p>
 @if(session('finance_status'))<div class="alert alert-success" role="status">{{ session('finance_status') }}</div>@endif
 @if($errors->any())<div class="alert alert-danger" role="alert">@foreach($errors->all() as $error)<p>{{ $error }}</p>@endforeach</div>@endif
 <form method="GET" class="mb-3"><label for="finance-account">Financial account</label><select id="finance-account" name="account" class="form-control">@foreach($accounts as $item)<option value="{{ $item->id }}" @selected($account?->id === $item->id)>{{ $item->name }}</option>@endforeach</select><button class="btn btn-primary mt-2">Open account</button></form>
 @php($capabilities = app(\App\Services\CampaignCapabilityService::class))
 @if($capabilities->allows(auth()->user(), 'finance.accounts.manage'))
-<details class="card card-body mb-3"><summary>Create account</summary><form method="POST" action="{{ route('finance.accounts.store') }}">@csrf<label>Name<input name="name" class="form-control" maxlength="120" required></label><label>Custodian member ID<input type="number" min="1" name="owner_id" class="form-control" required></label><p class="small">The account retains the custodian's current geographic jurisdiction. Only custodians in your permitted area can be selected.</p><button class="btn btn-primary">Create financial account</button></form></details>
+<details class="card card-body mb-3" @if($custodianSearch !== '') open @endif><summary>Create account</summary>
+<form method="GET" class="my-3"><input type="hidden" name="account" value="{{ $account?->id }}"><label for="custodian-search">Find a custodian by name or username</label><input id="custodian-search" name="custodian_search" class="form-control" maxlength="100" value="{{ $custodianSearch }}"><button class="btn btn-outline-primary mt-2">Find members</button></form>
+<form method="POST" action="{{ route('finance.accounts.store') }}">@csrf<label for="account-name">Account name</label><input id="account-name" name="name" class="form-control" maxlength="120" required><label for="account-custodian">Custodian</label><select id="account-custodian" name="owner_id" class="form-control" required><option value="">Choose an authorized member</option>@foreach($custodians as $custodian)<option value="{{ $custodian->id }}">{{ trim($custodian->firstname.' '.$custodian->lastname) }} ({{ $custodian->username }})</option>@endforeach</select><p class="small">The account retains the custodian's current geographic jurisdiction. Only active members in your permitted area are listed. Search to narrow the first 100 matches.</p><button class="btn btn-primary">Create financial account</button></form></details>
 @endif
 @if($account)
 <div class="row"><div class="col-md-4"><div class="card card-body"><h2 class="h5 text-primary">Recorded balance</h2><strong>NGN {{ number_format($account->balance_minor / 100, 2) }}</strong></div></div><div class="col-md-4"><div class="card card-body"><h2 class="h5 text-primary">Income</h2>NGN {{ number_format(($totals['income'] ?? 0) / 100, 2) }}</div></div><div class="col-md-4"><div class="card card-body"><h2 class="h5 text-primary">Expenditure</h2>NGN {{ number_format(($totals['expenditure'] ?? 0) / 100, 2) }}</div></div></div>
@@ -33,3 +35,4 @@
 @else<p class="alert alert-info">No financial accounts are visible in your permitted campaign area.</p>@endif
 </div></section>
 @endsection
+
