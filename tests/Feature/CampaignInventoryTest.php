@@ -19,7 +19,10 @@ function inventoryUnitFixture(int $id, int $stateId = 1): int
 }
 
 beforeEach(function () {
-    $this->mock(EntitlementService::class)->shouldReceive('active')->with('campaign_merchandise')->andReturn(true)->byDefault();
+    $entitlements = $this->mock(EntitlementService::class);
+    $entitlements->shouldReceive('active')->with('campaign_merchandise')->andReturn(true)->byDefault();
+    $entitlements->shouldReceive('active')->with('sms_messaging')->andReturn(false)->byDefault();
+    $entitlements->shouldReceive('cached')->andReturn(null)->byDefault();
     $this->inventory = app(CampaignInventoryService::class);
     $this->admin = User::factory()->create(['access_level' => 'superadmin', 'status' => 'active']);
     $this->source = inventoryUnitFixture(901);
@@ -131,7 +134,7 @@ test('inventory routes enforce entitlement and user capability and stock CSV esc
     $this->withoutMiddleware([\App\Http\Middleware\CheckUserOnboarding::class]);
     $response = $this->actingAs($this->admin)->get(route('enterprise.inventory.export'))->assertOk();
     expect($response->streamedContent())->toContain("'=SUM(1,2)");
-    foreach (['index', 'locations', 'export', 'categories', 'materials', 'adjustments', 'requests', 'fulfil'] as $name) {
+    foreach (['index', 'locations', 'export', 'categories', 'materials', 'adjustments', 'requests', 'cancel', 'fulfil'] as $name) {
         $route = app('router')->getRoutes()->getByName('enterprise.inventory.'.$name);
         expect(collect($route->gatherMiddleware())->contains(fn ($name) => str_starts_with($name, 'enterprise.feature:campaign_merchandise,')))->toBeTrue();
     }
@@ -147,4 +150,82 @@ test('office lookup returns only scoped locations and dashboard renders stock wo
         ->assertJsonCount(2, 'locations')->assertJsonMissing(['id' => 903]);
     $this->actingAs($this->admin)->get(route('enterprise.inventory.index'))->assertOk()
         ->assertSee('Stock balances')->assertSee('Distribution requests')->assertSee('Stock movement audit');
+});
+
+function inventoryBoundaryFixtures(): void
+{
+    inventoryUnitFixture(903, 2);
+    foreach ([[11, 1], [12, 1], [13, 2]] as [$id, $state]) {
+        \App\Models\SenatorialDistrict::create(['id' => $id, 'name' => 'District '.$id, 'state_id' => $state]);
+    }
+    foreach ([[21, 1, 11], [22, 1, 12], [23, 2, 13]] as [$id, $state, $district]) {
+        \App\Models\FederalConstituency::create(['id' => $id, 'name' => 'Constituency '.$id, 'state_id' => $state, 'senatorial_district_id' => $district]);
+    }
+    DB::table('local_government_areas')->where('id', 1)->update(['senatorial_district_id' => 11, 'federal_constituency_id' => 21]);
+    DB::table('local_government_areas')->where('id', 2)->update(['senatorial_district_id' => 13, 'federal_constituency_id' => 23]);
+    $lga = LocalGovernmentArea::create(['id' => 31, 'name' => 'Other LGA', 'state_id' => 1, 'senatorial_district_id' => 12, 'federal_constituency_id' => 22]);
+    $ward = Ward::create(['id' => 41, 'name' => 'Other ward', 'lga_id' => $lga->id]);
+    DB::table('polling_units')->where('id', 902)->update(['ward_id' => $ward->id]);
+}
+
+test('inventory office scope respects every geographic administrator boundary', function (string $level, array $attributes, array $expected) {
+    inventoryBoundaryFixtures();
+    $actor = User::factory()->create($attributes + ['access_level' => $level, 'status' => 'active']);
+    expect($this->inventory->units($actor)->orderBy('polling_units.id')->pluck('polling_units.id')->all())->toBe($expected);
+})->with([
+    'national' => ['nationaladmin', [], [901, 902, 903]],
+    'state' => ['stateadmin', ['state_id' => 1], [901, 902]],
+    'senatorial via LGA fallback' => ['senatorialadmin', ['senatorial_district_id' => 11], [901]],
+    'federal via LGA fallback' => ['federaladmin', ['federal_constituency_id' => 21], [901]],
+    'LGA' => ['lgaadmin', ['lga_id' => 1], [901]],
+    'ward' => ['wardadmin', ['ward_id' => 1], [901]],
+    'polling unit' => ['puadmin', ['polling_unit_id' => 901], [901]],
+    'missing jurisdiction' => ['wardadmin', ['ward_id' => null], []],
+]);
+
+test('inventory office scope respects all licensed campaign packages', function (string $package, string $type, array $scope, array $expected) {
+    inventoryBoundaryFixtures();
+    $license = LocalLicense::create(['license_key' => 'INVENTORY-'.$package, 'deployment_mode' => 'self_hosted', 'package_type' => $package, 'status' => 'active']);
+    $license->scope()->create($scope + ['scope_type' => $type, 'scope_name' => 'Licensed boundary']);
+    expect($this->inventory->units($this->admin)->orderBy('polling_units.id')->pluck('polling_units.id')->all())->toBe($expected);
+})->with([
+    'Presidential' => ['presidential', 'national', [], [901, 902, 903]],
+    'Governorship' => ['governorship', 'state', ['state_id' => 1], [901, 902]],
+    'Senatorial' => ['senatorial', 'senatorial_district', ['senatorial_district_id' => 11], [901]],
+    'Federal constituency' => ['federal_constituency', 'federal_constituency', ['federal_constituency_id' => 21], [901]],
+    'Local government' => ['chairmanship', 'lga', ['lga_id' => 1], [901]],
+]);
+
+test('an explicit polling unit boundary cannot be overridden by legacy LGA fallback', function (string $package, string $type, string $column, int $licensed, int $conflicting) {
+    inventoryBoundaryFixtures();
+    DB::table('polling_units')->where('id', 901)->update([$column => $conflicting]);
+    $license = LocalLicense::create(['license_key' => 'CONFLICT-'.$package, 'deployment_mode' => 'self_hosted', 'package_type' => $package, 'status' => 'active']);
+    $license->scope()->create([$column => $licensed, 'scope_type' => $type, 'scope_name' => 'Licensed constituency']);
+    expect($this->inventory->units($this->admin)->pluck('polling_units.id')->all())->toBe([]);
+})->with([
+    ['senatorial', 'senatorial_district', 'senatorial_district_id', 11, 12],
+    ['federal_constituency', 'federal_constituency', 'federal_constituency_id', 21, 22],
+]);
+
+test('pending cancellation is audited and can never consume stock or permit later fulfilment', function () {
+    $this->inventory->adjust($this->admin, $this->adjustment);
+    $id = $this->inventory->request($this->admin, ['material_id' => $this->material, 'source_polling_unit_id' => $this->source,
+        'destination_polling_unit_id' => $this->destination, 'quantity' => 10, 'purpose' => 'Cancelled event']);
+    $this->inventory->cancel($this->admin, $id, 'Event moved to a later date');
+    $this->inventory->cancel($this->admin, $id, 'Browser retry');
+    expect(DB::table('campaign_material_stocks')->value('quantity'))->toBe(100);
+    expect(DB::table('campaign_material_request_events')->where('request_id', $id)->pluck('event')->all())->toBe(['requested', 'cancelled']);
+    try { $this->inventory->fulfil($this->admin, $id); $this->fail('Cancelled request was fulfilled.'); }
+    catch (HttpException $e) { expect($e->getStatusCode())->toBe(409); }
+    expect(DB::table('campaign_material_movements')->count())->toBe(1);
+});
+
+test('an ordinary requester cannot cancel another users request', function () {
+    $id = $this->inventory->request($this->admin, ['material_id' => $this->material, 'source_polling_unit_id' => $this->source,
+        'destination_polling_unit_id' => $this->destination, 'quantity' => 10, 'purpose' => 'Another user request']);
+    $actor = User::factory()->create(['access_level' => 'stateadmin', 'state_id' => 1, 'status' => 'active']);
+    $actor->givePermissionTo(Permission::findOrCreate('merchandise.orders.view', 'web'));
+    try { $this->inventory->cancel($actor, $id, 'Not my request'); $this->fail('Unauthorised cancellation accepted.'); }
+    catch (HttpException $e) { expect($e->getStatusCode())->toBe(403); }
+    expect(DB::table('campaign_material_requests')->where('id', $id)->value('status'))->toBe('pending');
 });

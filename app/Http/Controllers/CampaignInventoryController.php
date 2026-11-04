@@ -21,6 +21,7 @@ class CampaignInventoryController extends Controller
             'materials' => DB::table('campaign_materials')->orderBy('name')->limit(2000)->get(),
             'categories' => DB::table('campaign_material_categories')->orderBy('name')->get(),
             'requests' => $can('merchandise.orders.view') ? $inventory->requests($actor)->orderByDesc('requests.id')->paginate(20, ['*'], 'request_page') : null,
+            'requestEvents' => $can('merchandise.orders.view') ? $inventory->requestEvents($actor)->orderByDesc('event.id')->paginate(20, ['*'], 'event_page') : null,
             'movements' => $inventory->movements($actor)->orderByDesc('movement.id')->paginate(30, ['*'], 'movement_page'),
             'can' => $can, 'reference' => (string) Str::uuid(),
         ])->header('Cache-Control', 'private, no-store');
@@ -63,6 +64,13 @@ class CampaignInventoryController extends Controller
     {
         $inventory->request($request->user(), $request->all());
         return back()->with('inventory_status', 'Distribution request submitted.');
+    }
+
+    public function cancel(Request $request, CampaignInventoryService $inventory, int $id)
+    {
+        $data = $request->validate(['reason' => 'required|string|max:500']);
+        $inventory->cancel($request->user(), $id, $data['reason']);
+        return back()->with('inventory_status', 'Pending distribution request cancelled. Stock balances are unchanged.');
     }
 
     public function fulfil(Request $request, CampaignInventoryService $inventory, int $id)

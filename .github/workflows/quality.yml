@@ -106,7 +106,18 @@ jobs:
         run: |
           cp .env.example .env
           php artisan key:generate --force
-          php artisan test --filter='EnterpriseFoundation|EnterpriseOfflineEntitlement|IntegratedPermissionsUi|ManagedCampaignCapabilities|IncidentEvidence|ContactConfirmationReturn|V120MigrationCompatibility|MemberImport|LicensedScopeQuery|PollingUnitAgentScope|MemberElectionParticipation' --log-junit database-results.xml
+          php artisan test --filter='EnterpriseWorkforceReport|EnterpriseAiIntelligence|CampaignFinance|CampaignInventory|LegacySmsAccess|EnterpriseFoundation|EnterpriseOfflineEntitlement|IntegratedPermissionsUi|ManagedCampaignCapabilities|IncidentEvidence|ContactConfirmationReturn|V120MigrationCompatibility|MemberImport|LicensedScopeQuery|PollingUnitAgentScope|MemberElectionParticipation' --log-junit database-results.xml
+      - name: Verify real concurrent inventory mutations on an isolated synthetic database
+        env:
+          DB_PORT: ${{ job.services.mysql.ports[3306] }}
+        run: |
+          php -r '$pdo = new PDO("mysql:host=".getenv("DB_HOST").";port=".getenv("DB_PORT"), getenv("DB_USERNAME"), getenv("DB_PASSWORD")); $pdo->exec("CREATE DATABASE campaign_inventory_concurrency_ci");'
+          DB_DATABASE=campaign_inventory_concurrency_ci php scripts/verify-inventory-concurrency.php
+      - name: Verify real concurrent campaign finance mutations
+        if: ${{ hashFiles('scripts/verify-finance-concurrency.php') != '' }}
+        env:
+          DB_PORT: ${{ job.services.mysql.ports[3306] }}
+        run: php scripts/verify-finance-concurrency.php
       - uses: actions/upload-artifact@v4
         if: always()
         with:

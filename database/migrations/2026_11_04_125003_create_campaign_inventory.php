@@ -35,6 +35,12 @@ return new class extends Migration {
             $table->unsignedBigInteger('requested_by')->index(); $table->unsignedBigInteger('fulfilled_by')->nullable();
             $table->string('purpose', 500); $table->timestamp('fulfilled_at')->nullable(); $table->timestamps();
         });
+        Schema::create('campaign_material_request_events', function (Blueprint $table) {
+            $table->engine = 'InnoDB';
+            $table->id(); $table->foreignId('request_id')->constrained('campaign_material_requests');
+            $table->string('event', 30); $table->unsignedBigInteger('actor_id')->index();
+            $table->string('reason', 500); $table->timestamp('created_at')->useCurrent();
+        });
         Schema::create('campaign_material_movements', function (Blueprint $table) {
             $table->engine = 'InnoDB';
             $table->id(); $table->foreignId('stock_id')->constrained('campaign_material_stocks');

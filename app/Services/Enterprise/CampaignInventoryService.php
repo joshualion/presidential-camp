@@ -136,7 +136,43 @@ class CampaignInventoryService
         ])->validate();
         $this->assertUnit($actor, (int) $data['source_polling_unit_id']);
         $this->assertUnit($actor, (int) $data['destination_polling_unit_id']);
-        return DB::table('campaign_material_requests')->insertGetId($data + ['requested_by' => $actor->id, 'status' => 'pending', 'created_at' => now(), 'updated_at' => now()]);
+        return DB::transaction(function () use ($actor, $data) {
+            $id = DB::table('campaign_material_requests')->insertGetId($data + ['requested_by' => $actor->id, 'status' => 'pending', 'created_at' => now(), 'updated_at' => now()]);
+            $this->requestEvent($id, 'requested', $actor, $data['purpose']);
+            return $id;
+        });
+    }
+
+    public function requestEvents(User $actor): Builder
+    {
+        $this->authorize($actor, 'merchandise.orders.view');
+        return DB::table('campaign_material_request_events as event')
+            ->whereIn('event.request_id', $this->requests($actor)->select('requests.id'))
+            ->select('event.*');
+    }
+
+    private function requestEvent(int $id, string $event, User $actor, string $reason): void
+    {
+        DB::table('campaign_material_request_events')->insert([
+            'request_id' => $id, 'event' => $event, 'actor_id' => $actor->id, 'reason' => $reason, 'created_at' => now(),
+        ]);
+    }
+
+    public function cancel(User $actor, int $id, string $reason): void
+    {
+        $this->authorize($actor, 'merchandise.orders.view');
+        $data = Validator::make(['reason' => $reason], ['reason' => 'required|string|max:500'])->validate();
+        DB::transaction(function () use ($actor, $id, $data) {
+            $request = DB::table('campaign_material_requests')->where('id', $id)->lockForUpdate()->first();
+            abort_unless($request, 404);
+            $this->assertUnit($actor, (int) $request->source_polling_unit_id);
+            $this->assertUnit($actor, (int) $request->destination_polling_unit_id);
+            abort_unless((int) $request->requested_by === $actor->id || $this->capabilities->allows($actor, 'merchandise.orders.fulfil'), 403);
+            if ($request->status === 'cancelled') { return; }
+            abort_unless($request->status === 'pending', 409, 'Only pending requests may be cancelled.');
+            DB::table('campaign_material_requests')->where('id', $id)->update(['status' => 'cancelled', 'updated_at' => now()]);
+            $this->requestEvent($id, 'cancelled', $actor, $data['reason']);
+        }, 3);
     }
 
     public function fulfil(User $actor, int $id): void
@@ -160,6 +196,7 @@ class CampaignInventoryService
             DB::table('campaign_material_requests')->where('id', $id)->update([
                 'status' => 'fulfilled', 'fulfilled_by' => $actor->id, 'fulfilled_at' => now(), 'updated_at' => now(),
             ]);
+            $this->requestEvent($id, 'fulfilled', $actor, $request->purpose);
         }, 3);
     }
 }

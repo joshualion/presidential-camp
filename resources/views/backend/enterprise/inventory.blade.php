@@ -47,8 +47,15 @@
       <div class="col-12"><label for="request-purpose">Purpose</label><textarea class="form-control mb-2" id="request-purpose" name="purpose" maxlength="500" required></textarea><button class="btn btn-primary">Request distribution</button></div>
     </form>
     <div class="table-responsive"><table class="table"><thead><tr><th>ID</th><th>Material</th><th>Source</th><th>Destination</th><th>Quantity</th><th>Status</th><th>Action</th></tr></thead><tbody>
-    @forelse($requests as $record)<tr><td>{{ $record->id }}</td><td>{{ $record->name }}</td><td>{{ $record->source_polling_unit_id }}</td><td>{{ $record->destination_polling_unit_id }}</td><td>{{ $record->quantity }}</td><td>{{ $record->status }}</td><td>@if($record->status === 'pending' && $can('merchandise.orders.fulfil'))<form method="POST" action="{{ route('enterprise.inventory.fulfil', $record->id) }}">@csrf<button class="btn btn-primary btn-sm">Fulfil distribution</button></form>@endif</td></tr>@empty<tr><td colspan="7">No distribution requests in your jurisdiction.</td></tr>@endforelse
+    @forelse($requests as $record)<tr><td>{{ $record->id }}</td><td>{{ $record->name }}</td><td>{{ $record->source_polling_unit_id }}</td><td>{{ $record->destination_polling_unit_id }}</td><td>{{ $record->quantity }}</td><td>{{ $record->status }}</td><td>@if($record->status === 'pending' && $can('merchandise.orders.fulfil'))<form method="POST" action="{{ route('enterprise.inventory.fulfil', $record->id) }}">@csrf<button class="btn btn-primary btn-sm">Fulfil distribution</button></form>@endif
+      @if($record->status === 'pending' && ($can('merchandise.orders.fulfil') || (int)$record->requested_by === (int)$profileData->id))<form method="POST" action="{{ route('enterprise.inventory.cancel', $record->id) }}" class="mt-2">@csrf<label class="sr-only" for="cancel-reason-{{ $record->id }}">Cancellation reason</label><input class="form-control form-control-sm mb-1" id="cancel-reason-{{ $record->id }}" name="reason" required maxlength="500" placeholder="Cancellation reason"><button class="btn btn-outline-secondary btn-sm">Cancel request</button></form>@endif
+    </td></tr>@empty<tr><td colspan="7">No distribution requests in your jurisdiction.</td></tr>@endforelse
     </tbody></table></div>{{ $requests->links() }}
+  </div></div>@endif
+  @if($requestEvents !== null)<div class="card"><div class="card-body"><h2 class="h5 text-primary">Request audit</h2>
+    <div class="table-responsive"><table class="table"><thead><tr><th>Time</th><th>Request ID</th><th>Event</th><th>Actor ID</th><th>Reason</th></tr></thead><tbody>
+    @forelse($requestEvents as $event)<tr><td>{{ $event->created_at }}</td><td>{{ $event->request_id }}</td><td>{{ $event->event }}</td><td>{{ $event->actor_id }}</td><td>{{ $event->reason }}</td></tr>@empty<tr><td colspan="5">No request events recorded.</td></tr>@endforelse
+    </tbody></table></div>{{ $requestEvents->links() }}
   </div></div>@endif
   <div class="card"><div class="card-body"><h2 class="h5 text-primary">Stock movement audit</h2>
     <div class="table-responsive"><table class="table"><thead><tr><th>Time</th><th>Material</th><th>Office / PU ID</th><th>Change</th><th>Balance after</th><th>Actor ID</th><th>Reason</th></tr></thead><tbody>

@@ -12,5 +12,6 @@ Route::middleware(['auth', 'check_onboarding'])->prefix('campaign-inventory')->n
     Route::post('/materials', [CampaignInventoryController::class, 'material'])->middleware($gate('merchandise.products.manage'))->name('materials');
     Route::post('/adjustments', [CampaignInventoryController::class, 'adjust'])->middleware($gate('merchandise.inventory.manage'))->name('adjustments');
     Route::post('/requests', [CampaignInventoryController::class, 'requestStock'])->middleware($gate('merchandise.orders.view'))->name('requests');
+    Route::post('/requests/{id}/cancel', [CampaignInventoryController::class, 'cancel'])->whereNumber('id')->middleware($gate('merchandise.orders.view'))->name('cancel');
     Route::post('/requests/{id}/fulfil', [CampaignInventoryController::class, 'fulfil'])->whereNumber('id')->middleware($gate('merchandise.orders.fulfil'))->name('fulfil');
 });
