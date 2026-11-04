@@ -398,7 +398,7 @@ foreach ([
         });
 }
 
-Route::middleware(['auth', 'access_level:superadmin'])
+Route::middleware(['auth', 'access_level:superadmin', 'sms.addon'])
     ->prefix('superadmin/bulksms')->name('superadmin.bulksms.')->group(function () {
         Route::get('/send', function () {
             abort_if(app(\App\Services\ModuleGateService::class)->disabled('sms'), 403, 'Bulk SMS is not available in this build.');
@@ -412,7 +412,7 @@ Route::middleware(['auth', 'access_level:superadmin'])
         })->name('setting');
     });
 
-Route::middleware(['auth', 'access_level:superadmin', 'module.enabled:sms'])
+Route::middleware(['auth', 'access_level:superadmin', 'module.enabled:sms', 'sms.addon'])
     ->prefix('superadmin/sms/settings')->name('superadmin.sms.settings.')->group(function () {
         Route::get('/', [SmsSettingsController::class, 'index'])->name('index');
         Route::put('/', [SmsSettingsController::class, 'update'])->name('update');
@@ -420,7 +420,7 @@ Route::middleware(['auth', 'access_level:superadmin', 'module.enabled:sms'])
     });
 
 foreach (AccessLevelRouteService::prefixes() as $accessLevel => $prefix) {
-    Route::middleware(['auth', 'access_level:'.$accessLevel, 'module.enabled:sms'])
+    Route::middleware(['auth', 'access_level:'.$accessLevel, 'module.enabled:sms', 'sms.addon'])
         ->prefix($prefix.'/sms')->name($accessLevel.'.sms.')->group(function () {
             Route::get('/', [SmsComposeController::class, 'dashboard'])->middleware('sms.access:sms.view')->name('dashboard');
             Route::get('/compose', [SmsComposeController::class, 'create'])->middleware('sms.access:sms.compose')->name('compose');
@@ -443,7 +443,7 @@ foreach (AccessLevelRouteService::prefixes() as $accessLevel => $prefix) {
 
 // Customer-funded SMS uses its own access grants, not the hosted SMS licence/wallet gate.
 foreach (array_diff_key(AccessLevelRouteService::prefixes(), ['user' => true]) as $level => $prefix) {
- Route::middleware(['auth', 'access_level:'.$level])->prefix($prefix.'/sms/direct')->name($level.'.direct-sms.')->group(function () {
+ Route::middleware(['auth', 'access_level:'.$level, 'sms.addon'])->prefix($prefix.'/sms/direct')->name($level.'.direct-sms.')->group(function () {
   Route::get('oversight-boundaries', [\App\Http\Controllers\DirectSmsController::class,'boundaries'])->middleware('throttle:60,1')->name('boundaries');
   Route::get('/', [\App\Http\Controllers\DirectSmsController::class,'index'])->name('index');
   Route::get('/settings', [\App\Http\Controllers\DirectSmsController::class,'settings'])->name('settings');
