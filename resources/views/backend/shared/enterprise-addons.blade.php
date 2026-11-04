@@ -54,6 +54,7 @@
       @else
         <p class="text-muted">Pricing is not yet available for this add-on.</p>
       @endif
+      @if(!empty($catalogue['upgrade_required']))<p class="alert alert-info">Update Campaign Manager to {{ $catalogue['minimum_core_version'] ?? 'the required version' }} through Official Updates before purchasing this module.</p>@endif
       @if($checkoutUrl && !$active)
         <a href="{{ $checkoutUrl }}" class="btn btn-primary" rel="noopener noreferrer">{{ $grant ? 'Review price and renew' : 'Review price and purchase' }}</a>
       @elseif(!empty($catalogue['purchasable']) && !$trustedOrigin)
@@ -68,3 +69,4 @@
   </div>
 </div></section>
 @endsection
+
