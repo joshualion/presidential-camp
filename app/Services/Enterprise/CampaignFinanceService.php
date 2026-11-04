@@ -38,10 +38,7 @@ class CampaignFinanceService
         $name = $this->text($name, 120);
         $owner = app(LocationScopeService::class)->applyScope(User::query(), $actor, 'users')->whereKey($ownerId)->firstOrFail();
         return DB::transaction(function () use ($actor, $name, $owner) {
-            $location = [];
-            foreach (['region_id', 'state_id', 'senatorial_district_id', 'federal_constituency_id', 'lga_id', 'ward_id', 'polling_unit_id'] as $key) {
-                $location[$key] = $owner->{$key};
-            }
+            $location = $this->jurisdiction($owner);
             $account = CampaignFinanceAccount::create($location + ['name' => $name, 'currency' => 'NGN', 'owner_id' => $owner->id, 'created_by' => $actor->id]);
             // Inconsistent historical owner geography must never create an inaccessible account.
             $this->account($actor, $account->id);
@@ -155,6 +152,48 @@ class CampaignFinanceService
             \Illuminate\Support\Facades\Storage::disk('local')->delete($path);
             throw $exception;
         }
+    }
+
+    /** Derive missing parents and reject contradictory legacy member locations. */
+    private function jurisdiction(User $owner): array
+    {
+        $location = [];
+        foreach (['region_id', 'state_id', 'senatorial_district_id', 'federal_constituency_id', 'lga_id', 'ward_id', 'polling_unit_id'] as $key) {
+            $location[$key] = $owner->{$key} ? (int) $owner->{$key} : null;
+        }
+        $set = function (string $key, mixed $value) use (&$location): void {
+            if (!$value) { return; }
+            if ($location[$key] !== null && $location[$key] !== (int) $value) {
+                $this->invalid('The custodian has inconsistent geographic records. Correct the member location before creating a financial account.');
+            }
+            $location[$key] = (int) $value;
+        };
+        if ($location['polling_unit_id']) {
+            $pu = \App\Models\PollingUnit::findOrFail($location['polling_unit_id']);
+            $set('ward_id', $pu->ward_id); $set('senatorial_district_id', $pu->senatorial_district_id); $set('federal_constituency_id', $pu->federal_constituency_id);
+        }
+        if ($location['ward_id']) {
+            $ward = \App\Models\Ward::findOrFail($location['ward_id']);
+            $set('lga_id', $ward->lga_id);
+        }
+        if ($location['lga_id']) {
+            $lga = \App\Models\LocalGovernmentArea::findOrFail($location['lga_id']);
+            $set('state_id', $lga->state_id); $set('senatorial_district_id', $lga->senatorial_district_id); $set('federal_constituency_id', $lga->federal_constituency_id);
+        }
+        if ($location['federal_constituency_id']) {
+            $federal = \App\Models\FederalConstituency::findOrFail($location['federal_constituency_id']);
+            $set('state_id', $federal->state_id); $set('senatorial_district_id', $federal->senatorial_district_id);
+        }
+        if ($location['senatorial_district_id']) {
+            $senate = \App\Models\SenatorialDistrict::findOrFail($location['senatorial_district_id']);
+            $set('state_id', $senate->state_id);
+        }
+        if ($location['state_id']) {
+            $state = \App\Models\State::findOrFail($location['state_id']);
+            $set('region_id', $state->region_id);
+        }
+        if ($location['region_id']) { \App\Models\Region::findOrFail($location['region_id']); }
+        return $location;
     }
 
     private function budget(int $accountId, ?int $id): ?object

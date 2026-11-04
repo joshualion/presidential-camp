@@ -12,7 +12,10 @@ use Spatie\Permission\Models\Permission;
 
 beforeEach(function () {
     SystemSetting::create(['package' => 'presidential', 'system_name' => 'Finance test', 'system_country' => 'Nigeria']);
-    $this->mock(EntitlementService::class)->shouldReceive('active')->with('campaign_finance')->andReturn(true)->byDefault();
+    $entitlements = $this->mock(EntitlementService::class);
+    $entitlements->shouldReceive('active')->with('campaign_finance')->andReturn(true)->byDefault();
+    $entitlements->shouldReceive('active')->with('sms_messaging')->andReturn(false)->byDefault();
+    $entitlements->shouldReceive('cached')->andReturn(null)->byDefault();
     $country = \App\Models\Country::create(['name' => 'Nigeria', 'uuid' => (string) Str::uuid()]);
     $region = \App\Models\Region::create(['name' => 'Region', 'country_id' => $country->id]);
     \App\Models\State::create(['name' => 'First', 'region_id' => $region->id]);
@@ -120,4 +123,113 @@ test('financial dashboard and full CSV statement are permission and scope protec
     $response = $this->get(route('finance.statement', $this->account->id))->assertOk();
     expect($response->streamedContent())->toContain("'=SUM(A1:A2)");
     $this->actingAs($this->outsider)->get(route('finance.statement', $this->account->id))->assertNotFound();
+});
+
+function financeTerritoryFixtures(): array
+{
+    $country = \App\Models\Country::first();
+    $secondRegion = \App\Models\Region::create(['name' => 'Second region', 'country_id' => $country->id]);
+    \App\Models\State::findOrFail(2)->update(['region_id' => $secondRegion->id]);
+    $firstRegion = \App\Models\State::findOrFail(1)->region_id;
+    $rows = [];
+    foreach ([
+        [1, $firstRegion, 1, 1, 1, 1, 1, 1],
+        [2, $firstRegion, 1, 2, 2, 2, 2, 2],
+        [3, $firstRegion, 1, 1, 1, 1, 3, 3],
+        [4, $secondRegion->id, 2, 3, 3, 3, 4, 4],
+        [5, $firstRegion, 1, 1, 4, 4, 5, 5],
+    ] as [$n, $region, $state, $senate, $federal, $lga, $ward, $pu]) {
+        \App\Models\SenatorialDistrict::firstOrCreate(['id' => $senate], ['name' => 'District '.$senate, 'state_id' => $state]);
+        \App\Models\FederalConstituency::firstOrCreate(['id' => $federal], ['name' => 'Federal '.$federal, 'state_id' => $state, 'senatorial_district_id' => $senate]);
+        \App\Models\LocalGovernmentArea::firstOrCreate(['id' => $lga], ['name' => 'LGA '.$lga, 'state_id' => $state, 'senatorial_district_id' => $senate, 'federal_constituency_id' => $federal]);
+        \App\Models\Ward::firstOrCreate(['id' => $ward], ['name' => 'Ward '.$ward, 'lga_id' => $lga]);
+        \App\Models\PollingUnit::firstOrCreate(['id' => $pu], ['name' => 'PU '.$pu, 'ward_id' => $ward, 'senatorial_district_id' => $senate, 'federal_constituency_id' => $federal]);
+        $location = ['region_id' => $region, 'state_id' => $state, 'senatorial_district_id' => $senate, 'federal_constituency_id' => $federal,
+            'lga_id' => $lga, 'ward_id' => $ward, 'polling_unit_id' => $pu];
+        $owner = User::factory()->create($location + ['access_level' => 'user', 'status' => 'active']);
+        $account = CampaignFinanceAccount::create($location + ['name' => 'Territory '.$n, 'owner_id' => $owner->id, 'created_by' => $owner->id, 'currency' => 'NGN']);
+        $rows[$n] = ['account' => $account, 'owner' => $owner, 'location' => $location];
+    }
+    return $rows;
+}
+
+test('finance account visibility enforces every administrative geographic boundary', function (string $level, array $expected) {
+    $rows = financeTerritoryFixtures();
+    $actor = $this->requester;
+    $actor->forceFill($rows[1]['location'] + ['access_level' => $level])->save();
+    $allIds = array_map(fn ($row) => $row['account']->id, $rows);
+    $visibleIds = $this->finance->accounts($actor)->whereIn('id', $allIds)->orderBy('id')->pluck('id')->all();
+    expect($visibleIds)->toBe(array_map(fn ($n) => $rows[$n]['account']->id, $expected));
+    foreach (array_diff(array_keys($rows), $expected) as $n) {
+        expect(fn () => $this->finance->account($actor, $rows[$n]['account']->id))->toThrow(\Illuminate\Database\Eloquent\ModelNotFoundException::class);
+    }
+})->with([
+    ['superadmin', [1, 2, 3, 4, 5]], ['nationaladmin', [1, 2, 3, 4, 5]], ['regionaladmin', [1, 2, 3, 5]],
+    ['stateadmin', [1, 2, 3, 5]], ['senatorialadmin', [1, 3, 5]], ['federaladmin', [1, 3]],
+    ['lgaadmin', [1, 3]], ['wardadmin', [1]], ['puadmin', [1]], ['user', [1]],
+]);
+
+test('finance account visibility intersects each licensed campaign scope even for Super Admin', function (string $package, string $type, array $attributes, array $expected) {
+    $rows = financeTerritoryFixtures();
+    config(['campaign.deployment_mode' => 'self_hosted']);
+    $license = \App\Models\LocalLicense::create(['license_key' => 'FINANCE-'.Str::uuid(), 'deployment_mode' => 'self_hosted', 'package_type' => $package, 'status' => 'active']);
+    $license->scope()->create($attributes + ['scope_type' => $type, 'scope_name' => 'Finance test scope']);
+    $actor = $this->requester;
+    $actor->update(['access_level' => 'superadmin']);
+    $allIds = array_map(fn ($row) => $row['account']->id, $rows);
+    $visibleIds = $this->finance->accounts($actor->fresh())->whereIn('id', $allIds)->orderBy('id')->pluck('id')->all();
+    expect($visibleIds)->toBe(array_map(fn ($n) => $rows[$n]['account']->id, $expected));
+})->with([
+    ['presidential', 'national', [], [1, 2, 3, 4, 5]],
+    ['governorship', 'state', ['state_id' => 1], [1, 2, 3, 5]],
+    ['senatorial', 'senatorial_district', ['state_id' => 1, 'senatorial_district_id' => 1], [1, 3, 5]],
+    ['federal_constituency', 'federal_constituency', ['state_id' => 1, 'senatorial_district_id' => 1, 'federal_constituency_id' => 1], [1, 3]],
+    ['chairmanship', 'lga', ['state_id' => 1, 'senatorial_district_id' => 1, 'federal_constituency_id' => 1, 'lga_id' => 1], [1, 3]],
+]);
+
+test('finance account snapshot is not reassigned when its custodian changes geographic area', function () {
+    $rows = financeTerritoryFixtures();
+    $rows[1]['owner']->update($rows[4]['location']);
+    $this->requester->forceFill($rows[1]['location'] + ['access_level' => 'wardadmin'])->save();
+    expect($this->finance->accounts($this->requester)->whereKey($rows[1]['account']->id)->exists())->toBeTrue();
+    $this->outsider->forceFill($rows[4]['location'] + ['access_level' => 'wardadmin'])->save();
+    expect($this->finance->accounts($this->outsider)->whereKey($rows[1]['account']->id)->exists())->toBeFalse();
+});
+
+test('finance rejects inconsistent custodian geography before exposing any account', function () {
+    $rows = financeTerritoryFixtures();
+    $owner = $rows[1]['owner'];
+    $owner->update(['state_id' => 2]);
+    $before = CampaignFinanceAccount::count();
+    $actor = $this->requester;
+    $actor->update(['access_level' => 'superadmin']);
+    expect(fn () => $this->finance->createAccount($actor, 'Contradictory account', $owner->id))->toThrow(ValidationException::class);
+    expect(CampaignFinanceAccount::count())->toBe($before);
+});
+
+test('finance derives missing geographic parents when recording account jurisdiction', function () {
+    $rows = financeTerritoryFixtures();
+    $owner = $rows[1]['owner'];
+    $owner->update(['region_id' => null, 'state_id' => null, 'lga_id' => null, 'ward_id' => null, 'senatorial_district_id' => null, 'federal_constituency_id' => null]);
+    $actor = $this->requester;
+    $actor->update(['access_level' => 'superadmin']);
+    $account = $this->finance->createAccount($actor, 'Derived jurisdiction', $owner->id);
+    foreach ($rows[1]['location'] as $field => $value) { expect((int)$account->{$field})->toBe((int)$value); }
+});
+
+test('finance HTTP routes enforce decision permission and retain independent decision audit', function () {
+    if (!app('router')->getRoutes()->getByName('finance.index')) { \Illuminate\Support\Facades\Route::middleware('web')->group(base_path('routes/enterprise-finance.php')); app('router')->getRoutes()->refreshNameLookups(); }
+    $this->withoutMiddleware([\App\Http\Middleware\CheckUserOnboarding::class]);
+    $request = $this->finance->request($this->requester, $this->account->id, null, 1000, 'Decision test');
+    $viewer = User::factory()->create(['access_level' => 'stateadmin', 'state_id' => 1, 'status' => 'active']);
+    $viewer->givePermissionTo(Permission::findOrCreate('finance.view', 'web'));
+    $this->actingAs($viewer)->post(route('finance.requests.decide', $request), ['decision' => 'approve'])->assertForbidden();
+    $this->actingAs($this->requester)->post(route('finance.requests.decide', $request), ['decision' => 'approve'])->assertForbidden();
+    $this->actingAs($this->outsider)->post(route('finance.requests.decide', $request), ['decision' => 'approve'])->assertNotFound();
+    $this->actingAs($this->approver)->post(route('finance.requests.decide', $request), ['decision' => 'approve'])->assertRedirect();
+    $event = DB::table('campaign_finance_audits')->where('action', 'request.approved')->first();
+    expect((int)$event->actor_id)->toBe($this->approver->id);
+    expect(json_decode($event->details, true)['request_id'])->toBe($request);
+    expect((int)DB::table('campaign_finance_requests')->where('id', $request)->value('decided_by'))->toBe($this->approver->id);
+    expect(DB::table('campaign_finance_audits')->where('action', 'request.created')->count())->toBe(1);
 });
