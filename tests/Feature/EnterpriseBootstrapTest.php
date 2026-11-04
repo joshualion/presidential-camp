@@ -84,3 +84,38 @@ test('local setup failures stop the upgrade with a sanitized recovery message', 
         ->and(\Illuminate\Support\Facades\Artisan::output())->toContain('official update recovery process')
         ->not->toContain('synthetic database password');
 });
+
+test('a synchronization outage preserves the exact previously signed encrypted licence cache', function () {
+    $directory = storage_path('framework/testing/bootstrap-'.\Illuminate\Support\Str::uuid());
+    \App\Models\SystemSetting::create(['package' => 'governorship', 'system_name' => 'Bootstrap fixture', 'system_country' => 'Nigeria']);
+    $key = openssl_pkey_new(['private_key_bits' => 2048, 'private_key_type' => OPENSSL_KEYTYPE_RSA]);
+    config(['app.url' => 'https://bootstrap.example.test', 'enterprise.public_key' => openssl_pkey_get_details($key)['key']]);
+    $registration = $this->mock(DeploymentRegistrationService::class);
+    $registration->shouldReceive('summary')->andReturn(['registered' => true, 'contact_verified' => true, 'id' => 'bootstrap-a', 'domain' => 'bootstrap.example.test']);
+    $registration->shouldReceive('domain')->andReturn('bootstrap.example.test');
+    $claims = ['protocol' => 1, 'installation_id' => 'bootstrap-a', 'domain' => 'bootstrap.example.test', 'package_type' => 'governorship',
+        'issued_at' => time(), 'refresh_after' => time() + 900, 'valid_until' => time() + 3600,
+        'features' => ['advanced_reports' => ['active' => true, 'starts_at' => time() - 60, 'expires_at' => time() + 1800]], 'catalogue' => []];
+    $payload = json_encode($claims, JSON_THROW_ON_ERROR);
+    openssl_sign($payload, $signature, $key, OPENSSL_ALGO_SHA256);
+    $response = new \Illuminate\Http\Client\Response(new \GuzzleHttp\Psr7\Response(200, [], json_encode([
+        'payload' => base64_encode($payload), 'signature' => base64_encode($signature),
+    ], JSON_THROW_ON_ERROR)));
+    $service = new class($registration, new \App\Services\Enterprise\SignedEntitlement, $directory.'/cache.json') extends EntitlementService {
+        public function __construct($registration, $verifier, private string $testPath) { parent::__construct($registration, $verifier); }
+        protected function path(): string { return $this->testPath; }
+    };
+    app()->instance(EntitlementService::class, $service);
+    try {
+        $registration->shouldReceive('enterpriseEntitlements')->once()->ordered()->andReturn($response);
+        $service->refresh();
+        $before = file_get_contents($directory.'/cache.json');
+        $registration->shouldReceive('enterpriseEntitlements')->once()->ordered()->andThrow(new ConnectionException('Synthetic outage'));
+        $result = app(EnterpriseBootstrapService::class)->initialize();
+        expect($result['synchronized'])->toBeFalse()
+            ->and(file_get_contents($directory.'/cache.json'))->toBe($before)
+            ->and($service->cached()['features']['advanced_reports']['active'])->toBeTrue();
+    } finally {
+        \Illuminate\Support\Facades\File::deleteDirectory($directory);
+    }
+});
