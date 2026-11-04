@@ -3,6 +3,8 @@
 return [
     // This is a trust anchor, never an installation bearer token or an AI key.
     'public_key' => env('ENTERPRISE_ENTITLEMENT_PUBLIC_KEY'),
+    // Keep existing SMS operational until purchase, provisioning and upgrade checks pass.
+    'sms_enforcement_enabled' => (bool) env('CAMPAIGN_SMS_ADDON_ENFORCEMENT', false),
     'features' => [
         'advanced_reports' => 'Advanced Reports and AI Intelligence',
         'campaign_finance' => 'Campaign Finance',
