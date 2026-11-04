@@ -61,6 +61,17 @@ test('SMS enforcement refuses installation access without an active entitlement'
     }
 });
 
+test('premium scope resolves chairmanship to Portal LGA rather than the environment default', function () {
+    \App\Models\SystemSetting::create([
+        'package' => 'chairmanship', 'system_name' => 'LGA Campaign', 'system_country' => 'Nigeria',
+    ]);
+    $resolved = app(\App\Services\PackageScopeService::class)->current();
+    expect($resolved->package_type)->toBe('chairmanship');
+    expect($resolved->fallback_used)->toBeFalse();
+    $portalScope = $resolved->package_type === 'chairmanship' ? 'lga' : $resolved->package_type;
+    expect($portalScope)->toBe('lga');
+});
+
 test('SMS premium entitlement restores route access without changing existing SMS permissions', function () {
     config(['enterprise.sms_enforcement_enabled' => true]);
     $this->mock(EntitlementService::class)->shouldReceive('active')
