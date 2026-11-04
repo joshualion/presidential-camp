@@ -19,4 +19,4 @@ jobs:
           run_id=41783718537
           state="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id" --jq .status)"
           if [[ "$state" == "completed" ]]; then echo "Already finished"; exit 0; fi
-          gh api -X POST "repos/$GITHUB_REPOSITORY/actions/runs/$run_id/cancel"
+          gh api -X POST "repos/$GITHUB_REPOSITORY/actions/runs/$run_id/force-cancel"
