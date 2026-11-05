@@ -407,7 +407,7 @@ test('finance navigation responds to the signed finance claim and its expiry', f
 
 test('finance migrations can re-enter after their tables already exist', function () {
     $this->finance->record($this->requester, $this->account->id, 'income', 100, 'Existing receipt', (string) Str::uuid());
-    foreach (['2026_11_05_000010_add_campaign_finance_journal.php', '2026_11_05_000011_add_campaign_finance_policies.php'] as $file) {
+    foreach (['2026_11_05_000010_add_campaign_finance_journal.php', '2026_11_05_000011_add_campaign_finance_policies.php', '2026_11_05_000012_add_campaign_finance_reversals.php'] as $file) {
         $migration = require database_path('migrations/'.$file);
         $migration->up();
     }
@@ -468,4 +468,16 @@ test('an income reversal cannot consume funds reserved for an approved request',
         ->toThrow(ValidationException::class);
     expect($this->account->fresh()->balance_minor)->toBe(10000);
     expect(DB::table('campaign_finance_reversals')->count())->toBe(0);
+});
+
+test('the Finance entry point opens an authorized section when the dashboard is hidden', function () {
+    $this->withoutMiddleware(\App\Http\Middleware\CheckUserOnboarding::class);
+    DB::table('campaign_finance_policies')->insert([
+        'previous_id' => 0, 'actor_id' => $this->requester->id,
+        'menus' => json_encode(['level:stateadmin' => ['requests']]), 'approval_rules' => '[]', 'created_at' => now(),
+    ]);
+    $this->actingAs($this->requester)->get(route('finance.index'))
+        ->assertRedirect(route('finance.section', ['section' => 'requests']));
+    $this->get(route('finance.section', ['section' => 'dashboard']))->assertNotFound();
+    $this->get(route('finance.section', ['section' => 'requests']))->assertOk();
 });

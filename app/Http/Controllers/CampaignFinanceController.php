@@ -12,6 +12,12 @@ class CampaignFinanceController extends Controller
 {
     public function index(Request $request, CampaignFinanceService $finance)
     {
+        $finance->authorize($request->user(), 'finance.view');
+        $sections = app(CampaignFinancePolicy::class)->visible($request->user());
+        abort_if(!$sections, 404);
+        if (!isset($sections['dashboard'])) {
+            return redirect()->route('finance.section', ['section' => array_key_first($sections)]);
+        }
         return $this->section($request, 'dashboard', $finance);
     }
 
@@ -63,22 +69,28 @@ class CampaignFinanceController extends Controller
         if ($section === 'disbursements') {
             $requests->whereIn('status', ['approved', 'recorded']);
         }
-        $totals = (clone $ledger)->selectRaw('kind, SUM(amount_minor) AS total')->groupBy('kind')->pluck('total', 'kind');
-        // A correction affects the reporting period in which the reversal was posted.
-        $reversed = (clone $ledger)
-            ->join('campaign_finance_reversals', 'campaign_finance_reversals.reversal_id', '=', 'campaign_finance_entries.id')
-            ->join('campaign_finance_entries as original', 'original.id', '=', 'campaign_finance_reversals.entry_id')
-            ->selectRaw('original.kind, SUM(campaign_finance_entries.amount_minor) AS total')
-            ->groupBy('original.kind')->pluck('total', 'original.kind');
-        foreach ($reversed as $kind => $amount) {
-            $totals[$kind] = ($totals[$kind] ?? 0) - $amount;
-        }
         $entries = (clone $ledger)->where('account_id', $id);
         if ($section === 'income' || $section === 'expenditure') {
             $entries->where('kind', $section);
         }
         $capabilities = app(\App\Services\CampaignCapabilityService::class);
-        $reserved = $finance->reservations()->whereIn('account_id', clone $selectedAccounts)->sum('amount_minor');
+        $totals = collect();
+        $treasury = $reserved = $pending = 0;
+        if ($section === 'dashboard') {
+            $totals = (clone $ledger)->selectRaw('kind, SUM(amount_minor) AS total')->groupBy('kind')->pluck('total', 'kind');
+            // A correction affects the reporting period in which the reversal was posted.
+            $reversed = (clone $ledger)
+                ->join('campaign_finance_reversals', 'campaign_finance_reversals.reversal_id', '=', 'campaign_finance_entries.id')
+                ->join('campaign_finance_entries as original', 'original.id', '=', 'campaign_finance_reversals.entry_id')
+                ->selectRaw('original.kind, SUM(campaign_finance_entries.amount_minor) AS total')
+                ->groupBy('original.kind')->pluck('total', 'original.kind');
+            foreach ($reversed as $kind => $amount) {
+                $totals[$kind] = ($totals[$kind] ?? 0) - $amount;
+            }
+            $treasury = (clone $selectedAccounts)->sum('campaign_finance_accounts.balance_minor');
+            $reserved = $finance->reservations()->whereIn('account_id', clone $selectedAccounts)->sum('amount_minor');
+            $pending = DB::table('campaign_finance_requests')->whereIn('account_id', $selectedAccounts)->where('status', 'pending')->count();
+        }
 
         return response()->view('backend.finance.index', [
             'profileData' => $actor,
@@ -103,9 +115,9 @@ class CampaignFinanceController extends Controller
                 ? DB::table('campaign_finance_audits')->where('account_id', $id)->latest('id')->paginate(25, ['*'], 'audits_page')->withQueryString() : null,
             'ledgerCheck' => $section === 'reports' ? DB::table('campaign_finance_ledger_checks')->where('account_id', $id)->first() : null,
             'chartOfAccounts' => CampaignFinanceJournal::ACCOUNTS,
-            'treasury' => (clone $selectedAccounts)->sum('campaign_finance_accounts.balance_minor'),
+            'treasury' => $treasury,
             'reserved' => $reserved,
-            'pending' => DB::table('campaign_finance_requests')->whereIn('account_id', $selectedAccounts)->where('status', 'pending')->count(),
+            'pending' => $pending,
             'totals' => $totals,
         ])->header('Cache-Control', 'no-store');
     }
