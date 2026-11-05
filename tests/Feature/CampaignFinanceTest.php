@@ -415,3 +415,57 @@ test('finance migrations can re-enter after their tables already exist', functio
     expect(DB::table('campaign_finance_journal')->count())->toBe(1);
     expect($this->account->fresh()->balance_minor)->toBe(100);
 });
+
+test('a reversal preserves its original and posts an equal amount with the journal codes swapped', function () {
+    $this->withoutMiddleware(\App\Http\Middleware\CheckUserOnboarding::class);
+    $permission = Permission::findOrCreate('finance.entries.reverse', 'web');
+    $this->approver->givePermissionTo($permission);
+    $this->requester->givePermissionTo($permission);
+    $account = $this->account->id;
+    $original = $this->finance->record($this->requester, $account, 'income', 10000, 'Duplicate receipt', (string) Str::uuid());
+    $key = (string) Str::uuid();
+    expect(fn () => $this->finance->reverse($this->requester, $account, $original, 'Correction', $key))
+        ->toThrow(\Symfony\Component\HttpKernel\Exception\HttpException::class);
+    $id = $this->finance->reverse($this->approver, $account, $original, 'Correction', $key);
+    expect($this->finance->reverse($this->approver, $account, $original, 'Correction', $key))->toBe($id);
+    expect(fn () => $this->finance->reverse($this->approver, $account, $original, 'Again', (string) Str::uuid()))
+        ->toThrow(ValidationException::class);
+    expect($this->account->fresh()->balance_minor)->toBe(0);
+    $this->assertDatabaseHas('campaign_finance_entries', ['id' => $original, 'kind' => 'income', 'amount_minor' => 10000]);
+    $this->assertDatabaseHas('campaign_finance_journal', ['entry_id' => $id, 'debit_code' => '4000', 'credit_code' => '1000', 'amount_minor' => 10000]);
+    $this->assertDatabaseHas('campaign_finance_reversals', ['entry_id' => $original, 'reversal_id' => $id]);
+    $this->actingAs($this->approver)->get(route('finance.index', ['from' => now()->toDateString()]))
+        ->assertOk()->assertViewHas('totals', fn ($totals) => (int) $totals['income'] === 0);
+    $this->get(route('finance.section', ['section' => 'reports', 'account' => $account]))
+        ->assertOk()->assertSee('Reverses entry '.$original);
+});
+
+test('an expense reversal restores the recorded balance and budget but cannot reopen its request', function () {
+    $this->approver->givePermissionTo(Permission::findOrCreate('finance.entries.reverse', 'web'));
+    $account = $this->account->id;
+    $this->finance->record($this->requester, $account, 'income', 10000, 'Receipt', (string) Str::uuid());
+    $budget = $this->finance->createBudget($this->requester, $account, 'Transport', 5000);
+    $request = $this->finance->request($this->requester, $account, $budget, 3000, 'Trip');
+    $this->finance->decide($this->approver, $request, true);
+    $expense = $this->finance->record($this->requester, $account, 'expenditure', 3000, 'Trip expense', (string) Str::uuid(), $request);
+    $this->finance->reverse($this->approver, $account, $expense, 'Correction', (string) Str::uuid());
+    expect($this->account->fresh()->balance_minor)->toBe(10000);
+    $this->assertDatabaseHas('campaign_finance_budgets', ['id' => $budget, 'utilized_minor' => 0]);
+    $this->assertDatabaseHas('campaign_finance_requests', ['id' => $request, 'status' => 'recorded']);
+});
+
+test('an income reversal cannot consume funds reserved for an approved request', function () {
+    $this->approver->givePermissionTo(Permission::findOrCreate('finance.entries.reverse', 'web'));
+    DB::table('campaign_finance_policies')->insert([
+        'previous_id' => 0, 'actor_id' => $this->approver->id, 'menus' => '{}',
+        'approval_rules' => json_encode([['minimum_minor' => 0, 'stages' => ['level:stateadmin']]]), 'created_at' => now(),
+    ]);
+    $account = $this->account->id;
+    $income = $this->finance->record($this->requester, $account, 'income', 10000, 'Receipt', (string) Str::uuid());
+    $request = $this->finance->request($this->requester, $account, null, 1000, 'Trip');
+    $this->finance->decide($this->approver, $request, true);
+    expect(fn () => $this->finance->reverse($this->approver, $account, $income, 'Correction', (string) Str::uuid()))
+        ->toThrow(ValidationException::class);
+    expect($this->account->fresh()->balance_minor)->toBe(10000);
+    expect(DB::table('campaign_finance_reversals')->count())->toBe(0);
+});

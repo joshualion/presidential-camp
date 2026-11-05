@@ -107,7 +107,7 @@ class CampaignFinanceService
             }
             DB::table('campaign_finance_requests')->where('id', $id)->update(['status' => $approve ? 'approved' : 'rejected', 'decided_by' => $actor->id, 'decided_at' => now(), 'updated_at' => now()]);
             $this->audit((int) $accountId, $actor, $approve ? 'request.approved' : 'request.rejected', ['request_id' => $id]);
-        });
+        }, 3);
     }
 
     public function record(User $actor, int $accountId, string $kind, int $amount, string $description, string $key, ?int $requestId = null): int
@@ -151,6 +151,73 @@ class CampaignFinanceService
             $journal->append($id, $kind, $amount);
             $this->audit($accountId, $actor, 'entry.recorded', ['entry_id' => $id, 'kind' => $kind, 'amount_minor' => $amount, 'balance_after_minor' => $balance]);
             return $id;
+        }, 3);
+    }
+
+    public function reverse(User $actor, int $accountId, int $entryId, string $reason, string $key): int
+    {
+        $this->authorize($actor, 'finance.entries.reverse');
+        $reason = $this->text($reason, 500);
+        if (!Str::isUuid($key)) {
+            $this->invalid('A valid submission key is required.');
+        }
+
+        return DB::transaction(function () use ($actor, $accountId, $entryId, $reason, $key) {
+            $account = $this->account($actor, $accountId, true);
+            $journal = app(CampaignFinanceJournal::class);
+            $journal->reconcile($account);
+            $original = DB::table('campaign_finance_entries')
+                ->where('account_id', $accountId)->where('id', $entryId)
+                ->whereIn('kind', ['income', 'expenditure'])->firstOrFail();
+            abort_if((int) $original->recorded_by === (int) $actor->id, 403, 'Another officer must reverse an entry you posted.');
+
+            $reversalId = DB::table('campaign_finance_reversals')->where('entry_id', $entryId)->value('reversal_id');
+            $existing = DB::table('campaign_finance_entries')->where('idempotency_key', $key)->first();
+            if ($existing) {
+                if ((int) $existing->id !== (int) $reversalId || (int) $existing->recorded_by !== (int) $actor->id || $existing->description !== $reason) {
+                    $this->invalid('This submission key was already used for another transaction.');
+                }
+                return (int) $existing->id;
+            }
+            if ($reversalId !== null) {
+                $this->invalid('This entry already has a reversal.');
+            }
+
+            $amount = (int) $original->amount_minor;
+            $balance = (int) $account->balance_minor;
+            if ($original->kind === 'income') {
+                $this->assertAvailable($account, null, $amount);
+                $balance -= $amount;
+            } else {
+                $balance += $amount;
+                if ($balance > 9000000000000000) {
+                    $this->invalid('Account balance limit exceeded.');
+                }
+                $budget = $this->budget($accountId, $original->budget_id);
+                if ($budget) {
+                    if ((int) $budget->utilized_minor < $amount) {
+                        $this->invalid('Historical budget utilization must be reconciled before reversing this expenditure.');
+                    }
+                    DB::table('campaign_finance_budgets')->where('id', $budget->id)
+                        ->decrement('utilized_minor', $amount, ['updated_at' => now()]);
+                }
+            }
+
+            $account->update(['balance_minor' => $balance]);
+            $reversalId = DB::table('campaign_finance_entries')->insertGetId([
+                'account_id' => $accountId, 'budget_id' => $original->budget_id,
+                'idempotency_key' => $key, 'kind' => 'reversal', 'amount_minor' => $amount,
+                'balance_after_minor' => $balance, 'description' => $reason,
+                'recorded_by' => $actor->id, 'created_at' => now(),
+            ]);
+            DB::table('campaign_finance_reversals')->insert(['entry_id' => $entryId, 'reversal_id' => $reversalId]);
+            $journal->reverse($entryId, $reversalId);
+            $this->audit($accountId, $actor, 'entry.reversed', [
+                'entry_id' => $entryId, 'reversal_id' => $reversalId, 'amount_minor' => $amount,
+                'balance_after_minor' => $balance,
+            ]);
+
+            return $reversalId;
         }, 3);
     }
 

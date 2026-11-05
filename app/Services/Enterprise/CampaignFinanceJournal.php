@@ -61,6 +61,17 @@ class CampaignFinanceJournal
             'expenditure' => ['5000', '1000'],
         };
 
+        $this->postPair($entryId, $debit, $credit, $amount);
+    }
+
+    public function reverse(int $entryId, int $reversalId): void
+    {
+        $original = DB::table('campaign_finance_journal')->where('entry_id', $entryId)->firstOrFail();
+        $this->postPair($reversalId, $original->credit_code, $original->debit_code, (int) $original->amount_minor);
+    }
+
+    private function postPair(int $entryId, string $debit, string $credit, int $amount): void
+    {
         DB::table('campaign_finance_journal')->insert([
             'entry_id' => $entryId,
             'debit_code' => $debit,

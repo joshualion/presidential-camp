@@ -46,13 +46,13 @@ class CampaignFinanceController extends Controller
         if (isset($filters['account'])) {
             $selectedAccounts->whereKey($id);
         }
-        $ledger = DB::table('campaign_finance_entries')->whereIn('account_id', clone $selectedAccounts);
+        $ledger = DB::table('campaign_finance_entries')->whereIn('campaign_finance_entries.account_id', clone $selectedAccounts);
         $requests = DB::table('campaign_finance_requests')->where('account_id', $id);
         if (isset($filters['from'])) {
-            $ledger->where('created_at', '>=', $filters['from'].' 00:00:00');
+            $ledger->where('campaign_finance_entries.created_at', '>=', $filters['from'].' 00:00:00');
         }
         if (isset($filters['to'])) {
-            $ledger->where('created_at', '<=', $filters['to'].' 23:59:59');
+            $ledger->where('campaign_finance_entries.created_at', '<=', $filters['to'].' 23:59:59');
         }
         if (isset($filters['status'])) {
             $requests->where('status', $filters['status']);
@@ -64,6 +64,15 @@ class CampaignFinanceController extends Controller
             $requests->whereIn('status', ['approved', 'recorded']);
         }
         $totals = (clone $ledger)->selectRaw('kind, SUM(amount_minor) AS total')->groupBy('kind')->pluck('total', 'kind');
+        // A correction affects the reporting period in which the reversal was posted.
+        $reversed = (clone $ledger)
+            ->join('campaign_finance_reversals', 'campaign_finance_reversals.reversal_id', '=', 'campaign_finance_entries.id')
+            ->join('campaign_finance_entries as original', 'original.id', '=', 'campaign_finance_reversals.entry_id')
+            ->selectRaw('original.kind, SUM(campaign_finance_entries.amount_minor) AS total')
+            ->groupBy('original.kind')->pluck('total', 'original.kind');
+        foreach ($reversed as $kind => $amount) {
+            $totals[$kind] = ($totals[$kind] ?? 0) - $amount;
+        }
         $entries = (clone $ledger)->where('account_id', $id);
         if ($section === 'income' || $section === 'expenditure') {
             $entries->where('kind', $section);
@@ -86,7 +95,9 @@ class CampaignFinanceController extends Controller
                     ->latest('campaign_finance_requests.id')->paginate(25, ['*'], 'requests_page')->withQueryString() : null,
             'entries' => in_array($section, ['income', 'expenditure', 'reports'], true)
                 ? $entries->leftJoin('campaign_finance_journal', 'campaign_finance_journal.entry_id', '=', 'campaign_finance_entries.id')
-                    ->select('campaign_finance_entries.*', 'campaign_finance_journal.debit_code', 'campaign_finance_journal.credit_code')
+                    ->leftJoin('campaign_finance_reversals as correction', 'correction.entry_id', '=', 'campaign_finance_entries.id')
+                    ->leftJoin('campaign_finance_reversals as reversed', 'reversed.reversal_id', '=', 'campaign_finance_entries.id')
+                    ->select('campaign_finance_entries.*', 'campaign_finance_journal.debit_code', 'campaign_finance_journal.credit_code', 'correction.reversal_id', 'reversed.entry_id as reverses_entry_id')
                     ->latest('campaign_finance_entries.id')->paginate(25, ['*'], 'entries_page')->withQueryString() : null,
             'audits' => $section === 'reports' && $capabilities->allows($actor, 'finance.reconcile')
                 ? DB::table('campaign_finance_audits')->where('account_id', $id)->latest('id')->paginate(25, ['*'], 'audits_page')->withQueryString() : null,
@@ -150,23 +161,31 @@ class CampaignFinanceController extends Controller
         return back()->with('finance_status', 'Transaction recorded. No bank transfer was initiated.');
     }
 
+    public function reverse(Request $request, int $accountId, int $entryId, CampaignFinanceService $finance)
+    {
+        $data = $request->validate(['reason' => 'required|string|max:500', 'idempotency_key' => 'required|uuid']);
+        $finance->reverse($request->user(), $accountId, $entryId, $data['reason'], $data['idempotency_key']);
+        return back()->with('finance_status', 'Reversal posted. The original transaction remains in the journal.');
+    }
+
     public function statement(Request $request, int $id, CampaignFinanceService $finance)
     {
         $finance->authorize($request->user(), 'finance.reports.export');
         $account = $finance->account($request->user(), $id);
         return response()->streamDownload(function () use ($account) {
             $out = fopen('php://output', 'w');
-            fputcsv($out, ['Transaction', 'Date', 'Kind', 'Currency', 'Amount', 'Balance', 'Description', 'Payment request', 'Debit code', 'Credit code'], ',', '"', '');
+            fputcsv($out, ['Transaction', 'Date', 'Kind', 'Currency', 'Amount', 'Balance', 'Description', 'Payment request', 'Debit code', 'Credit code', 'Reverses transaction'], ',', '"', '');
             foreach (DB::table('campaign_finance_entries')
                 ->leftJoin('campaign_finance_journal', 'campaign_finance_journal.entry_id', '=', 'campaign_finance_entries.id')
+                ->leftJoin('campaign_finance_reversals', 'campaign_finance_reversals.reversal_id', '=', 'campaign_finance_entries.id')
                 ->where('account_id', $account->id)
-                ->select('campaign_finance_entries.*', 'campaign_finance_journal.debit_code', 'campaign_finance_journal.credit_code')
+                ->select('campaign_finance_entries.*', 'campaign_finance_journal.debit_code', 'campaign_finance_journal.credit_code', 'campaign_finance_reversals.entry_id as reverses_entry_id')
                 ->orderBy('campaign_finance_entries.id')->cursor() as $entry) {
                 $description = preg_match('/^[\s]*[=+\-@\t\r]/u', $entry->description) ? "'".$entry->description : $entry->description;
                 fputcsv($out, [$entry->id, $entry->created_at, $entry->kind, $account->currency,
                     intdiv((int) $entry->amount_minor, 100).'.'.str_pad((string) ($entry->amount_minor % 100), 2, '0', STR_PAD_LEFT),
                     intdiv((int) $entry->balance_after_minor, 100).'.'.str_pad((string) ($entry->balance_after_minor % 100), 2, '0', STR_PAD_LEFT),
-                    $description, $entry->request_id, $entry->debit_code, $entry->credit_code], ',', '"', '');
+                    $description, $entry->request_id, $entry->debit_code, $entry->credit_code, $entry->reverses_entry_id], ',', '"', '');
             }
             fclose($out);
         }, 'campaign-finance-'.$account->id.'.csv', ['Content-Type' => 'text/csv; charset=UTF-8', 'Cache-Control' => 'no-store', 'X-Content-Type-Options' => 'nosniff']);
