@@ -17,7 +17,7 @@ return [
         'addons.purchase', 'reports.view', 'reports.export', 'reports.ai.generate', 'reports.settings.manage',
         'finance.view', 'finance.record', 'finance.budget.manage', 'finance.disbursement.create',
         'finance.disbursement.approve', 'finance.disbursement.execute', 'finance.reconcile',
-        'finance.reports.export', 'finance.accounts.manage', 'finance.donations.manage',
+        'finance.reports.export', 'finance.accounts.manage', 'finance.donations.manage', 'finance.documents.view',
         'merchandise.view', 'merchandise.products.manage', 'merchandise.categories.manage',
         'merchandise.inventory.manage', 'merchandise.orders.view', 'merchandise.orders.fulfil',
         'merchandise.reports.export',

@@ -243,10 +243,10 @@ test('finance provides older transaction history and current month summaries', f
     $old = $this->finance->record($this->requester, $this->account->id, 'income', 100, 'Prior month income', (string) Str::uuid());
     DB::table('campaign_finance_entries')->where('id', $old)->update(['created_at' => now()->subMonthNoOverflow()->startOfMonth()]);
     for ($n = 1; $n <= 30; $n++) { $this->finance->record($this->requester, $this->account->id, 'income', 100, 'Current month entry '.$n, (string) Str::uuid()); }
-    $response = $this->actingAs($this->requester)->get(route('finance.index', ['account' => $this->account->id, 'entries_page' => 2]))->assertOk()->assertSee('Prior month income');
-    $response->assertViewHas('monthlyTotals', fn ($totals) => (int)$totals['income'] === 3000);
+    $response = $this->actingAs($this->requester)->get(route('finance.section', ['section' => 'reports', 'account' => $this->account->id, 'entries_page' => 2]))->assertOk()->assertSee('Prior month income');
     $response->assertViewHas('entries', fn ($entries) => $entries->total() === 31 && $entries->currentPage() === 2);
-    $response->assertViewHas('audits', fn ($audits) => $audits->total() === 32);
+    $this->get(route('finance.index', ['from' => now()->startOfMonth()->toDateString()]))
+        ->assertViewHas('totals', fn ($totals) => (int) $totals['income'] === 3000);
 });
 
 test('finance document downloads enforce scope and integrity before returning attachments', function () {
@@ -254,6 +254,11 @@ test('finance document downloads enforce scope and integrity before returning at
     \Illuminate\Support\Facades\Storage::fake('local');
     $id = $this->finance->attachDocument($this->requester, $this->account->id, null, \Illuminate\Http\UploadedFile::fake()->image('receipt.png'));
     $document = DB::table('campaign_finance_documents')->where('id', $id)->first();
+    $this->actingAs($this->requester)->get(route('finance.documents.download', $id))->assertForbidden();
+    foreach ([$this->requester, $this->outsider] as $reader) {
+        $reader->givePermissionTo(Permission::findOrCreate('finance.documents.view', 'web'));
+        $reader->unsetRelation('permissions');
+    }
     $this->actingAs($this->requester)->get(route('finance.documents.download', $id))->assertOk()->assertHeader('Content-Type', 'application/octet-stream');
     $this->actingAs($this->outsider)->get(route('finance.documents.download', $id))->assertNotFound();
     \Illuminate\Support\Facades\Storage::disk('local')->put($document->path, 'tampered');
@@ -264,8 +269,149 @@ test('finance document downloads enforce scope and integrity before returning at
 
 test('finance custodian search exposes names only within the authorized jurisdiction', function () {
     $this->withoutMiddleware(\App\Http\Middleware\CheckUserOnboarding::class);
-    $this->actingAs($this->requester)->get(route('finance.index'))
+    $this->actingAs($this->requester)->get(route('finance.section', ['section' => 'accounts']))
         ->assertOk()->assertSee($this->approver->username)->assertDontSee($this->outsider->username);
-    $this->get(route('finance.index', ['custodian_search' => $this->outsider->username]))
+    $this->get(route('finance.section', ['section' => 'accounts', 'custodian_search' => $this->outsider->username]))
         ->assertOk()->assertDontSee('<option value="'.$this->outsider->id.'">', false);
+});
+
+test('historical entries reconcile once and new postings preserve paired minor-unit amounts', function () {
+    $this->requester->givePermissionTo(Permission::findOrCreate('finance.reconcile', 'web'));
+    $historical = DB::table('campaign_finance_entries')->insertGetId([
+        'account_id' => $this->account->id, 'idempotency_key' => (string) Str::uuid(), 'kind' => 'income',
+        'amount_minor' => 1100, 'balance_after_minor' => 1100, 'description' => 'v1.2.5 receipt',
+        'recorded_by' => $this->requester->id, 'created_at' => now()->subDay(),
+    ]);
+    $this->account->update(['balance_minor' => 1100]);
+
+    $this->finance->reconcileHistory($this->requester, $this->account->id);
+    $this->finance->reconcileHistory($this->requester, $this->account->id);
+    $new = $this->finance->record($this->requester, $this->account->id, 'income', 100, 'New receipt', (string) Str::uuid());
+
+    expect(DB::table('campaign_finance_journal')->count())->toBe(2);
+    $this->assertDatabaseHas('campaign_finance_journal', ['entry_id' => $historical, 'debit_code' => '1000', 'credit_code' => '4000', 'amount_minor' => 1100]);
+    $this->assertDatabaseHas('campaign_finance_journal', ['entry_id' => $new, 'amount_minor' => 100]);
+    $this->assertDatabaseHas('campaign_finance_entries', ['id' => $historical, 'balance_after_minor' => 1100, 'description' => 'v1.2.5 receipt']);
+    $this->assertDatabaseHas('campaign_finance_ledger_checks', ['account_id' => $this->account->id, 'historical_entries' => 1, 'historical_balance_minor' => 1100]);
+});
+
+test('a broken historical balance blocks posting without changing legacy records', function () {
+    $this->account->update(['balance_minor' => 1000]);
+    expect(fn () => $this->finance->record($this->requester, $this->account->id, 'income', 100, 'New receipt', (string) Str::uuid()))
+        ->toThrow(ValidationException::class);
+    expect($this->account->fresh()->balance_minor)->toBe(1000);
+    expect(DB::table('campaign_finance_journal')->count())->toBe(0);
+    expect(DB::table('campaign_finance_ledger_checks')->count())->toBe(0);
+    expect(DB::table('campaign_finance_entries')->count())->toBe(0);
+});
+
+test('a snapshotted approval chain requires distinct scoped actors and reserves funds after the final approval', function () {
+    $secondApprover = User::factory()->create(['access_level' => 'stateadmin', 'state_id' => 1, 'status' => 'active']);
+    $secondApprover->givePermissionTo(Permission::findOrCreate('finance.disbursement.approve', 'web'));
+    DB::table('campaign_finance_policies')->insert([
+        'previous_id' => 0, 'actor_id' => $secondApprover->id, 'menus' => '{}',
+        'approval_rules' => json_encode([['minimum_minor' => 0, 'stages' => ['level:stateadmin', 'level:stateadmin']]]),
+        'created_at' => now(),
+    ]);
+
+    $account = $this->account->id;
+    $this->finance->record($this->requester, $account, 'income', 10000, 'Recorded income', (string) Str::uuid());
+    $budget = $this->finance->createBudget($this->requester, $account, 'Transport', 10000);
+    $request = $this->finance->request($this->requester, $account, $budget, 8000, 'Travel');
+    $this->finance->decide($this->approver, $request, true);
+    expect(DB::table('campaign_finance_requests')->where('id', $request)->value('status'))->toBe('pending');
+    expect(fn () => $this->finance->decide($this->approver, $request, true))
+        ->toThrow(\Symfony\Component\HttpKernel\Exception\HttpException::class);
+    expect(fn () => $this->finance->decide($this->outsider, $request, true))
+        ->toThrow(\Illuminate\Database\Eloquent\ModelNotFoundException::class);
+    $this->finance->decide($secondApprover, $request, true);
+    expect((int) $this->finance->reservations()->where('account_id', $account)->sum('amount_minor'))->toBe(8000);
+    expect(fn () => $this->finance->record($this->approver, $account, 'expenditure', 8000, 'Travel paid', (string) Str::uuid(), $request))
+        ->toThrow(\Symfony\Component\HttpKernel\Exception\HttpException::class);
+    $next = $this->finance->request($this->requester, $account, $budget, 3000, 'Other travel');
+    $this->finance->decide($this->approver, $next, true);
+    expect(fn () => $this->finance->decide($secondApprover, $next, true))->toThrow(ValidationException::class);
+    expect(DB::table('campaign_finance_decisions')->where('request_id', $next)->count())->toBe(1);
+    $this->finance->cancel($this->requester, $request);
+    $this->finance->decide($secondApprover, $next, true);
+    $entry = $this->finance->record($this->requester, $account, 'expenditure', 3000, 'Other travel paid', (string) Str::uuid(), $next);
+    expect((int) $this->finance->reservations()->where('account_id', $account)->sum('amount_minor'))->toBe(0);
+    $this->assertDatabaseHas('campaign_finance_journal', ['entry_id' => $entry, 'debit_code' => '5000', 'credit_code' => '1000', 'amount_minor' => 3000]);
+});
+
+test('only a licensed super admin changes menu policies and menu visibility grants no writes', function () {
+    $this->withoutMiddleware([\App\Http\Middleware\CheckUserOnboarding::class]);
+    $super = User::factory()->create(['access_level' => 'superadmin', 'status' => 'active']);
+    $payload = [
+        'version' => 0, 'subject' => 'level:stateadmin', 'menus' => ['dashboard'],
+        'rules' => [['minimum_minor' => 0, 'stages' => ['level:stateadmin', '']]],
+    ];
+
+    $this->actingAs($this->requester)->post(route('finance.settings.save'), $payload)->assertForbidden();
+    $this->actingAs($super)->get(route('finance.settings'))->assertOk();
+    $this->post(route('finance.settings.save'), $payload)->assertRedirect()->assertSessionHasNoErrors();
+    $this->post(route('finance.settings.save'), $payload)->assertSessionHasErrors('version');
+    $viewer = User::factory()->create(['access_level' => 'stateadmin', 'state_id' => 1, 'status' => 'active']);
+    $viewer->givePermissionTo(Permission::findOrCreate('finance.view', 'web'));
+    $this->actingAs($viewer)->get(route('finance.index'))->assertOk();
+    $this->get(route('finance.section', ['section' => 'income']))->assertNotFound();
+    $this->post(route('finance.entries.store'), [
+        'account_id' => $this->account->id, 'kind' => 'income', 'amount' => '5.00',
+        'description' => 'Unauthorized', 'idempotency_key' => (string) Str::uuid(),
+    ])->assertForbidden();
+});
+
+test('a finance appointment is independent of the ordinary role, scoped, and revocable', function () {
+    $this->withoutMiddleware(\App\Http\Middleware\CheckUserOnboarding::class);
+    $super = User::factory()->create(['access_level' => 'superadmin', 'status' => 'active']);
+    $appointment = [
+        'user_id' => $this->approver->id, 'account_id' => $this->account->id,
+        'office' => 'treasurer', 'boundary_column' => 'state_id', 'expires_at' => now()->addDay()->toDateString(),
+    ];
+    $this->actingAs($this->requester)->post(route('finance.appointments.store'), $appointment)->assertForbidden();
+    $this->actingAs($super)->post(route('finance.appointments.store'), array_replace($appointment, ['user_id' => $this->outsider->id]))->assertNotFound();
+    $this->post(route('finance.appointments.store'), $appointment)->assertRedirect()->assertSessionHasNoErrors();
+    $id = DB::table('campaign_finance_appointments')->value('id');
+
+    $this->post(route('finance.settings.save'), [
+        'version' => 0, 'rules' => [['minimum_minor' => 0, 'stages' => ['office:treasurer']]],
+    ])->assertRedirect()->assertSessionHasNoErrors();
+    $account = $this->account->id;
+    $this->finance->record($this->requester, $account, 'income', 5000, 'Recorded income', (string) Str::uuid());
+    $first = $this->finance->request($this->requester, $account, null, 1000, 'First request');
+    $this->finance->decide($this->approver, $first, true);
+
+    $this->post(route('finance.appointments.revoke', $id))->assertRedirect();
+    $second = $this->finance->request($this->requester, $account, null, 1000, 'Second request');
+    expect(fn () => $this->finance->decide($this->approver, $second, true))
+        ->toThrow(\Symfony\Component\HttpKernel\Exception\HttpException::class);
+    $this->assertDatabaseHas('campaign_finance_appointments', ['id' => $id, 'revoked_by' => $super->id]);
+});
+
+test('finance navigation responds to the signed finance claim and its expiry', function () {
+    $this->withoutMiddleware(\App\Http\Middleware\CheckUserOnboarding::class);
+    $entitlements = app(EntitlementService::class);
+    $entitlements->shouldReceive('cached')->andReturn([
+        'features' => ['campaign_finance' => ['active' => true, 'starts_at' => time() - 60, 'expires_at' => time() + 60]],
+    ])->byDefault();
+    $this->actingAs($this->requester)->get(route('finance.index'))->assertOk()
+        ->assertSee(route('finance.section', ['section' => 'income']))
+        ->assertDontSee(route('finance.settings'));
+
+    $entitlements->shouldReceive('cached')->andReturn([
+        'features' => ['campaign_finance' => ['active' => true, 'starts_at' => time() - 60, 'expires_at' => time() - 1]],
+    ])->byDefault();
+    $entitlements->shouldReceive('active')->with('campaign_finance')->andReturn(false);
+    $this->get(route('finance.section', ['section' => 'income']))->assertStatus(402);
+});
+
+test('finance migrations can re-enter after their tables already exist', function () {
+    $this->finance->record($this->requester, $this->account->id, 'income', 100, 'Existing receipt', (string) Str::uuid());
+    foreach (['2026_11_05_000010_add_campaign_finance_journal.php', '2026_11_05_000011_add_campaign_finance_policies.php'] as $file) {
+        $migration = require database_path('migrations/'.$file);
+        $migration->up();
+    }
+    expect(DB::table('campaign_finance_entries')->count())->toBe(1);
+    expect(DB::table('campaign_finance_journal')->count())->toBe(1);
+    expect($this->account->fresh()->balance_minor)->toBe(100);
 });
