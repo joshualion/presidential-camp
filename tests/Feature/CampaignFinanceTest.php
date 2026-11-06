@@ -882,3 +882,59 @@ test('headquarters workflow migration safely reenters without losing proposal au
     expect(DB::table('campaign_finance_proposal_events')->where('proposal_id', $id)->count())->toBe(1);
     expect(DB::table('campaign_finance_funding_proposals')->where('id', $id)->exists())->toBeTrue();
 });
+
+
+test('bank statement reconciliation snapshots ledger balance and requires independent review', function () {
+    $service = app(\App\Services\Enterprise\CampaignFinanceStatementService::class);
+    foreach ([$this->requester, $this->approver] as $user) {
+        $user->givePermissionTo(Permission::findOrCreate('finance.reconcile', 'web'));
+    }
+    $this->finance->record($this->requester, $this->account->id, 'income', 120000,
+        'Opening income', (string) Str::uuid());
+    $check = $service->prepare($this->requester, $this->account->id,
+        today()->toDateString(), 120000, 'External bank statement A');
+    expect(DB::table('campaign_finance_statement_checks')->where('id', $check)
+        ->value('variance_minor'))->toBe(0);
+    expect(fn () => $service->review($this->requester, $check, 'My own statement'))
+        ->toThrow(\Symfony\Component\HttpKernel\Exception\HttpException::class);
+    $service->review($this->approver, $check, 'Checked the supplied statement reference.');
+    $row = DB::table('campaign_finance_statement_checks')->find($check);
+    expect($row->review_outcome)->toBe('balanced');
+    expect((int) $row->reviewed_by)->toBe($this->approver->id);
+    expect($this->account->fresh()->balance_minor)->toBe(120000);
+    expect(DB::table('campaign_finance_audits')
+        ->whereIn('action', ['statement.check.prepared','statement.check.reviewed'])->count())->toBe(2);
+    expect(fn () => $service->review($this->approver, $check, 'Approve again'))
+        ->toThrow(ValidationException::class);
+});
+
+test('statement variance is flagged rather than silently mutating recorded campaign funds', function () {
+    $service = app(\App\Services\Enterprise\CampaignFinanceStatementService::class);
+    $this->requester->givePermissionTo(Permission::findOrCreate('finance.reconcile', 'web'));
+    $this->approver->givePermissionTo(Permission::findOrCreate('finance.reconcile', 'web'));
+    $this->finance->record($this->requester, $this->account->id, 'income', 50000,
+        'Recorded donation', (string) Str::uuid());
+    $id = $service->prepare($this->requester, $this->account->id, today()->toDateString(),
+        45000, 'External bank balance B');
+    $service->review($this->approver, $id, 'Investigate the difference before booking adjustments.');
+    $row = DB::table('campaign_finance_statement_checks')->find($id);
+    expect((int) $row->variance_minor)->toBe(-5000);
+    expect($row->review_outcome)->toBe('variance');
+    expect($this->account->fresh()->balance_minor)->toBe(50000);
+    expect(DB::table('campaign_finance_entries')->count())->toBe(1);
+    expect(fn () => $service->prepare($this->requester, $this->account->id,
+        today()->toDateString(), 45000, 'Duplicate bank statement'))
+        ->toThrow(ValidationException::class);
+});
+
+test('reconciliation requires explicit privileges and cannot expose another jurisdiction', function () {
+    $service = app(\App\Services\Enterprise\CampaignFinanceStatementService::class);
+    expect(fn () => $service->prepare($this->requester, $this->account->id,
+        today()->toDateString(), 0, 'No reconciler role'))
+        ->toThrow(\Symfony\Component\HttpKernel\Exception\HttpException::class);
+    $this->outsider->givePermissionTo(Permission::findOrCreate('finance.reconcile', 'web'));
+    expect(fn () => $service->prepare($this->outsider, $this->account->id,
+        today()->toDateString(), 0, 'Different state statement'))
+        ->toThrow(\Illuminate\Database\Eloquent\ModelNotFoundException::class);
+    expect(DB::table('campaign_finance_statement_checks')->count())->toBe(0);
+});
