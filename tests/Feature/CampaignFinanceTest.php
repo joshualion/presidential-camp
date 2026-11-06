@@ -598,3 +598,18 @@ test('delegated governance never replaces role permissions or geographic account
     $this->expectException(\\Symfony\\Component\\HttpKernel\\Exception\\HttpException::class);
     $this->finance->authorize($leader, 'finance.disbursement.approve');
 });
+
+test('central governance grants finance actions to expressly authorized campaign root officers', function () {
+    $root = User::factory()->create(['access_level' => 'nationaladmin', 'status' => 'active']);
+    $policy = app(\\App\\Services\\Enterprise\\CampaignFinancePolicy::class);
+    DB::table('campaign_finance_governance')->insert([
+        'previous_id' => 1, 'actor_id' => $this->requester->id, 'mode' => 'central',
+        'grants' => json_encode([
+            'level:nationaladmin' => ['finance.disbursement.approve'],
+            'level:stateadmin' => ['finance.disbursement.approve'],
+        ], JSON_THROW_ON_ERROR),
+        'created_at' => now(),
+    ]);
+    expect($policy->permits($root, 'finance.disbursement.approve'))->toBeTrue();
+    expect($policy->permits($this->approver, 'finance.disbursement.approve'))->toBeFalse();
+});
