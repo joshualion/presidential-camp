@@ -14,6 +14,7 @@ return [
     'supported_sources' => ['1.0.8', '1.0.9', '1.1.0', '1.1.1', '1.1.2', '1.1.3', '1.1.4', '1.1.5', '1.1.6', '1.1.7', '1.1.8', '1.1.9', '1.2.0', '1.2.1', '1.2.2', '1.2.3', '1.2.4', '1.2.5'],
     // Names are added only after reviewing their up() implementation and compatibility.
     'approved_migrations' => [
+        '2026_11_06_000015_add_campaign_finance_governance' => '56935e450202baf5e35373ba170ddfb25937e463f9d2447f16446a61baae59a1',
         '2026_11_06_000014_add_campaign_finance_request_routes' => '2a84afbaff970b7088acfb77b4885ec23aa5d404c4b348d6b19f2fb420a43552',
         '2026_11_06_000013_add_campaign_finance_manual_expenses' => '53ee594d57b039b8b5eaaa94601352916313d1954168defde3f3bb6ad7ac947b',
         '2026_11_05_000012_add_campaign_finance_reversals' => 'def6b4cb037deaf0ca1a6a5de44b4ec88d89162bec6b3c997ef2bcf41051798e',
@@ -30,6 +31,6 @@ return [
         '2026_10_19_000002_create_direct_sms_tables' => '0909ab8a804ce0fedb195c0adb0091f42e9f1ca155727b18eb6775771e9e1a8a',
         '2026_09_06_000001_add_boundary_inec_codes_to_location_tables' => '579b7ba008504af708258ab255c15739b06b2d84c2f69c5b2458a6a2f1176eac',
     ],
-    'created_tables' => ['campaign_finance_request_routes', 'campaign_finance_manual_expenses', 'campaign_finance_reversals', 'campaign_finance_journal', 'campaign_finance_ledger_checks', 'campaign_finance_policies', 'campaign_finance_appointments', 'campaign_finance_workflows', 'campaign_finance_decisions', 'campaign_finance_accounts', 'campaign_finance_budgets', 'campaign_finance_requests', 'campaign_finance_entries', 'campaign_finance_audits', 'campaign_finance_documents', 'campaign_material_categories', 'campaign_materials', 'campaign_material_stocks', 'campaign_material_requests', 'campaign_material_request_events', 'campaign_material_movements', 'campaign_enterprise_legacy_access', 'enterprise_ai_settings', 'enterprise_ai_usage', 'enterprise_ai_audits', 'campaign_permission_restrictions', 'campaign_default_roles', 'sms_provider_grants', 'sms_provider_accounts', 'sms_direct_batches', 'sms_direct_messages', 'sms_direct_suppressions', 'sms_direct_events'],
+    'created_tables' => ['campaign_finance_governance', 'campaign_finance_request_routes', 'campaign_finance_manual_expenses', 'campaign_finance_reversals', 'campaign_finance_journal', 'campaign_finance_ledger_checks', 'campaign_finance_policies', 'campaign_finance_appointments', 'campaign_finance_workflows', 'campaign_finance_decisions', 'campaign_finance_accounts', 'campaign_finance_budgets', 'campaign_finance_requests', 'campaign_finance_entries', 'campaign_finance_audits', 'campaign_finance_documents', 'campaign_material_categories', 'campaign_materials', 'campaign_material_stocks', 'campaign_material_requests', 'campaign_material_request_events', 'campaign_material_movements', 'campaign_enterprise_legacy_access', 'enterprise_ai_settings', 'enterprise_ai_usage', 'enterprise_ai_audits', 'campaign_permission_restrictions', 'campaign_default_roles', 'sms_provider_grants', 'sms_provider_accounts', 'sms_direct_batches', 'sms_direct_messages', 'sms_direct_suppressions', 'sms_direct_events'],
 ];
 
