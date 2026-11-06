@@ -5,6 +5,44 @@
 <p>Record campaign funds, allocate budgets and approve payment requests. Amounts are in Nigerian naira. This workspace records campaign operations in NGN. Recorded balances are accounting balances.</p>
 @if(session('finance_status'))<div class="alert alert-success" role="status">{{ session('finance_status') }}</div>@endif
 @if($errors->any())<div class="alert alert-danger" role="alert">@foreach($errors->all() as $error)<p>{{ $error }}</p>@endforeach</div>@endif
+
+@if($section === 'requests')
+    <h2 class="h5 text-primary">Ask campaign headquarters for funding</h2>
+    <p>Authorized leaders can submit a request for their unit without seeing or controlling headquarters accounts. Finance will review the proposal and assign a paying account later. Submitting this form does not move funds.</p>
+    @if($capabilities->allows(auth()->user(), 'finance.disbursement.create')
+        && app(\App\Services\Enterprise\CampaignFinancePolicy::class)->permits(auth()->user(), 'finance.disbursement.create'))
+    <details class="card card-body mb-3"><summary>New funding proposal</summary>
+        <form method="POST" action="{{ route('finance.proposals.store') }}">
+            @csrf
+            <input type="hidden" name="submission_key" value="{{ (string)\Illuminate\Support\Str::uuid() }}">
+            <label>Funding amount (NGN)<input name="amount" class="form-control" inputmode="decimal" required></label>
+            <label>Purpose / project / event<textarea name="purpose" class="form-control" maxlength="500" required></textarea></label>
+            <p class="small">Optional named recipients: leave all rows blank if the branch itself will receive the allocation, subject to Finance approval.</p>
+            @foreach(range(0, 4) as $i)
+                <div class="form-row">
+                    <div class="col-md-8"><label>Recipient {{ $i + 1 }}<input name="recipients[{{ $i }}][name]" class="form-control" maxlength="160"></label></div>
+                    <div class="col-md-4"><label>Amount (NGN)<input name="recipients[{{ $i }}][amount]" class="form-control" inputmode="decimal"></label></div>
+                </div>
+            @endforeach
+            <button class="btn btn-primary">Submit proposal</button>
+        </form>
+    </details>
+    @endif
+    <h3 class="h6 text-primary">My proposals to Finance</h3>
+    <div class="table-responsive"><table class="table table-striped">
+        <thead><tr><th>ID</th><th>Purpose</th><th>Amount</th><th>Status</th></tr></thead>
+        <tbody>
+        @forelse($fundingProposals as $proposal)
+            <tr><td>{{ $proposal->id }}</td><td>{{ $proposal->purpose }}</td>
+                <td>NGN {{ number_format($proposal->amount_minor / 100, 2) }}</td>
+                <td>{{ ucfirst($proposal->status) }}</td></tr>
+        @empty <tr><td colspan="4">No headquarters funding proposals submitted.</td></tr>
+        @endforelse
+        </tbody>
+    </table></div>
+    {{ $fundingProposals->links('pagination::bootstrap-4') }}
+@endif
+
 @unless($section === 'accounts' && $accounts->isEmpty())
 <form method="GET" class="card card-body mb-3">
     <div class="form-row align-items-end">
