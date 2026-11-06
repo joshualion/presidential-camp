@@ -699,3 +699,15 @@ test('branch funding proposals cannot be forged, duplicated with changes or subm
     }
     expect(DB::table('campaign_finance_funding_proposals')->count())->toBe(1);
 });
+
+test('finance approval inbox does not expose proposals submitted outside approver geography', function () {
+    if (!app('router')->getRoutes()->getByName('finance.index')) {
+        \\Illuminate\\Support\\Facades\\Route::middleware('web')->group(base_path('routes/enterprise-finance.php'));
+        app('router')->getRoutes()->refreshNameLookups();
+    }
+    $this->withoutMiddleware([\\App\\Http\\Middleware\\CheckUserOnboarding::class]);
+    $this->finance->submitFundingProposal($this->requester, 10000, 'First state funded event', (string) Str::uuid());
+    $this->finance->submitFundingProposal($this->outsider, 20000, 'Second state private event', (string) Str::uuid());
+    $this->actingAs($this->approver)->get(route('finance.section', ['section' => 'approvals']))
+        ->assertOk()->assertSee('First state funded event')->assertDontSee('Second state private event');
+});
