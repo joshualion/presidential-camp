@@ -658,3 +658,44 @@ test('funding request retains requesting location separate from internal allocat
     expect((int) $origin->requesting_location_id)->toBe(1);
     expect((int) $origin->beneficiary_location_id)->toBe($destination->id);
 });
+
+test('branch funding proposals preserve original territorial identity and do not require paying-account access', function () {
+    $branch = $this->outsider;
+    DB::table('campaign_finance_governance')->insert([
+        'previous_id' => 1, 'actor_id' => $this->requester->id, 'mode' => 'central',
+        'grants' => json_encode(['level:stateadmin' => [
+            'finance.view', 'finance.disbursement.create',
+        ]], JSON_THROW_ON_ERROR), 'created_at' => now(),
+    ]);
+    expect($this->finance->accounts($branch)->whereKey($this->account->id)->exists())->toBeFalse();
+    $key = (string) Str::uuid();
+    $id = $this->finance->submitFundingProposal($branch, 12000, 'Ward transport funding', $key,
+        [['name' => 'Transport vendor', 'amount_minor' => 12000]]);
+    expect($this->finance->submitFundingProposal($branch, 12000, 'Ward transport funding', $key,
+        [['name' => 'Transport vendor', 'amount_minor' => 12000]]))->toBe($id);
+    $proposal = DB::table('campaign_finance_funding_proposals')->find($id);
+    expect((int) $proposal->requested_by)->toBe($branch->id);
+    expect($proposal->requesting_level)->toBe('state');
+    expect((int) $proposal->requesting_location_id)->toBe(2);
+    expect($proposal->status)->toBe('submitted');
+    expect(DB::table('campaign_finance_entries')->count())->toBe(0);
+    expect(DB::table('campaign_finance_requests')->count())->toBe(0);
+});
+
+test('branch funding proposals cannot be forged, duplicated with changes or submitted by ordinary members', function () {
+    $key = (string) Str::uuid();
+    $this->finance->submitFundingProposal($this->requester, 10000, 'Event', $key);
+    expect(fn () => $this->finance->submitFundingProposal($this->requester, 20000, 'Changed', $key))
+        ->toThrow(ValidationException::class);
+    expect(fn () => $this->finance->submitFundingProposal($this->requester, 10000, 'Event', (string) Str::uuid(),
+        [['name' => 'A', 'amount_minor' => 5000]]))->toThrow(ValidationException::class);
+    $member = User::factory()->create(['access_level' => 'user', 'status' => 'active']);
+    $member->givePermissionTo(Permission::findOrCreate('finance.disbursement.create', 'web'));
+    try {
+        $this->finance->submitFundingProposal($member, 10000, 'Unauthorized', (string) Str::uuid());
+        $this->fail('Ordinary member submitted proposal.');
+    } catch (\\Symfony\\Component\\HttpKernel\\Exception\\HttpException $e) {
+        expect($e->getStatusCode())->toBe(403);
+    }
+    expect(DB::table('campaign_finance_funding_proposals')->count())->toBe(1);
+});
