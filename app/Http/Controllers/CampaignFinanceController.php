@@ -54,6 +54,13 @@ class CampaignFinanceController extends Controller
         }
         $ledger = DB::table('campaign_finance_entries')->whereIn('campaign_finance_entries.account_id', clone $selectedAccounts);
         $requests = DB::table('campaign_finance_requests')->where('account_id', $id);
+        // A request-only leader sees only requests they submitted, not every
+        // beneficiary or expenditure in the geographic account.
+        if ($section === 'requests'
+            && (!app(\App\Services\CampaignCapabilityService::class)->allows($actor, 'finance.requests.view')
+                || !app(CampaignFinancePolicy::class)->permits($actor, 'finance.requests.view'))) {
+            $requests->where('requested_by', $actor->id);
+        }
         if (isset($filters['from'])) {
             $ledger->where('campaign_finance_entries.created_at', '>=', $filters['from'].' 00:00:00');
         }
