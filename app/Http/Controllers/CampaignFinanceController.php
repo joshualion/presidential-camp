@@ -109,6 +109,9 @@ class CampaignFinanceController extends Controller
                 ? DB::table('campaign_finance_documents')->where('account_id', $id)->latest('id')->paginate(25, ['*'], 'documents_page')->withQueryString()
                 : null,
             'budgets' => in_array($section, ['budgets', 'requests', 'expenditure'], true) ? DB::table('campaign_finance_budgets')->where('account_id', $id)->orderBy('id')->get() : [],
+            'fundingProposals' => $section === 'requests'
+                ? DB::table('campaign_finance_funding_proposals')->where('requested_by', $actor->id)
+                    ->latest('id')->paginate(25, ['*'], 'proposals_page')->withQueryString() : null,
             'requests' => in_array($section, ['requests', 'approvals', 'disbursements'], true)
                 ? $requests->leftJoin('campaign_finance_workflows', 'campaign_finance_workflows.request_id', '=', 'campaign_finance_requests.id')
                     ->leftJoin('campaign_finance_request_routes as routing', 'routing.request_id', '=', 'campaign_finance_requests.id')
@@ -157,6 +160,33 @@ class CampaignFinanceController extends Controller
         $data = $request->validate(['account_id' => 'required|integer|min:1', 'name' => 'required|string|max:120', 'amount' => ['required', 'regex:/^\d{1,12}(\.\d{1,2})?$/D']]);
         $finance->createBudget($request->user(), (int) $data['account_id'], $data['name'], $this->minor($data['amount']));
         return back()->with('finance_status', 'Budget allocation recorded.');
+    }
+
+    public function submitFundingProposal(Request $request, CampaignFinanceService $finance)
+    {
+        if (is_array($request->input('recipients'))) {
+            $request->merge(['recipients' => array_values(array_filter(
+                $request->input('recipients'),
+                fn ($payee) => !is_array($payee) || trim((string) ($payee['name'] ?? '')) !== ''
+                    || trim((string) ($payee['amount'] ?? '')) !== ''
+            ))]);
+        }
+        $data = $request->validate([
+            'submission_key' => 'required|uuid',
+            'amount' => ['required', 'regex:/^\\d{1,12}(\\.\\d{1,2})?$/D'],
+            'purpose' => 'required|string|max:500',
+            'recipients' => 'sometimes|array|max:20',
+            'recipients.*' => 'required|array:name,amount',
+            'recipients.*.name' => 'required|string|max:160',
+            'recipients.*.amount' => ['required', 'regex:/^\\d{1,12}(\\.\\d{1,2})?$/D'],
+        ]);
+        $finance->submitFundingProposal(
+            $request->user(), $this->minor($data['amount']), $data['purpose'], $data['submission_key'],
+            array_map(fn (array $payee) => ['name' => $payee['name'], 'amount_minor' => $this->minor($payee['amount'])],
+                $data['recipients'] ?? [])
+        );
+        return redirect()->route('finance.section', ['section' => 'requests'])
+            ->with('finance_status', 'Funding proposal submitted to Finance intake. No payment has been authorized.');
     }
 
     public function paymentRequest(Request $request, CampaignFinanceService $finance)
