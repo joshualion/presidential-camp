@@ -161,6 +161,14 @@ class CampaignFinanceController extends Controller
 
     public function paymentRequest(Request $request, CampaignFinanceService $finance)
     {
+        // Omit fully blank UI rows but reject any partially entered recipient.
+        if (is_array($request->input('recipients'))) {
+            $request->merge(['recipients' => array_values(array_filter(
+                $request->input('recipients'),
+                fn ($payee) => !is_array($payee) || trim((string) ($payee['name'] ?? '')) !== ''
+                    || trim((string) ($payee['amount'] ?? '')) !== ''
+            ))]);
+        }
         $data = $request->validate(['account_id' => 'required|integer|min:1', 'budget_id' => 'nullable|integer|min:1',
             'amount' => ['required', 'regex:/^\d{1,12}(\.\d{1,2})?$/D'], 'description' => 'required|string|max:500',
             'purpose' => 'nullable|in:expense,transfer,advance', 'destination_id' => 'nullable|integer|min:1',
