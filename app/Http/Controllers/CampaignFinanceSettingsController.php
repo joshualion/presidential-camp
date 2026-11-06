@@ -35,6 +35,9 @@ class CampaignFinanceSettingsController extends Controller
             'offices' => CampaignFinancePolicy::OFFICES,
             'appointments' => DB::table('campaign_finance_appointments')->orderByDesc('id')->paginate(20)->withQueryString(),
             'subject' => $subject,
+            'governance' => $policy->governance(),
+            'financeCapabilities' => array_values(array_filter(config('enterprise.permissions', []),
+                fn ($name) => str_starts_with($name, 'finance.'))),
         ])->header('Cache-Control', 'no-store');
     }
 
@@ -100,6 +103,40 @@ class CampaignFinanceSettingsController extends Controller
 
         return redirect()->route('finance.settings', array_filter(['subject' => $data['subject'] ?? null]))
             ->with('finance_status', 'Finance settings saved. Pending requests retain their original approval policy.');
+    }
+
+
+    public function saveGovernance(Request $request, CampaignFinanceService $finance)
+    {
+        $finance->authorize($request->user(), 'authorization.manage');
+        $subjects = array_keys($this->subjects());
+        $capabilities = array_values(array_filter(config('enterprise.permissions', []),
+            fn ($name) => str_starts_with($name, 'finance.')));
+        $data = $request->validate([
+            'version' => 'required|integer|min:0',
+            'mode' => ['required', Rule::in(['central', 'delegated'])],
+            'subject' => ['required', Rule::in($subjects)],
+            'grants' => 'sometimes|array',
+            'grants.*' => [Rule::in($capabilities)],
+        ]);
+        DB::transaction(function () use ($request, $data) {
+            $current = DB::table('campaign_finance_governance')->orderByDesc('id')->lockForUpdate()->first();
+            $previous = (int) ($current?->id ?? 0);
+            if ($previous !== (int) $data['version']) {
+                $this->outdated();
+            }
+            $grants = $current ? json_decode($current->grants, true, 512, JSON_THROW_ON_ERROR) : [];
+            $grants[$data['subject']] = array_values(array_unique($data['grants'] ?? []));
+            DB::table('campaign_finance_governance')->insert([
+                'previous_id' => $previous,
+                'actor_id' => $request->user()->id,
+                'mode' => $data['mode'],
+                'grants' => json_encode($grants, JSON_THROW_ON_ERROR),
+                'created_at' => now(),
+            ]);
+        }, 3);
+        return redirect()->route('finance.settings', ['subject' => $data['subject']])
+            ->with('finance_status', 'Finance governance saved. Changes apply immediately to future actions.');
     }
 
     public function appoint(Request $request, CampaignFinanceService $finance)
