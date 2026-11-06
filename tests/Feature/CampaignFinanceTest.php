@@ -715,3 +715,141 @@ test('finance approval inbox does not expose proposals submitted outside approve
     $this->actingAs($this->approver)->get(route('finance.section', ['section' => 'approvals']))
         ->assertOk()->assertSee('First state funded event')->assertDontSee('Second state private event');
 });
+
+
+/*
+ * Headquarters proposal processing: branch origin and beneficiary revisions must
+ * remain independent of the treasury account and the approving officer.
+ */
+test('finance headquarters returns a proposal then the original branch officer revises and resubmits', function () {
+    $workflow = app(\App\Services\Enterprise\CampaignFundingProposalService::class);
+    $id = $this->finance->submitFundingProposal($this->requester, 15000, 'First purpose', (string) Str::uuid(),
+        [['name' => 'Original recipient', 'amount_minor' => 15000]]);
+    $workflow->review($this->approver, $id, 1, 'return', 'Provide an updated beneficiary.');
+    expect(DB::table('campaign_finance_funding_proposals')->where('id', $id)->value('status'))->toBe('returned');
+    expect(fn () => $workflow->review($this->approver, $id, 1, 'reject', 'Stale form'))
+        ->toThrow(ValidationException::class);
+    expect(fn () => $workflow->resubmit($this->outsider, $id, 2, 15000, 'Forgery', []))
+        ->toThrow(\Illuminate\Database\Eloquent\ModelNotFoundException::class);
+    $workflow->resubmit($this->requester, $id, 2, 17000, 'Updated purpose',
+        [['name' => 'Updated recipient', 'amount_minor' => 17000]]);
+    $proposal = DB::table('campaign_finance_funding_proposals')->find($id);
+    expect($proposal->status)->toBe('submitted');
+    expect((int) $proposal->amount_minor)->toBe(17000);
+    expect(json_decode($proposal->recipients, true)[0]['name'])->toBe('Updated recipient');
+    $events = DB::table('campaign_finance_proposal_events')->where('proposal_id', $id)
+        ->orderBy('revision')->get();
+    expect($events->pluck('action')->all())->toBe(['submit', 'return', 'resubmit']);
+    expect(json_decode($events[2]->details, true)['previous_recipients'][0]['name'])
+        ->toBe('Original recipient');
+    expect((int) DB::table('campaign_finance_proposal_controls')->where('proposal_id', $id)->value('revision'))->toBe(3);
+});
+
+test('funding proposals can be rejected only by independent geographically authorized reviewers', function () {
+    $workflow = app(\App\Services\Enterprise\CampaignFundingProposalService::class);
+    $id = $this->finance->submitFundingProposal($this->requester, 10000, 'Pending grant', (string) Str::uuid());
+    expect(fn () => $workflow->review($this->requester, $id, 1, 'reject', 'Own proposal'))
+        ->toThrow(\Symfony\Component\HttpKernel\Exception\HttpException::class);
+    expect(fn () => $workflow->review($this->outsider, $id, 1, 'reject', 'Wrong territory'))
+        ->toThrow(\Illuminate\Database\Eloquent\ModelNotFoundException::class);
+    $workflow->review($this->approver, $id, 1, 'reject', 'Insufficient evidence.');
+    expect(DB::table('campaign_finance_funding_proposals')->where('id', $id)->value('status'))->toBe('rejected');
+    expect(fn () => $workflow->resubmit($this->requester, $id, 2, 10000, 'Retry', []))
+        ->toThrow(ValidationException::class);
+    expect(DB::table('campaign_finance_requests')->count())->toBe(0);
+});
+
+test('headquarters allocation requires an explicit approval chain and cannot mint approved money', function () {
+    $workflow = app(\App\Services\Enterprise\CampaignFundingProposalService::class);
+    $id = $this->finance->submitFundingProposal($this->requester, 12000, 'Branch project', (string) Str::uuid());
+    $this->finance->record($this->requester, $this->account->id, 'income', 20000,
+        'Opening balance', (string) Str::uuid());
+    expect(fn () => $workflow->assign($this->approver, $id, 1, $this->account->id))
+        ->toThrow(ValidationException::class);
+    expect(DB::table('campaign_finance_requests')->count())->toBe(0);
+    expect(DB::table('campaign_finance_funding_proposals')->where('id', $id)->value('status'))
+        ->toBe('submitted');
+
+    DB::table('campaign_finance_policies')->insert([
+        'previous_id' => 0, 'actor_id' => $this->approver->id,
+        'menus' => '{}', 'approval_rules' => json_encode([
+            ['minimum_minor' => 0, 'stages' => ['level:stateadmin']],
+        ]), 'created_at' => now(),
+    ]);
+    $requestId = $workflow->assign($this->approver, $id, 1, $this->account->id);
+    $request = DB::table('campaign_finance_requests')->find($requestId);
+    expect($request->status)->toBe('pending');
+    expect((int) $request->requested_by)->toBe($this->requester->id);
+    expect((int) DB::table('campaign_finance_funding_proposals')
+        ->where('id', $id)->value('assigned_request_id'))->toBe($requestId);
+    expect((int) $this->finance->reservations()->where('account_id', $this->account->id)
+        ->sum('amount_minor'))->toBe(0);
+    expect(fn () => $workflow->assign($this->approver, $id, 1, $this->account->id))
+        ->toThrow(ValidationException::class);
+    expect(fn () => $this->finance->decide($this->approver, $requestId, true))
+        ->toThrow(\Symfony\Component\HttpKernel\Exception\HttpException::class);
+    expect(fn () => $this->finance->decide($this->requester, $requestId, true))
+        ->toThrow(\Symfony\Component\HttpKernel\Exception\HttpException::class);
+
+    $independent = User::factory()->create([
+        'access_level' => 'stateadmin', 'state_id' => 1, 'status' => 'active',
+    ]);
+    $independent->givePermissionTo(Permission::findOrCreate('finance.disbursement.approve', 'web'));
+    $this->finance->decide($independent, $requestId, true);
+    expect(DB::table('campaign_finance_requests')->where('id', $requestId)
+        ->value('status'))->toBe('approved');
+    expect((int) $this->finance->reservations()->where('account_id', $this->account->id)
+        ->sum('amount_minor'))->toBe(12000);
+    expect($this->account->fresh()->balance_minor)->toBe(20000);
+});
+
+test('headquarters allocation retains named recipients and original location and blocks a lump-sum payout', function () {
+    $workflow = app(\App\Services\Enterprise\CampaignFundingProposalService::class);
+    DB::table('campaign_finance_policies')->insert([
+        'previous_id' => 0, 'actor_id' => $this->approver->id,
+        'menus' => '{}', 'approval_rules' => json_encode([
+            ['minimum_minor' => 0, 'stages' => ['level:stateadmin']],
+        ]), 'created_at' => now(),
+    ]);
+    $id = $this->finance->submitFundingProposal($this->outsider, 20000,
+        'Second state vendors', (string) Str::uuid(), [
+            ['name' => 'Vendor A', 'amount_minor' => 7000],
+            ['name' => 'Vendor B', 'amount_minor' => 13000],
+        ]);
+    expect(fn () => $workflow->assign($this->approver, $id, 1, $this->account->id))
+        ->toThrow(\Illuminate\Database\Eloquent\ModelNotFoundException::class);
+
+    $regional = User::factory()->create([
+        'access_level' => 'superadmin', 'status' => 'active',
+    ]);
+    $requestId = $workflow->assign($regional, $id, 1, $this->account->id);
+    $origin = DB::table('campaign_finance_request_origins')->where('request_id', $requestId)->first();
+    expect($origin->requesting_level)->toBe('state');
+    expect((int) $origin->requesting_location_id)->toBe(2);
+    expect(DB::table('campaign_finance_request_recipients')->where('request_id', $requestId)
+        ->sum('amount_minor'))->toBe(20000);
+    expect(DB::table('campaign_finance_requests')->where('id', $requestId)
+        ->value('status'))->toBe('pending');
+});
+
+test('headquarters branch allocations record a recipient account rather than treating it as an expense', function () {
+    $workflow = app(\App\Services\Enterprise\CampaignFundingProposalService::class);
+    DB::table('campaign_finance_policies')->insert([
+        'previous_id' => 0, 'actor_id' => $this->approver->id,
+        'menus' => '{}', 'approval_rules' => json_encode([
+            ['minimum_minor' => 0, 'stages' => ['level:stateadmin']],
+        ]), 'created_at' => now(),
+    ]);
+    $destination = $this->finance->createAccount($this->requester,
+        'Receiving branch treasury', $this->requester->id);
+    $id = $this->finance->submitFundingProposal($this->requester, 5000,
+        'Unspecified branch beneficiaries', (string) Str::uuid());
+    $requestId = $workflow->assign($this->approver, $id, 1,
+        $this->account->id, null, $destination->id);
+    $routing = DB::table('campaign_finance_request_routes')->where('request_id', $requestId)->first();
+    expect($routing->purpose)->toBe('transfer');
+    expect((int) $routing->destination_id)->toBe($destination->id);
+    expect(DB::table('campaign_finance_entries')->count())->toBe(0);
+    expect(DB::table('campaign_finance_request_origins')->where('request_id', $requestId)
+        ->value('payment_plan'))->toBe('branch_allocation');
+});
