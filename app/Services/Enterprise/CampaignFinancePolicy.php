@@ -128,8 +128,10 @@ class CampaignFinancePolicy
             }
         }
         if (!array_intersect($subjects, array_keys($menus))) {
-            // No saved navigation rule must not result in unrestricted menu visibility.
-            $allowed = ['dashboard', 'requests'];
+            // Navigation is a presentation preference, not authorization.
+            // With no explicit menu restriction, derive visibility exclusively
+            // from independently granted role capabilities + finance governance.
+            $allowed = array_keys(self::SECTIONS);
         }
 
         $sections = array_diff_key(array_intersect_key(self::SECTIONS, array_flip($allowed)), ['settings' => true]);
@@ -146,8 +148,12 @@ class CampaignFinancePolicy
             'reports' => 'finance.reports.export',
         ];
         foreach ($requirements as $section => $capability) {
-            if (!app(\App\Services\CampaignCapabilityService::class)->allows($actor, $capability)
-                || !$this->permits($actor, $capability)) {
+            $canSubmitOwnRequest = $section === 'requests'
+                && app(\App\Services\CampaignCapabilityService::class)->allows($actor, 'finance.disbursement.create')
+                && $this->permits($actor, 'finance.disbursement.create');
+            if (!$canSubmitOwnRequest
+                && (!app(\App\Services\CampaignCapabilityService::class)->allows($actor, $capability)
+                    || !$this->permits($actor, $capability))) {
                 unset($sections[$section]);
             }
         }
