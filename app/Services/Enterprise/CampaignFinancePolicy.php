@@ -40,6 +40,52 @@ class CampaignFinancePolicy
         'polling_unit_id' => 'Polling Unit',
     ];
 
+
+    /**
+     * Global governance starts closed. Role capabilities alone never open financial
+     * records or money movement; the Super Admin explicitly delegates each action.
+     */
+    public function governance(): ?object
+    {
+        if (!Schema::hasTable('campaign_finance_governance')) {
+            return null;
+        }
+        return DB::table('campaign_finance_governance')->latest('id')->first();
+    }
+
+    public function permits(User $actor, string $permission): bool
+    {
+        if ($actor->status !== 'active' || !str_starts_with($permission, 'finance.')) {
+            return false;
+        }
+        if ($actor->access_level === 'superadmin') {
+            return true;
+        }
+        $policy = $this->governance();
+        if (!$policy) {
+            return false;
+        }
+        $grants = json_decode($policy->grants, true, 512, JSON_THROW_ON_ERROR);
+        $subjects = ['level:'.$actor->access_level];
+        foreach ($actor->roles->where('guard_name', 'web') as $role) {
+            $subjects[] = 'role:'.$role->id;
+        }
+        $allowed = false;
+        foreach ($subjects as $subject) {
+            if (in_array($permission, $grants[$subject] ?? [], true)) {
+                $allowed = true;
+                break;
+            }
+        }
+        if (!$allowed) {
+            return false;
+        }
+        // The main campaign office retains spending/approval authority in central mode.
+        // Delegation of view and request creation alone never grants a payout capability.
+        return $policy->mode === 'delegated'
+            || in_array($permission, ['finance.view', 'finance.disbursement.create'], true);
+    }
+
     public function current(): ?object
     {
         if (!Schema::hasTable('campaign_finance_policies')) {
@@ -54,6 +100,9 @@ class CampaignFinancePolicy
         if ($actor->access_level === 'superadmin') {
             return self::SECTIONS;
         }
+        if (!$this->permits($actor, 'finance.view')) {
+            return [];
+        }
 
         $policy = $this->current();
         $menus = $policy ? json_decode($policy->menus, true, 512, JSON_THROW_ON_ERROR) : [];
@@ -66,10 +115,28 @@ class CampaignFinancePolicy
             }
         }
         if (!array_intersect($subjects, array_keys($menus))) {
-            $allowed = array_keys(self::SECTIONS);
+            // No saved navigation rule must not result in unrestricted menu visibility.
+            $allowed = ['dashboard', 'requests'];
         }
 
-        return array_diff_key(array_intersect_key(self::SECTIONS, array_flip($allowed)), ['settings' => true]);
+        $sections = array_diff_key(array_intersect_key(self::SECTIONS, array_flip($allowed)), ['settings' => true]);
+        // The approval, accounting and audit pages are not inferred from finance.view.
+        $requirements = [
+            'income' => 'finance.record',
+            'expenditure' => 'finance.expenses.record',
+            'approvals' => 'finance.disbursement.approve',
+            'disbursements' => 'finance.movements.post',
+            'budgets' => 'finance.budget.manage',
+            'accounts' => 'finance.accounts.manage',
+            'reports' => 'finance.reports.export',
+        ];
+        foreach ($requirements as $section => $capability) {
+            if (!app(\\App\\Services\\CampaignCapabilityService::class)->allows($actor, $capability)
+                || !$this->permits($actor, $capability)) {
+                unset($sections[$section]);
+            }
+        }
+        return $sections;
     }
 
     public function snapshot(int $requestId, int $amount): void
