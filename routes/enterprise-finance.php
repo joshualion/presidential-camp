@@ -12,6 +12,8 @@ Route::middleware(['auth', 'enterprise.feature:campaign_finance,finance.view'])-
     Route::post('/settings/appointments', [CampaignFinanceSettingsController::class, 'appoint'])->name('appointments.store');
     Route::post('/settings/appointments/{id}/revoke', [CampaignFinanceSettingsController::class, 'revoke'])->whereNumber('id')->name('appointments.revoke');
     Route::get('/section/{section}', [CampaignFinanceController::class, 'section'])->name('section');
+    Route::post('/statements/checks', [CampaignFinanceController::class, 'prepareStatementCheck'])->name('statements.prepare');
+    Route::post('/statements/checks/{id}/review', [CampaignFinanceController::class, 'reviewStatementCheck'])->whereNumber('id')->name('statements.review');
     Route::post('/accounts/{id}/reconcile', [CampaignFinanceController::class, 'reconcile'])->whereNumber('id')->name('reconcile');
     Route::post('/requests/{id}/cancel', [CampaignFinanceController::class, 'cancel'])->whereNumber('id')->name('requests.cancel');
     Route::post('/accounts', [CampaignFinanceController::class, 'account'])->name('accounts.store');
