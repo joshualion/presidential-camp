@@ -5,6 +5,31 @@
     @if($errors->any())
         <ul class="alert alert-danger" role="alert">@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul>
     @endif
+    <h2 class="h4 text-primary">Finance governance</h2>
+    <p>Central mode keeps money movement and approvals under the Super Admin. In central mode, delegated roles can only receive finance viewing and funding request creation. Delegated mode allows each listed finance capability to be granted explicitly. Ordinary members have no implicit finance access. Role permission grants under Roles &amp; Permissions are separately required for every selected function; campaign geography restrictions continue to apply.</p>
+    <form method="POST" action="{{ route('finance.settings.governance') }}" class="card card-body mb-3">
+        @csrf
+        <input type="hidden" name="version" value="{{ $governance?->id ?? 0 }}">
+        <label for="finance-governance-mode">Finance operating model</label>
+        <select name="mode" id="finance-governance-mode" class="form-control mb-3">
+            <option value="central" @selected(old('mode', $governance?->mode ?? 'central') === 'central')>Central — only explicitly delegated view and funding requests</option>
+            <option value="delegated" @selected(old('mode', $governance?->mode ?? 'central') === 'delegated')>Delegated — grant individual functions to approved levels or roles</option>
+        </select>
+        @if($subject)
+            <input type="hidden" name="subject" value="{{ $subject }}">
+            <p class="font-weight-bold">{{ $subjects[$subject] }} — permitted finance capabilities</p>
+            @php($savedFinanceGrants = $governance ? (json_decode($governance->grants, true, 512, JSON_THROW_ON_ERROR)[$subject] ?? []) : [])
+            @foreach($financeCapabilities as $capability)
+                <label class="d-block">
+                    <input type="checkbox" name="grants[]" value="{{ $capability }}" @checked(in_array($capability, old('grants', $savedFinanceGrants), true))>
+                    {{ $capability }}
+                </label>
+            @endforeach
+            <button class="btn btn-primary mt-2">Save governance and grants</button>
+        @else
+            <p class="text-muted">Select a role or access level above to configure grants. The operating model is saved together with that subject's permissions.</p>
+        @endif
+    </form>
     <h2 class="h4 text-primary">Finance navigation</h2>
     <p>Choose which Finance pages are available to a role or access level. Existing capabilities control what users can do on each page. Users keep their campaign and geographic restrictions.</p>
     <form method="GET" action="{{ route('finance.settings') }}" class="mb-3">
@@ -25,7 +50,7 @@
                 <legend class="h5 text-primary">{{ $subjects[$subject] }}</legend>
                 <input type="hidden" name="subject" value="{{ $subject }}">
                 @foreach($sections as $key => $label)
-                    <label class="d-block"><input type="checkbox" name="menus[]" value="{{ $key }}" @checked(in_array($key, old('menus', $menus[$subject] ?? array_keys($sections)), true))> {{ $label }}</label>
+                    <label class="d-block"><input type="checkbox" name="menus[]" value="{{ $key }}" @checked(in_array($key, old('menus', $menus[$subject] ?? ['dashboard', 'requests']), true))> {{ $label }}</label>
                 @endforeach
             </fieldset>
         @endif
