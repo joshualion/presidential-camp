@@ -29,6 +29,18 @@ beforeEach(function () {
             $user->givePermissionTo(Permission::findOrCreate($permission, 'web'));
         }
     }
+    // Explicit test policy: previous role grants do not bypass finance governance.
+    DB::table('campaign_finance_governance')->insert([
+        'previous_id' => 0, 'actor_id' => $this->requester->id, 'mode' => 'delegated',
+        'grants' => json_encode(['level:stateadmin' => array_values(array_filter(
+            config('enterprise.permissions'), fn ($name) => str_starts_with($name, 'finance.')))], JSON_THROW_ON_ERROR),
+        'created_at' => now(),
+    ]);
+    foreach ([$this->requester, $this->approver, $this->outsider] as $user) {
+        foreach (['finance.dashboard.view', 'finance.requests.view'] as $permission) {
+            $user->givePermissionTo(Permission::findOrCreate($permission, 'web'));
+        }
+    }
     $this->account = $this->finance->createAccount($this->requester, 'State operations', $this->requester->id);
 });
 
@@ -543,4 +555,46 @@ test('a paid advance is settled once with documented spending and returned funds
     $this->assertDatabaseHas('campaign_finance_entries', ['kind' => 'advance_expense', 'amount_minor' => 18000, 'balance_after_minor' => 70000]);
     $this->assertDatabaseHas('campaign_finance_entries', ['kind' => 'advance_return', 'amount_minor' => 12000, 'balance_after_minor' => 82000]);
     expect(DB::table('campaign_finance_entries')->whereIn('kind', ['advance_expense', 'advance_return'])->count())->toBe(2);
+});
+
+test('finance governance denies ordinary members and explicit capability alone is insufficient', function () {
+    $member = User::factory()->create(['access_level' => 'user', 'state_id' => 1, 'status' => 'active']);
+    foreach (['finance.view', 'finance.disbursement.create', 'finance.dashboard.view'] as $permission) {
+        $member->givePermissionTo(Permission::findOrCreate($permission, 'web'));
+    }
+    expect(app(\\App\\Services\\Enterprise\\CampaignFinancePolicy::class)->visible($member))->toBe([]);
+    $this->expectException(\\Symfony\\Component\\HttpKernel\\Exception\\HttpException::class);
+    $this->finance->request($member, $this->account->id, null, 1000, 'No finance delegation');
+});
+
+test('central mode supports request-only leadership without disclosing dashboard or payment rights', function () {
+    $policy = app(\\App\\Services\\Enterprise\\CampaignFinancePolicy::class);
+    $leader = $this->requester;
+    DB::table('campaign_finance_governance')->insert([
+        'previous_id' => 1, 'actor_id' => $leader->id, 'mode' => 'central',
+        'grants' => json_encode(['level:stateadmin' => [
+            'finance.view', 'finance.disbursement.create',
+            'finance.dashboard.view', 'finance.disbursement.approve',
+        ]], JSON_THROW_ON_ERROR),
+        'created_at' => now(),
+    ]);
+    expect($policy->permits($leader, 'finance.disbursement.create'))->toBeTrue();
+    expect($policy->permits($leader, 'finance.disbursement.approve'))->toBeFalse();
+    expect($policy->visible($leader))->not->toHaveKey('approvals');
+    // A view grant permits financial dashboard access only if separately configured.
+    $version = DB::table('campaign_finance_governance')->max('id');
+    DB::table('campaign_finance_governance')->insert([
+        'previous_id' => $version, 'actor_id' => $leader->id, 'mode' => 'central',
+        'grants' => json_encode(['level:stateadmin' => ['finance.view', 'finance.disbursement.create']], JSON_THROW_ON_ERROR),
+        'created_at' => now(),
+    ]);
+    expect($policy->visible($leader))->not->toHaveKey('dashboard');
+    expect($policy->visible($leader))->toHaveKey('requests');
+});
+
+test('delegated governance never replaces role permissions or geographic account scoping', function () {
+    $leader = User::factory()->create(['access_level' => 'stateadmin', 'state_id' => 2, 'status' => 'active']);
+    expect(app(\\App\\Services\\Enterprise\\CampaignFinancePolicy::class)->permits($leader, 'finance.disbursement.approve'))->toBeTrue();
+    $this->expectException(\\Symfony\\Component\\HttpKernel\\Exception\\HttpException::class);
+    $this->finance->authorize($leader, 'finance.disbursement.approve');
 });
