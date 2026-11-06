@@ -100,6 +100,17 @@ class CampaignFinanceController extends Controller
             $pending = DB::table('campaign_finance_requests')->whereIn('account_id', $selectedAccounts)->where('status', 'pending')->count();
         }
 
+        $incomingFundingProposals = null;
+        if ($section === 'approvals') {
+            $queue = DB::table('campaign_finance_funding_proposals')
+                ->join('users', 'users.id', '=', 'campaign_finance_funding_proposals.requested_by')
+                ->select('campaign_finance_funding_proposals.*');
+            $queue = app(\App\Services\LocationScopeService::class)
+                ->applyScope($queue, $actor, 'users', 'users');
+            $incomingFundingProposals = $queue->orderByDesc('campaign_finance_funding_proposals.id')
+                ->paginate(25, ['*'], 'incoming_proposals_page')->withQueryString();
+        }
+
         return response()->view('backend.finance.index', [
             'profileData' => $actor,
             'pageTitle' => $section === 'dashboard' ? 'Campaign Finance' : $sections[$section],
@@ -109,6 +120,7 @@ class CampaignFinanceController extends Controller
                 ? DB::table('campaign_finance_documents')->where('account_id', $id)->latest('id')->paginate(25, ['*'], 'documents_page')->withQueryString()
                 : null,
             'budgets' => in_array($section, ['budgets', 'requests', 'expenditure'], true) ? DB::table('campaign_finance_budgets')->where('account_id', $id)->orderBy('id')->get() : [],
+            'incomingFundingProposals' => $incomingFundingProposals,
             'fundingProposals' => $section === 'requests'
                 ? DB::table('campaign_finance_funding_proposals')->where('requested_by', $actor->id)
                     ->latest('id')->paginate(25, ['*'], 'proposals_page')->withQueryString() : null,
