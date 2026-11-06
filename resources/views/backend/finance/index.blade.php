@@ -142,6 +142,46 @@
     {{ $incomingFundingProposals->links('pagination::bootstrap-4') }}
 @endif
 
+@if($section === 'reports'
+    && $capabilities->allows(auth()->user(), 'finance.reconcile')
+    && app(\App\Services\Enterprise\CampaignFinancePolicy::class)->permits(auth()->user(), 'finance.reconcile'))
+    <h2 class="h5 text-primary">Bank statement reconciliation</h2>
+    <p class="small">Compare an external bank-statement ending balance against the Finance ledger for a specified date. This records an internal check, not confirmation from a bank or payment gateway. Discrepancies require investigation; no funds are posted or adjusted automatically.</p>
+    <details class="card card-body mb-3"><summary>Record statement balance</summary>
+        <form method="POST" action="{{ route('finance.statements.prepare') }}">
+            @csrf
+            <label>Finance account<select name="account_id" class="form-control" required>
+                @foreach($accounts as $item)<option value="{{ $item->id }}">{{ $item->name }}</option>@endforeach
+            </select></label>
+            <label>Statement ending date<input type="date" max="{{ today()->toDateString() }}" name="statement_date" class="form-control" required></label>
+            <label>Statement ending balance (NGN)<input name="statement_balance" class="form-control" inputmode="decimal" required></label>
+            <label>Bank statement / evidence reference<input name="evidence_reference" class="form-control" maxlength="300" required></label>
+            <button class="btn btn-primary btn-sm">Record for independent review</button>
+        </form>
+    </details>
+    <div class="table-responsive"><table class="table table-striped">
+        <thead><tr><th>Date / Account</th><th>Ledger NGN</th><th>Statement NGN</th><th>Variance NGN</th><th>Review</th></tr></thead>
+        <tbody>
+        @forelse($statementChecks as $check)
+            <tr><td>{{ $check->statement_date }} / #{{ $check->account_id }}<div class="small">{{ $check->evidence_reference }}</div></td>
+                <td>{{ number_format($check->ledger_balance_minor / 100, 2) }}</td>
+                <td>{{ number_format($check->statement_balance_minor / 100, 2) }}</td>
+                <td>{{ number_format($check->variance_minor / 100, 2) }}</td>
+                <td>{{ ucfirst($check->review_outcome) }}
+                    @if($check->review_outcome === 'pending' && (int) $check->prepared_by !== (int) auth()->id())
+                    <form method="POST" action="{{ route('finance.statements.review', $check->id) }}">
+                        @csrf
+                        <label>Review notes<input name="review_notes" class="form-control" maxlength="500" required></label>
+                        <button class="btn btn-outline-primary btn-sm">Record independent review</button>
+                    </form>@endif
+                </td>
+            </tr>
+        @empty <tr><td colspan="5">No statement checks recorded.</td></tr>
+        @endforelse
+        </tbody>
+    </table></div>
+@endif
+
 @unless($section === 'accounts' && $accounts->isEmpty())
 <form method="GET" class="card card-body mb-3">
     <div class="form-row align-items-end">
