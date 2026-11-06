@@ -613,3 +613,48 @@ test('central governance grants finance actions to expressly authorized campaign
     expect($policy->permits($root, 'finance.disbursement.approve'))->toBeTrue();
     expect($policy->permits($this->approver, 'finance.disbursement.approve'))->toBeFalse();
 });
+
+test('named funding recipients must reconcile exactly to the requested amount', function () {
+    $this->finance->record($this->requester, $this->account->id, 'income', 80000, 'Funds', (string) Str::uuid());
+    $id = $this->finance->request($this->requester, $this->account->id, null, 50000,
+        'Ward outreach', 'expense', null, null, [
+            ['name' => 'Vendor Alpha', 'amount_minor' => 30000],
+            ['name' => 'Vendor Beta', 'amount_minor' => 20000],
+        ]);
+    expect(DB::table('campaign_finance_request_recipients')->where('request_id', $id)->count())->toBe(2);
+    expect(DB::table('campaign_finance_request_origins')->where('request_id', $id)->value('payment_plan'))->toBe('named_recipients');
+    $this->finance->decide($this->approver, $id, true);
+    expect(fn () => $this->finance->record($this->requester, $this->account->id, 'expenditure',
+        50000, 'Paid everyone', (string) Str::uuid(), $id))->toThrow(ValidationException::class);
+    expect($this->account->fresh()->balance_minor)->toBe(80000);
+    expect(DB::table('campaign_finance_requests')->where('id', $id)->value('status'))->toBe('approved');
+});
+
+test('invalid, duplicate or mismatched named recipient allocations never submit a funding request', function () {
+    $starting = DB::table('campaign_finance_requests')->count();
+    foreach ([
+        [['name' => 'Alpha', 'amount_minor' => 2500]],
+        [['name' => 'Alpha', 'amount_minor' => 5000], ['name' => 'alpha', 'amount_minor' => 5000]],
+        [['name' => 'Alpha', 'amount_minor' => -1000], ['name' => 'Beta', 'amount_minor' => 11000]],
+    ] as $recipients) {
+        try {
+            $this->finance->request($this->requester, $this->account->id, null, 10000,
+                'Invalid recipient plan', 'expense', null, null, $recipients);
+            $this->fail('Invalid recipients accepted.');
+        } catch (ValidationException $e) {
+            expect($e)->toBeInstanceOf(ValidationException::class);
+        }
+    }
+    expect(DB::table('campaign_finance_requests')->count())->toBe($starting);
+});
+
+test('funding request retains requesting location separate from internal allocation destination', function () {
+    $destination = $this->finance->createAccount($this->requester, 'Second location', $this->requester->id);
+    $id = $this->finance->request($this->requester, $this->account->id, null, 1000,
+        'Transfer to branch', 'transfer', $destination->id);
+    $origin = DB::table('campaign_finance_request_origins')->where('request_id', $id)->first();
+    expect($origin->payment_plan)->toBe('branch_allocation');
+    expect($origin->requesting_level)->toBe('state');
+    expect((int) $origin->requesting_location_id)->toBe(1);
+    expect((int) $origin->beneficiary_location_id)->toBe($destination->id);
+});
