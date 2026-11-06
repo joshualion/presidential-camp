@@ -17,12 +17,19 @@ class CampaignFundingProposalService
     {
         $this->finance->authorize($actor, 'finance.disbursement.approve');
 
-        $query = DB::table('campaign_finance_funding_proposals as proposals')
-            ->join('campaign_finance_proposal_locations as origin', 'origin.proposal_id', '=', 'proposals.id')
-            ->join('campaign_finance_proposal_controls as control', 'control.proposal_id', '=', 'proposals.id')
+        // Keep the snapshot table as the unaliased SQL "from" table. The
+        // licence-scope query service validates this table's real geography
+        // columns and would fail closed on a joined proposal alias instead.
+        $query = DB::table('campaign_finance_proposal_locations')
+            ->join('campaign_finance_funding_proposals as proposals',
+                'proposals.id', '=', 'campaign_finance_proposal_locations.proposal_id')
+            ->join('campaign_finance_proposal_controls as control',
+                'control.proposal_id', '=', 'proposals.id')
             ->select('proposals.*', 'control.revision', 'control.assigned_by');
 
-        return app(LocationScopeService::class)->applyScope($query, $actor, 'users', 'origin');
+        return app(LocationScopeService::class)->applyScope(
+            $query, $actor, 'users', 'campaign_finance_proposal_locations'
+        );
     }
 
     private function scoped(User $actor, int $id, bool $lock = false): object
