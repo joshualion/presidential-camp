@@ -83,7 +83,7 @@ class CampaignFinancePolicy
         // The main campaign office retains spending/approval authority in central mode.
         // Delegation of view and request creation alone never grants a payout capability.
         return $policy->mode === 'delegated'
-            || in_array($permission, ['finance.view', 'finance.disbursement.create'], true);
+            || in_array($permission, ['finance.view', 'finance.dashboard.view', 'finance.requests.view', 'finance.disbursement.create'], true);
     }
 
     public function current(): ?object
@@ -122,6 +122,8 @@ class CampaignFinancePolicy
         $sections = array_diff_key(array_intersect_key(self::SECTIONS, array_flip($allowed)), ['settings' => true]);
         // The approval, accounting and audit pages are not inferred from finance.view.
         $requirements = [
+            'dashboard' => 'finance.dashboard.view',
+            'requests' => 'finance.requests.view',
             'income' => 'finance.record',
             'expenditure' => 'finance.expenses.record',
             'approvals' => 'finance.disbursement.approve',
