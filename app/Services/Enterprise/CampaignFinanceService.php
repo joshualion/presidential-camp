@@ -109,7 +109,7 @@ class CampaignFinanceService
                 return (int) $existing->id;
             }
             $scope = app(LocationScopeService::class);
-            return DB::table('campaign_finance_funding_proposals')->insertGetId([
+            $id = DB::table('campaign_finance_funding_proposals')->insertGetId([
                 'submission_key' => $key,
                 'requested_by' => $actor->id,
                 'requesting_level' => $scope->getScopeType($actor),
@@ -121,6 +121,30 @@ class CampaignFinanceService
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
+            DB::table('campaign_finance_proposal_controls')->insert([
+                'proposal_id' => $id, 'revision' => 1,
+            ]);
+            DB::table('campaign_finance_proposal_locations')->insert([
+                'proposal_id' => $id,
+                'region_id' => $actor->region_id,
+                'state_id' => $actor->state_id,
+                'senatorial_district_id' => $actor->senatorial_district_id,
+                'federal_constituency_id' => $actor->federal_constituency_id,
+                'lga_id' => $actor->lga_id,
+                'ward_id' => $actor->ward_id,
+                'polling_unit_id' => $actor->polling_unit_id,
+            ]);
+            DB::table('campaign_finance_proposal_events')->insert([
+                'proposal_id' => $id, 'actor_id' => $actor->id, 'revision' => 1,
+                'action' => 'submit', 'from_status' => null, 'to_status' => 'submitted',
+                'details' => json_encode([
+                    'purpose' => $purpose, 'amount_minor' => $amount, 'recipients' => $recipients,
+                    'requesting_level' => $scope->getScopeType($actor),
+                    'requesting_location_id' => $scope->getScopeId($actor),
+                ], JSON_THROW_ON_ERROR),
+                'created_at' => now(),
+            ]);
+            return $id;
         }, 3);
     }
 
@@ -212,6 +236,7 @@ class CampaignFinanceService
             $account = $this->account($actor, (int) $accountId, true);
             $request = DB::table('campaign_finance_requests')->where('id', $id)->lockForUpdate()->first();
             abort_if((int) $request->requested_by === (int) $actor->id, 403, 'You cannot approve or reject your own payment request.');
+            app(CampaignFundingProposalService::class)->assertIndependentApprover($actor, $id);
             if ($request->status !== 'pending') { $this->invalid('This request has already been decided.'); }
             $routing = DB::table('campaign_finance_request_routes')->where('request_id', $id)->first();
             if ($routing?->destination_id) {
