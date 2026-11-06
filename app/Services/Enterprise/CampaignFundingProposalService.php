@@ -232,6 +232,25 @@ class CampaignFundingProposalService
             'An officer who assigns headquarters funding cannot approve that same request.');
     }
 
+    public function history(User $actor, int $id): array
+    {
+        $proposal = DB::table('campaign_finance_funding_proposals')
+            ->where('id', $id)->firstOrFail();
+        if ((int) $proposal->requested_by === (int) $actor->id) {
+            $this->finance->authorize($actor, 'finance.disbursement.create');
+        } else {
+            $this->scoped($actor, $id);
+        }
+        $events = DB::table('campaign_finance_proposal_events')
+            ->where('proposal_id', $id)->orderBy('revision')->get();
+        $request = $proposal->assigned_request_id
+            ? DB::table('campaign_finance_requests')->where('id', $proposal->assigned_request_id)
+                ->first(['id', 'status', 'amount_minor'])
+            : null;
+
+        return [$proposal, $events, $request];
+    }
+
     private function invalid(string $message): never
     {
         throw ValidationException::withMessages(['finance' => $message]);
