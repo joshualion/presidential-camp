@@ -17,6 +17,7 @@ Route::middleware(['auth', 'enterprise.feature:campaign_finance,finance.view'])-
     Route::post('/accounts', [CampaignFinanceController::class, 'account'])->name('accounts.store');
     Route::post('/budgets', [CampaignFinanceController::class, 'budget'])->name('budgets.store');
     Route::post('/requests', [CampaignFinanceController::class, 'paymentRequest'])->name('requests.store');
+    Route::post('/funding-proposals', [CampaignFinanceController::class, 'submitFundingProposal'])->name('proposals.store');
     Route::post('/requests/{id}/decision', [CampaignFinanceController::class, 'decide'])->whereNumber('id')->name('requests.decide');
     Route::post('/accounts/{accountId}/entries/{entryId}/reverse', [CampaignFinanceController::class, 'reverse'])
         ->whereNumber(['accountId', 'entryId'])->name('entries.reverse');
