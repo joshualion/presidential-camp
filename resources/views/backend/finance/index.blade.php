@@ -43,6 +43,24 @@
     {{ $fundingProposals->links('pagination::bootstrap-4') }}
 @endif
 
+
+@if($section === 'approvals' && $incomingFundingProposals)
+    <h2 class="h5 text-primary">Funding proposals from your jurisdiction</h2>
+    <p class="small">These are upstream funding requests awaiting headquarters allocation. They are not approved payments and cannot trigger a transfer from this queue.</p>
+    <div class="table-responsive"><table class="table table-striped">
+        <thead><tr><th>ID</th><th>Requesting level</th><th>Purpose</th><th>Amount</th><th>Status</th></tr></thead>
+        <tbody>
+            @forelse($incomingFundingProposals as $proposal)
+                <tr><td>{{ $proposal->id }}</td><td>{{ ucfirst($proposal->requesting_level) }}</td>
+                    <td>{{ $proposal->purpose }}</td>
+                    <td>NGN {{ number_format($proposal->amount_minor / 100, 2) }}</td>
+                    <td>{{ ucfirst($proposal->status) }}</td></tr>
+            @empty<tr><td colspan="5">No funding proposals for review.</td></tr>@endforelse
+        </tbody>
+    </table></div>
+    {{ $incomingFundingProposals->links('pagination::bootstrap-4') }}
+@endif
+
 @unless($section === 'accounts' && $accounts->isEmpty())
 <form method="GET" class="card card-body mb-3">
     <div class="form-row align-items-end">
