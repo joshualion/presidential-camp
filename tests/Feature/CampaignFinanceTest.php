@@ -364,7 +364,11 @@ test('only a licensed super admin changes menu policies and menu visibility gran
     $this->post(route('finance.settings.save'), $payload)->assertRedirect()->assertSessionHasNoErrors();
     $this->post(route('finance.settings.save'), $payload)->assertSessionHasErrors('version');
     $viewer = User::factory()->create(['access_level' => 'stateadmin', 'state_id' => 1, 'status' => 'active']);
-    $viewer->givePermissionTo(Permission::findOrCreate('finance.view', 'web'));
+    // Dashboard visibility is intentionally independent from finance.view.
+    $viewer->givePermissionTo(
+        Permission::findOrCreate('finance.view', 'web'),
+        Permission::findOrCreate('finance.dashboard.view', 'web')
+    );
     $this->actingAs($viewer)->get(route('finance.index'))->assertOk();
     $this->get(route('finance.section', ['section' => 'income']))->assertNotFound();
     $this->post(route('finance.entries.store'), [
