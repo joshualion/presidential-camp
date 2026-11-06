@@ -31,6 +31,16 @@ Status: approved product requirements; implementation remains incomplete. This d
 - For multi-recipient requests, recipient changes after approval trigger reapproval if they alter amount or bank identity. No partial execution without explicit policy, item-level reconciliation, failure recovery and accurate unspent balance.
 - A fund request may be returned, rejected, cancelled or re-submitted with an immutable decision history. Lock concurrent approvals and reservations. Every obligation has an audit trail.
 
+## Gateway configuration contract: Paystack now, Flutterwave later
+- Provider registry uses an adapter contract (initialize collection, verify collection, manage recipients, initiate transfer, verify transfer, process authenticated provider events, reconciliation) and does not hard-wire Paystack names into ledger or funding request identifiers.
+- Super Admin may store **four independent Paystack keys**: test public, test secret, live public, live secret. Public/secret prefixes must match the selected environment; secret keys are encrypted at rest and are never returned in editable form. Empty edit fields preserve the existing credential; a deliberate rotate/delete action is separate.
+- Both key pairs remain stored when the operator switches between `test` and `live`. Switching does **not** overwrite either pair. The chosen gateway environment is independently persisted and each transaction permanently records its environment and merchant account identifier. Historical test data can never be presented as live funds.
+- Gateway credentials are per campaign installation/eligible merchant, not centrally shared between independent customers. Allowing a new provider in the future does not alter or lose existing Paystack records.
+- An environment change must be restricted to Super Admin and audited; reject a live switch unless live credentials exist and a successful server-side connection check is completed. Require explicit confirmation before enabling live collection or payouts.
+- The server uses the secret key, whereas the public key is exposed only where the chosen Paystack checkout integration actually requires it. Neither secret key nor decrypted credentials should appear in HTML, logs, notifications, reports or API responses.
+- Webhook receivers authenticate independently for the **test and live** environment; recognize late events for transactions initiated before a mode switch, so a switch cannot redirect an old transaction to the wrong ledger.
+- Build the settings and gateway adapters in the dedicated payment implementation stages; no claim of operational payment processing is made in Step 2.
+
 ## Payment gateway and banking safety
 - Merchant account belongs to the campaign/eligible campaign entity, never to the software vendor. Root chooses one settlement account or expressly verified downstream accounts subject to provider eligibility and operator policy.
 - Paystack account/subaccount/split functionality must not be misrepresented as unrestricted arbitrary inbound routing. Collect under campaign-owned merchant credentials and reconcile the actual provider settlement. A regional origin tag is accounting metadata, not proof that money settled in that region.
