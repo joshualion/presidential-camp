@@ -207,6 +207,17 @@ class CampaignFinanceController extends Controller
             ->with('finance_status', 'Funding proposal submitted to Finance intake. No payment has been authorized.');
     }
 
+    public function fundingProposalHistory(Request $request, int $id, CampaignFundingProposalService $proposals)
+    {
+        [$proposal, $events, $payment] = $proposals->history($request->user(), $id);
+
+        return response()->view('backend.finance.proposal-history', [
+            'profileData' => $request->user(),
+            'pageTitle' => 'Funding proposal #'.$id.' history',
+            'proposal' => $proposal, 'events' => $events, 'payment' => $payment,
+        ]);
+    }
+
     public function reviewFundingProposal(Request $request, int $id, CampaignFundingProposalService $proposals)
     {
         $data = $request->validate([
