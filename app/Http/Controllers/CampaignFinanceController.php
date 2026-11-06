@@ -165,11 +165,19 @@ class CampaignFinanceController extends Controller
             'amount' => ['required', 'regex:/^\d{1,12}(\.\d{1,2})?$/D'], 'description' => 'required|string|max:500',
             'purpose' => 'nullable|in:expense,transfer,advance', 'destination_id' => 'nullable|integer|min:1',
             'recipient' => 'nullable|string|max:160',
+            'recipients' => 'sometimes|array|max:20',
+            'recipients.*' => 'required|array:name,amount',
+            'recipients.*.name' => 'required|string|max:160',
+            'recipients.*.amount' => ['required', 'regex:/^\\d{1,12}(\\.\\d{1,2})?$/D'],
         ]);
         $finance->request(
             $request->user(), (int) $data['account_id'], isset($data['budget_id']) ? (int) $data['budget_id'] : null,
             $this->minor($data['amount']), $data['description'], $data['purpose'] ?? 'expense',
             isset($data['destination_id']) ? (int) $data['destination_id'] : null, $data['recipient'] ?? null,
+            array_map(fn (array $payee) => [
+                'name' => $payee['name'],
+                'amount_minor' => $this->minor($payee['amount']),
+            ], $data['recipients'] ?? []),
         );
         return back()->with('finance_status', 'Payment request submitted for independent approval.');
     }
