@@ -30,14 +30,42 @@
     @endif
     <h3 class="h6 text-primary">My proposals to Finance</h3>
     <div class="table-responsive"><table class="table table-striped">
-        <thead><tr><th>ID</th><th>Purpose</th><th>Amount</th><th>Status</th></tr></thead>
+        <thead><tr><th>ID</th><th>Purpose</th><th>Amount</th><th>Status</th><th>Next action</th></tr></thead>
         <tbody>
         @forelse($fundingProposals as $proposal)
-            <tr><td>{{ $proposal->id }}</td><td>{{ $proposal->purpose }}</td>
+            <tr>
+                <td>{{ $proposal->id }}</td>
+                <td>{{ $proposal->purpose }}</td>
                 <td>NGN {{ number_format($proposal->amount_minor / 100, 2) }}</td>
-                <td>{{ ucfirst($proposal->status) }}</td></tr>
-        @empty <tr><td colspan="4">No headquarters funding proposals submitted.</td></tr>
-        @endforelse
+                <td>{{ ucfirst($proposal->status) }}@if($proposal->payment_status) — Payment {{ $proposal->payment_status }}@endif</td>
+                <td>
+                    @if($proposal->status === 'returned')
+                        <details><summary>Revise and resubmit</summary>
+                        <form method="POST" action="{{ route('finance.proposals.resubmit', $proposal->id) }}">
+                            @csrf
+                            <input type="hidden" name="revision" value="{{ $proposal->revision }}">
+                            <label>Amount (NGN)<input class="form-control" name="amount" value="{{ number_format($proposal->amount_minor / 100, 2, '.', '') }}" required></label>
+                            <label>Purpose<textarea class="form-control" name="purpose" required maxlength="500">{{ $proposal->purpose }}</textarea></label>
+                            <p class="small">You may change recipients. Blank rows are ignored. Recipient amounts must equal the request total.</p>
+                            @php($previousRecipients = json_decode($proposal->recipients, true, 512, JSON_THROW_ON_ERROR))
+                            @foreach(range(0, max(4, count($previousRecipients) - 1)) as $i)
+                                <div class="form-row">
+                                    <div class="col-md-7"><label>Recipient {{ $i + 1 }}<input name="recipients[{{ $i }}][name]" class="form-control" maxlength="160" value="{{ $previousRecipients[$i]['name'] ?? '' }}"></label></div>
+                                    <div class="col-md-5"><label>NGN<input name="recipients[{{ $i }}][amount]" class="form-control" value="{{ isset($previousRecipients[$i]['amount_minor']) ? number_format($previousRecipients[$i]['amount_minor'] / 100, 2, '.', '') : '' }}"></label></div>
+                                </div>
+                            @endforeach
+                            <button class="btn btn-primary btn-sm mt-2">Resubmit for review</button>
+                        </form></details>
+                    @elseif($proposal->status === 'rejected')
+                        <span class="small">Closed — submit a new proposal if needed</span>
+                    @elseif($proposal->status === 'assigned')
+                        <span class="small">Await independent approvals on request #{{ $proposal->assigned_request_id }}</span>
+                    @else
+                        <span class="small">Pending Finance review</span>
+                    @endif
+                </td>
+            </tr>
+        @empty<tr><td colspan="5">No headquarters funding proposals submitted.</td></tr>@endforelse
         </tbody>
     </table></div>
     {{ $fundingProposals->links('pagination::bootstrap-4') }}
@@ -46,15 +74,68 @@
 
 @if($section === 'approvals' && $incomingFundingProposals)
     <h2 class="h5 text-primary">Funding proposals from your jurisdiction</h2>
-    <p class="small">These are upstream funding requests awaiting headquarters allocation. They are not approved payments and cannot trigger a transfer from this queue.</p>
+    <p class="small">Review intake requests, return them for correction, reject them, or assign an authorized paying account. Assignment is not approval; each linked payment follows the independent threshold-based Finance approval chain and reserves funds only at final approval. Real bank transfers are not initiated here.</p>
     <div class="table-responsive"><table class="table table-striped">
-        <thead><tr><th>ID</th><th>Requesting level</th><th>Purpose</th><th>Amount</th><th>Status</th></tr></thead>
+        <thead><tr><th>ID</th><th>Origin</th><th>Purpose / recipients</th><th>Amount</th><th>Status / review</th></tr></thead>
         <tbody>
             @forelse($incomingFundingProposals as $proposal)
-                <tr><td>{{ $proposal->id }}</td><td>{{ ucfirst($proposal->requesting_level) }}</td>
-                    <td>{{ $proposal->purpose }}</td>
+                <tr>
+                    <td>{{ $proposal->id }}</td>
+                    <td>{{ ucfirst($proposal->requesting_level) }} #{{ $proposal->requesting_location_id }}</td>
+                    <td>{{ $proposal->purpose }}
+                        @php($beneficiaries = json_decode($proposal->recipients, true, 512, JSON_THROW_ON_ERROR))
+                        @if($beneficiaries)
+                        <ul class="small">@foreach($beneficiaries as $beneficiary)
+                            <li>{{ $beneficiary['name'] }} — NGN {{ number_format($beneficiary['amount_minor'] / 100, 2) }}</li>
+                        @endforeach</ul>
+                        @else <p class="small text-muted">Unassigned recipients; may allocate to verified branch account</p> @endif
+                    </td>
                     <td>NGN {{ number_format($proposal->amount_minor / 100, 2) }}</td>
-                    <td>{{ ucfirst($proposal->status) }}</td></tr>
+                    <td>{{ ucfirst($proposal->status) }}
+                        @if($proposal->assigned_request_id)<div class="small">Linked payment request #{{ $proposal->assigned_request_id }}</div>@endif
+                        @if($proposal->status === 'submitted' && (int) $proposal->requested_by !== (int) auth()->id())
+                            <details><summary>Return or reject</summary>
+                                <form method="POST" action="{{ route('finance.proposals.review', $proposal->id) }}">
+                                    @csrf<input type="hidden" name="revision" value="{{ $proposal->revision }}">
+                                    <label>Review reason<textarea class="form-control" name="reason" maxlength="500" required></textarea></label>
+                                    <button class="btn btn-outline-warning btn-sm" name="decision" value="return">Return for correction</button>
+                                    <button class="btn btn-outline-danger btn-sm" name="decision" value="reject">Reject</button>
+                                </form>
+                            </details>
+                            @if($capabilities->allows(auth()->user(), 'finance.disbursement.create')
+                                && app(\App\Services\Enterprise\CampaignFinancePolicy::class)->permits(auth()->user(), 'finance.disbursement.create'))
+                            <details><summary>Assign funding account</summary>
+                                <form method="POST" action="{{ route('finance.proposals.assign', $proposal->id) }}">
+                                    @csrf<input type="hidden" name="revision" value="{{ $proposal->revision }}">
+                                    <label>Paying Finance account
+                                        <select class="form-control" name="account_id" required>
+                                            <option value="">Select paying account</option>
+                                            @foreach($accounts as $source)
+                                                <option value="{{ $source->id }}">{{ $source->name }} (#{{ $source->id }})</option>
+                                            @endforeach
+                                        </select></label>
+                                    <label>Expense budget (optional, must match paying account)
+                                        <select class="form-control" name="budget_id"><option value="">No budget</option>
+                                            @foreach($fundingBudgets as $budget)
+                                                <option value="{{ $budget->id }}">{{ $budget->name }} — account #{{ $budget->account_id }}</option>
+                                            @endforeach
+                                        </select></label>
+                                    @unless($beneficiaries)
+                                        <label>Receiving branch Finance account (optional)
+                                            <select class="form-control" name="destination_id"><option value="">Leave blank for an expense request</option>
+                                                @foreach($accounts as $destination)
+                                                    <option value="{{ $destination->id }}">{{ $destination->name }} (#{{ $destination->id }})</option>
+                                                @endforeach
+                                            </select></label>
+                                    @endunless
+                                    <p class="small">Configured approval stages and separate approvers are required before this allocation can be submitted.</p>
+                                    <button class="btn btn-primary btn-sm">Assign for independent approval</button>
+                                </form>
+                            </details>
+                            @endif
+                        @endif
+                    </td>
+                </tr>
             @empty<tr><td colspan="5">No funding proposals for review.</td></tr>@endforelse
         </tbody>
     </table></div>
