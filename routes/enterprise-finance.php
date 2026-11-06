@@ -8,6 +8,7 @@ Route::middleware(['auth', 'enterprise.feature:campaign_finance,finance.view'])-
     Route::get('/', [CampaignFinanceController::class, 'index'])->name('index');
     Route::get('/settings', [CampaignFinanceSettingsController::class, 'show'])->name('settings');
     Route::post('/settings', [CampaignFinanceSettingsController::class, 'save'])->name('settings.save');
+    Route::post('/settings/governance', [CampaignFinanceSettingsController::class, 'saveGovernance'])->name('settings.governance');
     Route::post('/settings/appointments', [CampaignFinanceSettingsController::class, 'appoint'])->name('appointments.store');
     Route::post('/settings/appointments/{id}/revoke', [CampaignFinanceSettingsController::class, 'revoke'])->whereNumber('id')->name('appointments.revoke');
     Route::get('/section/{section}', [CampaignFinanceController::class, 'section'])->name('section');
