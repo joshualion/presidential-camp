@@ -61,6 +61,11 @@ class CampaignFinancePolicy
         if ($actor->access_level === 'superadmin') {
             return true;
         }
+        // An ordinary member cannot acquire financial authority via an unrelated
+        // role or a mistaken access-level grant.
+        if ($actor->access_level === 'user') {
+            return false;
+        }
         $policy = $this->governance();
         if (!$policy) {
             return false;
