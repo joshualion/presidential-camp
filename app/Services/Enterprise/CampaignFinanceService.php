@@ -63,6 +63,67 @@ class CampaignFinanceService
         });
     }
 
+
+    /**
+     * A sub-office may ask headquarters for funding without access to the paying
+     * account. This is only intake; it does not approve, reserve or move money.
+     */
+    public function submitFundingProposal(User $actor, int $amount, string $purpose, string $key, array $recipients = []): int
+    {
+        $this->authorize($actor, 'finance.disbursement.create');
+        $this->amount($amount);
+        $purpose = $this->text($purpose, 500);
+        if (!Str::isUuid($key) || count($recipients) > 20) {
+            $this->invalid('Use a valid submission key and no more than twenty recipients.');
+        }
+        $total = 0;
+        $names = [];
+        foreach ($recipients as &$payee) {
+            if (!is_array($payee) || !isset($payee['name'], $payee['amount_minor'])
+                || !is_int($payee['amount_minor']) || $payee['amount_minor'] <= 0) {
+                $this->invalid('Each proposed recipient must have a name and positive amount.');
+            }
+            $name = $this->text($payee['name'], 160);
+            $normalized = mb_strtolower($name);
+            if (in_array($normalized, $names, true)) {
+                $this->invalid('Combine duplicate recipient allocations.');
+            }
+            $names[] = $normalized;
+            $total += $payee['amount_minor'];
+            $payee = ['name' => $name, 'amount_minor' => $payee['amount_minor']];
+        }
+        unset($payee);
+        if ($recipients && $total !== $amount) {
+            $this->invalid('Recipient allocations must total the proposed funding amount.');
+        }
+
+        return DB::transaction(function () use ($actor, $amount, $purpose, $key, $recipients) {
+            $existing = DB::table('campaign_finance_funding_proposals')->where('submission_key', $key)->first();
+            if ($existing) {
+                if ((int) $existing->requested_by !== (int) $actor->id
+                    || (int) $existing->amount_minor !== $amount
+                    || $existing->purpose !== $purpose
+                    || json_decode($existing->recipients, true, 512, JSON_THROW_ON_ERROR) !== $recipients) {
+                    $this->invalid('This submission key already belongs to a different funding proposal.');
+                }
+                return (int) $existing->id;
+            }
+            $scope = app(LocationScopeService::class);
+            return DB::table('campaign_finance_funding_proposals')->insertGetId([
+                'submission_key' => $key,
+                'requested_by' => $actor->id,
+                'requesting_level' => $scope->getScopeType($actor),
+                'requesting_location_id' => $scope->getScopeId($actor),
+                'purpose' => $purpose,
+                'amount_minor' => $amount,
+                'recipients' => json_encode($recipients, JSON_THROW_ON_ERROR),
+                'status' => 'submitted',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }, 3);
+    }
+
     public function request(User $actor, int $accountId, ?int $budgetId, int $amount, string $description,
         string $purpose = 'expense', ?int $destinationId = null, ?string $recipient = null, array $recipients = []
     ): int {
