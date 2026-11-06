@@ -15,7 +15,11 @@
                     <td>{{ $entry->id }}</td>
                     <td>{{ $entry->created_at }}</td>
                     <td>{{ ucfirst($entry->kind) }}</td>
-                    <td>{{ $entry->description }}</td>
+                    <td>{{ $entry->description }}
+                        @if($entry->payee)
+                            <div class="small">Manual expense paid to {{ $entry->payee }} on {{ $entry->paid_on }}.</div>
+                            <div class="small">Reference {{ $entry->reference }}. Evidence {{ $entry->evidence_reference }}.</div>
+                        @endif</td>
                     <td>{{ number_format($entry->amount_minor / 100, 2) }}</td>
                     <td>{{ number_format($entry->balance_after_minor / 100, 2) }}</td>
                     <td>{{ $entry->debit_code ? $entry->debit_code.' / '.$entry->credit_code : 'Historical' }}</td>
@@ -25,7 +29,7 @@
                                 Reversed by entry {{ $entry->reversal_id }}
                             @elseif($entry->reverses_entry_id)
                                 Reverses entry {{ $entry->reverses_entry_id }}
-                            @elseif((int) $entry->recorded_by !== (int) auth()->id() && $capabilities->allows(auth()->user(), 'finance.entries.reverse'))
+                            @elseif(in_array($entry->kind, ['income', 'expenditure'], true) && (int) $entry->recorded_by !== (int) auth()->id() && $capabilities->allows(auth()->user(), 'finance.entries.reverse'))
                                 <details>
                                     <summary>Reverse entry</summary>
                                     <form method="POST" action="{{ route('finance.entries.reverse', ['accountId' => $account->id, 'entryId' => $entry->id]) }}">

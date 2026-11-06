@@ -15,7 +15,7 @@ return [
     ],
     'permissions' => [
         'addons.purchase', 'reports.view', 'reports.export', 'reports.ai.generate', 'reports.settings.manage',
-        'finance.view', 'finance.record', 'finance.budget.manage', 'finance.disbursement.create',
+        'finance.view', 'finance.record', 'finance.expenses.record', 'finance.movements.post', 'finance.advances.settle', 'finance.budget.manage', 'finance.disbursement.create',
         'finance.disbursement.approve', 'finance.disbursement.execute', 'finance.reconcile',
         'finance.reports.export', 'finance.accounts.manage', 'finance.donations.manage', 'finance.documents.view', 'finance.entries.reverse',
         'merchandise.view', 'merchandise.products.manage', 'merchandise.categories.manage',

@@ -60,15 +60,32 @@ class CampaignFinanceService
         });
     }
 
-    public function request(User $actor, int $accountId, ?int $budgetId, int $amount, string $description): int
-    {
+    public function request(User $actor, int $accountId, ?int $budgetId, int $amount, string $description,
+        string $purpose = 'expense', ?int $destinationId = null, ?string $recipient = null
+    ): int {
         $this->authorize($actor, 'finance.disbursement.create');
         $this->amount($amount); $description = $this->text($description, 500);
-        return DB::transaction(function () use ($actor, $accountId, $budgetId, $amount, $description) {
+        if (!in_array($purpose, ['expense', 'transfer', 'advance'], true)) {
+            $this->invalid('Choose a valid funding purpose.');
+        }
+        if ($purpose === 'transfer' && (!$destinationId || $destinationId === $accountId || $budgetId !== null)) {
+            $this->invalid('An internal transfer needs a different destination account and no expense budget.');
+        }
+        $recipient = $purpose === 'advance' ? $this->text($recipient ?? '', 160) : null;
+        return DB::transaction(function () use ($actor, $accountId, $budgetId, $amount, $description, $purpose, $destinationId, $recipient) {
+            if ($purpose === 'transfer') {
+                $this->account($actor, $destinationId);
+            }
             $this->account($actor, $accountId, true);
             $this->budget($accountId, $budgetId);
             $id = DB::table('campaign_finance_requests')->insertGetId(['account_id' => $accountId, 'budget_id' => $budgetId,
                 'amount_minor' => $amount, 'description' => $description, 'requested_by' => $actor->id, 'status' => 'pending', 'created_at' => now(), 'updated_at' => now()]);
+            if ($purpose !== 'expense') {
+                DB::table('campaign_finance_request_routes')->insert([
+                    'request_id' => $id, 'purpose' => $purpose, 'recipient' => $recipient,
+                    'destination_id' => $purpose === 'transfer' ? $destinationId : null,
+                ]);
+            }
             app(CampaignFinancePolicy::class)->snapshot($id, $amount);
             $this->audit($accountId, $actor, 'request.created', ['request_id' => $id, 'amount_minor' => $amount]);
             return $id;
@@ -86,6 +103,10 @@ class CampaignFinanceService
             $request = DB::table('campaign_finance_requests')->where('id', $id)->lockForUpdate()->first();
             abort_if((int) $request->requested_by === (int) $actor->id, 403, 'You cannot approve or reject your own payment request.');
             if ($request->status !== 'pending') { $this->invalid('This request has already been decided.'); }
+            $routing = DB::table('campaign_finance_request_routes')->where('request_id', $id)->first();
+            if ($routing?->destination_id) {
+                $this->account($actor, (int) $routing->destination_id);
+            }
             $workflow = DB::table('campaign_finance_workflows')->where('request_id', $id)->lockForUpdate()->first();
             if ($workflow) {
                 $stages = json_decode($workflow->stages, true, 512, JSON_THROW_ON_ERROR);
@@ -102,7 +123,7 @@ class CampaignFinanceService
                     return;
                 }
             }
-            if ($workflow && $approve) {
+            if ($approve && ($workflow || $routing)) {
                 $this->assertAvailable($account, $request->budget_id, (int) $request->amount_minor);
             }
             DB::table('campaign_finance_requests')->where('id', $id)->update(['status' => $approve ? 'approved' : 'rejected', 'decided_by' => $actor->id, 'decided_at' => now(), 'updated_at' => now()]);
@@ -130,6 +151,9 @@ class CampaignFinanceService
             }
             $budgetId = null;
             if ($requestId !== null) {
+                if (DB::table('campaign_finance_request_routes')->where('request_id', $requestId)->exists()) {
+                    $this->invalid('Use the approved internal transfer or advance workflow for this request.');
+                }
                 $request = DB::table('campaign_finance_requests')->where('id', $requestId)->where('account_id', $accountId)->lockForUpdate()->first();
                 if (!$request || $request->status !== 'approved' || (int) $request->amount_minor !== $amount) { $this->invalid('An approved request for this exact account and amount is required.'); }
                 abort_if((int) $request->decided_by === (int) $actor->id
@@ -142,16 +166,183 @@ class CampaignFinanceService
                 if ($budget) { DB::table('campaign_finance_budgets')->where('id', $budgetId)->increment('utilized_minor', $amount, ['updated_at' => now()]); }
                 DB::table('campaign_finance_requests')->where('id', $requestId)->update(['status' => 'recorded', 'updated_at' => now()]);
             }
-            $balance = $kind === 'income' ? $account->balance_minor + $amount : $account->balance_minor - $amount;
-            if ($balance > 9000000000000000) { $this->invalid('Account balance limit exceeded.'); }
-            $account->update(['balance_minor' => $balance]);
-            $id = DB::table('campaign_finance_entries')->insertGetId(['account_id' => $accountId, 'budget_id' => $budgetId,
-                'request_id' => $requestId, 'idempotency_key' => $key, 'kind' => $kind, 'amount_minor' => $amount,
-                'balance_after_minor' => $balance, 'description' => $description, 'recorded_by' => $actor->id, 'created_at' => now()]);
-            $journal->append($id, $kind, $amount);
-            $this->audit($accountId, $actor, 'entry.recorded', ['entry_id' => $id, 'kind' => $kind, 'amount_minor' => $amount, 'balance_after_minor' => $balance]);
+            return $this->post($actor, $account, $kind, $amount, $description, $key, $budgetId, $requestId);
+        }, 3);
+    }
+
+    public function recordManualExpense(User $actor, int $accountId, int $amount, string $description, string $key, array $receipt, ?int $budgetId = null): int
+    {
+        $this->authorize($actor, 'finance.expenses.record');
+        $this->amount($amount);
+        $description = $this->text($description, 500);
+        $receipt = \Illuminate\Support\Facades\Validator::make($receipt, [
+            'payee' => 'required|string|max:160',
+            'paid_on' => 'required|date_format:Y-m-d|before_or_equal:today',
+            'reference' => 'required|string|max:120',
+            'evidence_reference' => 'required|string|max:300',
+        ])->validate();
+        $referenceKey = hash('sha256', mb_strtolower(trim($receipt['reference'])));
+        if (!Str::isUuid($key)) {
+            $this->invalid('A valid submission key is required.');
+        }
+
+        return DB::transaction(function () use ($actor, $accountId, $amount, $description, $key, $receipt, $referenceKey, $budgetId) {
+            $account = $this->account($actor, $accountId, true);
+            $existing = DB::table('campaign_finance_entries')->where('idempotency_key', $key)->first();
+            if ($existing) {
+                $saved = DB::table('campaign_finance_manual_expenses')->where('entry_id', $existing->id)->first();
+                if (!$saved || (int) $existing->account_id !== $accountId || (int) $existing->recorded_by !== (int) $actor->id
+                    || (int) $existing->amount_minor !== $amount || $existing->description !== $description
+                    || (int) $existing->budget_id !== (int) $budgetId || array_intersect_key((array) $saved, $receipt) != $receipt) {
+                    $this->invalid('This submission key was already used for another transaction.');
+                }
+                return (int) $existing->id;
+            }
+            if (DB::table('campaign_finance_manual_expenses')->where('account_id', $accountId)->where('reference_key', $referenceKey)->exists()) {
+                $this->invalid('That payment reference is already recorded on this account.');
+            }
+
+            app(CampaignFinanceJournal::class)->reconcile($account);
+            $this->assertAvailable($account, $budgetId, $amount);
+            if ($budgetId !== null) {
+                DB::table('campaign_finance_budgets')->where('id', $budgetId)
+                    ->increment('utilized_minor', $amount, ['updated_at' => now()]);
+            }
+            $id = $this->post($actor, $account, 'expenditure', $amount, $description, $key, $budgetId);
+            DB::table('campaign_finance_manual_expenses')->insert($receipt + [
+                'entry_id' => $id, 'account_id' => $accountId, 'reference_key' => $referenceKey,
+            ]);
+            $this->audit($accountId, $actor, 'expense.recorded_manually', ['entry_id' => $id, 'amount_minor' => $amount]);
             return $id;
         }, 3);
+    }
+
+    public function postApprovedMovement(User $actor, int $requestId, string $key, string $reference): int
+    {
+        $this->authorize($actor, 'finance.movements.post');
+        $reference = $this->text($reference, 200);
+        if (!Str::isUuid($key)) {
+            $this->invalid('A valid submission key is required.');
+        }
+
+        return DB::transaction(function () use ($actor, $requestId, $key, $reference) {
+            $routing = DB::table('campaign_finance_request_routes')->where('request_id', $requestId)->firstOrFail();
+            $request = DB::table('campaign_finance_requests')->where('id', $requestId)->firstOrFail();
+            $sourceId = (int) $request->account_id;
+            $destinationId = (int) $routing->destination_id;
+            $ids = $destinationId ? [$sourceId, $destinationId] : [$sourceId];
+            sort($ids);
+            $accounts = [];
+            foreach ($ids as $id) {
+                $accounts[$id] = $this->account($actor, $id, true);
+            }
+            $source = $accounts[$sourceId];
+            $request = DB::table('campaign_finance_requests')->where('id', $requestId)->lockForUpdate()->firstOrFail();
+            $existing = DB::table('campaign_finance_entries')->where('request_id', $requestId)->lockForUpdate()->first();
+            if ($existing) {
+                if ($existing->idempotency_key !== $key || (int) $existing->recorded_by !== (int) $actor->id || $existing->description !== $reference) {
+                    $this->invalid('This movement has already been recorded.');
+                }
+                return (int) $existing->id;
+            }
+            abort_if((int) $request->decided_by === (int) $actor->id
+                || DB::table('campaign_finance_decisions')->where('request_id', $requestId)->where('actor_id', $actor->id)->exists(),
+                403, 'An approver cannot post the same request.');
+            if ($request->status !== 'approved') {
+                $this->invalid('An approved funding request is required.');
+            }
+            $amount = (int) $request->amount_minor;
+            $this->assertAvailable($source, $request->budget_id, $amount, $requestId);
+            foreach ($accounts as $account) {
+                app(CampaignFinanceJournal::class)->reconcile($account);
+            }
+            $entry = $this->post($actor, $source, $destinationId ? 'transfer_out' : 'advance_out',
+                $amount, $reference, $key, $request->budget_id, $requestId);
+            if ($destinationId) {
+                $this->post($actor, $accounts[$destinationId], 'transfer_in', $amount,
+                    'Internal transfer #'.$requestId.' (entry #'.$entry.')', (string) Str::uuid());
+            } elseif ($request->budget_id !== null) {
+                DB::table('campaign_finance_budgets')->where('id', $request->budget_id)
+                    ->increment('utilized_minor', $amount, ['updated_at' => now()]);
+            }
+            DB::table('campaign_finance_requests')->where('id', $requestId)->update(['status' => 'recorded', 'updated_at' => now()]);
+            $this->audit($sourceId, $actor, 'movement.recorded', ['request_id' => $requestId, 'destination_id' => $destinationId ?: null]);
+            return $entry;
+        }, 3);
+    }
+
+    public function settleAdvance(User $actor, int $requestId, int $spent, string $evidence, string $key): void
+    {
+        $this->authorize($actor, 'finance.advances.settle');
+        $evidence = $this->text($evidence, 300);
+        if (!Str::isUuid($key) || $spent < 0) {
+            $this->invalid('Enter a nonnegative expense and a valid submission key.');
+        }
+
+        DB::transaction(function () use ($actor, $requestId, $spent, $evidence, $key) {
+            $accountId = DB::table('campaign_finance_requests')->where('id', $requestId)->value('account_id');
+            abort_unless($accountId, 404);
+            $account = $this->account($actor, (int) $accountId, true);
+            $routing = DB::table('campaign_finance_request_routes')->where('request_id', $requestId)
+                ->where('purpose', 'advance')->lockForUpdate()->firstOrFail();
+            if ($routing->settled_at !== null) {
+                if ($routing->settlement_key !== $key || (int) $routing->settled_by !== (int) $actor->id
+                    || (int) $routing->spent_minor !== $spent || $routing->settlement_evidence !== $evidence) {
+                    $this->invalid('This advance has already been settled.');
+                }
+                return;
+            }
+            $advance = DB::table('campaign_finance_entries')->where('request_id', $requestId)->where('kind', 'advance_out')->lockForUpdate()->first();
+            if (!$advance || $spent > (int) $advance->amount_minor) {
+                $this->invalid('The advance must be issued and the documented expense must fit within its amount.');
+            }
+            abort_if((int) $advance->recorded_by === (int) $actor->id, 403, 'Another officer must settle the advance.');
+            $returned = (int) $advance->amount_minor - $spent;
+            if ($spent > 0) {
+                $this->post($actor, $account, 'advance_expense', $spent, 'Advance #'.$requestId.' expense. '.$evidence,
+                    (string) Str::uuid(), $advance->budget_id);
+            }
+            if ($returned > 0) {
+                $this->post($actor, $account, 'advance_return', $returned, 'Advance #'.$requestId.' funds returned', (string) Str::uuid());
+                if ($advance->budget_id !== null) {
+                    DB::table('campaign_finance_budgets')->where('id', $advance->budget_id)
+                        ->decrement('utilized_minor', $returned, ['updated_at' => now()]);
+                }
+            }
+            DB::table('campaign_finance_request_routes')->where('request_id', $requestId)->update([
+                'settlement_key' => $key, 'settled_by' => $actor->id, 'spent_minor' => $spent,
+                'settlement_evidence' => $evidence, 'settled_at' => now(),
+            ]);
+            $this->audit($account->id, $actor, 'advance.settled', [
+                'request_id' => $requestId, 'spent_minor' => $spent, 'returned_minor' => $returned,
+            ]);
+        }, 3);
+    }
+
+    private function post(
+        User $actor, CampaignFinanceAccount $account, string $kind, int $amount, string $description, string $key,
+        ?int $budgetId = null, ?int $requestId = null
+    ): int {
+        $change = match ($kind) {
+            'income', 'transfer_in', 'advance_return' => $amount,
+            'advance_expense' => 0,
+            'expenditure', 'transfer_out', 'advance_out' => -$amount,
+        };
+        $balance = $account->balance_minor + $change;
+        if ($balance < 0 || $balance > 9000000000000000) {
+            $this->invalid('The recorded balance would be outside the supported range.');
+        }
+        $account->update(['balance_minor' => $balance]);
+        $id = DB::table('campaign_finance_entries')->insertGetId([
+            'account_id' => $account->id, 'budget_id' => $budgetId, 'request_id' => $requestId,
+            'idempotency_key' => $key, 'kind' => $kind, 'amount_minor' => $amount, 'balance_after_minor' => $balance,
+            'description' => $description, 'recorded_by' => $actor->id, 'created_at' => now(),
+        ]);
+        app(CampaignFinanceJournal::class)->append($id, $kind, $amount);
+        $this->audit($account->id, $actor, 'entry.recorded', [
+            'entry_id' => $id, 'kind' => $kind, 'amount_minor' => $amount, 'balance_after_minor' => $balance,
+        ]);
+        return $id;
     }
 
     public function reverse(User $actor, int $accountId, int $entryId, string $reason, string $key): int
@@ -241,7 +432,10 @@ class CampaignFinanceService
     public function reservations()
     {
         return DB::table('campaign_finance_requests')
-            ->join('campaign_finance_workflows', 'campaign_finance_workflows.request_id', '=', 'campaign_finance_requests.id')
+            ->where(function ($query) {
+                $query->whereIn('campaign_finance_requests.id', DB::table('campaign_finance_workflows')->select('request_id'))
+                    ->orWhereIn('campaign_finance_requests.id', DB::table('campaign_finance_request_routes')->select('request_id'));
+            })
             ->where('campaign_finance_requests.status', 'approved');
     }
 

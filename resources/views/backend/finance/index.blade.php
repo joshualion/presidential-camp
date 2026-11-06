@@ -62,19 +62,28 @@
 @elseif(in_array($section, ['requests', 'approvals', 'disbursements'], true))
 @if($section === 'requests')
 @if($capabilities->allows(auth()->user(), 'finance.disbursement.create'))
-<details class="card card-body mb-3"><summary>Request payment</summary><form method="POST" action="{{ route('finance.requests.store') }}">@csrf<input type="hidden" name="account_id" value="{{ $account->id }}"><label>Budget<select class="form-control" name="budget_id"><option value="">Unbudgeted</option>@foreach($budgets as $budget)<option value="{{ $budget->id }}">{{ $budget->name }}</option>@endforeach</select></label><label>Amount (NGN)<input class="form-control" name="amount" inputmode="decimal" required></label><label>Purpose<textarea class="form-control" name="description" maxlength="500" required></textarea></label><button class="btn btn-primary">Submit request</button></form></details>
+@include('backend.finance.funding-request')
 @endif
 @endif
 @if($section === 'disbursements')
 <p>Track approved requests and recorded expenses. Bank transfers are unavailable.</p>
 @endif
-<h2 class="h4 text-primary">Funding requests</h2><p class="small">Payment requests in this account. Requesters cannot decide their own requests. Approvers cannot record expenditure against their own approvals.</p><div class="table-responsive"><table class="table"><thead><tr><th>ID</th><th>Purpose</th><th>Amount (NGN)</th><th>Status</th><th>Action</th></tr></thead><tbody>@forelse($requests as $payment)<tr><td>{{ $payment->id }}</td><td>{{ $payment->description }}</td><td>{{ number_format($payment->amount_minor / 100, 2) }}</td><td>{{ ucfirst($payment->status) }} @if($section === 'approvals' && $payment->status === 'pending' && $payment->stages) (Stage {{ $payment->next_stage + 1 }} of {{ count(json_decode($payment->stages, true)) }}) @endif</td><td>@if($payment->status === 'pending' && (int)$payment->requested_by !== (int)auth()->id() && $capabilities->allows(auth()->user(), 'finance.disbursement.approve'))<form method="POST" action="{{ route('finance.requests.decide', $payment->id) }}">@csrf<button name="decision" value="approve" class="btn btn-success btn-sm">Approve</button><button name="decision" value="reject" class="btn btn-danger btn-sm">Reject</button></form>@endif
+<h2 class="h4 text-primary">Funding requests</h2><p class="small">Payment requests in this account. Requesters cannot decide their own requests. Approvers cannot record expenditure against their own approvals.</p><div class="table-responsive"><table class="table"><thead><tr><th>ID</th><th>Purpose</th><th>Amount (NGN)</th><th>Status</th><th>Action</th></tr></thead><tbody>@forelse($requests as $payment)<tr><td>{{ $payment->id }}</td><td>{{ $payment->description }}
+@if($payment->purpose === 'transfer')<div class="small">Internal transfer to account #{{ $payment->destination_id }}</div>@endif
+@if($payment->purpose === 'advance')<div class="small">Advance to {{ $payment->recipient }}{{ $payment->settled_at ? ' (settled)' : '' }}</div>@endif
+</td><td>{{ number_format($payment->amount_minor / 100, 2) }}</td><td>{{ ucfirst($payment->status) }} @if($section === 'approvals' && $payment->status === 'pending' && $payment->stages) (Stage {{ $payment->next_stage + 1 }} of {{ count(json_decode($payment->stages, true)) }}) @endif</td><td>@if($payment->status === 'pending' && (int)$payment->requested_by !== (int)auth()->id() && $capabilities->allows(auth()->user(), 'finance.disbursement.approve'))<form method="POST" action="{{ route('finance.requests.decide', $payment->id) }}">@csrf<button name="decision" value="approve" class="btn btn-success btn-sm">Approve</button><button name="decision" value="reject" class="btn btn-danger btn-sm">Reject</button></form>@endif
 @if($section === 'requests' && in_array($payment->status, ['pending', 'approved'], true) && (int) $payment->requested_by === (int) auth()->id() && $capabilities->allows(auth()->user(), 'finance.disbursement.create'))
 <form method="POST" action="{{ route('finance.requests.cancel', $payment->id) }}">@csrf<button class="btn btn-outline-danger btn-sm">Cancel request</button></form>
-@endif</td></tr>@empty<tr><td colspan="5">No payment requests yet.</td></tr>@endforelse</tbody></table></div>{{ $requests->links('pagination::bootstrap-4') }}
+@endif@if($section === 'disbursements')
+    @include('backend.finance.movement-actions')
+@endif
+</td></tr>@empty<tr><td colspan="5">No payment requests yet.</td></tr>@endforelse</tbody></table></div>{{ $requests->links('pagination::bootstrap-4') }}
 @elseif(in_array($section, ['income', 'expenditure'], true))
+@if($section === 'expenditure' && $capabilities->allows(auth()->user(), 'finance.expenses.record'))
+    @include('backend.finance.manual-expense')
+@endif
 @if($capabilities->allows(auth()->user(), $section === 'income' ? 'finance.record' : 'finance.disbursement.execute'))
-<details class="card card-body mb-3"><summary>{{ $section === 'income' ? 'Record manual income' : 'Record a completed expense' }}</summary><form method="POST" action="{{ route('finance.entries.store') }}">@csrf<input type="hidden" name="account_id" value="{{ $account->id }}"><input type="hidden" name="idempotency_key" value="{{ (string)\Illuminate\Support\Str::uuid() }}"><input type="hidden" name="kind" value="{{ $section === 'income' ? 'income' : 'expenditure' }}">
+<details class="card card-body mb-3"><summary>{{ $section === 'income' ? 'Record manual income' : 'Record a completed payment against an approved expense request' }}</summary><form method="POST" action="{{ route('finance.entries.store') }}">@csrf<input type="hidden" name="account_id" value="{{ $account->id }}"><input type="hidden" name="idempotency_key" value="{{ (string)\Illuminate\Support\Str::uuid() }}"><input type="hidden" name="kind" value="{{ $section === 'income' ? 'income' : 'expenditure' }}">
 @if($section !== 'income')<label>Approved funding request ID<input class="form-control" type="number" name="request_id" min="1" required></label>@endif<label>Amount (NGN)<input class="form-control" name="amount" inputmode="decimal" required></label><label>Description<textarea class="form-control" name="description" maxlength="500" required></textarea></label><button class="btn btn-primary">Record transaction</button></form></details>
 @endif
 @include('backend.finance.entries')

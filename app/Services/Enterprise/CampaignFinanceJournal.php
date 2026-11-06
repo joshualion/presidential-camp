@@ -11,6 +11,8 @@ class CampaignFinanceJournal
 {
     public const ACCOUNTS = [
         '1000' => 'Recorded treasury',
+        '1100' => 'Internal transfers in transit',
+        '1200' => 'Outstanding advances',
         '4000' => 'Historical and manual receipts',
         '5000' => 'Campaign expenditure',
     ];
@@ -59,6 +61,11 @@ class CampaignFinanceJournal
         [$debit, $credit] = match ($kind) {
             'income' => ['1000', '4000'],
             'expenditure' => ['5000', '1000'],
+            'transfer_out' => ['1100', '1000'],
+            'transfer_in' => ['1000', '1100'],
+            'advance_out' => ['1200', '1000'],
+            'advance_return' => ['1000', '1200'],
+            'advance_expense' => ['5000', '1200'],
         };
 
         $this->postPair($entryId, $debit, $credit, $amount);

@@ -69,15 +69,16 @@ class CampaignFinanceController extends Controller
         if ($section === 'disbursements') {
             $requests->whereIn('status', ['approved', 'recorded']);
         }
-        $entries = (clone $ledger)->where('account_id', $id);
+        $entries = (clone $ledger)->where('campaign_finance_entries.account_id', $id);
         if ($section === 'income' || $section === 'expenditure') {
-            $entries->where('kind', $section);
+            $entries->whereIn('kind', $section === 'income' ? ['income'] : ['expenditure', 'advance_expense']);
         }
         $capabilities = app(\App\Services\CampaignCapabilityService::class);
         $totals = collect();
         $treasury = $reserved = $pending = 0;
         if ($section === 'dashboard') {
             $totals = (clone $ledger)->selectRaw('kind, SUM(amount_minor) AS total')->groupBy('kind')->pluck('total', 'kind');
+            $totals['expenditure'] = ($totals['expenditure'] ?? 0) + ($totals['advance_expense'] ?? 0);
             // A correction affects the reporting period in which the reversal was posted.
             $reversed = (clone $ledger)
                 ->join('campaign_finance_reversals', 'campaign_finance_reversals.reversal_id', '=', 'campaign_finance_entries.id')
@@ -100,16 +101,19 @@ class CampaignFinanceController extends Controller
             'documents' => $section === 'reports' && $capabilities->allows($actor, 'finance.documents.view')
                 ? DB::table('campaign_finance_documents')->where('account_id', $id)->latest('id')->paginate(25, ['*'], 'documents_page')->withQueryString()
                 : null,
-            'budgets' => in_array($section, ['budgets', 'requests'], true) ? DB::table('campaign_finance_budgets')->where('account_id', $id)->orderBy('id')->get() : [],
+            'budgets' => in_array($section, ['budgets', 'requests', 'expenditure'], true) ? DB::table('campaign_finance_budgets')->where('account_id', $id)->orderBy('id')->get() : [],
             'requests' => in_array($section, ['requests', 'approvals', 'disbursements'], true)
                 ? $requests->leftJoin('campaign_finance_workflows', 'campaign_finance_workflows.request_id', '=', 'campaign_finance_requests.id')
-                    ->select('campaign_finance_requests.*', 'campaign_finance_workflows.next_stage', 'campaign_finance_workflows.stages')
+                    ->leftJoin('campaign_finance_request_routes as routing', 'routing.request_id', '=', 'campaign_finance_requests.id')
+                    ->select('campaign_finance_requests.*', 'campaign_finance_workflows.next_stage', 'campaign_finance_workflows.stages',
+                        'routing.purpose', 'routing.destination_id', 'routing.recipient', 'routing.settled_at', 'routing.spent_minor')
                     ->latest('campaign_finance_requests.id')->paginate(25, ['*'], 'requests_page')->withQueryString() : null,
             'entries' => in_array($section, ['income', 'expenditure', 'reports'], true)
                 ? $entries->leftJoin('campaign_finance_journal', 'campaign_finance_journal.entry_id', '=', 'campaign_finance_entries.id')
+                    ->leftJoin('campaign_finance_manual_expenses as manual', 'manual.entry_id', '=', 'campaign_finance_entries.id')
                     ->leftJoin('campaign_finance_reversals as correction', 'correction.entry_id', '=', 'campaign_finance_entries.id')
                     ->leftJoin('campaign_finance_reversals as reversed', 'reversed.reversal_id', '=', 'campaign_finance_entries.id')
-                    ->select('campaign_finance_entries.*', 'campaign_finance_journal.debit_code', 'campaign_finance_journal.credit_code', 'correction.reversal_id', 'reversed.entry_id as reverses_entry_id')
+                    ->select('campaign_finance_entries.*', 'campaign_finance_journal.debit_code', 'campaign_finance_journal.credit_code', 'correction.reversal_id', 'reversed.entry_id as reverses_entry_id', 'manual.payee', 'manual.paid_on', 'manual.reference', 'manual.evidence_reference')
                     ->latest('campaign_finance_entries.id')->paginate(25, ['*'], 'entries_page')->withQueryString() : null,
             'audits' => $section === 'reports' && $capabilities->allows($actor, 'finance.reconcile')
                 ? DB::table('campaign_finance_audits')->where('account_id', $id)->latest('id')->paginate(25, ['*'], 'audits_page')->withQueryString() : null,
@@ -151,8 +155,15 @@ class CampaignFinanceController extends Controller
     public function paymentRequest(Request $request, CampaignFinanceService $finance)
     {
         $data = $request->validate(['account_id' => 'required|integer|min:1', 'budget_id' => 'nullable|integer|min:1',
-            'amount' => ['required', 'regex:/^\d{1,12}(\.\d{1,2})?$/D'], 'description' => 'required|string|max:500']);
-        $finance->request($request->user(), (int) $data['account_id'], isset($data['budget_id']) ? (int) $data['budget_id'] : null, $this->minor($data['amount']), $data['description']);
+            'amount' => ['required', 'regex:/^\d{1,12}(\.\d{1,2})?$/D'], 'description' => 'required|string|max:500',
+            'purpose' => 'nullable|in:expense,transfer,advance', 'destination_id' => 'nullable|integer|min:1',
+            'recipient' => 'nullable|string|max:160',
+        ]);
+        $finance->request(
+            $request->user(), (int) $data['account_id'], isset($data['budget_id']) ? (int) $data['budget_id'] : null,
+            $this->minor($data['amount']), $data['description'], $data['purpose'] ?? 'expense',
+            isset($data['destination_id']) ? (int) $data['destination_id'] : null, $data['recipient'] ?? null,
+        );
         return back()->with('finance_status', 'Payment request submitted for independent approval.');
     }
 
@@ -173,6 +184,41 @@ class CampaignFinanceController extends Controller
         return back()->with('finance_status', 'Transaction recorded. No bank transfer was initiated.');
     }
 
+    public function postMovement(Request $request, int $id, CampaignFinanceService $finance)
+    {
+        $data = $request->validate(['reference' => 'required|string|max:200', 'idempotency_key' => 'required|uuid']);
+        $finance->postApprovedMovement($request->user(), $id, $data['idempotency_key'], $data['reference']);
+        return back()->with('finance_status', 'Approved movement recorded in the campaign ledger.');
+    }
+
+    public function settleAdvance(Request $request, int $id, CampaignFinanceService $finance)
+    {
+        $data = $request->validate([
+            'spent' => ['required', 'regex:/^\d{1,12}(\.\d{1,2})?$/D'],
+            'evidence' => 'required|string|max:300', 'idempotency_key' => 'required|uuid',
+            'returns_received' => 'accepted',
+        ]);
+        $finance->settleAdvance($request->user(), $id, $this->minor($data['spent']), $data['evidence'], $data['idempotency_key']);
+        return back()->with('finance_status', 'Advance settled.');
+    }
+
+    public function manualExpense(Request $request, CampaignFinanceService $finance)
+    {
+        $data = $request->validate([
+            'account_id' => 'required|integer|min:1',
+            'budget_id' => 'nullable|integer|min:1',
+            'amount' => ['required', 'regex:/^\d{1,12}(\.\d{1,2})?$/D'],
+            'description' => 'required|string|max:500',
+            'idempotency_key' => 'required|uuid',
+        ]);
+        $finance->recordManualExpense(
+            $request->user(), (int) $data['account_id'], $this->minor($data['amount']), $data['description'],
+            $data['idempotency_key'], $request->only('payee', 'paid_on', 'reference', 'evidence_reference'),
+            isset($data['budget_id']) ? (int) $data['budget_id'] : null,
+        );
+        return back()->with('finance_status', 'Expense recorded against the selected account.');
+    }
+
     public function reverse(Request $request, int $accountId, int $entryId, CampaignFinanceService $finance)
     {
         $data = $request->validate(['reason' => 'required|string|max:500', 'idempotency_key' => 'required|uuid']);
@@ -186,18 +232,21 @@ class CampaignFinanceController extends Controller
         $account = $finance->account($request->user(), $id);
         return response()->streamDownload(function () use ($account) {
             $out = fopen('php://output', 'w');
-            fputcsv($out, ['Transaction', 'Date', 'Kind', 'Currency', 'Amount', 'Balance', 'Description', 'Payment request', 'Debit code', 'Credit code', 'Reverses transaction'], ',', '"', '');
+            fputcsv($out, ['Transaction', 'Date', 'Kind', 'Currency', 'Amount', 'Balance', 'Description', 'Payment request', 'Debit code', 'Credit code', 'Reverses transaction', 'Payee', 'Date paid', 'Payment reference', 'Evidence reference'], ',', '"', '');
             foreach (DB::table('campaign_finance_entries')
                 ->leftJoin('campaign_finance_journal', 'campaign_finance_journal.entry_id', '=', 'campaign_finance_entries.id')
                 ->leftJoin('campaign_finance_reversals', 'campaign_finance_reversals.reversal_id', '=', 'campaign_finance_entries.id')
-                ->where('account_id', $account->id)
-                ->select('campaign_finance_entries.*', 'campaign_finance_journal.debit_code', 'campaign_finance_journal.credit_code', 'campaign_finance_reversals.entry_id as reverses_entry_id')
+                ->leftJoin('campaign_finance_manual_expenses as manual', 'manual.entry_id', '=', 'campaign_finance_entries.id')
+                ->where('campaign_finance_entries.account_id', $account->id)
+                ->select('campaign_finance_entries.*', 'campaign_finance_journal.debit_code', 'campaign_finance_journal.credit_code',
+                    'campaign_finance_reversals.entry_id as reverses_entry_id', 'manual.payee', 'manual.paid_on', 'manual.reference', 'manual.evidence_reference')
                 ->orderBy('campaign_finance_entries.id')->cursor() as $entry) {
-                $description = preg_match('/^[\s]*[=+\-@\t\r]/u', $entry->description) ? "'".$entry->description : $entry->description;
+                $csvText = static fn (?string $value) => preg_match('/^[\s]*[=+\-@\t\r]/u', $value ?? '') ? "'".$value : $value;
                 fputcsv($out, [$entry->id, $entry->created_at, $entry->kind, $account->currency,
                     intdiv((int) $entry->amount_minor, 100).'.'.str_pad((string) ($entry->amount_minor % 100), 2, '0', STR_PAD_LEFT),
                     intdiv((int) $entry->balance_after_minor, 100).'.'.str_pad((string) ($entry->balance_after_minor % 100), 2, '0', STR_PAD_LEFT),
-                    $description, $entry->request_id, $entry->debit_code, $entry->credit_code, $entry->reverses_entry_id], ',', '"', '');
+                    $csvText($entry->description), $entry->request_id, $entry->debit_code, $entry->credit_code, $entry->reverses_entry_id,
+                    $csvText($entry->payee), $entry->paid_on, $csvText($entry->reference), $csvText($entry->evidence_reference)], ',', '"', '');
             }
             fclose($out);
         }, 'campaign-finance-'.$account->id.'.csv', ['Content-Type' => 'text/csv; charset=UTF-8', 'Cache-Control' => 'no-store', 'X-Content-Type-Options' => 'nosniff']);

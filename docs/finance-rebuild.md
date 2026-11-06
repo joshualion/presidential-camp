@@ -25,3 +25,11 @@ The 2026 INEC regulations cover source-of-funds records, donor identification an
 - [INEC 2026 Regulations and Guidelines, Part 5](https://inecnigeria.org/wp-content/uploads/Regulations-and-Guidelines-2026_UPDATED.pdf)
 - [Paystack terms](https://paystack.com/terms)
 - [Paystack merchant activation](https://support.paystack.com/en/articles/2125506)
+
+### Externally paid expenses and approved funding movements
+
+Grant `finance.expenses.record` to officers allowed to record payments already made. The original payment date, payee, payment reference and evidence reference are recorded with the entry. An optional budget is charged subject to its available balance. The payment reference is unique per account.
+
+An internal allocation or personal advance is identified when the funding request is submitted. This fixes the destination or recipient before approval. Grant `finance.movements.post` to the officers who record approved allocations and confirmed external advance payments. An allocation moves funds between two in-scope ledger accounts. An advance is outstanding until a separate officer with `finance.advances.settle` documents the expense and confirms any unused funds have been returned. An unsettled budgeted advance uses the full budget amount until the return is recorded.
+
+These entries are ledger records. Campaign payment settings and Paystack confirmation require a separate integration.

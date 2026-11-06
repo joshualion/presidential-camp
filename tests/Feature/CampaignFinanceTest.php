@@ -481,3 +481,66 @@ test('the Finance entry point opens an authorized section when the dashboard is 
     $this->get(route('finance.section', ['section' => 'dashboard']))->assertNotFound();
     $this->get(route('finance.section', ['section' => 'requests']))->assertOk();
 });
+
+test('manual expenses use a separate permission and preserve evidence and budget totals on retry', function () {
+    $this->finance->record($this->requester, $this->account->id, 'income', 100000, 'Opening funds', (string) Str::uuid());
+    $budget = $this->finance->createBudget($this->requester, $this->account->id, 'Transport', 50000);
+    $key = (string) Str::uuid();
+    $receipt = ['payee' => 'Example Transport', 'paid_on' => today()->toDateString(),
+        'reference' => 'RECEIPT-1', 'evidence_reference' => 'Paper receipt 1'];
+    $record = fn ($actor, $details, $token) => $this->finance->recordManualExpense(
+        $actor, $this->account->id, 12000, 'Transport paid externally', $token, $details, $budget
+    );
+
+    expect(fn () => $record($this->requester, $receipt, $key))->toThrow(\Symfony\Component\HttpKernel\Exception\HttpException::class);
+    foreach ([$this->requester, $this->outsider] as $user) {
+        $user->givePermissionTo(Permission::findOrCreate('finance.expenses.record', 'web'));
+    }
+    expect(fn () => $record($this->outsider, $receipt, $key))->toThrow(\Illuminate\Database\Eloquent\ModelNotFoundException::class);
+    $id = $record($this->requester, $receipt, $key);
+    expect($record($this->requester, $receipt, $key))->toBe($id);
+    expect(fn () => $record($this->requester, ['reference' => 'receipt-1'] + $receipt, (string) Str::uuid()))->toThrow(ValidationException::class);
+    expect($this->account->fresh()->balance_minor)->toBe(88000);
+    $this->assertDatabaseHas('campaign_finance_manual_expenses', $receipt + ['entry_id' => $id]);
+    $this->assertDatabaseHas('campaign_finance_entries', ['id' => $id, 'request_id' => null, 'recorded_by' => $this->requester->id]);
+    $this->assertDatabaseHas('campaign_finance_budgets', ['id' => $budget, 'utilized_minor' => 12000]);
+    expect(DB::table('campaign_finance_audits')->where('action', 'expense.recorded_manually')->count())->toBe(1);
+});
+
+test('an approved internal allocation shifts both balances once without booking an expense', function () {
+    $this->requester->givePermissionTo(Permission::findOrCreate('finance.movements.post', 'web'));
+    $destination = $this->finance->createAccount($this->requester, 'Local operations', $this->requester->id);
+    $this->finance->record($this->requester, $this->account->id, 'income', 100000, 'Opening funds', (string) Str::uuid());
+    $id = $this->finance->request($this->requester, $this->account->id, null, 25000, 'Local allocation', 'transfer', $destination->id);
+    $this->finance->decide($this->approver, $id, true);
+    expect(fn () => $this->finance->record($this->requester, $this->account->id, 'expenditure', 25000, 'Incorrect route', (string) Str::uuid(), $id))
+        ->toThrow(ValidationException::class);
+    $key = (string) Str::uuid();
+    $entry = $this->finance->postApprovedMovement($this->requester, $id, $key, 'Allocation 1');
+    expect($this->finance->postApprovedMovement($this->requester, $id, $key, 'Allocation 1'))->toBe($entry);
+    expect($this->account->fresh()->balance_minor)->toBe(75000);
+    expect($destination->fresh()->balance_minor)->toBe(25000);
+    expect(DB::table('campaign_finance_entries')->where('kind', 'expenditure')->count())->toBe(0);
+    $this->assertDatabaseHas('campaign_finance_entries', ['id' => $entry, 'kind' => 'transfer_out', 'request_id' => $id]);
+    $this->assertDatabaseHas('campaign_finance_entries', ['account_id' => $destination->id, 'kind' => 'transfer_in']);
+});
+
+test('a paid advance is settled once with documented spending and returned funds', function () {
+    $this->requester->givePermissionTo(Permission::findOrCreate('finance.movements.post', 'web'));
+    $this->approver->givePermissionTo(Permission::findOrCreate('finance.advances.settle', 'web'));
+    $this->finance->record($this->requester, $this->account->id, 'income', 100000, 'Opening funds', (string) Str::uuid());
+    $budget = $this->finance->createBudget($this->requester, $this->account->id, 'Field work', 70000);
+    $id = $this->finance->request($this->requester, $this->account->id, $budget, 30000, 'Field advance', 'advance', null, 'Example Officer');
+    $this->finance->decide($this->approver, $id, true);
+    $this->finance->postApprovedMovement($this->requester, $id, (string) Str::uuid(), 'Confirmed transfer 1');
+    expect($this->account->fresh()->balance_minor)->toBe(70000);
+    expect(DB::table('campaign_finance_entries')->where('kind', 'advance_expense')->count())->toBe(0);
+    $key = (string) Str::uuid();
+    $this->finance->settleAdvance($this->approver, $id, 18000, 'Receipt and return reference', $key);
+    $this->finance->settleAdvance($this->approver, $id, 18000, 'Receipt and return reference', $key);
+    expect($this->account->fresh()->balance_minor)->toBe(82000);
+    $this->assertDatabaseHas('campaign_finance_budgets', ['id' => $budget, 'utilized_minor' => 18000]);
+    $this->assertDatabaseHas('campaign_finance_entries', ['kind' => 'advance_expense', 'amount_minor' => 18000, 'balance_after_minor' => 70000]);
+    $this->assertDatabaseHas('campaign_finance_entries', ['kind' => 'advance_return', 'amount_minor' => 12000, 'balance_after_minor' => 82000]);
+    expect(DB::table('campaign_finance_entries')->whereIn('kind', ['advance_expense', 'advance_return'])->count())->toBe(2);
+});

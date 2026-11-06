@@ -19,6 +19,9 @@ Route::middleware(['auth', 'enterprise.feature:campaign_finance,finance.view'])-
     Route::post('/requests/{id}/decision', [CampaignFinanceController::class, 'decide'])->whereNumber('id')->name('requests.decide');
     Route::post('/accounts/{accountId}/entries/{entryId}/reverse', [CampaignFinanceController::class, 'reverse'])
         ->whereNumber(['accountId', 'entryId'])->name('entries.reverse');
+    Route::post('/requests/{id}/movement', [CampaignFinanceController::class, 'postMovement'])->whereNumber('id')->name('movements.store');
+    Route::post('/requests/{id}/settlement', [CampaignFinanceController::class, 'settleAdvance'])->whereNumber('id')->name('advances.settle');
+    Route::post('/manual-expenses', [CampaignFinanceController::class, 'manualExpense'])->name('expenses.store');
     Route::post('/entries', [CampaignFinanceController::class, 'record'])->name('entries.store');
     Route::post('/documents', [CampaignFinanceController::class, 'document'])->name('documents.store');
     Route::get('/documents/{id}', [CampaignFinanceController::class, 'downloadDocument'])->whereNumber('id')->name('documents.download');
