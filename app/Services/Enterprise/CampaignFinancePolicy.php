@@ -80,10 +80,18 @@ class CampaignFinancePolicy
         if (!$allowed) {
             return false;
         }
-        // The main campaign office retains spending/approval authority in central mode.
-        // Delegation of view and request creation alone never grants a payout capability.
-        return $policy->mode === 'delegated'
-            || in_array($permission, ['finance.view', 'finance.dashboard.view', 'finance.requests.view', 'finance.disbursement.create'], true);
+        if ($policy->mode === 'delegated') {
+            return true;
+        }
+        if (in_array($permission, ['finance.view', 'finance.dashboard.view', 'finance.requests.view', 'finance.disbursement.create'], true)) {
+            return true;
+        }
+        // Central finance remains operable by an explicitly permitted root-office
+        // officer; a presidential root is national, a governorship root is state, etc.
+        $package = \App\Models\SystemSetting::query()->value('package');
+        $levels = config('campaign_roles.packages.'. $package .'.access_levels', []);
+        $root = collect($levels)->first(fn ($level) => $level !== 'superadmin');
+        return $root !== null && $root !== 'user' && $actor->access_level === $root;
     }
 
     public function current(): ?object
