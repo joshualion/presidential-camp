@@ -17,6 +17,9 @@ class CampaignFinanceService
     public function authorize(User $actor, string $permission): void
     {
         abort_unless(app(CampaignCapabilityService::class)->allows($actor, $permission), 403, 'Finance permission not assigned.');
+        if (str_starts_with($permission, 'finance.')) {
+            abort_unless(app(CampaignFinancePolicy::class)->permits($actor, $permission), 403, 'Finance governance does not delegate this action.');
+        }
         abort_unless(app(EntitlementService::class)->active('campaign_finance'), 402, 'An active Campaign Finance licence is required.');
     }
 
