@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\Enterprise\CampaignFinanceJournal;
+use App\Services\Enterprise\CampaignFundingProposalService;
 use App\Services\Enterprise\CampaignFinancePolicy;
 use App\Services\Enterprise\CampaignFinanceService;
 use Illuminate\Http\Request;
@@ -101,14 +102,14 @@ class CampaignFinanceController extends Controller
         }
 
         $incomingFundingProposals = null;
+        $fundingBudgets = collect();
         if ($section === 'approvals') {
-            $queue = DB::table('campaign_finance_funding_proposals')
-                ->join('users', 'users.id', '=', 'campaign_finance_funding_proposals.requested_by')
-                ->select('campaign_finance_funding_proposals.*');
-            $queue = app(\App\Services\LocationScopeService::class)
-                ->applyScope($queue, $actor, 'users', 'users');
-            $incomingFundingProposals = $queue->orderByDesc('campaign_finance_funding_proposals.id')
+            $incomingFundingProposals = app(CampaignFundingProposalService::class)
+                ->reviewerQueue($actor)->orderByDesc('proposals.id')
                 ->paginate(25, ['*'], 'incoming_proposals_page')->withQueryString();
+            $fundingBudgets = DB::table('campaign_finance_budgets')
+                ->whereIn('account_id', $finance->accounts($actor)->select('campaign_finance_accounts.id'))
+                ->orderBy('name')->get(['id', 'name', 'account_id']);
         }
 
         return response()->view('backend.finance.index', [
@@ -121,9 +122,14 @@ class CampaignFinanceController extends Controller
                 : null,
             'budgets' => in_array($section, ['budgets', 'requests', 'expenditure'], true) ? DB::table('campaign_finance_budgets')->where('account_id', $id)->orderBy('id')->get() : [],
             'incomingFundingProposals' => $incomingFundingProposals,
+            'fundingBudgets' => $fundingBudgets,
             'fundingProposals' => $section === 'requests'
-                ? DB::table('campaign_finance_funding_proposals')->where('requested_by', $actor->id)
-                    ->latest('id')->paginate(25, ['*'], 'proposals_page')->withQueryString() : null,
+                ? DB::table('campaign_finance_funding_proposals as proposals')
+                    ->join('campaign_finance_proposal_controls as control', 'control.proposal_id', '=', 'proposals.id')
+                    ->leftJoin('campaign_finance_requests as allocated', 'allocated.id', '=', 'proposals.assigned_request_id')
+                    ->where('proposals.requested_by', $actor->id)
+                    ->select('proposals.*', 'control.revision', 'allocated.status as payment_status')
+                    ->latest('proposals.id')->paginate(25, ['*'], 'proposals_page')->withQueryString() : null,
             'requests' => in_array($section, ['requests', 'approvals', 'disbursements'], true)
                 ? $requests->leftJoin('campaign_finance_workflows', 'campaign_finance_workflows.request_id', '=', 'campaign_finance_requests.id')
                     ->leftJoin('campaign_finance_request_routes as routing', 'routing.request_id', '=', 'campaign_finance_requests.id')
@@ -199,6 +205,60 @@ class CampaignFinanceController extends Controller
         );
         return redirect()->route('finance.section', ['section' => 'requests'])
             ->with('finance_status', 'Funding proposal submitted to Finance intake. No payment has been authorized.');
+    }
+
+    public function reviewFundingProposal(Request $request, int $id, CampaignFundingProposalService $proposals)
+    {
+        $data = $request->validate([
+            'revision' => 'required|integer|min:1',
+            'decision' => 'required|in:return,reject',
+            'reason' => 'required|string|max:500',
+        ]);
+        $proposals->review($request->user(), $id, (int) $data['revision'],
+            $data['decision'], $data['reason']);
+        return back()->with('finance_status', 'Funding proposal review recorded.');
+    }
+
+    public function resubmitFundingProposal(Request $request, int $id, CampaignFundingProposalService $proposals)
+    {
+        if (is_array($request->input('recipients'))) {
+            $request->merge(['recipients' => array_values(array_filter(
+                $request->input('recipients'),
+                fn ($payee) => !is_array($payee) || trim((string) ($payee['name'] ?? '')) !== ''
+                    || trim((string) ($payee['amount'] ?? '')) !== ''
+            ))]);
+        }
+        $data = $request->validate([
+            'revision' => 'required|integer|min:1',
+            'amount' => ['required', 'regex:/^\d{1,12}(\.\d{1,2})?$/D'],
+            'purpose' => 'required|string|max:500',
+            'recipients' => 'sometimes|array|max:20',
+            'recipients.*' => 'required|array:name,amount',
+            'recipients.*.name' => 'required|string|max:160',
+            'recipients.*.amount' => ['required', 'regex:/^\d{1,12}(\.\d{1,2})?$/D'],
+        ]);
+        $recipients = array_map(fn (array $payee) => [
+            'name' => $payee['name'], 'amount_minor' => $this->minor($payee['amount']),
+        ], $data['recipients'] ?? []);
+        $proposals->resubmit($request->user(), $id, (int) $data['revision'],
+            $this->minor($data['amount']), $data['purpose'], $recipients);
+        return redirect()->route('finance.section', ['section' => 'requests'])
+            ->with('finance_status', 'Revised funding proposal resubmitted to Finance.');
+    }
+
+    public function assignFundingProposal(Request $request, int $id, CampaignFundingProposalService $proposals)
+    {
+        $data = $request->validate([
+            'revision' => 'required|integer|min:1',
+            'account_id' => 'required|integer|min:1',
+            'budget_id' => 'nullable|integer|min:1',
+            'destination_id' => 'nullable|integer|min:1',
+        ]);
+        $proposals->assign($request->user(), $id, (int) $data['revision'],
+            (int) $data['account_id'], isset($data['budget_id']) ? (int) $data['budget_id'] : null,
+            isset($data['destination_id']) ? (int) $data['destination_id'] : null);
+        return redirect()->route('finance.section', ['section' => 'approvals'])
+            ->with('finance_status', 'Funding account assigned. Independent financial approval is still required.');
     }
 
     public function paymentRequest(Request $request, CampaignFinanceService $finance)
