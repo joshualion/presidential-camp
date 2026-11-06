@@ -562,13 +562,13 @@ test('finance governance denies ordinary members and explicit capability alone i
     foreach (['finance.view', 'finance.disbursement.create', 'finance.dashboard.view'] as $permission) {
         $member->givePermissionTo(Permission::findOrCreate($permission, 'web'));
     }
-    expect(app(\\App\\Services\\Enterprise\\CampaignFinancePolicy::class)->visible($member))->toBe([]);
-    $this->expectException(\\Symfony\\Component\\HttpKernel\\Exception\\HttpException::class);
+    expect(app(\App\Services\Enterprise\CampaignFinancePolicy::class)->visible($member))->toBe([]);
+    $this->expectException(\Symfony\Component\HttpKernel\Exception\HttpException::class);
     $this->finance->request($member, $this->account->id, null, 1000, 'No finance delegation');
 });
 
 test('central mode supports request-only leadership without disclosing dashboard or payment rights', function () {
-    $policy = app(\\App\\Services\\Enterprise\\CampaignFinancePolicy::class);
+    $policy = app(\App\Services\Enterprise\CampaignFinancePolicy::class);
     $leader = $this->requester;
     DB::table('campaign_finance_governance')->insert([
         'previous_id' => 1, 'actor_id' => $leader->id, 'mode' => 'central',
@@ -594,14 +594,14 @@ test('central mode supports request-only leadership without disclosing dashboard
 
 test('delegated governance never replaces role permissions or geographic account scoping', function () {
     $leader = User::factory()->create(['access_level' => 'stateadmin', 'state_id' => 2, 'status' => 'active']);
-    expect(app(\\App\\Services\\Enterprise\\CampaignFinancePolicy::class)->permits($leader, 'finance.disbursement.approve'))->toBeTrue();
-    $this->expectException(\\Symfony\\Component\\HttpKernel\\Exception\\HttpException::class);
+    expect(app(\App\Services\Enterprise\CampaignFinancePolicy::class)->permits($leader, 'finance.disbursement.approve'))->toBeTrue();
+    $this->expectException(\Symfony\Component\HttpKernel\Exception\HttpException::class);
     $this->finance->authorize($leader, 'finance.disbursement.approve');
 });
 
 test('central governance grants finance actions to expressly authorized campaign root officers', function () {
     $root = User::factory()->create(['access_level' => 'nationaladmin', 'status' => 'active']);
-    $policy = app(\\App\\Services\\Enterprise\\CampaignFinancePolicy::class);
+    $policy = app(\App\Services\Enterprise\CampaignFinancePolicy::class);
     DB::table('campaign_finance_governance')->insert([
         'previous_id' => 1, 'actor_id' => $this->requester->id, 'mode' => 'central',
         'grants' => json_encode([
@@ -694,7 +694,7 @@ test('branch funding proposals cannot be forged, duplicated with changes or subm
     try {
         $this->finance->submitFundingProposal($member, 10000, 'Unauthorized', (string) Str::uuid());
         $this->fail('Ordinary member submitted proposal.');
-    } catch (\\Symfony\\Component\\HttpKernel\\Exception\\HttpException $e) {
+    } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
         expect($e->getStatusCode())->toBe(403);
     }
     expect(DB::table('campaign_finance_funding_proposals')->count())->toBe(1);
@@ -702,10 +702,10 @@ test('branch funding proposals cannot be forged, duplicated with changes or subm
 
 test('finance approval inbox does not expose proposals submitted outside approver geography', function () {
     if (!app('router')->getRoutes()->getByName('finance.index')) {
-        \\Illuminate\\Support\\Facades\\Route::middleware('web')->group(base_path('routes/enterprise-finance.php'));
+        \Illuminate\Support\Facades\Route::middleware('web')->group(base_path('routes/enterprise-finance.php'));
         app('router')->getRoutes()->refreshNameLookups();
     }
-    $this->withoutMiddleware([\\App\\Http\\Middleware\\CheckUserOnboarding::class]);
+    $this->withoutMiddleware([\App\Http\Middleware\CheckUserOnboarding::class]);
     $this->finance->submitFundingProposal($this->requester, 10000, 'First state funded event', (string) Str::uuid());
     $this->finance->submitFundingProposal($this->outsider, 20000, 'Second state private event', (string) Str::uuid());
     $this->actingAs($this->approver)->get(route('finance.section', ['section' => 'approvals']))
