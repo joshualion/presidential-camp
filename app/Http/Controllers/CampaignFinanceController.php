@@ -121,6 +121,10 @@ class CampaignFinanceController extends Controller
                 ? DB::table('campaign_finance_documents')->where('account_id', $id)->latest('id')->paginate(25, ['*'], 'documents_page')->withQueryString()
                 : null,
             'budgets' => in_array($section, ['budgets', 'requests', 'expenditure'], true) ? DB::table('campaign_finance_budgets')->where('account_id', $id)->orderBy('id')->get() : [],
+            'statementChecks' => $section === 'reports'
+                ? DB::table('campaign_finance_statement_checks')
+                    ->whereIn('account_id', $finance->accounts($actor)->select('campaign_finance_accounts.id'))
+                    ->orderByDesc('id')->limit(50)->get() : collect(),
             'incomingFundingProposals' => $incomingFundingProposals,
             'fundingBudgets' => $fundingBudgets,
             'fundingProposals' => $section === 'requests'
@@ -152,6 +156,27 @@ class CampaignFinanceController extends Controller
             'pending' => $pending,
             'totals' => $totals,
         ])->header('Cache-Control', 'no-store');
+    }
+
+    public function prepareStatementCheck(Request $request, \App\Services\Enterprise\CampaignFinanceStatementService $statements)
+    {
+        $data = $request->validate([
+            'account_id' => 'required|integer|min:1',
+            'statement_date' => 'required|date_format:Y-m-d|before_or_equal:today',
+            'statement_balance' => ['required', 'regex:/^\d{1,12}(\.\d{1,2})?$/D'],
+            'evidence_reference' => 'required|string|min:3|max:300',
+        ]);
+        $statements->prepare($request->user(), (int) $data['account_id'],
+            $data['statement_date'], $this->minor($data['statement_balance']),
+            $data['evidence_reference']);
+        return back()->with('finance_status', 'Statement check recorded for independent Finance review. This is not a verified bank settlement.');
+    }
+
+    public function reviewStatementCheck(Request $request, int $id, \App\Services\Enterprise\CampaignFinanceStatementService $statements)
+    {
+        $data = $request->validate(['review_notes' => 'required|string|min:3|max:500']);
+        $statements->review($request->user(), $id, $data['review_notes']);
+        return back()->with('finance_status', 'Independent statement review recorded. Any variance requires investigation.');
     }
 
     public function reconcile(Request $request, int $id, CampaignFinanceService $finance)
