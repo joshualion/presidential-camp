@@ -853,3 +853,32 @@ test('headquarters branch allocations record a recipient account rather than tre
     expect(DB::table('campaign_finance_request_origins')->where('request_id', $requestId)
         ->value('payment_plan'))->toBe('branch_allocation');
 });
+
+
+test('proposal approval and audit visibility stay tied to immutable submitting jurisdiction after a member relocates', function () {
+    $workflow = app(\App\Services\Enterprise\CampaignFundingProposalService::class);
+    $id = $this->finance->submitFundingProposal($this->requester, 8000,
+        'Original first-state branch proposal', (string) Str::uuid());
+    $this->requester->update(['state_id' => 2]);
+    $this->requester->refresh();
+    expect($workflow->reviewerQueue($this->approver)->where('proposals.id', $id)->exists())->toBeTrue();
+    expect($workflow->reviewerQueue($this->outsider)->where('proposals.id', $id)->exists())->toBeFalse();
+    expect(fn () => $workflow->history($this->outsider, $id))
+        ->toThrow(\Illuminate\Database\Eloquent\ModelNotFoundException::class);
+    [$proposal, $events] = $workflow->history($this->requester, $id);
+    expect($proposal->requesting_level)->toBe('state');
+    expect((int) $proposal->requesting_location_id)->toBe(1);
+    expect($events->first()->action)->toBe('submit');
+});
+
+test('headquarters workflow migration safely reenters without losing proposal audit history', function () {
+    $id = $this->finance->submitFundingProposal($this->requester, 3000,
+        'No duplicate migration history', (string) Str::uuid());
+    $migration = require database_path('migrations/2026_11_06_000018_add_campaign_finance_proposal_workflow.php');
+    $migration->up();
+    $migration->up();
+    expect(DB::table('campaign_finance_proposal_controls')->where('proposal_id', $id)->count())->toBe(1);
+    expect(DB::table('campaign_finance_proposal_locations')->where('proposal_id', $id)->count())->toBe(1);
+    expect(DB::table('campaign_finance_proposal_events')->where('proposal_id', $id)->count())->toBe(1);
+    expect(DB::table('campaign_finance_funding_proposals')->where('id', $id)->exists())->toBeTrue();
+});
