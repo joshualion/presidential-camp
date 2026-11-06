@@ -64,7 +64,7 @@ class CampaignFinanceService
     }
 
     public function request(User $actor, int $accountId, ?int $budgetId, int $amount, string $description,
-        string $purpose = 'expense', ?int $destinationId = null, ?string $recipient = null
+        string $purpose = 'expense', ?int $destinationId = null, ?string $recipient = null, array $recipients = []
     ): int {
         $this->authorize($actor, 'finance.disbursement.create');
         $this->amount($amount); $description = $this->text($description, 500);
@@ -75,7 +75,29 @@ class CampaignFinanceService
             $this->invalid('An internal transfer needs a different destination account and no expense budget.');
         }
         $recipient = $purpose === 'advance' ? $this->text($recipient ?? '', 160) : null;
-        return DB::transaction(function () use ($actor, $accountId, $budgetId, $amount, $description, $purpose, $destinationId, $recipient) {
+        if (count($recipients) > 20 || ($recipients && $purpose !== 'expense')) {
+            $this->invalid('Provide up to twenty named recipients for a direct expense request only.');
+        }
+        $planned = 0;
+        $seen = [];
+        foreach ($recipients as &$payee) {
+            if (!is_array($payee) || !isset($payee['name'], $payee['amount_minor'])
+                || !is_int($payee['amount_minor']) || $payee['amount_minor'] <= 0) {
+                $this->invalid('Every recipient needs a name and a positive amount.');
+            }
+            $payee = ['name' => $this->text($payee['name'], 160), 'amount_minor' => $payee['amount_minor']];
+            $normalized = mb_strtolower(trim($payee['name']));
+            if (in_array($normalized, $seen, true)) {
+                $this->invalid('Duplicate recipients must be combined into one allocation.');
+            }
+            $seen[] = $normalized;
+            $planned += $payee['amount_minor'];
+        }
+        unset($payee);
+        if ($recipients && $planned !== $amount) {
+            $this->invalid('Named recipient amounts must equal the total request.');
+        }
+        return DB::transaction(function () use ($actor, $accountId, $budgetId, $amount, $description, $purpose, $destinationId, $recipient, $recipients) {
             if ($purpose === 'transfer') {
                 $this->account($actor, $destinationId);
             }
@@ -87,6 +109,30 @@ class CampaignFinanceService
                 DB::table('campaign_finance_request_routes')->insert([
                     'request_id' => $id, 'purpose' => $purpose, 'recipient' => $recipient,
                     'destination_id' => $purpose === 'transfer' ? $destinationId : null,
+                ]);
+            }
+            $locationService = app(LocationScopeService::class);
+            $requestingLevel = $locationService->getScopeType($actor);
+            $requestingId = $locationService->getScopeId($actor);
+            $beneficiary = $purpose === 'transfer'
+                ? $this->account($actor, (int) $destinationId)
+                : $this->account($actor, $accountId);
+            DB::table('campaign_finance_request_origins')->insert([
+                'request_id' => $id,
+                'requesting_level' => $requestingLevel,
+                'requesting_location_id' => $requestingId,
+                'beneficiary_level' => $purpose === 'transfer' ? 'account' : $requestingLevel,
+                'beneficiary_location_id' => $purpose === 'transfer' ? $beneficiary->id : $requestingId,
+                'payment_plan' => $recipients ? 'named_recipients' : ($purpose === 'transfer' ? 'branch_allocation' : 'unassigned'),
+                'created_at' => now(),
+            ]);
+            foreach ($recipients as $position => $payee) {
+                DB::table('campaign_finance_request_recipients')->insert([
+                    'request_id' => $id,
+                    'position' => $position + 1,
+                    'recipient_name' => $payee['name'],
+                    'amount_minor' => $payee['amount_minor'],
+                    'created_at' => now(),
                 ]);
             }
             app(CampaignFinancePolicy::class)->snapshot($id, $amount);
@@ -154,6 +200,12 @@ class CampaignFinanceService
             }
             $budgetId = null;
             if ($requestId !== null) {
+                // Itemized beneficiary requests require recipient-level payment
+                // execution and reconciliation. Do not falsely mark a lump-sum
+                // ledger entry as a completed multi-person payment.
+                if (DB::table('campaign_finance_request_recipients')->where('request_id', $requestId)->exists()) {
+                    $this->invalid('Itemized recipient requests require verified recipient disbursement processing.');
+                }
                 if (DB::table('campaign_finance_request_routes')->where('request_id', $requestId)->exists()) {
                     $this->invalid('Use the approved internal transfer or advance workflow for this request.');
                 }
