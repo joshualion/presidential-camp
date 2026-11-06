@@ -34,7 +34,7 @@
         <tbody>
         @forelse($fundingProposals as $proposal)
             <tr>
-                <td>{{ $proposal->id }}</td>
+                <td><a href="{{ route('finance.proposals.history', $proposal->id) }}">#{{ $proposal->id }} history</a></td>
                 <td>{{ $proposal->purpose }}</td>
                 <td>NGN {{ number_format($proposal->amount_minor / 100, 2) }}</td>
                 <td>{{ ucfirst($proposal->status) }}@if($proposal->payment_status) — Payment {{ $proposal->payment_status }}@endif</td>
@@ -80,7 +80,7 @@
         <tbody>
             @forelse($incomingFundingProposals as $proposal)
                 <tr>
-                    <td>{{ $proposal->id }}</td>
+                    <td><a href="{{ route('finance.proposals.history', $proposal->id) }}">#{{ $proposal->id }} history</a></td>
                     <td>{{ ucfirst($proposal->requesting_level) }} #{{ $proposal->requesting_location_id }}</td>
                     <td>{{ $proposal->purpose }}
                         @php($beneficiaries = json_decode($proposal->recipients, true, 512, JSON_THROW_ON_ERROR))
