@@ -146,7 +146,7 @@ class CampaignFinancePolicy
             'reports' => 'finance.reports.export',
         ];
         foreach ($requirements as $section => $capability) {
-            if (!app(\\App\\Services\\CampaignCapabilityService::class)->allows($actor, $capability)
+            if (!app(\App\Services\CampaignCapabilityService::class)->allows($actor, $capability)
                 || !$this->permits($actor, $capability)) {
                 unset($sections[$section]);
             }
