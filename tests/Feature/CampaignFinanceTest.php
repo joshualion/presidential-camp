@@ -826,7 +826,7 @@ test('headquarters allocation retains named recipients and original location and
     $origin = DB::table('campaign_finance_request_origins')->where('request_id', $requestId)->first();
     expect($origin->requesting_level)->toBe('state');
     expect((int) $origin->requesting_location_id)->toBe(2);
-    expect(DB::table('campaign_finance_request_recipients')->where('request_id', $requestId)
+    expect((int) DB::table('campaign_finance_request_recipients')->where('request_id', $requestId)
         ->sum('amount_minor'))->toBe(20000);
     expect(DB::table('campaign_finance_requests')->where('id', $requestId)
         ->value('status'))->toBe('pending');
@@ -993,6 +993,8 @@ test('Paystack preserves four encrypted keys across switches and verifies late s
     expect(fn () => $payments->saveSettings($admin, [], 'live', true, false))->toThrow(ValidationException::class);
     $payments->saveSettings($admin, [], 'live', false, false);
     $reference = DB::table('campaign_paystack_operations')->value('reference');
+    expect(fn () => $payments->operations($this->outsider))->toThrow(\Symfony\Component\HttpKernel\Exception\HttpException::class);
+    $this->outsider->givePermissionTo(Permission::findOrCreate('finance.paystack.view', 'web'));
     expect($payments->operations($this->outsider)->count())->toBe(0);
     $body = json_encode(['event' => 'charge.success', 'data' => ['domain' => 'test', 'reference' => $reference]]);
     $time = now()->timestamp;
@@ -1033,6 +1035,7 @@ test('Paystack branch payouts require separate authorization and one sandbox sub
     $this->approver->givePermissionTo(Permission::findOrCreate('finance.paystack.approve', 'web'));
     $this->approver->givePermissionTo(Permission::findOrCreate('finance.paystack.transfer', 'web'));
     $this->requester->givePermissionTo(Permission::findOrCreate('finance.paystack.transfer', 'web'));
+    $this->requester->givePermissionTo(Permission::findOrCreate('finance.paystack.view', 'web'));
     $destination = $this->finance->createAccount($this->requester, 'Test destination', $this->requester->id);
     $payments->saveRecipient($admin, $destination->id, 'RCP_abcd1234');
     $this->finance->record($this->requester, $this->account->id, 'income', 50000, 'Initial funds', (string) Str::uuid());

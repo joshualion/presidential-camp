@@ -263,7 +263,9 @@
 @endif
 @endif
 @if($section === 'disbursements')
-<p><a href="{{ route('finance.paystack.index') }}">View Paystack test activity</a></p>
+@if($capabilities->allows(auth()->user(), 'finance.paystack.view') && app(\App\Services\Enterprise\CampaignFinancePolicy::class)->permits(auth()->user(), 'finance.paystack.view'))
+    <p><a href="{{ route('finance.paystack.index') }}">View Paystack test activity</a></p>
+@endif
 <p>Track approved requests and recorded expenses. Bank transfers are unavailable.</p>
 @endif
 <h2 class="h4 text-primary">Funding requests</h2><p class="small">Payment requests in this account. Requesters cannot decide their own requests. Approvers cannot record expenditure against their own approvals.</p><div class="table-responsive"><table class="table"><thead><tr><th>ID</th><th>Purpose</th><th>Amount (NGN)</th><th>Status</th><th>Action</th></tr></thead><tbody>@forelse($requests as $payment)<tr><td>{{ $payment->id }}</td><td>{{ $payment->description }}
@@ -278,7 +280,9 @@
 </td></tr>@empty<tr><td colspan="5">No payment requests yet.</td></tr>@endforelse</tbody></table></div>{{ $requests->links('pagination::bootstrap-4') }}
 @elseif(in_array($section, ['income', 'expenditure'], true))
 @if($section === 'income')
+    @if($capabilities->allows(auth()->user(), 'finance.paystack.view') && app(\App\Services\Enterprise\CampaignFinancePolicy::class)->permits(auth()->user(), 'finance.paystack.view'))
     <p><a href="{{ route('finance.paystack.index') }}">View Paystack test activity</a></p>
+@endif
 @endif
 @if($section === 'expenditure' && $capabilities->allows(auth()->user(), 'finance.expenses.record'))
     @include('backend.finance.manual-expense')

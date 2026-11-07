@@ -90,7 +90,7 @@ class CampaignPaystackService
         // Paystack checks that the recipient exists under this merchant.
         $details = $this->gateway->fetchRecipient($key, $recipient);
         if (($details['recipient_code'] ?? null) !== $recipient || ($details['currency'] ?? null) !== 'NGN'
-            || ($details['domain'] ?? null) !== 'test' || ($details['active'] ?? null) !== true) {
+            || ($details['domain'] ?? null) !== 'test' || ($details['active'] ?? null) !== true || !empty($details['is_deleted'])) {
             $this->invalid('Select an active Nigerian naira recipient in this Paystack test account.');
         }
         DB::table('campaign_paystack_recipients')->upsert([[
@@ -101,7 +101,7 @@ class CampaignPaystackService
 
     public function operations(User $actor)
     {
-        $this->finance->authorize($actor, 'finance.view');
+        $this->finance->authorize($actor, 'finance.paystack.view');
         $accounts = $this->finance->accounts($actor)->select('campaign_finance_accounts.id');
         return DB::table('campaign_paystack_operations')->where(function ($query) use ($accounts) {
             $query->whereIn('account_id', clone $accounts)->orWhereIn('destination_id', clone $accounts);
