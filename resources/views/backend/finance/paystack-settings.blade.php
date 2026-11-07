@@ -42,6 +42,21 @@
         <label>Paystack test recipient code<input class="form-control" name="recipient" maxlength="80" required></label>
         <button class="btn btn-primary">Verify and link test recipient</button>
     </form>
+    @if($beneficiaries->isNotEmpty())
+        <form method="POST" action="{{ route('finance.paystack.beneficiary') }}" class="card card-body">
+            @csrf
+            <label>Approved funding beneficiary
+                <select class="form-control" name="beneficiary_id" required>
+                    <option value="">Select a beneficiary</option>
+                    @foreach($beneficiaries as $beneficiary)
+                        <option value="{{ $beneficiary->id }}">Request #{{ $beneficiary->request_id }} · {{ $beneficiary->recipient_name }}</option>
+                    @endforeach
+                </select>
+            </label>
+            <label>Paystack test recipient code<input class="form-control" name="recipient" maxlength="80" required></label>
+            <button class="btn btn-primary">Verify and link beneficiary</button>
+        </form>
+    @endif
     <a href="{{ route('finance.paystack.index') }}">View Paystack test activity</a>
 </div></section>
 @endsection

@@ -1051,3 +1051,55 @@ test('Paystack branch payouts require separate authorization and one sandbox sub
     expect(DB::table('campaign_finance_requests')->where('id', $id)->value('status'))->toBe('approved');
     $http::assertSentCount(3);
 });
+
+test('Paystack beneficiary test batch locks verified recipients and reconciles individual outcomes', function () {
+    $admin = User::factory()->create(['access_level' => 'superadmin', 'status' => 'active']);
+    $payments = app(\App\Services\Enterprise\CampaignPaystackService::class);
+    $http = \Illuminate\Support\Facades\Http::class;
+    $status = ['RCP_alice001' => 'success', 'RCP_bob00001' => 'failed'];
+    $http::fake([
+        'https://api.paystack.co/transferrecipient/*' => fn ($request) => $http::response([
+            'status' => true, 'data' => ['recipient_code' => basename($request->url()), 'domain' => 'test',
+                'currency' => 'NGN', 'active' => true, 'type' => 'nuban', 'details' => [
+                    'account_name' => str_contains($request->url(), 'alice') ? 'Alice Example' : 'Bob Example',
+                ]],
+        ]),
+        'https://api.paystack.co/transfer/bulk' => fn ($request) => $http::response(['status' => true, 'data' => $request['transfers']]),
+        'https://api.paystack.co/transfer/verify/*' => function ($request) use ($http, &$status) {
+            $operation = DB::table('campaign_paystack_operations')->where('reference', basename($request->url()))->first();
+            return $http::response(['status' => true, 'data' => [
+                'reference' => $operation->reference, 'domain' => 'test', 'currency' => 'NGN',
+                'status' => $status[$operation->recipient_code], 'amount' => (int) $operation->amount_minor,
+                'recipient' => ['recipient_code' => $operation->recipient_code],
+            ]]);
+        },
+    ]);
+    $payments->saveSettings($admin, ['test_public' => 'pk_test_'.str_repeat('a', 30),
+        'test_secret' => 'sk_test_'.str_repeat('b', 30)], 'test', false, true);
+    $this->approver->givePermissionTo(Permission::findOrCreate('finance.paystack.approve', 'web'));
+    $this->requester->givePermissionTo(Permission::findOrCreate('finance.paystack.transfer', 'web'));
+    $this->requester->givePermissionTo(Permission::findOrCreate('finance.paystack.view', 'web'));
+    $this->finance->record($this->requester, $this->account->id, 'income', 50000, 'Initial funds', (string) Str::uuid());
+    $request = $this->finance->request($this->requester, $this->account->id, null, 20000, 'Test project', 'expense', null, null, [
+        ['name' => 'Alice Example', 'amount_minor' => 12000], ['name' => 'Bob Example', 'amount_minor' => 8000],
+    ]);
+    $this->finance->decide($this->approver, $request, true);
+    $beneficiaries = DB::table('campaign_finance_request_recipients')->where('request_id', $request)->orderBy('position')->pluck('id');
+    expect(fn () => $payments->linkBeneficiary($admin, $beneficiaries[0], 'RCP_bob00001'))->toThrow(ValidationException::class);
+    $payments->linkBeneficiary($admin, $beneficiaries[0], 'RCP_alice001');
+    expect(fn () => $payments->approveBatch($this->approver, $request))->toThrow(ValidationException::class);
+    expect(DB::table('campaign_paystack_operations')->count())->toBe(0);
+    $payments->linkBeneficiary($admin, $beneficiaries[1], 'RCP_bob00001');
+    $payments->approveBatch($this->approver, $request);
+    $payments->submitBatch($this->requester, $request);
+    expect(fn () => $payments->submitBatch($this->requester, $request))->toThrow(ValidationException::class);
+    $operations = DB::table('campaign_paystack_operations')->pluck('reference', 'recipient_code');
+    foreach ($status as $recipient => $result) {
+        expect($payments->verify($this->requester, $operations[$recipient]))->toBe($result);
+    }
+    $status['RCP_alice001'] = 'reversed';
+    expect($payments->verify($this->requester, $operations['RCP_alice001']))->toBe('reversed');
+    expect($this->account->fresh()->balance_minor)->toBe(50000);
+    expect(DB::table('campaign_finance_requests')->where('id', $request)->value('status'))->toBe('approved');
+    $http::assertSentCount(7);
+});

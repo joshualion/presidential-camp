@@ -1,3 +1,17 @@
+@if($payment->status === 'approved' && $payment->beneficiary_count && $paystackTransfersEnabled)
+    @if($capabilities->allows(auth()->user(), 'finance.paystack.approve'))
+        <form method="POST" action="{{ route('finance.paystack.batch.approve', $payment->id) }}">
+            @csrf
+            <button class="btn btn-outline-primary btn-sm">Authorize beneficiary test batch</button>
+        </form>
+    @endif
+    @if($capabilities->allows(auth()->user(), 'finance.paystack.transfer'))
+        <form method="POST" action="{{ route('finance.paystack.batch.submit', $payment->id) }}">
+            @csrf
+            <button class="btn btn-outline-primary btn-sm">Submit beneficiary test batch</button>
+        </form>
+    @endif
+@endif
 @if($payment->purpose === 'transfer' && $payment->status === 'approved' && $paystackTransfersEnabled && $capabilities->allows(auth()->user(), 'finance.paystack.approve'))
     <form method="POST" action="{{ route('finance.paystack.approve', $payment->id) }}">
         @csrf

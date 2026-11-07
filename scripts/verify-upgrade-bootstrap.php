@@ -195,6 +195,7 @@ if ($targetVersion === '1.2.6') {
         '2026_11_06_000019_add_campaign_finance_statement_checks',
         '2026_11_06_000020_add_campaign_finance_period_events',
         '2026_11_06_000021_add_campaign_paystack_sandbox',
+        '2026_11_07_000022_add_campaign_paystack_beneficiary_links',
     ]);
 }
 $actualMigrations = array_keys($plan['pending_migrations']);

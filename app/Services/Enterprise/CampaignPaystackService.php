@@ -187,6 +187,113 @@ class CampaignPaystackService
         ]);
     }
 
+    public function linkBeneficiary(User $actor, int $beneficiaryId, string $recipient): void
+    {
+        $this->manage($actor);
+        if (!preg_match('/^RCP_[a-z0-9]{6,75}$/iD', $recipient)) {
+            $this->invalid('Enter a valid Paystack test recipient code.');
+        }
+        $beneficiary = DB::table('campaign_finance_request_recipients')->where('id', $beneficiaryId)->firstOrFail();
+        $accountId = DB::table('campaign_finance_requests')->where('id', $beneficiary->request_id)->value('account_id');
+        $this->finance->account($actor, (int) $accountId);
+        $key = $this->connection('transfers');
+        $details = $this->gateway->fetchRecipient($key, $recipient);
+        $accountName = data_get($details, 'details.account_name');
+        if (($details['recipient_code'] ?? null) !== $recipient || ($details['domain'] ?? null) !== 'test'
+            || ($details['currency'] ?? null) !== 'NGN' || ($details['type'] ?? null) !== 'nuban'
+            || ($details['active'] ?? null) !== true || !empty($details['is_deleted']) || !is_string($accountName)
+            || strcasecmp(trim($accountName), trim($beneficiary->recipient_name)) !== 0) {
+            $this->invalid('The active test bank account must match the approved beneficiary name.');
+        }
+
+        DB::transaction(function () use ($actor, $beneficiary, $recipient, $key) {
+            $request = DB::table('campaign_finance_requests')->where('id', $beneficiary->request_id)->lockForUpdate()->firstOrFail();
+            $this->finance->account($actor, (int) $request->account_id);
+            $link = DB::table('campaign_paystack_beneficiary_links')->where('beneficiary_id', $beneficiary->id)->first();
+            if ($request->status !== 'approved' || $link?->operation_id) {
+                $this->invalid('The beneficiary requires an approved request and cannot change after payout authorization.');
+            }
+            DB::table('campaign_paystack_beneficiary_links')->updateOrInsert(['beneficiary_id' => $beneficiary->id], [
+                'recipient_code' => $recipient, 'connection' => hash('sha256', $key),
+                'linked_by' => $actor->id, 'linked_at' => now(),
+            ]);
+        }, 3);
+    }
+
+    public function approveBatch(User $actor, int $requestId): void
+    {
+        $this->finance->authorize($actor, 'finance.paystack.approve');
+        $key = $this->connection('transfers');
+        DB::transaction(function () use ($actor, $requestId, $key) {
+            $request = DB::table('campaign_finance_requests')->where('id', $requestId)->lockForUpdate()->firstOrFail();
+            $this->finance->account($actor, (int) $request->account_id);
+            abort_if((int) $request->requested_by === (int) $actor->id, 403, 'A requester cannot authorize their own payout.');
+            app(CampaignFundingProposalService::class)->assertIndependentApprover($actor, $requestId);
+            $items = $this->batchItems($requestId)->get(['beneficiaries.id', 'beneficiaries.amount_minor',
+                'links.recipient_code', 'links.connection', 'links.linked_by', 'links.operation_id']);
+            if ($request->status !== 'approved' || $items->isEmpty() || $items->count() > 100
+                || (int) $items->sum('amount_minor') !== (int) $request->amount_minor
+                || $items->pluck('recipient_code')->unique()->count() !== $items->count()) {
+                $this->invalid('The batch must match the approved total and use distinct verified recipients.');
+            }
+            foreach ($items as $item) {
+                if (!$item->recipient_code || $item->operation_id || !hash_equals($item->connection, hash('sha256', $key))) {
+                    $this->invalid('Verify every recipient in this test account before authorizing the batch.');
+                }
+                abort_if((int) $item->linked_by === (int) $actor->id, 403, 'A separate officer must authorize recipients you linked.');
+                $reference = $this->begin($actor, $key, 'transfer', (int) $request->account_id, (int) $item->amount_minor, [
+                    'recipient_code' => $item->recipient_code, 'status' => 'authorized',
+                ]);
+                $operationId = DB::table('campaign_paystack_operations')->where('reference', $reference)->value('id');
+                DB::table('campaign_paystack_beneficiary_links')->where('beneficiary_id', $item->id)
+                    ->update(['operation_id' => $operationId]);
+            }
+        }, 3);
+    }
+
+    public function submitBatch(User $actor, int $requestId): void
+    {
+        $this->finance->authorize($actor, 'finance.paystack.transfer');
+        $key = $this->connection('transfers');
+        $transfers = DB::transaction(function () use ($actor, $requestId, $key) {
+            $request = DB::table('campaign_finance_requests')->where('id', $requestId)->lockForUpdate()->firstOrFail();
+            $this->finance->account($actor, (int) $request->account_id);
+            abort_if((int) $request->decided_by === (int) $actor->id
+                || DB::table('campaign_finance_decisions')->where('request_id', $requestId)->where('actor_id', $actor->id)->exists(),
+                403, 'A funding approver cannot execute this payout.');
+            $items = $this->batchItems($requestId)
+                ->leftJoin('campaign_paystack_operations as operations', 'operations.id', '=', 'links.operation_id')
+                ->get(['operations.*', 'beneficiaries.amount_minor as approved_amount', 'links.recipient_code as mapped_recipient', 'links.linked_by']);
+            if ($request->status !== 'approved' || $items->isEmpty()) {
+                $this->invalid('This batch is unavailable for submission.');
+            }
+            $details = [];
+            foreach ($items as $item) {
+                if ($item->status !== 'authorized' || $item->mode !== 'test'
+                    || !hash_equals($item->connection, hash('sha256', $key))
+                    || (int) $item->amount_minor !== (int) $item->approved_amount || $item->recipient_code !== $item->mapped_recipient) {
+                    $this->invalid('Authorize every batch item before submitting. A submitted batch is reconciled by its item references.');
+                }
+                abort_if((int) $item->created_by === (int) $actor->id || (int) $item->linked_by === (int) $actor->id,
+                    403, 'The recipient linker and payout approver cannot execute the same batch.');
+                DB::table('campaign_paystack_operations')->where('id', $item->id)
+                    ->update(['status' => 'pending', 'submitted_by' => $actor->id, 'updated_at' => now()]);
+                $details[] = ['amount' => (int) $item->amount_minor, 'recipient' => $item->recipient_code,
+                    'reference' => $item->reference, 'reason' => 'Campaign beneficiary test #'.$requestId];
+            }
+            return $details;
+        }, 3);
+
+        $this->gateway->initiateBulkTransfer($key, ['currency' => 'NGN', 'source' => 'balance', 'transfers' => $transfers]);
+    }
+
+    private function batchItems(int $requestId)
+    {
+        return DB::table('campaign_finance_request_recipients as beneficiaries')
+            ->leftJoin('campaign_paystack_beneficiary_links as links', 'links.beneficiary_id', '=', 'beneficiaries.id')
+            ->where('beneficiaries.request_id', $requestId)->orderBy('beneficiaries.position');
+    }
+
     private function mappedRecipient(int $accountId, #[\SensitiveParameter] string $key): ?string
     {
         return DB::table('campaign_paystack_recipients')->where('account_id', $accountId)

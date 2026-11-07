@@ -17,6 +17,12 @@ class CampaignPaystackController extends Controller
             'profileData' => $request->user(),
             'pageTitle' => 'Campaign Payment Settings',
             'settings' => $paystack->settings(),
+            'beneficiaries' => \Illuminate\Support\Facades\DB::table('campaign_finance_request_recipients as beneficiaries')
+                ->join('campaign_finance_requests as requests', 'requests.id', '=', 'beneficiaries.request_id')
+                ->where('requests.status', 'approved')
+                ->whereIn('requests.account_id', $finance->accounts($request->user())->select('campaign_finance_accounts.id'))
+                ->latest('beneficiaries.id')->limit(100)
+                ->get(['beneficiaries.id', 'beneficiaries.request_id', 'beneficiaries.recipient_name']),
             'accounts' => $finance->accounts($request->user())->orderBy('name')->get(['id', 'name']),
         ])->header('Cache-Control', 'no-store');
     }
@@ -76,6 +82,25 @@ class CampaignPaystackController extends Controller
     {
         $paystack->transfer($request->user(), $id);
         return redirect()->route('finance.paystack.index')->with('finance_status', 'Test transfer submitted. Verify the reference for its current status.');
+    }
+
+    public function linkBeneficiary(Request $request, CampaignPaystackService $paystack)
+    {
+        $data = $request->validate(['beneficiary_id' => 'required|integer|min:1', 'recipient' => 'required|string|max:80']);
+        $paystack->linkBeneficiary($request->user(), (int) $data['beneficiary_id'], $data['recipient']);
+        return back()->with('finance_status', 'Test beneficiary verified and linked.');
+    }
+
+    public function approveBatch(Request $request, int $id, CampaignPaystackService $paystack)
+    {
+        $paystack->approveBatch($request->user(), $id);
+        return back()->with('finance_status', 'Test batch authorized for an independent officer.');
+    }
+
+    public function submitBatch(Request $request, int $id, CampaignPaystackService $paystack)
+    {
+        $paystack->submitBatch($request->user(), $id);
+        return redirect()->route('finance.paystack.index')->with('finance_status', 'Test batch submitted. Verify each reference separately.');
     }
 
     public function webhook(Request $request, string $mode, CampaignPaystackService $paystack)

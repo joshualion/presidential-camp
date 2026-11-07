@@ -142,6 +142,8 @@ class CampaignFinanceController extends Controller
                     ->leftJoin('campaign_finance_request_routes as routing', 'routing.request_id', '=', 'campaign_finance_requests.id')
                     ->select('campaign_finance_requests.*', 'campaign_finance_workflows.next_stage', 'campaign_finance_workflows.stages',
                         'routing.purpose', 'routing.destination_id', 'routing.recipient', 'routing.settled_at', 'routing.spent_minor')
+                    ->selectSub(DB::table('campaign_finance_request_recipients')
+                        ->whereColumn('request_id', 'campaign_finance_requests.id')->selectRaw('COUNT(*)'), 'beneficiary_count')
                     ->latest('campaign_finance_requests.id')->paginate(25, ['*'], 'requests_page')->withQueryString() : null,
             'entries' => in_array($section, ['income', 'expenditure', 'reports'], true)
                 ? $entries->leftJoin('campaign_finance_journal', 'campaign_finance_journal.entry_id', '=', 'campaign_finance_entries.id')

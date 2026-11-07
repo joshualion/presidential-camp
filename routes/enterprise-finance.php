@@ -15,6 +15,9 @@ Route::middleware(['auth', 'enterprise.feature:campaign_finance,finance.view'])-
     Route::get('/paystack/settings', [CampaignPaystackController::class, 'settings'])->name('paystack.settings');
     Route::post('/paystack/settings', [CampaignPaystackController::class, 'save'])->name('paystack.settings.save');
     Route::post('/paystack/recipient', [CampaignPaystackController::class, 'recipient'])->middleware('throttle:10,1')->name('paystack.recipient');
+    Route::post('/paystack/beneficiary', [CampaignPaystackController::class, 'linkBeneficiary'])->middleware('throttle:10,1')->name('paystack.beneficiary');
+    Route::post('/paystack/batch/{id}/approve', [CampaignPaystackController::class, 'approveBatch'])->middleware('throttle:10,1')->whereNumber('id')->name('paystack.batch.approve');
+    Route::post('/paystack/batch/{id}', [CampaignPaystackController::class, 'submitBatch'])->middleware('throttle:10,1')->whereNumber('id')->name('paystack.batch.submit');
     Route::get('/paystack', [CampaignPaystackController::class, 'index'])->name('paystack.index');
     Route::post('/paystack/collect', [CampaignPaystackController::class, 'collect'])->middleware('throttle:10,1')->name('paystack.collect');
     Route::post('/paystack/transfer/{id}', [CampaignPaystackController::class, 'transfer'])->middleware('throttle:10,1')->whereNumber('id')->name('paystack.transfer');

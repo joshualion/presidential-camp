@@ -33,6 +33,11 @@ class PaystackGateway implements PaymentGateway
         return $this->request($secret, 'POST', '/transfer', $details);
     }
 
+    public function initiateBulkTransfer(#[\SensitiveParameter] string $secret, array $details): array
+    {
+        return $this->request($secret, 'POST', '/transfer/bulk', $details);
+    }
+
     public function verifyTransfer(#[\SensitiveParameter] string $secret, string $reference): array
     {
         return $this->request($secret, 'GET', '/transfer/verify/'.rawurlencode($reference));
