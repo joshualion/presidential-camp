@@ -1267,6 +1267,11 @@ test('approved reimbursement reuses its bound profile in a single audited test p
     $operation = DB::table('campaign_paystack_operations')->orderBy('id')->first();
     expect($operation->status)->toBe('pending');
     expect($payments->verify($executor, $operation->reference))->toBe('success');
+    $statuses = DB::table('campaign_finance_audits')->whereIn('action', [
+        'paystack.payout.authorized', 'paystack.payout.submitted', 'paystack.operation.verified',
+    ])->orderBy('id')->get()->filter(fn ($event) => data_get(json_decode($event->details, true), 'reference') === $operation->reference);
+    expect($statuses->pluck('action')->all())->toBe(['paystack.payout.authorized', 'paystack.payout.submitted', 'paystack.operation.verified']);
+    expect($statuses->pluck('actor_id')->map(fn ($id) => (int) $id)->all())->toBe([$payoutApprover->id, $executor->id, $executor->id]);
     $this->requester->update(['bank_account_number' => '1111111111']);
     $this->requester->update(['bank_account_number' => '0000000000']);
     expect(fn () => $payments->submitBatch($executor, $staleRequest))->toThrow(ValidationException::class);

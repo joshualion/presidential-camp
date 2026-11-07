@@ -298,7 +298,10 @@ class CampaignPaystackService
             }
             foreach ($items as $item) {
                 $profile = app(CampaignFinanceProfileBank::class)->forRequest($actor, (int) $item->id, true);
-                abort_if($profile && (int) $profile['user_id'] === (int) $actor->id, 403, 'A beneficiary cannot authorize their own payout.');
+                abort_if($profile && ((int) $profile['user_id'] === (int) $actor->id
+                    || (int) $request->decided_by === (int) $actor->id
+                    || DB::table('campaign_finance_decisions')->where('request_id', $requestId)->where('actor_id', $actor->id)->exists()),
+                    403, 'A separate officer must authorize the reimbursement payout.');
                 if (!$item->recipient_code || $item->operation_id || !hash_equals($item->connection, hash('sha256', $key))) {
                     $this->invalid('Verify every recipient in this test account before authorizing the batch.');
                 }
@@ -309,6 +312,9 @@ class CampaignPaystackService
                 $operationId = DB::table('campaign_paystack_operations')->where('reference', $reference)->value('id');
                 DB::table('campaign_paystack_beneficiary_links')->where('beneficiary_id', $item->id)
                     ->update(['operation_id' => $operationId]);
+                $this->auditOperation((int) $request->account_id, (int) $actor->id, 'paystack.payout.authorized', [
+                    'request_id' => $requestId, 'reference' => $reference, 'amount_minor' => (int) $item->amount_minor,
+                ]);
             }
         }, 3);
     }
@@ -343,6 +349,9 @@ class CampaignPaystackService
                     403, 'The recipient linker and payout approver cannot execute the same batch.');
                 DB::table('campaign_paystack_operations')->where('id', $item->id)
                     ->update(['status' => 'pending', 'submitted_by' => $actor->id, 'updated_at' => now()]);
+                $this->auditOperation((int) $request->account_id, (int) $actor->id, 'paystack.payout.submitted', [
+                    'request_id' => $requestId, 'reference' => $item->reference, 'amount_minor' => (int) $item->amount_minor,
+                ]);
                 $details[] = ['amount' => (int) $item->amount_minor, 'recipient' => $item->recipient_code,
                     'reference' => $item->reference, 'reason' => 'Campaign beneficiary test #'.$requestId];
             }
@@ -372,7 +381,7 @@ class CampaignPaystackService
     public function verify(User $actor, string $reference): string
     {
         $operation = $this->operations($actor)->where('reference', $reference)->firstOrFail();
-        return $this->verifyOperation($operation);
+        return $this->verifyOperation($operation, (int) $actor->id);
     }
 
     public function reconcileRefund(User $actor, string $reference, int $refundId): string
@@ -524,7 +533,7 @@ class CampaignPaystackService
         ]);
     }
 
-    private function verifyOperation(object $operation): string
+    private function verifyOperation(object $operation, ?int $actorId = null): string
     {
         if ($operation->status === 'authorized') {
             $this->invalid('Submit the authorized payout before verifying it.');
@@ -547,15 +556,28 @@ class CampaignPaystackService
             $this->invalid('Paystack returned a result that does not match this test operation.');
         }
 
-        return DB::transaction(function () use ($operation, $status) {
+        return DB::transaction(function () use ($operation, $status, $actorId) {
             $table = DB::table('campaign_paystack_operations')->where('id', $operation->id);
             $current = $table->lockForUpdate()->value('status');
             if ($current !== $status && $current !== 'reversed' && ($current !== 'success' || $status === 'reversed')) {
                 $table->update(['status' => $status, 'updated_at' => now()]);
+                $this->auditOperation((int) $operation->account_id, $actorId ?? 0, 'paystack.operation.verified', [
+                    'reference' => $operation->reference, 'from' => $current, 'to' => $status,
+                    'source' => $actorId === null ? 'webhook' : 'officer',
+                ]);
                 return $status;
             }
             return $current;
         }, 3);
+    }
+
+    private function auditOperation(int $accountId, int $actorId, string $action, array $details): void
+    {
+        DB::table('campaign_finance_audits')->insert([
+            'account_id' => $accountId, 'actor_id' => $actorId, 'action' => $action,
+            'details' => json_encode($details + ['environment' => 'test'], JSON_THROW_ON_ERROR),
+            'created_at' => now(),
+        ]);
     }
 
     public function manage(User $actor): void

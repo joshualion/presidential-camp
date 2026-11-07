@@ -356,7 +356,7 @@
 <ul>@forelse($documents as $document)<li><a href="{{ route('finance.documents.download', $document->id) }}">{{ $document->filename }}</a> @if($document->request_id) (Request {{ $document->request_id }}) @endif</li>@empty<li>No supporting documents attached.</li>@endforelse</ul>{{ $documents->links('pagination::bootstrap-4') }}
 @endif
 @if($audits)
-<details class="card card-body" @if(request()->filled('audits_page')) open @endif><summary>Audit trail</summary><div class="table-responsive"><table class="table"><thead><tr><th>Date</th><th>Actor ID</th><th>Action</th><th>Details</th></tr></thead><tbody>@foreach($audits as $event)<tr><td>{{ $event->created_at }}</td><td>{{ $event->actor_id }}</td><td>{{ $event->action }}</td><td>{{ $event->details }}</td></tr>@endforeach</tbody></table></div>{{ $audits->links('pagination::bootstrap-4') }}</details>
+<details class="card card-body" @if(request()->filled('audits_page')) open @endif><summary>Audit trail</summary><div class="table-responsive"><table class="table"><thead><tr><th>Date</th><th>Actor ID</th><th>Action</th><th>Details</th></tr></thead><tbody>@foreach($audits as $event)<tr><td>{{ $event->created_at }}</td><td>{{ (int) $event->actor_id === 0 ? 'Provider webhook' : $event->actor_id }}</td><td>{{ $event->action }}</td><td>{{ $event->details }}</td></tr>@endforeach</tbody></table></div>{{ $audits->links('pagination::bootstrap-4') }}</details>
 @endif
 @elseif($section === 'accounts')
 <p>Recorded balance for {{ $account->name }}: NGN {{ number_format($account->balance_minor / 100, 2) }}.</p>
