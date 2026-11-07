@@ -1103,3 +1103,32 @@ test('Paystack beneficiary test batch locks verified recipients and reconciles i
     expect(DB::table('campaign_finance_requests')->where('id', $request)->value('status'))->toBe('approved');
     $http::assertSentCount(7);
 });
+
+test('Paystack refund checks bind the provider refund to its original collection and cap completed totals', function () {
+    $admin = User::factory()->create(['access_level' => 'superadmin', 'status' => 'active']);
+    $payments = app(\App\Services\Enterprise\CampaignPaystackService::class);
+    $http = \Illuminate\Support\Facades\Http::class;
+    $http::fake([
+        'https://api.paystack.co/transaction/initialize' => fn ($request) => $http::response([
+            'status' => true, 'data' => ['reference' => $request['reference'], 'authorization_url' => 'https://checkout.paystack.com/test'],
+        ]),
+        'https://api.paystack.co/transaction/verify/*' => fn ($request) => $http::response([
+            'status' => true, 'data' => ['id' => 100, 'reference' => basename($request->url()), 'domain' => 'test',
+                'status' => 'success', 'currency' => 'NGN', 'amount' => 50000],
+        ]),
+        'https://api.paystack.co/refund/*' => fn ($request) => $http::response([
+            'status' => true, 'data' => ['id' => (int) basename($request->url()), 'domain' => 'test', 'currency' => 'NGN',
+                'amount' => 30000, 'status' => 'processed', 'transaction' => str_ends_with($request->url(), '/3') ? 200 : 100],
+        ]),
+    ]);
+    $payments->saveSettings($admin, ['test_public' => 'pk_test_'.str_repeat('a', 30),
+        'test_secret' => 'sk_test_'.str_repeat('b', 30)], 'test', true, false);
+    $payments->collect($admin, $this->account->id, 50000, 'payer@example.invalid', 'https://example.invalid/return');
+    $reference = DB::table('campaign_paystack_operations')->value('reference');
+    expect($payments->reconcileRefund($admin, $reference, 1))->toBe('processed');
+    expect($payments->reconcileRefund($admin, $reference, 1))->toBe('processed');
+    expect(fn () => $payments->reconcileRefund($admin, $reference, 2))->toThrow(ValidationException::class);
+    expect(fn () => $payments->reconcileRefund($admin, $reference, 3))->toThrow(ValidationException::class);
+    expect(DB::table('campaign_paystack_refund_checks')->count())->toBe(1);
+    expect($this->account->fresh()->balance_minor)->toBe(0);
+});

@@ -21,6 +21,7 @@ Route::middleware(['auth', 'enterprise.feature:campaign_finance,finance.view'])-
     Route::get('/paystack', [CampaignPaystackController::class, 'index'])->name('paystack.index');
     Route::post('/paystack/collect', [CampaignPaystackController::class, 'collect'])->middleware('throttle:10,1')->name('paystack.collect');
     Route::post('/paystack/transfer/{id}', [CampaignPaystackController::class, 'transfer'])->middleware('throttle:10,1')->whereNumber('id')->name('paystack.transfer');
+    Route::post('/paystack/refunds/{reference}', [CampaignPaystackController::class, 'refund'])->middleware('throttle:10,1')->whereUuid('reference')->name('paystack.refund');
     Route::post('/paystack/verify/{reference}', [CampaignPaystackController::class, 'verify'])->middleware('throttle:10,1')->whereUuid('reference')->name('paystack.verify');
     Route::post('/paystack/transfer/{id}/approve', [CampaignPaystackController::class, 'approveTransfer'])->middleware('throttle:10,1')->whereNumber('id')->name('paystack.approve');
     Route::get('/settings', [CampaignFinanceSettingsController::class, 'show'])->name('settings');

@@ -27,11 +27,23 @@
                     <td>{{ $operation->reference }}</td><td>{{ ucfirst($operation->kind) }}</td>
                     <td>{{ $accounts[$operation->account_id] ?? 'Parent or external jurisdiction' }}</td>
                     <td>{{ $operation->destination_id ? ($accounts[$operation->destination_id] ?? 'Another jurisdiction') : 'Main campaign Paystack account' }}</td>
-                    <td>{{ number_format($operation->amount_minor / 100, 2) }}</td><td>{{ ucfirst($operation->status) }}</td>
+                    <td>{{ number_format($operation->amount_minor / 100, 2) }}</td><td>{{ ucfirst($operation->status) }}
+                        @if($operation->processed_refunds_minor > 0)
+                            <div>Verified refunds NGN {{ number_format($operation->processed_refunds_minor / 100, 2) }}</div>
+                        @endif
+                    </td>
                     <td><form method="POST" action="{{ route('finance.paystack.verify', $operation->reference) }}">
                         @csrf
                         <button class="btn btn-sm btn-outline-primary">Verify with Paystack</button>
-                    </form></td>
+                    </form>
+                    @if($operation->kind === 'collection' && app(\App\Services\CampaignCapabilityService::class)->allows(auth()->user(), 'finance.reconcile'))
+                        <form method="POST" action="{{ route('finance.paystack.refund', $operation->reference) }}" class="mt-2">
+                            @csrf
+                            <label>Existing Paystack refund ID<input type="number" min="1" name="refund_id" class="form-control" required></label>
+                            <button class="btn btn-sm btn-outline-primary">Verify refund</button>
+                        </form>
+                    @endif
+                    </td>
                 </tr>
             @empty
                 <tr><td colspan="7">No Paystack test activity in your jurisdiction.</td></tr>

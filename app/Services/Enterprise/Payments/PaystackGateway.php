@@ -18,6 +18,11 @@ class PaystackGateway implements PaymentGateway
         return $this->request($secret, 'POST', '/transaction/initialize', $details);
     }
 
+    public function fetchRefund(#[\SensitiveParameter] string $secret, int $refundId): array
+    {
+        return $this->request($secret, 'GET', '/refund/'.$refundId);
+    }
+
     public function verifyCollection(#[\SensitiveParameter] string $secret, string $reference): array
     {
         return $this->request($secret, 'GET', '/transaction/verify/'.rawurlencode($reference));

@@ -306,6 +306,51 @@ class CampaignPaystackService
         return $this->verifyOperation($operation);
     }
 
+    public function reconcileRefund(User $actor, string $reference, int $refundId): string
+    {
+        $this->finance->authorize($actor, 'finance.reconcile');
+        $operation = $this->operations($actor)->where('kind', 'collection')->where('reference', $reference)->firstOrFail();
+        $secret = $this->connection(null, $operation->mode);
+        if (!hash_equals($operation->connection, hash('sha256', $secret))) {
+            $this->invalid('This refund belongs to a different payment connection.');
+        }
+
+        $transaction = $this->gateway->verifyCollection($secret, $reference);
+        $refund = $this->gateway->fetchRefund($secret, $refundId);
+        $transactionId = filter_var($transaction['id'] ?? null, FILTER_VALIDATE_INT);
+        $amount = filter_var($refund['amount'] ?? null, FILTER_VALIDATE_INT);
+        $status = $refund['status'] ?? null;
+        if (!$transactionId || ($transaction['reference'] ?? null) !== $reference
+            || ($transaction['domain'] ?? null) !== $operation->mode || ($refund['domain'] ?? null) !== $operation->mode
+            || (int) ($refund['id'] ?? 0) !== $refundId || (int) ($refund['transaction'] ?? 0) !== $transactionId
+            || ($refund['currency'] ?? null) !== 'NGN' || ($transaction['currency'] ?? null) !== 'NGN'
+            || (int) ($transaction['amount'] ?? 0) !== (int) $operation->amount_minor
+            || !$amount || $amount < 1 || $amount > (int) $operation->amount_minor
+            || !in_array($status, ['pending', 'processing', 'needs-attention', 'failed', 'processed'], true)) {
+            $this->invalid('Paystack did not confirm a matching refund for this collection.');
+        }
+
+        return DB::transaction(function () use ($actor, $operation, $refundId, $amount, $status) {
+            DB::table('campaign_paystack_operations')->where('id', $operation->id)->lockForUpdate()->firstOrFail();
+            $refunds = DB::table('campaign_paystack_refund_checks')->where('operation_id', $operation->id);
+            $existing = (clone $refunds)->where('provider_refund_id', $refundId)->first();
+            if ($existing && (int) $existing->amount_minor !== $amount) {
+                $this->invalid('The verified refund amount differs from the recorded refund.');
+            }
+            if ($existing?->status === 'processed') {
+                return 'processed';
+            }
+            $completed = (int) (clone $refunds)->where('status', 'processed')->sum('amount_minor');
+            if ($status === 'processed' && $completed + $amount > (int) $operation->amount_minor) {
+                $this->invalid('Processed refunds would exceed the original collection.');
+            }
+            DB::table('campaign_paystack_refund_checks')->updateOrInsert([
+                'operation_id' => $operation->id, 'provider_refund_id' => $refundId,
+            ], ['amount_minor' => $amount, 'status' => $status, 'checked_by' => $actor->id, 'checked_at' => now()]);
+            return $status;
+        }, 3);
+    }
+
     public function receiveWebhook(string $mode, string $body, string $header, string $legacy): void
     {
         abort_unless(in_array($mode, ['test', 'live'], true) && strlen($body) <= 65536, 400);

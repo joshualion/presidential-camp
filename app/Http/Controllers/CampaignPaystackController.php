@@ -56,9 +56,12 @@ class CampaignPaystackController extends Controller
     public function index(Request $request, CampaignPaystackService $paystack, CampaignFinanceService $finance)
     {
         $actor = $request->user();
-        $operations = $paystack->operations($actor)->latest('id')->paginate(25, [
-            'account_id', 'destination_id', 'request_id', 'reference', 'kind', 'amount_minor', 'status', 'created_at',
-        ]);
+        $operations = $paystack->operations($actor)
+            ->select(['account_id', 'destination_id', 'request_id', 'reference', 'kind', 'amount_minor', 'status', 'created_at'])
+            ->selectSub(\Illuminate\Support\Facades\DB::table('campaign_paystack_refund_checks')
+                ->whereColumn('operation_id', 'campaign_paystack_operations.id')->where('status', 'processed')
+                ->selectRaw('COALESCE(SUM(amount_minor), 0)'), 'processed_refunds_minor')
+            ->latest('id')->paginate(25);
         $accounts = $finance->accounts($actor)->orderBy('name')->pluck('name', 'id');
         return response()->view('backend.finance.paystack-operations', [
             'profileData' => $actor, 'pageTitle' => 'Campaign Paystack test activity',
@@ -118,6 +121,13 @@ class CampaignPaystackController extends Controller
     {
         $paystack->approveTransfer($request->user(), $id);
         return back()->with('finance_status', 'Test payout authorized for a separate officer to submit.');
+    }
+
+    public function refund(Request $request, string $reference, CampaignPaystackService $paystack)
+    {
+        $data = $request->validate(['refund_id' => 'required|integer|min:1']);
+        $status = $paystack->reconcileRefund($request->user(), $reference, (int) $data['refund_id']);
+        return back()->with('finance_status', 'Verified refund status: '.$status.'.');
     }
 
     public function verify(Request $request, string $reference, CampaignPaystackService $paystack)
