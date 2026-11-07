@@ -62,7 +62,7 @@ jobs:
           jq -e '.ready == true and .protocol == 1 and .terms_version == "2026-10-12" and .automatic_updates.protocol == 1 and .automatic_updates.ready == true and .automatic_updates.payment_ready == true and .automatic_updates.coverage_protocol == 1 and (.automatic_updates.return_protocols | index(2)) != null and .automatic_updates.coverage_ready == true and .automatic_updates.pricing_source == "campaign_service_prices" and (.automatic_updates.configured_scopes | length) > 0' "$RUNNER_TEMP/registration-health.json"
           if git lfs ls-files | grep ' - '; then echo 'Unresolved LFS assets' >&2; exit 1; fi
       - run: composer install --prefer-dist --no-interaction && composer audit --locked --no-interaction
-      - run: npm ci && npm run build && npm audit --omit=dev
+      - run: npm ci && npm run build && npm audit --audit-level=high
       - run: cp .env.example .env && php artisan key:generate --force && php artisan test --log-junit test-results.xml
       - run: composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction && composer check-platform-reqs --no-dev
       - name: Build with established signing identity

@@ -37,7 +37,7 @@ jobs:
       - run: composer audit --locked --no-interaction
       - run: npm ci
       - run: npm run build
-      - run: npm audit --omit=dev
+      - run: npm audit --audit-level=high
       - name: Isolated regression tests
         env:
           APP_ENV: testing

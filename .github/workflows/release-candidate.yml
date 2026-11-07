@@ -56,7 +56,7 @@ jobs:
         run: php -r 'if (!preg_match("/^\d+\.\d+\.\d+$/D", getenv("CANDIDATE_VERSION"))) { exit(1); }'
       - run: composer install --prefer-dist --no-interaction
       - run: composer audit --locked --no-interaction
-      - run: npm ci && npm run build && npm audit --omit=dev
+      - run: npm ci && npm run build && npm audit --audit-level=high
       - run: cp .env.example .env && php artisan key:generate --force && php artisan test --log-junit test-results.xml
       - name: Install production-only dependencies
         run: composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction && composer check-platform-reqs --no-dev
