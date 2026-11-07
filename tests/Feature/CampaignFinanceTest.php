@@ -730,7 +730,7 @@ test('finance headquarters returns a proposal then the original branch officer r
     expect(fn () => $workflow->review($this->approver, $id, 1, 'reject', 'Stale form'))
         ->toThrow(ValidationException::class);
     expect(fn () => $workflow->resubmit($this->outsider, $id, 2, 15000, 'Forgery', []))
-        ->toThrow(\Illuminate\Database\Eloquent\ModelNotFoundException::class);
+        ->toThrow(\Illuminate\Database\RecordNotFoundException::class);
     $workflow->resubmit($this->requester, $id, 2, 17000, 'Updated purpose',
         [['name' => 'Updated recipient', 'amount_minor' => 17000]]);
     $proposal = DB::table('campaign_finance_funding_proposals')->find($id);
@@ -751,7 +751,7 @@ test('funding proposals can be rejected only by independent geographically autho
     expect(fn () => $workflow->review($this->requester, $id, 1, 'reject', 'Own proposal'))
         ->toThrow(\Symfony\Component\HttpKernel\Exception\HttpException::class);
     expect(fn () => $workflow->review($this->outsider, $id, 1, 'reject', 'Wrong territory'))
-        ->toThrow(\Illuminate\Database\Eloquent\ModelNotFoundException::class);
+        ->toThrow(\Illuminate\Database\RecordNotFoundException::class);
     $workflow->review($this->approver, $id, 1, 'reject', 'Insufficient evidence.');
     expect(DB::table('campaign_finance_funding_proposals')->where('id', $id)->value('status'))->toBe('rejected');
     expect(fn () => $workflow->resubmit($this->requester, $id, 2, 10000, 'Retry', []))
@@ -817,7 +817,7 @@ test('headquarters allocation retains named recipients and original location and
             ['name' => 'Vendor B', 'amount_minor' => 13000],
         ]);
     expect(fn () => $workflow->assign($this->approver, $id, 1, $this->account->id))
-        ->toThrow(\Illuminate\Database\Eloquent\ModelNotFoundException::class);
+        ->toThrow(\Illuminate\Database\RecordNotFoundException::class);
 
     $regional = User::factory()->create([
         'access_level' => 'superadmin', 'status' => 'active',
@@ -864,7 +864,7 @@ test('proposal approval and audit visibility stay tied to immutable submitting j
     expect($workflow->reviewerQueue($this->approver)->where('proposals.id', $id)->exists())->toBeTrue();
     expect($workflow->reviewerQueue($this->outsider)->where('proposals.id', $id)->exists())->toBeFalse();
     expect(fn () => $workflow->history($this->outsider, $id))
-        ->toThrow(\Illuminate\Database\Eloquent\ModelNotFoundException::class);
+        ->toThrow(\Illuminate\Database\RecordNotFoundException::class);
     [$proposal, $events] = $workflow->history($this->requester, $id);
     expect($proposal->requesting_level)->toBe('state');
     expect((int) $proposal->requesting_location_id)->toBe(1);

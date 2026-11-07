@@ -188,6 +188,11 @@ if ($targetVersion === '1.2.6') {
         '2026_11_05_000012_add_campaign_finance_reversals',
         '2026_11_06_000013_add_campaign_finance_manual_expenses',
         '2026_11_06_000014_add_campaign_finance_request_routes',
+        '2026_11_06_000015_add_campaign_finance_governance',
+        '2026_11_06_000016_add_campaign_finance_request_recipients',
+        '2026_11_06_000017_add_campaign_finance_funding_proposals',
+        '2026_11_06_000018_add_campaign_finance_proposal_workflow',
+        '2026_11_06_000019_add_campaign_finance_statement_checks',
     ]);
 }
 $actualMigrations = array_keys($plan['pending_migrations']);

@@ -15,7 +15,7 @@ return [
     // Names are added only after reviewing their up() implementation and compatibility.
     'approved_migrations' => [
         '2026_11_06_000019_add_campaign_finance_statement_checks' => '63e8608b9ba356e9379e38b4ab00ea822d61be836aa13143f4f34f75e3d1314e',
-        '2026_11_06_000018_add_campaign_finance_proposal_workflow' => '4059a0eecb50e59e7e54bf8b71107be5fabceb278b04ba56724e9326b0f8b752',
+        '2026_11_06_000018_add_campaign_finance_proposal_workflow' => 'ae5ec7687eae2de55acd54bc43940ddd952f71d1a1c0e385392a592b3e1859c7',
         '2026_11_06_000017_add_campaign_finance_funding_proposals' => 'd4764c851d35016b6e76508aa78c998ba1d41aecbb20127ad759afbe38974177',
         '2026_11_06_000016_add_campaign_finance_request_recipients' => '52a8f5eeba5444d5b81d58ff24d29d2b7755943729bf217abbc0b847b1c4c113',
         '2026_11_06_000015_add_campaign_finance_governance' => '56935e450202baf5e35373ba170ddfb25937e463f9d2447f16446a61baae59a1',

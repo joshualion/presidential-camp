@@ -32,15 +32,24 @@ return new class extends Migration {
                 $table->unique(['proposal_id', 'revision']);
             });
         }
+        $locationColumns = ['region_id', 'state_id', 'senatorial_district_id',
+            'federal_constituency_id', 'lga_id', 'ward_id', 'polling_unit_id'];
         if (!Schema::hasTable('campaign_finance_proposal_locations')) {
-            Schema::create('campaign_finance_proposal_locations', function (Blueprint $table) {
+            Schema::create('campaign_finance_proposal_locations', function (Blueprint $table) use ($locationColumns) {
                 $table->engine = 'InnoDB';
                 $table->unsignedBigInteger('proposal_id')->primary();
-                foreach (['region_id', 'state_id', 'senatorial_district_id',
-                          'federal_constituency_id', 'lga_id', 'ward_id', 'polling_unit_id'] as $column) {
-                    $table->unsignedBigInteger($column)->nullable()->index();
+                foreach ($locationColumns as $column) {
+                    $table->unsignedBigInteger($column)->nullable();
                 }
             });
+        }
+        // MySQL can leave the table and earlier indexes behind after a failed DDL statement.
+        foreach ($locationColumns as $column) {
+            if (!Schema::hasIndex('campaign_finance_proposal_locations', [$column])) {
+                Schema::table('campaign_finance_proposal_locations', function (Blueprint $table) use ($column) {
+                    $table->index($column, 'finance_proposal_loc_'.$column.'_idx');
+                });
+            }
         }
         // Existing intake records (from pre-1.2.6 checkpoints) remain accessible.
         // Their initial location is reconstructed once; all future records snapshot at creation.

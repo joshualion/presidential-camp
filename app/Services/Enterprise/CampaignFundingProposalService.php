@@ -249,7 +249,12 @@ class CampaignFundingProposalService
             $this->scoped($actor, $id);
         }
         $events = DB::table('campaign_finance_proposal_events')
-            ->where('proposal_id', $id)->orderBy('revision')->get();
+            ->where('proposal_id', $id)->orderBy('revision')->get()->map(function ($event) {
+                $details = json_decode($event->details, true, 512, JSON_THROW_ON_ERROR);
+                unset($details['account_id'], $details['budget_id'], $details['destination_id']);
+                $event->details = json_encode($details, JSON_THROW_ON_ERROR);
+                return $event;
+            });
         $request = $proposal->assigned_request_id
             ? DB::table('campaign_finance_requests')->where('id', $proposal->assigned_request_id)
                 ->first(['id', 'status', 'amount_minor'])
