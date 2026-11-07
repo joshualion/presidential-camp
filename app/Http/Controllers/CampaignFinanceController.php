@@ -121,6 +121,7 @@ class CampaignFinanceController extends Controller
                 ? DB::table('campaign_finance_documents')->where('account_id', $id)->latest('id')->paginate(25, ['*'], 'documents_page')->withQueryString()
                 : null,
             'budgets' => in_array($section, ['budgets', 'requests', 'expenditure'], true) ? DB::table('campaign_finance_budgets')->where('account_id', $id)->orderBy('id')->get() : [],
+            'paystackTransfersEnabled' => $section === 'disbursements' && app(\App\Services\Enterprise\CampaignPaystackService::class)->settings()?->transfers,
             'period' => $section === 'reports' && $account
                 ? app(\App\Services\Enterprise\CampaignFinancePeriodService::class)->latest((int) $account->id) : null,
             'statementChecks' => $section === 'reports'

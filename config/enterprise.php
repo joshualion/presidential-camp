@@ -16,6 +16,7 @@ return [
     'permissions' => [
         'addons.purchase', 'reports.view', 'reports.export', 'reports.ai.generate', 'reports.settings.manage',
         'finance.view', 'finance.dashboard.view', 'finance.requests.view', 'finance.record', 'finance.expenses.record', 'finance.movements.post', 'finance.advances.settle', 'finance.budget.manage', 'finance.disbursement.create',
+        'finance.paystack.collect', 'finance.paystack.approve', 'finance.paystack.transfer',
         'finance.disbursement.approve', 'finance.disbursement.execute', 'finance.reconcile', 'finance.periods.close', 'finance.periods.reopen',
         'finance.reports.export', 'finance.accounts.manage', 'finance.donations.manage', 'finance.documents.view', 'finance.entries.reverse',
         'merchandise.view', 'merchandise.products.manage', 'merchandise.categories.manage',

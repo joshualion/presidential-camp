@@ -1,3 +1,15 @@
+@if($payment->purpose === 'transfer' && $payment->status === 'approved' && $paystackTransfersEnabled && $capabilities->allows(auth()->user(), 'finance.paystack.approve'))
+    <form method="POST" action="{{ route('finance.paystack.approve', $payment->id) }}">
+        @csrf
+        <button class="btn btn-outline-primary btn-sm">Authorize test payout</button>
+    </form>
+@endif
+@if($payment->purpose === 'transfer' && $payment->status === 'approved' && $paystackTransfersEnabled && $capabilities->allows(auth()->user(), 'finance.paystack.transfer'))
+    <form method="POST" action="{{ route('finance.paystack.transfer', $payment->id) }}">
+        @csrf
+        <button class="btn btn-outline-primary btn-sm">Submit to Paystack test mode</button>
+    </form>
+@endif
 @if($payment->purpose && $payment->status === 'approved' && $capabilities->allows(auth()->user(), 'finance.movements.post'))
     <form method="POST" action="{{ route('finance.movements.store', $payment->id) }}">
         @csrf

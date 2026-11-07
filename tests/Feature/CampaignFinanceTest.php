@@ -965,3 +965,86 @@ test('closing requires an independent statement and reopening restores entry rig
     expect($this->account->fresh()->balance_minor)->toBe(99000);
     expect(DB::table('campaign_finance_period_events')->count())->toBe(2);
 });
+
+test('Paystack preserves four encrypted keys across switches and verifies late sandbox webhooks', function () {
+    $admin = User::factory()->create(['access_level' => 'superadmin', 'status' => 'active']);
+    $payments = app(\App\Services\Enterprise\CampaignPaystackService::class);
+    $keys = [
+        'test_public' => 'pk_test_'.str_repeat('a', 30), 'test_secret' => 'sk_test_'.str_repeat('b', 30),
+        'live_public' => 'pk_live_'.str_repeat('c', 30), 'live_secret' => 'sk_live_'.str_repeat('d', 30),
+        'test_webhook' => 'whsec_'.str_repeat('e', 30),
+    ];
+    $http = \Illuminate\Support\Facades\Http::class;
+    $http::fake([
+        'https://api.paystack.co/balance' => $http::response(['status' => true, 'data' => []]),
+        'https://api.paystack.co/transaction/initialize' => fn ($request) => $http::response([
+            'status' => true, 'data' => ['reference' => $request['reference'], 'authorization_url' => 'https://checkout.paystack.com/test'],
+        ]),
+        'https://api.paystack.co/transaction/verify/*' => fn ($request) => $http::response([
+            'status' => true, 'data' => ['reference' => basename($request->url()), 'domain' => 'test',
+                'status' => 'success', 'currency' => 'NGN', 'amount' => 50000],
+        ]),
+    ]);
+    expect(fn () => $payments->saveSettings($this->requester, $keys, 'test', true, true))
+        ->toThrow(\Symfony\Component\HttpKernel\Exception\HttpException::class);
+    $payments->saveSettings($admin, $keys, 'test', true, false);
+    expect($payments->collect($admin, $this->account->id, 50000, 'payer@example.invalid', 'https://example.invalid/return'))
+        ->toBe('https://checkout.paystack.com/test');
+    expect(fn () => $payments->saveSettings($admin, [], 'live', true, false))->toThrow(ValidationException::class);
+    $payments->saveSettings($admin, [], 'live', false, false);
+    $reference = DB::table('campaign_paystack_operations')->value('reference');
+    expect($payments->operations($this->outsider)->count())->toBe(0);
+    $body = json_encode(['event' => 'charge.success', 'data' => ['domain' => 'test', 'reference' => $reference]]);
+    $time = now()->timestamp;
+    $signature = 't='.$time.',v1=key:'.hash_hmac('sha512', $time.'.'.$body, $keys['test_webhook']);
+    expect(fn () => $payments->receiveWebhook('test', $body, $signature.'bad', ''))
+        ->toThrow(\Symfony\Component\HttpKernel\Exception\HttpException::class);
+    $payments->receiveWebhook('test', $body, $signature, '');
+    $payments->receiveWebhook('test', $body, $signature, '');
+    $payments->saveSettings($admin, ['test_secret' => ''], 'test', true, false);
+    $saved = DB::table('campaign_paystack_settings')->first();
+    foreach ($keys as $column => $key) {
+        expect($saved->{$column})->not->toBe($key);
+        expect(\Illuminate\Support\Facades\Crypt::decryptString($saved->{$column}))->toBe($key);
+    }
+    expect($payments->settings())->not->toHaveProperty('live_secret');
+    expect(DB::table('campaign_paystack_operations')->value('status'))->toBe('success');
+    expect(DB::table('campaign_paystack_webhook_events')->count())->toBe(1);
+    expect($this->account->fresh()->balance_minor)->toBe(0);
+    $http::assertSentCount(3);
+});
+
+test('Paystack branch payouts require separate authorization and one sandbox submission', function () {
+    $admin = User::factory()->create(['access_level' => 'superadmin', 'status' => 'active']);
+    $payments = app(\App\Services\Enterprise\CampaignPaystackService::class);
+    $http = \Illuminate\Support\Facades\Http::class;
+    $http::fake([
+        'https://api.paystack.co/transferrecipient/*' => $http::response([
+            'status' => true, 'data' => ['recipient_code' => 'RCP_abcd1234', 'domain' => 'test', 'currency' => 'NGN', 'active' => true],
+        ]),
+        'https://api.paystack.co/transfer' => $http::response(['status' => true, 'data' => ['status' => 'pending']]),
+        'https://api.paystack.co/transfer/verify/*' => fn ($request) => $http::response([
+            'status' => true, 'data' => ['reference' => basename($request->url()), 'domain' => 'test', 'amount' => 15000,
+                'status' => 'success', 'currency' => 'NGN', 'recipient' => ['recipient_code' => 'RCP_abcd1234']],
+        ]),
+    ]);
+    $payments->saveSettings($admin, ['test_public' => 'pk_test_'.str_repeat('a', 30),
+        'test_secret' => 'sk_test_'.str_repeat('b', 30)], 'test', false, true);
+    $this->approver->givePermissionTo(Permission::findOrCreate('finance.paystack.approve', 'web'));
+    $this->approver->givePermissionTo(Permission::findOrCreate('finance.paystack.transfer', 'web'));
+    $this->requester->givePermissionTo(Permission::findOrCreate('finance.paystack.transfer', 'web'));
+    $destination = $this->finance->createAccount($this->requester, 'Test destination', $this->requester->id);
+    $payments->saveRecipient($admin, $destination->id, 'RCP_abcd1234');
+    $this->finance->record($this->requester, $this->account->id, 'income', 50000, 'Initial funds', (string) Str::uuid());
+    $id = $this->finance->request($this->requester, $this->account->id, null, 15000, 'Test allocation', 'transfer', $destination->id);
+    $this->finance->decide($this->approver, $id, true);
+    $payments->approveTransfer($this->approver, $id);
+    expect(fn () => $payments->transfer($this->approver, $id))->toThrow(\Symfony\Component\HttpKernel\Exception\HttpException::class);
+    $payments->transfer($this->requester, $id);
+    expect(fn () => $payments->transfer($this->requester, $id))->toThrow(ValidationException::class);
+    expect($payments->verify($this->requester, DB::table('campaign_paystack_operations')->value('reference')))->toBe('success');
+    expect($this->account->fresh()->balance_minor)->toBe(50000);
+    expect($destination->fresh()->balance_minor)->toBe(0);
+    expect(DB::table('campaign_finance_requests')->where('id', $id)->value('status'))->toBe('approved');
+    $http::assertSentCount(3);
+});

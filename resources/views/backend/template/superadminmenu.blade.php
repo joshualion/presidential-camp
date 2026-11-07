@@ -525,16 +525,14 @@
 @endif
                 </li>
 
-                {{-- Payment Settings temporarily disabled pending finance module completion.
-                <li class="nav-item">
-                  @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, url('superadmin/settings/paymentgateway')))
-<a href="{{ url('superadmin/settings/paymentgateway') }}" class="nav-link">
-                  <i class="fas fa-credit-card nav-icon"></i>
-                    <p> Payment Settings</p>
-                  </a>
-@endif
-                </li>
-                --}}
+                @if(app(\App\Services\Enterprise\EntitlementService::class)->active('campaign_finance'))
+                    <li class="nav-item">
+                        <a href="{{ route('finance.paystack.settings') }}" class="nav-link">
+                            <i class="fas fa-credit-card nav-icon"></i>
+                            <p>Campaign Payment Settings</p>
+                        </a>
+                    </li>
+                @endif
 
                 <li class="nav-item">
                   @if(app(\App\Services\CampaignCapabilityService::class)->canVisit(Auth::user() ?? $profileData ?? null, route('superadmin.settings.email-notifications.edit')))

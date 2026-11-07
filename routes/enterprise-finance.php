@@ -2,10 +2,24 @@
 
 use App\Http\Controllers\CampaignFinanceController;
 use App\Http\Controllers\CampaignFinanceSettingsController;
+use App\Http\Controllers\CampaignPaystackController;
+use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Support\Facades\Route;
+
+Route::post('/campaign-finance/paystack/webhook/{mode}', [CampaignPaystackController::class, 'webhook'])
+    ->whereIn('mode', ['test', 'live'])->withoutMiddleware(ValidateCsrfToken::class)
+    ->middleware('throttle:60,1')->name('finance.paystack.webhook');
 
 Route::middleware(['auth', 'enterprise.feature:campaign_finance,finance.view'])->prefix('campaign-finance')->name('finance.')->group(function () {
     Route::get('/', [CampaignFinanceController::class, 'index'])->name('index');
+    Route::get('/paystack/settings', [CampaignPaystackController::class, 'settings'])->name('paystack.settings');
+    Route::post('/paystack/settings', [CampaignPaystackController::class, 'save'])->name('paystack.settings.save');
+    Route::post('/paystack/recipient', [CampaignPaystackController::class, 'recipient'])->middleware('throttle:10,1')->name('paystack.recipient');
+    Route::get('/paystack', [CampaignPaystackController::class, 'index'])->name('paystack.index');
+    Route::post('/paystack/collect', [CampaignPaystackController::class, 'collect'])->middleware('throttle:10,1')->name('paystack.collect');
+    Route::post('/paystack/transfer/{id}', [CampaignPaystackController::class, 'transfer'])->middleware('throttle:10,1')->whereNumber('id')->name('paystack.transfer');
+    Route::post('/paystack/verify/{reference}', [CampaignPaystackController::class, 'verify'])->middleware('throttle:10,1')->whereUuid('reference')->name('paystack.verify');
+    Route::post('/paystack/transfer/{id}/approve', [CampaignPaystackController::class, 'approveTransfer'])->middleware('throttle:10,1')->whereNumber('id')->name('paystack.approve');
     Route::get('/settings', [CampaignFinanceSettingsController::class, 'show'])->name('settings');
     Route::post('/settings', [CampaignFinanceSettingsController::class, 'save'])->name('settings.save');
     Route::post('/settings/governance', [CampaignFinanceSettingsController::class, 'saveGovernance'])->name('settings.governance');
