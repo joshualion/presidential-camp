@@ -147,6 +147,22 @@
     && app(\App\Services\Enterprise\CampaignFinancePolicy::class)->permits(auth()->user(), 'finance.reconcile'))
     <h2 class="h5 text-primary">Bank statement reconciliation</h2>
     <p class="small">Compare an external bank-statement ending balance against the Finance ledger for a specified date. This records an internal check, not confirmation from a bank or payment gateway. Discrepancies require investigation; no funds are posted or adjusted automatically.</p>
+    <details class="card card-body mb-3"><summary>Import bank statement CSV</summary>
+        <form method="POST" enctype="multipart/form-data" action="{{ route('finance.statements.import') }}">
+            @csrf
+            <label>Treasury account<select name="account_id" class="form-select" required>
+                @foreach($accounts as $item)<option value="{{ $item->id }}">{{ $item->name }}</option>@endforeach
+            </select></label>
+            <label>Start date<input type="date" name="starts_on" class="form-control" required></label>
+            <label>Ending date<input type="date" name="statement_date" class="form-control" required></label>
+            <label>Opening balance (NGN)<input name="opening_balance" class="form-control" inputmode="decimal" required></label>
+            <label>Closing balance (NGN)<input name="statement_balance" class="form-control" inputmode="decimal" required></label>
+            <label>Bank statement reference<input name="evidence_reference" class="form-control" maxlength="300" required></label>
+            <label>Statement CSV<input type="file" name="statement_csv" class="form-control" accept=".csv,text/csv" required></label>
+            <p class="small">Use the header <code>date,reference,amount_minor</code>. Use YYYY-MM-DD dates and signed amounts in kobo. Limits are 512 KB and 5,000 rows.</p>
+            <button class="btn btn-outline-primary">Import for review</button>
+        </form>
+    </details>
     <details class="card card-body mb-3"><summary>Record statement balance</summary>
         <form method="POST" action="{{ route('finance.statements.prepare') }}">
             @csrf
@@ -174,7 +190,7 @@
         <thead><tr><th>Date / Account</th><th>Ledger NGN</th><th>Statement NGN</th><th>Variance NGN</th><th>Review</th></tr></thead>
         <tbody>
         @forelse($statementChecks as $check)
-            <tr><td>{{ $check->statement_date }} / #{{ $check->account_id }}<div class="small">{{ $check->evidence_reference }}</div></td>
+            <tr><td>Check #{{ $check->id }} · {{ $check->statement_date }} / Account #{{ $check->account_id }}<div class="small">{{ $check->evidence_reference }}</div></td>
                 <td>{{ number_format($check->ledger_balance_minor / 100, 2) }}</td>
                 <td>{{ number_format($check->statement_balance_minor / 100, 2) }}</td>
                 <td>{{ number_format($check->variance_minor / 100, 2) }}</td>
@@ -185,6 +201,27 @@
                         <label>Review notes<input name="review_notes" class="form-control" maxlength="500" required></label>
                         <button class="btn btn-outline-primary btn-sm">Record independent review</button>
                     </form>@endif
+                    @if($check->sha256 && $check->review_outcome !== 'pending' && auth()->user()->access_level === 'superadmin'
+                        && (int) $check->prepared_by !== (int) auth()->id())
+                        <details><summary>Match a Paystack settlement</summary>
+                            <form method="POST" action="{{ route('finance.paystack.settlements.match', $check->id) }}">
+                                @csrf
+                                <label>Paystack settlement ID<input type="number" name="settlement_id" min="1" class="form-control" required></label>
+                                <label>Exact bank credit reference<input name="bank_credit_reference" maxlength="150" class="form-control" required></label>
+                                <button class="btn btn-outline-primary btn-sm">Verify and match</button>
+                            </form>
+                        </details>
+                    @endif
+                    @if($check->matched_check_id)
+                        <div>Resolved with check #{{ $check->matched_check_id }}</div>
+                    @elseif($check->review_outcome === 'variance' && (int) $check->prepared_by !== (int) auth()->id())
+                        <form method="POST" action="{{ route('finance.statements.resolve', $check->id) }}">
+                            @csrf
+                            <label>Later balanced CSV check ID<input type="number" name="matched_check_id" min="1" class="form-control" required></label>
+                            <label>Investigation and adjustment reference<input name="resolution_reason" maxlength="500" class="form-control" required></label>
+                            <button class="btn btn-outline-primary btn-sm">Record variance resolution</button>
+                        </form>
+                    @endif
                     @if($check->review_outcome === 'balanced' && $check->statement_date < today()->toDateString()
                         && (int) $check->prepared_by !== (int) auth()->id() && $capabilities->allows(auth()->user(), 'finance.periods.close'))
                     <form method="POST" action="{{ route('finance.periods.close', $check->account_id) }}">

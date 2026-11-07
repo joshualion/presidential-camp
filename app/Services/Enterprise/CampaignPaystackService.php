@@ -351,6 +351,75 @@ class CampaignPaystackService
         }, 3);
     }
 
+    public function matchSettlement(User $actor, int $checkId, int $settlementId, string $reference): void
+    {
+        $this->manage($actor);
+        $this->finance->authorize($actor, 'finance.reconcile');
+        $check = DB::table('campaign_finance_statement_checks')->where('id', $checkId)->firstOrFail();
+        $this->finance->account($actor, (int) $check->account_id);
+        $import = DB::table('campaign_finance_statement_imports')->where('check_id', $checkId)->firstOrFail();
+        if ($check->review_outcome === 'pending' || (int) $check->prepared_by === (int) $actor->id) {
+            $this->invalid('Use a reviewed statement CSV prepared by another finance officer.');
+        }
+
+        $lines = json_decode($import->lines, true, flags: JSON_THROW_ON_ERROR);
+        $candidates = array_filter($lines, fn ($line) => $line['reference'] === $reference && $line['amount_minor'] > 0);
+        if (count($candidates) !== 1) {
+            $this->invalid('The reference must identify exactly one credit in the reviewed statement.');
+        }
+        $line = reset($candidates);
+        $lineNumber = (int) key($candidates) + 1;
+        $bankDate = \Illuminate\Support\Carbon::parse($line['date'], 'UTC');
+        $from = $bankDate->copy()->subDays(7)->toDateString();
+        $to = $bankDate->copy()->addDay()->toDateString();
+        $key = $this->connection(null, 'live');
+        $settlements = $this->gateway->listSettlements($key, $from, $to);
+        $settlement = collect($settlements)->first(fn ($item) => ($item['id'] ?? null) === $settlementId);
+        $integration = $settlement['integration'] ?? null;
+        $gross = $settlement['total_processed'] ?? null;
+        $fee = $settlement['total_fees'] ?? null;
+        $net = $settlement['effective_amount'] ?? null;
+        $settledOn = substr((string) ($settlement['settlement_date'] ?? ''), 0, 10);
+        if (($settlement['status'] ?? null) !== 'success' || ($settlement['domain'] ?? null) !== 'live'
+            || ($settlement['currency'] ?? null) !== 'NGN' || !empty($settlement['deductions'])
+            || !is_int($integration) || $integration < 1 || !is_int($gross) || $gross < 1
+            || !is_int($fee) || $fee < 0 || $gross - $fee !== $net || $net !== $line['amount_minor']
+            || ($settlement['total_amount'] ?? null) !== $net
+            || !preg_match('/^\d{4}-\d{2}-\d{2}$/D', $settledOn) || $settledOn < $from || $settledOn > $line['date']) {
+            $this->invalid('Paystack did not confirm a matching live naira settlement without deductions for this bank credit.');
+        }
+
+        DB::transaction(function () use ($actor, $check, $checkId, $key, $integration, $settlementId, $settledOn, $lineNumber, $gross, $fee, $net) {
+            $this->finance->account($actor, (int) $check->account_id, true);
+            $settings = DB::table('campaign_paystack_settings')->where('id', 1)->lockForUpdate()->first();
+            if (!$settings?->live_secret || !hash_equals(Crypt::decryptString($settings->live_secret), $key)) {
+                $this->invalid('The live connection changed. Verify the settlement again.');
+            }
+            $matches = DB::table('campaign_paystack_settlement_matches');
+            $prior = (clone $matches)->where('provider_integration', $integration)
+                ->where('provider_settlement', $settlementId)->lockForUpdate()->first();
+            if ($prior && (int) $prior->check_id === $checkId && (int) $prior->line_number === $lineNumber
+                && (int) $prior->gross_minor === $gross && (int) $prior->fee_minor === $fee
+                && (int) $prior->net_minor === $net && $prior->settled_on === $settledOn) {
+                return;
+            }
+            if ($prior || (clone $matches)->where('check_id', $checkId)->where('line_number', $lineNumber)->lockForUpdate()->first()) {
+                $this->invalid('The bank credit or provider settlement already has a recorded match.');
+            }
+            $matchId = $matches->insertGetId([
+                'check_id' => $checkId, 'provider_integration' => $integration, 'provider_settlement' => $settlementId,
+                'settled_on' => $settledOn, 'line_number' => $lineNumber, 'gross_minor' => $gross,
+                'fee_minor' => $fee, 'net_minor' => $net, 'actor_id' => $actor->id, 'created_at' => now(),
+            ]);
+            DB::table('campaign_finance_audits')->insert([
+                'account_id' => $check->account_id, 'actor_id' => $actor->id, 'action' => 'paystack.settlement.matched',
+                'details' => json_encode(['match_id' => $matchId, 'check_id' => $checkId,
+                    'gross_minor' => $gross, 'fee_minor' => $fee, 'net_minor' => $net], JSON_THROW_ON_ERROR),
+                'created_at' => now(),
+            ]);
+        }, 3);
+    }
+
     public function receiveWebhook(string $mode, string $body, string $header, string $legacy): void
     {
         abort_unless(in_array($mode, ['test', 'live'], true) && strlen($body) <= 65536, 400);

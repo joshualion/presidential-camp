@@ -21,6 +21,8 @@ Route::middleware(['auth', 'enterprise.feature:campaign_finance,finance.view'])-
     Route::get('/paystack', [CampaignPaystackController::class, 'index'])->name('paystack.index');
     Route::post('/paystack/collect', [CampaignPaystackController::class, 'collect'])->middleware('throttle:10,1')->name('paystack.collect');
     Route::post('/paystack/transfer/{id}', [CampaignPaystackController::class, 'transfer'])->middleware('throttle:10,1')->whereNumber('id')->name('paystack.transfer');
+    Route::post('/paystack/settlements/{id}/match', [CampaignPaystackController::class, 'matchSettlement'])
+        ->middleware('throttle:10,1')->whereNumber('id')->name('paystack.settlements.match');
     Route::post('/paystack/refunds/{reference}', [CampaignPaystackController::class, 'refund'])->middleware('throttle:10,1')->whereUuid('reference')->name('paystack.refund');
     Route::post('/paystack/verify/{reference}', [CampaignPaystackController::class, 'verify'])->middleware('throttle:10,1')->whereUuid('reference')->name('paystack.verify');
     Route::post('/paystack/transfer/{id}/approve', [CampaignPaystackController::class, 'approveTransfer'])->middleware('throttle:10,1')->whereNumber('id')->name('paystack.approve');
@@ -33,6 +35,8 @@ Route::middleware(['auth', 'enterprise.feature:campaign_finance,finance.view'])-
     Route::post('/accounts/{id}/periods/close', [CampaignFinanceController::class, 'closePeriod'])->whereNumber('id')->name('periods.close');
     Route::post('/accounts/{id}/periods/reopen', [CampaignFinanceController::class, 'reopenPeriod'])->whereNumber('id')->name('periods.reopen');
     Route::post('/statements/checks', [CampaignFinanceController::class, 'prepareStatementCheck'])->name('statements.prepare');
+    Route::post('/statements/import', [CampaignFinanceController::class, 'importStatement'])->name('statements.import');
+    Route::post('/statements/checks/{id}/resolve', [CampaignFinanceController::class, 'resolveStatementVariance'])->whereNumber('id')->name('statements.resolve');
     Route::post('/statements/checks/{id}/review', [CampaignFinanceController::class, 'reviewStatementCheck'])->whereNumber('id')->name('statements.review');
     Route::post('/accounts/{id}/reconcile', [CampaignFinanceController::class, 'reconcile'])->whereNumber('id')->name('reconcile');
     Route::post('/requests/{id}/cancel', [CampaignFinanceController::class, 'cancel'])->whereNumber('id')->name('requests.cancel');

@@ -32,18 +32,30 @@ class CampaignFinancePeriodService
         DB::transaction(function () use ($actor, $accountId, $statementId, $reason) {
             $account = $this->finance->account($actor, $accountId, true);
             $statement = DB::table('campaign_finance_statement_checks')->where('account_id', $accountId)
-                ->where('id', $statementId)->firstOrFail();
+                ->where('id', $statementId)->lockForUpdate()->firstOrFail();
             if ($statement->review_outcome !== 'balanced' || (int) $statement->variance_minor !== 0
                 || $statement->statement_date >= today()->toDateString()
                 || (int) $statement->prepared_by === (int) $actor->id) {
                 $this->invalid('Closing requires a balanced, independently reviewed statement for a completed day.');
             }
             $this->assertOpen($accountId, $statement->statement_date);
+            $openIssues = DB::table('campaign_finance_statement_checks as checks')
+                ->leftJoin('campaign_finance_statement_resolutions as resolution', 'resolution.check_id', '=', 'checks.id')
+                ->leftJoin('campaign_finance_statement_checks as matched', 'matched.id', '=', 'resolution.matched_check_id')
+                ->where('checks.account_id', $accountId)
+                ->where('checks.statement_date', '<=', $statement->statement_date)
+                ->whereIn('checks.review_outcome', ['pending', 'variance'])
+                ->where(fn ($query) => $query->whereNull('resolution.check_id')
+                    ->orWhere('matched.statement_date', '>', $statement->statement_date))
+                ->select('checks.id')->lockForUpdate()->first();
+            if ($openIssues) {
+                $this->invalid('Resolve all pending statement reviews and variances through the closing date.');
+            }
             $journal = app(CampaignFinanceJournal::class);
             $journal->reconcile($account);
             $journal->assertIntegrity($account);
             $entry = DB::table('campaign_finance_entries')->where('account_id', $accountId)
-                ->whereDate('created_at', '<=', $statement->statement_date)->orderByDesc('created_at')->orderByDesc('id')->first();
+                ->whereDate('created_at', '<=', $statement->statement_date)->orderByDesc('created_at')->orderByDesc('id')->lockForUpdate()->first();
             if ((int) $entry?->id !== (int) $statement->ledger_entry_id
                 || (int) $entry?->balance_after_minor !== (int) $statement->ledger_balance_minor) {
                 $this->invalid('The reviewed statement snapshot no longer matches the journal.');

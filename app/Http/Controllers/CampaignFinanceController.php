@@ -125,9 +125,12 @@ class CampaignFinanceController extends Controller
             'period' => $section === 'reports' && $account
                 ? app(\App\Services\Enterprise\CampaignFinancePeriodService::class)->latest((int) $account->id) : null,
             'statementChecks' => $section === 'reports'
-                ? DB::table('campaign_finance_statement_checks')
-                    ->whereIn('account_id', $finance->accounts($actor)->select('campaign_finance_accounts.id'))
-                    ->orderByDesc('id')->limit(50)->get() : collect(),
+                ? DB::table('campaign_finance_statement_checks as checks')
+                    ->leftJoin('campaign_finance_statement_imports as imports', 'imports.check_id', '=', 'checks.id')
+                    ->leftJoin('campaign_finance_statement_resolutions as resolution', 'resolution.check_id', '=', 'checks.id')
+                    ->whereIn('checks.account_id', $finance->accounts($actor)->select('campaign_finance_accounts.id'))
+                    ->select('checks.*', 'imports.sha256', 'resolution.matched_check_id')
+                    ->orderByDesc('checks.id')->limit(50)->get() : collect(),
             'incomingFundingProposals' => $incomingFundingProposals,
             'fundingBudgets' => $fundingBudgets,
             'fundingProposals' => $section === 'requests'
@@ -189,6 +192,31 @@ class CampaignFinanceController extends Controller
             $data['statement_date'], $this->minor($data['statement_balance']),
             $data['evidence_reference']);
         return back()->with('finance_status', 'Statement check recorded for independent Finance review. This is not a verified bank settlement.');
+    }
+
+    public function importStatement(Request $request, \App\Services\Enterprise\CampaignFinanceStatementService $statements)
+    {
+        $balance = ['required', 'regex:/^\d{1,12}(\.\d{1,2})?$/D'];
+        $data = $request->validate([
+            'account_id' => 'required|integer|min:1',
+            'starts_on' => 'required|date_format:Y-m-d|before_or_equal:statement_date',
+            'statement_date' => 'required|date_format:Y-m-d|before_or_equal:today',
+            'opening_balance' => $balance,
+            'statement_balance' => $balance,
+            'evidence_reference' => 'required|string|max:300',
+            'statement_csv' => 'required|file|max:512',
+        ]);
+        $statements->import($request->user(), (int) $data['account_id'], $data['starts_on'], $data['statement_date'],
+            $this->minor($data['opening_balance']), $this->minor($data['statement_balance']),
+            $data['evidence_reference'], $data['statement_csv']->get());
+        return back()->with('finance_status', 'Statement imported. A second finance officer must review it.');
+    }
+
+    public function resolveStatementVariance(Request $request, int $id, \App\Services\Enterprise\CampaignFinanceStatementService $statements)
+    {
+        $data = $request->validate(['matched_check_id' => 'required|integer|min:1', 'resolution_reason' => 'required|string|max:500']);
+        $statements->resolve($request->user(), $id, (int) $data['matched_check_id'], $data['resolution_reason']);
+        return back()->with('finance_status', 'Statement variance resolution recorded.');
     }
 
     public function reviewStatementCheck(Request $request, int $id, \App\Services\Enterprise\CampaignFinanceStatementService $statements)

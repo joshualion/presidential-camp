@@ -123,6 +123,15 @@ class CampaignPaystackController extends Controller
         return back()->with('finance_status', 'Test payout authorized for a separate officer to submit.');
     }
 
+    public function matchSettlement(Request $request, int $id, CampaignPaystackService $paystack)
+    {
+        $data = $request->validate([
+            'settlement_id' => 'required|integer|min:1', 'bank_credit_reference' => 'required|string|max:150',
+        ]);
+        $paystack->matchSettlement($request->user(), $id, (int) $data['settlement_id'], $data['bank_credit_reference']);
+        return back()->with('finance_status', 'Verified settlement matched to statement evidence.');
+    }
+
     public function refund(Request $request, string $reference, CampaignPaystackService $paystack)
     {
         $data = $request->validate(['refund_id' => 'required|integer|min:1']);

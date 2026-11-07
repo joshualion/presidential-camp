@@ -1132,3 +1132,82 @@ test('Paystack refund checks bind the provider refund to its original collection
     expect(DB::table('campaign_paystack_refund_checks')->count())->toBe(1);
     expect($this->account->fresh()->balance_minor)->toBe(0);
 });
+
+test('statement CSV is balanced before storage and unresolved variances block period close', function () {
+    $statements = app(\App\Services\Enterprise\CampaignFinanceStatementService::class);
+    $periods = app(\App\Services\Enterprise\CampaignFinancePeriodService::class);
+    foreach (['finance.reconcile', 'finance.periods.close'] as $permission) {
+        foreach ([$this->requester, $this->approver, $this->outsider] as $user) {
+            $user->givePermissionTo(Permission::findOrCreate($permission, 'web'));
+        }
+    }
+
+    $this->travel(-3)->days();
+    $earlier = today()->toDateString();
+    $this->finance->record($this->requester, $this->account->id, 'income', 5000, 'Opening donation', (string) Str::uuid());
+    $this->travelBack();
+    $later = today()->subDay()->toDateString();
+    $accountId = $this->account->id;
+    $csv = "date,reference,amount_minor\n{$later},Receipt 18,5000\n";
+    expect(fn () => $statements->import($this->requester, $accountId, $earlier, $later, 0, 4999, 'Statement 18', $csv))
+        ->toThrow(ValidationException::class);
+    expect(fn () => $statements->import($this->outsider, $accountId, $earlier, $later, 0, 5000, 'Statement 18', $csv))
+        ->toThrow(\Illuminate\Database\Eloquent\ModelNotFoundException::class);
+    expect(DB::table('campaign_finance_statement_checks')->count())->toBe(0);
+
+    $variance = $statements->prepare($this->requester, $accountId, $earlier, 4000, 'Statement 17');
+    $statements->review($this->approver, $variance, 'Investigated the reported variance');
+    $matched = $statements->import($this->requester, $accountId, $earlier, $later, 0, 5000, 'Statement 18', $csv);
+    $statements->review($this->approver, $matched, 'Matched the corrected bank statement');
+    expect(DB::table('campaign_finance_statement_imports')->where('check_id', $matched)->value('sha256'))
+        ->toBe(hash('sha256', $csv));
+    expect(fn () => $periods->close($this->approver, $accountId, $matched, 'Close reviewed period'))
+        ->toThrow(ValidationException::class);
+    expect(fn () => $statements->resolve($this->requester, $variance, $matched, 'Duplicate statement amount corrected'))
+        ->toThrow(\Symfony\Component\HttpKernel\Exception\HttpException::class);
+    $statements->resolve($this->approver, $variance, $matched, 'Duplicate statement amount corrected');
+    $periods->close($this->approver, $accountId, $matched, 'Close reviewed period');
+    expect(DB::table('campaign_finance_statement_checks')->find($variance)->review_outcome)->toBe('variance');
+    expect(DB::table('campaign_finance_statement_resolutions')->where('check_id', $variance)->count())->toBe(1);
+    expect(DB::table('campaign_finance_entries')->count())->toBe(1);
+});
+
+test('reviewed bank credit matches one verified Paystack live settlement without booking cash', function () {
+    $admin = User::factory()->create(['access_level' => 'superadmin', 'status' => 'active']);
+    $payments = app(\App\Services\Enterprise\CampaignPaystackService::class);
+    $statements = app(\App\Services\Enterprise\CampaignFinanceStatementService::class);
+    foreach ([$this->requester, $this->approver, $admin] as $user) {
+        $user->givePermissionTo(Permission::findOrCreate('finance.reconcile', 'web'));
+    }
+    $payments->saveSettings($admin, ['live_secret' => 'sk_live_'.str_repeat('a', 30)], 'test', false, false);
+    $date = today()->subDay()->toDateString();
+    $credit = 'BANK-REF-173';
+    $csv = "date,reference,amount_minor\n{$date},{$credit},9800\n";
+    $check = $statements->import($this->requester, $this->account->id, $date, $date, 0, 9800, 'Bank statement', $csv);
+
+    $http = \Illuminate\Support\Facades\Http::class;
+    $providerStatus = 'pending';
+    $http::preventStrayRequests();
+    $http::fake(['https://api.paystack.co/settlement?*' => function () use ($http, $date, &$providerStatus) {
+        return $http::response(['status' => true, 'data' => [[
+            'id' => 123, 'integration' => 81, 'domain' => 'live', 'status' => $providerStatus,
+            'currency' => 'NGN', 'total_processed' => 10000, 'total_fees' => 200,
+            'effective_amount' => 9800, 'total_amount' => 9800, 'deductions' => null,
+            'settlement_date' => $date.'T00:00:00.000Z',
+        ]]]);
+    }]);
+    expect(fn () => $payments->matchSettlement($admin, $check, 123, $credit))->toThrow(ValidationException::class);
+    $statements->review($this->approver, $check, 'Verified the statement evidence');
+    expect(fn () => $payments->matchSettlement($this->approver, $check, 123, $credit))
+        ->toThrow(\Symfony\Component\HttpKernel\Exception\HttpException::class);
+    expect(fn () => $payments->matchSettlement($admin, $check, 123, $credit))->toThrow(ValidationException::class);
+    $providerStatus = 'success';
+    $payments->matchSettlement($admin, $check, 123, $credit);
+    $payments->matchSettlement($admin, $check, 123, $credit);
+
+    expect(DB::table('campaign_paystack_settlement_matches')->count())->toBe(1);
+    expect((int) DB::table('campaign_paystack_settlement_matches')->value('fee_minor'))->toBe(200);
+    expect(DB::table('campaign_finance_entries')->count())->toBe(0);
+    $http::assertSent(fn ($request) => $request->method() === 'GET'
+        && $request->hasHeader('Authorization', 'Bearer sk_live_'.str_repeat('a', 30)));
+});

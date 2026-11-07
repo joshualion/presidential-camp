@@ -5,12 +5,17 @@ return [
         'name' => 'Campaign Manager Core',
         'package' => 'campaign-manager-core',
         'channel' => env('RELEASE_CHANNEL', 'self-hosted'),
-        'version' => env('APP_VERSION', '1.2.5'),
+        'version' => env('APP_VERSION', '1.2.6'),
         'build_date' => env('RELEASE_BUILD_DATE', null),
         'minimum_php' => '8.2.0',
     ],
 
     'release_notes' => [
+        '1.2.6' => [
+            'Adds jurisdiction-scoped Finance permissions, independently reviewed funding proposals, budget reservations, advances and audited expense records.',
+            'Adds balanced journals, bank statement CSV evidence, variance review and accounting period controls.',
+            'Supports campaign-owned Paystack test collections and transfers, and read-only matching of live settlement evidence.',
+        ],
         '1.2.5' => [
             'Adds scoped workforce reporting, geographic coverage, CSV/PDF export and optional customer-configured AI with encrypted credentials and usage limits.',
             'Adds campaign finance accounts, budgets, independent approvals, private evidence, statements and immutable financial history.',

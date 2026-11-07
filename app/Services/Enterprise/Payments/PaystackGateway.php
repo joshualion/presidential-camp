@@ -18,6 +18,12 @@ class PaystackGateway implements PaymentGateway
         return $this->request($secret, 'POST', '/transaction/initialize', $details);
     }
 
+    public function listSettlements(#[\SensitiveParameter] string $secret, string $from, string $to): array
+    {
+        $query = http_build_query(['from' => $from, 'to' => $to, 'status' => 'success', 'subaccount' => 'none', 'perPage' => 100]);
+        return $this->request($secret, 'GET', '/settlement?'.$query);
+    }
+
     public function fetchRefund(#[\SensitiveParameter] string $secret, int $refundId): array
     {
         return $this->request($secret, 'GET', '/refund/'.$refundId);
