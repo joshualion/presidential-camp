@@ -27,10 +27,10 @@ class FinanceMigrationIdentifierTest extends TestCase
 
         $identifiers = [];
         foreach ($queries as $query) {
-            preg_match_all('/\b(?:index|key|constraint)\s+`([^`]+)`/i', $query['query'], $names);
+            preg_match_all('/\b(?:index|key|constraint|unique)\s+`([^`]+)`/i', $query['query'], $names);
             array_push($identifiers, ...$names[1]);
         }
-        $this->assertNotEmpty($identifiers);
+        $this->assertContains('paystack_donation_transaction_once', $identifiers);
         foreach ($identifiers as $name) {
             $this->assertLessThanOrEqual(64, strlen($name), $name);
         }
