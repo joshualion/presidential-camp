@@ -938,3 +938,30 @@ test('reconciliation requires explicit privileges and cannot expose another juri
         ->toThrow(\Illuminate\Database\Eloquent\ModelNotFoundException::class);
     expect(DB::table('campaign_finance_statement_checks')->count())->toBe(0);
 });
+
+test('closing requires an independent statement and reopening restores entry rights', function () {
+    $this->requester->givePermissionTo(Permission::findOrCreate('finance.expenses.record', 'web'));
+    foreach (['finance.reconcile', 'finance.periods.close', 'finance.periods.reopen'] as $permission) {
+        foreach ([$this->requester, $this->approver] as $user) {
+            $user->givePermissionTo(Permission::findOrCreate($permission, 'web'));
+        }
+    }
+    $this->travel(-2)->days();
+    $date = today()->toDateString();
+    $this->finance->record($this->requester, $this->account->id, 'income', 100000, 'Opening funds', (string) Str::uuid());
+    $this->travelBack();
+    $statements = app(\App\Services\Enterprise\CampaignFinanceStatementService::class);
+    $periods = app(\App\Services\Enterprise\CampaignFinancePeriodService::class);
+    $check = $statements->prepare($this->requester, $this->account->id, $date, 100000, 'Statement #1');
+    expect(fn () => $periods->close($this->approver, $this->account->id, $check, 'Early close'))->toThrow(ValidationException::class);
+    $statements->review($this->approver, $check, 'Matched bank statement');
+    $periods->close($this->approver, $this->account->id, $check, 'Close reviewed period');
+    $receipt = ['payee' => 'Supplier', 'paid_on' => $date, 'reference' => 'REF-9', 'evidence_reference' => 'Receipt #9'];
+    $post = fn () => $this->finance->recordManualExpense($this->requester, $this->account->id, 1000, 'Paid invoice', (string) Str::uuid(), $receipt);
+    expect($post)->toThrow(ValidationException::class);
+    $event = $periods->latest($this->account->id);
+    $periods->reopen($this->approver, $this->account->id, $event->id, 'Late receipt verified');
+    expect($post())->toBeInt();
+    expect($this->account->fresh()->balance_minor)->toBe(99000);
+    expect(DB::table('campaign_finance_period_events')->count())->toBe(2);
+});

@@ -32,7 +32,9 @@ class CampaignFinanceStatementService
                 ->where('account_id', $accountId)->where('statement_date', $date)->exists()) {
                 $this->invalid('A reconciliation check already exists for this account and date.');
             }
-            app(CampaignFinanceJournal::class)->reconcile($account);
+            $journal = app(CampaignFinanceJournal::class);
+            $journal->reconcile($account);
+            $journal->assertIntegrity($account);
             $entry = DB::table('campaign_finance_entries')
                 ->where('account_id', $accountId)
                 ->whereDate('created_at', '<=', $date)

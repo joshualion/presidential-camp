@@ -58,7 +58,50 @@ class CampaignFinanceJournal
 
     public function append(int $entryId, string $kind, int $amount): void
     {
-        [$debit, $credit] = match ($kind) {
+        [$debit, $credit] = $this->codes($kind);
+        $this->postPair($entryId, $debit, $credit, $amount);
+    }
+
+    public function assertIntegrity(CampaignFinanceAccount $account): void
+    {
+        $rows = DB::table('campaign_finance_entries as entry')
+            ->leftJoin('campaign_finance_journal as journal', 'journal.entry_id', '=', 'entry.id')
+            ->leftJoin('campaign_finance_reversals as reversal', 'reversal.reversal_id', '=', 'entry.id')
+            ->leftJoin('campaign_finance_entries as original', 'original.id', '=', 'reversal.entry_id')
+            ->where('entry.account_id', $account->id)->select([
+                'entry.id', 'entry.kind', 'entry.amount_minor', 'entry.balance_after_minor',
+                'journal.debit_code', 'journal.credit_code', 'journal.amount_minor as journal_amount',
+                'original.kind as original_kind', 'original.account_id as original_account',
+                'original.amount_minor as original_amount', 'original.id as original_id',
+            ])->lazyById(500, 'entry.id', 'id');
+
+        $balance = 0;
+        foreach ($rows as $entry) {
+            $amount = (int) $entry->amount_minor;
+            if ($entry->kind === 'reversal') {
+                if ((int) $entry->original_account !== (int) $account->id || (int) $entry->original_amount !== $amount
+                    || (int) $entry->original_id >= (int) $entry->id || !in_array($entry->original_kind, ['income', 'expenditure'], true)) {
+                    $this->unreconciled();
+                }
+                [$credit, $debit] = $this->codes($entry->original_kind);
+            } else {
+                [$debit, $credit] = $this->codes($entry->kind);
+            }
+            $balance += ($debit === '1000' ? $amount : 0) - ($credit === '1000' ? $amount : 0);
+            if ($amount < 1 || $amount > 100000000000000 || $amount !== (int) $entry->journal_amount
+                || $entry->debit_code !== $debit || $entry->credit_code !== $credit
+                || $balance < 0 || $balance > 9000000000000000 || $balance !== (int) $entry->balance_after_minor) {
+                $this->unreconciled();
+            }
+        }
+        if ($balance !== (int) $account->balance_minor) {
+            $this->unreconciled();
+        }
+    }
+
+    private function codes(string $kind): array
+    {
+        return match ($kind) {
             'income' => ['1000', '4000'],
             'expenditure' => ['5000', '1000'],
             'transfer_out' => ['1100', '1000'],
@@ -66,9 +109,8 @@ class CampaignFinanceJournal
             'advance_out' => ['1200', '1000'],
             'advance_return' => ['1000', '1200'],
             'advance_expense' => ['5000', '1200'],
+            default => $this->unreconciled(),
         };
-
-        $this->postPair($entryId, $debit, $credit, $amount);
     }
 
     public function reverse(int $entryId, int $reversalId): void

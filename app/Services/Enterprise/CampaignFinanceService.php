@@ -344,6 +344,7 @@ class CampaignFinanceService
             }
 
             app(CampaignFinanceJournal::class)->reconcile($account);
+            app(CampaignFinancePeriodService::class)->assertOpen($accountId, $receipt['paid_on']);
             $this->assertAvailable($account, $budgetId, $amount);
             if ($budgetId !== null) {
                 DB::table('campaign_finance_budgets')->where('id', $budgetId)
@@ -464,6 +465,7 @@ class CampaignFinanceService
         User $actor, CampaignFinanceAccount $account, string $kind, int $amount, string $description, string $key,
         ?int $budgetId = null, ?int $requestId = null
     ): int {
+        app(CampaignFinancePeriodService::class)->assertOpen((int) $account->id, today()->toDateString());
         $change = match ($kind) {
             'income', 'transfer_in', 'advance_return' => $amount,
             'advance_expense' => 0,
@@ -535,6 +537,7 @@ class CampaignFinanceService
                 }
             }
 
+            app(CampaignFinancePeriodService::class)->assertOpen($accountId, today()->toDateString());
             $account->update(['balance_minor' => $balance]);
             $reversalId = DB::table('campaign_finance_entries')->insertGetId([
                 'account_id' => $accountId, 'budget_id' => $original->budget_id,

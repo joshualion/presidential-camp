@@ -121,6 +121,8 @@ class CampaignFinanceController extends Controller
                 ? DB::table('campaign_finance_documents')->where('account_id', $id)->latest('id')->paginate(25, ['*'], 'documents_page')->withQueryString()
                 : null,
             'budgets' => in_array($section, ['budgets', 'requests', 'expenditure'], true) ? DB::table('campaign_finance_budgets')->where('account_id', $id)->orderBy('id')->get() : [],
+            'period' => $section === 'reports' && $account
+                ? app(\App\Services\Enterprise\CampaignFinancePeriodService::class)->latest((int) $account->id) : null,
             'statementChecks' => $section === 'reports'
                 ? DB::table('campaign_finance_statement_checks')
                     ->whereIn('account_id', $finance->accounts($actor)->select('campaign_finance_accounts.id'))
@@ -156,6 +158,20 @@ class CampaignFinanceController extends Controller
             'pending' => $pending,
             'totals' => $totals,
         ])->header('Cache-Control', 'no-store');
+    }
+
+    public function closePeriod(Request $request, int $id, \App\Services\Enterprise\CampaignFinancePeriodService $periods)
+    {
+        $data = $request->validate(['statement_id' => 'required|integer|min:1', 'reason' => 'required|string|max:500']);
+        $periods->close($request->user(), $id, (int) $data['statement_id'], $data['reason']);
+        return back()->with('finance_status', 'Accounting period closed.');
+    }
+
+    public function reopenPeriod(Request $request, int $id, \App\Services\Enterprise\CampaignFinancePeriodService $periods)
+    {
+        $data = $request->validate(['event_id' => 'required|integer|min:1', 'reason' => 'required|string|max:500']);
+        $periods->reopen($request->user(), $id, (int) $data['event_id'], $data['reason']);
+        return back()->with('finance_status', 'Accounting period reopened.');
     }
 
     public function prepareStatementCheck(Request $request, \App\Services\Enterprise\CampaignFinanceStatementService $statements)

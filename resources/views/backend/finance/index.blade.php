@@ -159,6 +159,17 @@
             <button class="btn btn-primary btn-sm">Record for independent review</button>
         </form>
     </details>
+    @if($period?->closed_through)
+        <p>Selected account closed through {{ $period->closed_through }}.</p>
+        @if($capabilities->allows(auth()->user(), 'finance.periods.reopen'))
+            <form method="POST" action="{{ route('finance.periods.reopen', $account->id) }}" class="mb-3">
+                @csrf
+                <input type="hidden" name="event_id" value="{{ $period->id }}">
+                <label>Reason to reopen<input class="form-control" name="reason" maxlength="500" required></label>
+                <button class="btn btn-outline-warning btn-sm">Reopen most recent period</button>
+            </form>
+        @endif
+    @endif
     <div class="table-responsive"><table class="table table-striped">
         <thead><tr><th>Date / Account</th><th>Ledger NGN</th><th>Statement NGN</th><th>Variance NGN</th><th>Review</th></tr></thead>
         <tbody>
@@ -174,6 +185,15 @@
                         <label>Review notes<input name="review_notes" class="form-control" maxlength="500" required></label>
                         <button class="btn btn-outline-primary btn-sm">Record independent review</button>
                     </form>@endif
+                    @if($check->review_outcome === 'balanced' && $check->statement_date < today()->toDateString()
+                        && (int) $check->prepared_by !== (int) auth()->id() && $capabilities->allows(auth()->user(), 'finance.periods.close'))
+                    <form method="POST" action="{{ route('finance.periods.close', $check->account_id) }}">
+                        @csrf
+                        <input type="hidden" name="statement_id" value="{{ $check->id }}">
+                        <label>Reason to close<input class="form-control" name="reason" maxlength="500" required></label>
+                        <button class="btn btn-outline-primary btn-sm">Close through this statement date</button>
+                    </form>
+                    @endif
                 </td>
             </tr>
         @empty <tr><td colspan="5">No statement checks recorded.</td></tr>
