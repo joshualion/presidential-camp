@@ -37,7 +37,7 @@ jobs:
       - run: composer audit --locked --no-interaction
       - run: npm ci
       - run: npm run build
-      - run: npm audit --omit=dev
+      - run: npm audit --audit-level=high
       - name: Isolated regression tests
         env:
           APP_ENV: testing
@@ -101,12 +101,13 @@ jobs:
           coverage: none
       - run: composer install --prefer-dist --no-interaction
       - name: Authorization, evidence, registration and migration regressions
+        timeout-minutes: 20
         env:
           DB_PORT: ${{ job.services.mysql.ports[3306] }}
         run: |
           cp .env.example .env
           php artisan key:generate --force
-          php artisan test --filter='EnterpriseWorkforceReport|EnterpriseWorkforceAi|CampaignFinance|CampaignInventory|SmsLegacyAccessMigration|EnterpriseBootstrap|EnterpriseVersionRecovery|EnterpriseBundledTrust|EnterpriseAddonReturn|EnterpriseFoundation|EnterpriseOfflineEntitlement|IntegratedPermissionsUi|ManagedCampaignCapabilities|IncidentEvidence|ContactConfirmationReturn|V120MigrationCompatibility|MemberImport|LicensedScopeQuery|PollingUnitAgentScope|MemberElectionParticipation' --log-junit database-results.xml
+          php artisan test --filter='EnterpriseWorkforceReport|EnterpriseWorkforceAi|CampaignFinance|CampaignInventory|SmsLegacyAccessMigration|EnterpriseBootstrap|EnterpriseVersionRecovery|EnterpriseBundledTrust|EnterpriseAddonReturn|EnterpriseFoundation|EnterpriseOfflineEntitlement|IntegratedPermissionsUi|ManagedCampaignCapabilities|IncidentEvidence|ContactConfirmationReturn|V120MigrationCompatibility|MemberImport|LicensedScopeQuery|PollingUnitAgentScope|MemberElectionParticipation' --stop-on-failure --stop-on-error --log-junit database-results.xml
       - name: Verify real concurrent inventory mutations on an isolated synthetic database
         env:
           DB_PORT: ${{ job.services.mysql.ports[3306] }}

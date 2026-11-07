@@ -15,6 +15,7 @@ use Illuminate\Support\Str;
 [$script, $root, $archive, $metadata, $report, $bootstrapArchive, $sourceVersion] = $argv;
 $targetVersion = json_decode(file_get_contents($metadata), true, 64, JSON_THROW_ON_ERROR)['version'];
 $reviewedSources = match ($targetVersion) {
+    '1.2.6' => ['1.1.3', '1.1.4', '1.1.5', '1.1.6', '1.1.7', '1.1.8', '1.1.9', '1.2.0', '1.2.1', '1.2.2', '1.2.3', '1.2.4', '1.2.5'],
     '1.2.5' => ['1.1.3', '1.1.4', '1.1.5', '1.1.6', '1.1.7', '1.1.8', '1.1.9', '1.2.0', '1.2.1', '1.2.2', '1.2.3', '1.2.4'],
     '1.2.4' => ['1.1.3', '1.1.4', '1.1.5', '1.1.6', '1.1.7', '1.1.8', '1.1.9', '1.2.0', '1.2.1', '1.2.2', '1.2.3'],
     '1.2.3' => ['1.1.3', '1.1.4', '1.1.5', '1.1.6', '1.1.7', '1.1.8', '1.1.9', '1.2.0', '1.2.1', '1.2.2'],
@@ -102,6 +103,19 @@ $customRole = DB::table('roles')->insertGetId(['name' => 'Customer upgrade role'
 $customPermission = DB::table('permissions')->insertGetId(['name' => 'customer.upgrade.view', 'guard_name' => 'web', 'group_name' => 'user']);
 DB::table('role_has_permissions')->insert(['role_id' => $customRole, 'permission_id' => $customPermission]);
 DB::table('model_has_roles')->insert(['role_id' => $customRole, 'model_id' => $beforeUser['id'], 'model_type' => App\Models\User::class]);
+$beforeFinance = null;
+if ($sourceVersion === '1.2.5') {
+    $financeAccount = DB::table('campaign_finance_accounts')->insertGetId([
+        'name' => 'Existing campaign funds', 'owner_id' => $beforeUser['id'], 'created_by' => $beforeUser['id'],
+        'currency' => 'NGN', 'balance_minor' => 500000,
+    ]);
+    $financeEntry = DB::table('campaign_finance_entries')->insertGetId([
+        'account_id' => $financeAccount, 'idempotency_key' => (string) Str::uuid(), 'kind' => 'income',
+        'amount_minor' => 500000, 'balance_after_minor' => 500000, 'description' => 'Synthetic legacy receipt',
+        'recorded_by' => $beforeUser['id'], 'created_at' => now(),
+    ]);
+    $beforeFinance = (array) DB::table('campaign_finance_entries')->where('id', $financeEntry)->first();
+}
 $beforeEnv = hash_file('sha256', $root.'/.env');
 $uploads = $root.'/public/uploads/member_images';
 if (! is_dir($uploads)) { mkdir($uploads, 0755, true); }
@@ -167,6 +181,27 @@ if (version_compare($targetVersion, '1.2.2', '>=') && version_compare($sourceVer
 if (version_compare($targetVersion, '1.2.5', '>=') && version_compare($sourceVersion, '1.2.5', '<')) {
     $expectedMigrations = array_merge($expectedMigrations, ['2026_11_04_000010_create_campaign_finance_tables', '2026_11_04_125003_create_campaign_inventory', '2026_11_04_125004_capture_legacy_sms_access', '2026_11_04_125004_create_enterprise_ai_tables']);
 }
+if ($targetVersion === '1.2.6') {
+    $expectedMigrations = array_merge($expectedMigrations, [
+        '2026_11_05_000010_add_campaign_finance_journal',
+        '2026_11_05_000011_add_campaign_finance_policies',
+        '2026_11_05_000012_add_campaign_finance_reversals',
+        '2026_11_06_000013_add_campaign_finance_manual_expenses',
+        '2026_11_06_000014_add_campaign_finance_request_routes',
+        '2026_11_06_000015_add_campaign_finance_governance',
+        '2026_11_06_000016_add_campaign_finance_request_recipients',
+        '2026_11_06_000017_add_campaign_finance_funding_proposals',
+        '2026_11_06_000018_add_campaign_finance_proposal_workflow',
+        '2026_11_06_000019_add_campaign_finance_statement_checks',
+        '2026_11_06_000020_add_campaign_finance_period_events',
+        '2026_11_06_000021_add_campaign_paystack_sandbox',
+        '2026_11_07_000022_add_campaign_paystack_beneficiary_links',
+        '2026_11_07_000023_add_campaign_paystack_refund_checks',
+        '2026_11_07_000024_add_campaign_finance_statement_evidence',
+        '2026_11_07_000026_add_reviewed_paystack_donations',
+        '2026_11_07_000025_bind_finance_beneficiaries_to_profiles',
+    ]);
+}
 $actualMigrations = array_keys($plan['pending_migrations']);
 sort($expectedMigrations); sort($actualMigrations);
 $assert($actualMigrations === $expectedMigrations, 'Unexpected pending migrations. Expected '.json_encode($expectedMigrations).'; received '.json_encode($actualMigrations));
@@ -196,6 +231,12 @@ if ($journal['state'] !== 'completed') {
 }
 DB::purge();
 $assert(app(OfficialUpdateService::class)->installedVersion() === $targetVersion, 'Installed version did not change.');
+if ($beforeFinance !== null) {
+    $assert((array) DB::table('campaign_finance_entries')->where('id', $financeEntry)->first() === $beforeFinance, 'Existing finance entry changed.');
+    $assert((int) DB::table('campaign_finance_accounts')->where('id', $financeAccount)->value('balance_minor') === 500000, 'Existing finance balance changed.');
+    $assert(\Illuminate\Support\Facades\Schema::hasTable('campaign_finance_manual_expenses')
+        && \Illuminate\Support\Facades\Schema::hasTable('campaign_finance_request_routes'), 'Finance workflow migrations were not applied.');
+}
 $afterUser = (array) DB::table('users')->where('username', 'upgrade-fixture')->first();
 $assert(array_intersect_key($afterUser, $beforeUser) === $beforeUser, 'Existing user data changed.');
 $assert(DB::table('roles')->where('id', $customRole)->value('name') === 'Customer upgrade role', 'Customer role changed.');
@@ -226,6 +267,14 @@ if (version_compare($targetVersion, '1.2.5', '>=')) {
     $assert(hash_file('sha256', $root.'/config/enterprise-public.pem') === hash_file('sha256', __DIR__.'/../config/enterprise-public.pem'), 'Updated trust anchor differs from reviewed release source.');
     $assert(is_file($root.'/app/Console/Commands/CampaignEnterpriseBootstrap.php'), 'Enterprise initializer was not installed.');
     $enterpriseInfrastructureInitialized = true; $automaticEntitlementTrust = true;
+}
+if ($targetVersion === '1.2.6') {
+    $schema = \Illuminate\Support\Facades\Schema::class;
+    $assert($schema::hasColumn('users', 'finance_bank_revision'), 'Finance bank revision column was not installed.');
+    foreach (['campaign_finance_statement_imports', 'campaign_finance_statement_resolutions',
+        'campaign_paystack_settlement_matches', 'campaign_finance_profile_beneficiaries', 'campaign_paystack_donation_reviews'] as $table) {
+        $assert($schema::hasTable($table), 'Missing Finance upgrade table: '.$table);
+    }
 }
 $assert(hash_file('sha256', $root.'/.env') === $beforeEnv, 'Environment or APP_KEY changed.');
 $assert(hash_file('sha256', $uploads.'/upgrade-preservation.txt') === $beforeUpload, 'Existing upload changed.');

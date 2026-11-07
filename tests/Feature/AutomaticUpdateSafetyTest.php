@@ -239,7 +239,7 @@ test('bootstrap installation rejects an unreviewed source before changing the in
         ->and(is_dir($this->sandbox.'/storage/app/updates/bootstrap'))->toBeFalse()
         ->and(is_file($this->sandbox.'/public/campaign-update-bootstrap.php'))->toBeFalse()
         ->and(file_get_contents($this->sandbox.'/.env'))->toBe('APP_KEY=preserved');
-})->with(['1.2.5', '9.9.9']);
+})->with(['1.2.6', '9.9.9']);
 
 test('authorized startup writes a valid private worker and permits cancelling only queued jobs', function () {
     $id = (string) Str::uuid();

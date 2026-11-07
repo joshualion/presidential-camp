@@ -11,9 +11,26 @@ return [
     'mysql_dump' => env('CAMPAIGN_UPDATE_MYSQL_DUMP'),
     'mysql_client' => env('CAMPAIGN_UPDATE_MYSQL_CLIENT'),
     // Explicit compatibility review; an unknown source version fails closed.
-    'supported_sources' => ['1.0.8', '1.0.9', '1.1.0', '1.1.1', '1.1.2', '1.1.3', '1.1.4', '1.1.5', '1.1.6', '1.1.7', '1.1.8', '1.1.9', '1.2.0', '1.2.1', '1.2.2', '1.2.3', '1.2.4'],
+    'supported_sources' => ['1.0.8', '1.0.9', '1.1.0', '1.1.1', '1.1.2', '1.1.3', '1.1.4', '1.1.5', '1.1.6', '1.1.7', '1.1.8', '1.1.9', '1.2.0', '1.2.1', '1.2.2', '1.2.3', '1.2.4', '1.2.5'],
     // Names are added only after reviewing their up() implementation and compatibility.
     'approved_migrations' => [
+        '2026_11_07_000026_add_reviewed_paystack_donations' => 'fa492356f7d6757261e2741cfa97b4c5b0d378f4e119b788da8e8a8246aaf22c',
+        '2026_11_07_000025_bind_finance_beneficiaries_to_profiles' => 'c29f4968b6fc6abda2fd2681fa2a212f0011dcbfb4efce387494f34fdb39b080',
+        '2026_11_07_000024_add_campaign_finance_statement_evidence' => 'c502da2a0590cd8ed5fda8eed2860cd7f73a981e4c55dc35e2a13a2bc03a130a',
+        '2026_11_07_000023_add_campaign_paystack_refund_checks' => '0cfa8d11138455a200f5329c01b69968975e5d0d13b6e8734f078c163cceb0f2',
+        '2026_11_07_000022_add_campaign_paystack_beneficiary_links' => 'a31b00988e2df5056835fc0249be3b3fae17d1735df2b4cb3b63855eb897c865',
+        '2026_11_06_000021_add_campaign_paystack_sandbox' => '45336a422b251268cd35b8c5e0892f3fc3da027bc8d884736bcb18def76e3a63',
+        '2026_11_06_000020_add_campaign_finance_period_events' => '7270e7c641b58d08af10a374e31f1ecc7915ba8986350f3f03d78f1329205308',
+        '2026_11_06_000019_add_campaign_finance_statement_checks' => '63e8608b9ba356e9379e38b4ab00ea822d61be836aa13143f4f34f75e3d1314e',
+        '2026_11_06_000018_add_campaign_finance_proposal_workflow' => 'ae5ec7687eae2de55acd54bc43940ddd952f71d1a1c0e385392a592b3e1859c7',
+        '2026_11_06_000017_add_campaign_finance_funding_proposals' => 'd4764c851d35016b6e76508aa78c998ba1d41aecbb20127ad759afbe38974177',
+        '2026_11_06_000016_add_campaign_finance_request_recipients' => '52a8f5eeba5444d5b81d58ff24d29d2b7755943729bf217abbc0b847b1c4c113',
+        '2026_11_06_000015_add_campaign_finance_governance' => '56935e450202baf5e35373ba170ddfb25937e463f9d2447f16446a61baae59a1',
+        '2026_11_06_000014_add_campaign_finance_request_routes' => '2a84afbaff970b7088acfb77b4885ec23aa5d404c4b348d6b19f2fb420a43552',
+        '2026_11_06_000013_add_campaign_finance_manual_expenses' => '53ee594d57b039b8b5eaaa94601352916313d1954168defde3f3bb6ad7ac947b',
+        '2026_11_05_000012_add_campaign_finance_reversals' => 'def6b4cb037deaf0ca1a6a5de44b4ec88d89162bec6b3c997ef2bcf41051798e',
+        '2026_11_05_000010_add_campaign_finance_journal' => 'ab737a5aba0f27c598d067641826d6d736698d34d923facabd61c6f73679545a',
+        '2026_11_05_000011_add_campaign_finance_policies' => 'd0443e3b9fef25456473343b29c4532a852d4c59edc3906972c03575e38ac4c7',
         '2026_11_04_000010_create_campaign_finance_tables' => '26e4786966fe069d0b513e909d81a8a6d60766a3a232e6194d2204bbe5ef38f2',
         '2026_11_04_125003_create_campaign_inventory' => '4a7847dc3c006578e90b11ac944c692f6c92f351c5cbe01f88f42f977b6a284a',
         '2026_11_04_125004_capture_legacy_sms_access' => 'aea680253c2c65813ccb741718052f435ed5fa978bbbeb947f20dd7483a5ca21',
@@ -25,6 +42,6 @@ return [
         '2026_10_19_000002_create_direct_sms_tables' => '0909ab8a804ce0fedb195c0adb0091f42e9f1ca155727b18eb6775771e9e1a8a',
         '2026_09_06_000001_add_boundary_inec_codes_to_location_tables' => '579b7ba008504af708258ab255c15739b06b2d84c2f69c5b2458a6a2f1176eac',
     ],
-    'created_tables' => ['campaign_finance_accounts', 'campaign_finance_budgets', 'campaign_finance_requests', 'campaign_finance_entries', 'campaign_finance_audits', 'campaign_finance_documents', 'campaign_material_categories', 'campaign_materials', 'campaign_material_stocks', 'campaign_material_requests', 'campaign_material_request_events', 'campaign_material_movements', 'campaign_enterprise_legacy_access', 'enterprise_ai_settings', 'enterprise_ai_usage', 'enterprise_ai_audits', 'campaign_permission_restrictions', 'campaign_default_roles', 'sms_provider_grants', 'sms_provider_accounts', 'sms_direct_batches', 'sms_direct_messages', 'sms_direct_suppressions', 'sms_direct_events'],
+    'created_tables' => ['campaign_paystack_donation_reviews', 'campaign_finance_profile_beneficiaries', 'campaign_paystack_settlement_matches', 'campaign_finance_statement_resolutions', 'campaign_finance_statement_imports', 'campaign_paystack_refund_checks', 'campaign_paystack_beneficiary_links', 'campaign_paystack_webhook_events', 'campaign_paystack_operations', 'campaign_paystack_recipients', 'campaign_paystack_setting_events', 'campaign_paystack_settings', 'campaign_finance_period_events', 'campaign_finance_statement_checks', 'campaign_finance_proposal_controls', 'campaign_finance_proposal_events', 'campaign_finance_proposal_locations', 'campaign_finance_funding_proposals', 'campaign_finance_request_origins', 'campaign_finance_request_recipients', 'campaign_finance_governance', 'campaign_finance_request_routes', 'campaign_finance_manual_expenses', 'campaign_finance_reversals', 'campaign_finance_journal', 'campaign_finance_ledger_checks', 'campaign_finance_policies', 'campaign_finance_appointments', 'campaign_finance_workflows', 'campaign_finance_decisions', 'campaign_finance_accounts', 'campaign_finance_budgets', 'campaign_finance_requests', 'campaign_finance_entries', 'campaign_finance_audits', 'campaign_finance_documents', 'campaign_material_categories', 'campaign_materials', 'campaign_material_stocks', 'campaign_material_requests', 'campaign_material_request_events', 'campaign_material_movements', 'campaign_enterprise_legacy_access', 'enterprise_ai_settings', 'enterprise_ai_usage', 'enterprise_ai_audits', 'campaign_permission_restrictions', 'campaign_default_roles', 'sms_provider_grants', 'sms_provider_accounts', 'sms_direct_batches', 'sms_direct_messages', 'sms_direct_suppressions', 'sms_direct_events'],
 ];
 

@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\Enterprise\CampaignFinanceJournal;
+use App\Services\Enterprise\CampaignFundingProposalService;
+use App\Services\Enterprise\CampaignFinancePolicy;
 use App\Services\Enterprise\CampaignFinanceService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -11,9 +14,30 @@ class CampaignFinanceController extends Controller
     public function index(Request $request, CampaignFinanceService $finance)
     {
         $finance->authorize($request->user(), 'finance.view');
-        $search = $request->validate(['custodian_search' => 'nullable|string|max:100'])['custodian_search'] ?? '';
+        $sections = app(CampaignFinancePolicy::class)->visible($request->user());
+        abort_if(!$sections, 404);
+        if (!isset($sections['dashboard'])) {
+            return redirect()->route('finance.section', ['section' => array_key_first($sections)]);
+        }
+        return $this->section($request, 'dashboard', $finance);
+    }
+
+    public function section(Request $request, string $section, CampaignFinanceService $finance)
+    {
+        $actor = $request->user();
+        $finance->authorize($actor, 'finance.view');
+        $sections = app(CampaignFinancePolicy::class)->visible($actor);
+        abort_unless(isset($sections[$section]) && $section !== 'settings', 404);
+        $filters = $request->validate([
+            'account' => 'nullable|integer|min:1',
+            'custodian_search' => 'nullable|string|max:100',
+            'from' => 'nullable|date_format:Y-m-d',
+            'to' => 'nullable|date_format:Y-m-d'.($request->filled('from') ? '|after_or_equal:from' : ''),
+            'status' => 'nullable|in:pending,approved,rejected,cancelled,recorded',
+        ]);
+        $search = $filters['custodian_search'] ?? '';
         $custodians = collect();
-        if (app(\App\Services\CampaignCapabilityService::class)->allows($request->user(), 'finance.accounts.manage')) {
+        if ($section === 'accounts' && app(\App\Services\CampaignCapabilityService::class)->allows($request->user(), 'finance.accounts.manage')) {
             $query = app(\App\Services\LocationScopeService::class)->applyScope(\App\Models\User::query()->where('status', 'active'), $request->user(), 'users');
             if ($search !== '') {
                 $query->where(function ($query) use ($search) {
@@ -22,26 +46,207 @@ class CampaignFinanceController extends Controller
             }
             $custodians = $query->orderBy('firstname')->limit(100)->get(['id', 'firstname', 'lastname', 'username']);
         }
-        $accounts = $finance->accounts($request->user())->orderBy('name')->get();
-        $account = $request->filled('account') ? $finance->account($request->user(), (int) $request->input('account')) : $accounts->first();
-        $id = $account?->id;
+        $accounts = $finance->accounts($actor)->orderBy('name')->get();
+        $account = isset($filters['account']) ? $finance->account($actor, (int) $filters['account']) : $accounts->first();
+        $id = $account?->id ?? 0;
+        $selectedAccounts = $finance->accounts($actor)->select('campaign_finance_accounts.id');
+        if (isset($filters['account'])) {
+            $selectedAccounts->whereKey($id);
+        }
+        $ledger = DB::table('campaign_finance_entries')->whereIn('campaign_finance_entries.account_id', clone $selectedAccounts);
+        $requests = DB::table('campaign_finance_requests')->where('account_id', $id);
+        // A request-only leader sees only requests they submitted, not every
+        // beneficiary or expenditure in the geographic account.
+        if ($section === 'requests'
+            && (!app(\App\Services\CampaignCapabilityService::class)->allows($actor, 'finance.requests.view')
+                || !app(CampaignFinancePolicy::class)->permits($actor, 'finance.requests.view'))) {
+            $requests->where('requested_by', $actor->id);
+        }
+        if (isset($filters['from'])) {
+            $ledger->where('campaign_finance_entries.created_at', '>=', $filters['from'].' 00:00:00');
+        }
+        if (isset($filters['to'])) {
+            $ledger->where('campaign_finance_entries.created_at', '<=', $filters['to'].' 23:59:59');
+        }
+        if (isset($filters['status'])) {
+            $requests->where('status', $filters['status']);
+        }
+        if ($section === 'approvals') {
+            $requests->where('status', 'pending');
+        }
+        if ($section === 'disbursements') {
+            $requests->whereIn('status', ['approved', 'recorded']);
+        }
+        $entries = (clone $ledger)->where('campaign_finance_entries.account_id', $id);
+        if ($section === 'income' || $section === 'expenditure') {
+            $entries->whereIn('kind', $section === 'income' ? ['income'] : ['expenditure', 'advance_expense']);
+        }
+        $capabilities = app(\App\Services\CampaignCapabilityService::class);
+        $totals = collect();
+        $treasury = $reserved = $pending = 0;
+        if ($section === 'dashboard') {
+            $totals = (clone $ledger)->selectRaw('kind, SUM(amount_minor) AS total')->groupBy('kind')->pluck('total', 'kind');
+            $totals['expenditure'] = ($totals['expenditure'] ?? 0) + ($totals['advance_expense'] ?? 0);
+            // A correction affects the reporting period in which the reversal was posted.
+            $reversed = (clone $ledger)
+                ->join('campaign_finance_reversals', 'campaign_finance_reversals.reversal_id', '=', 'campaign_finance_entries.id')
+                ->join('campaign_finance_entries as original', 'original.id', '=', 'campaign_finance_reversals.entry_id')
+                ->selectRaw('original.kind, SUM(campaign_finance_entries.amount_minor) AS total')
+                ->groupBy('original.kind')->pluck('total', 'original.kind');
+            foreach ($reversed as $kind => $amount) {
+                $totals[$kind] = ($totals[$kind] ?? 0) - $amount;
+            }
+            $treasury = (clone $selectedAccounts)->sum('campaign_finance_accounts.balance_minor');
+            $reserved = $finance->reservations()->whereIn('account_id', clone $selectedAccounts)->sum('amount_minor');
+            $pending = DB::table('campaign_finance_requests')->whereIn('account_id', $selectedAccounts)->where('status', 'pending')->count();
+        }
+
+        $incomingFundingProposals = null;
+        $fundingBudgets = collect();
+        if ($section === 'approvals') {
+            $incomingFundingProposals = app(CampaignFundingProposalService::class)
+                ->reviewerQueue($actor)->orderByDesc('proposals.id')
+                ->paginate(25, ['*'], 'incoming_proposals_page')->withQueryString();
+            $fundingBudgets = DB::table('campaign_finance_budgets')
+                ->whereIn('account_id', $finance->accounts($actor)->select('campaign_finance_accounts.id'))
+                ->orderBy('name')->get(['id', 'name', 'account_id']);
+        }
+
         return response()->view('backend.finance.index', [
-            'profileData' => $request->user(), 'pageTitle' => 'Campaign Finance', 'custodians' => $custodians, 'custodianSearch' => $search, 'accounts' => $accounts, 'account' => $account,
-            'documents' => DB::table('campaign_finance_documents')->where('account_id', $id ?? 0)->latest('id')->paginate(25, ['*'], 'documents_page')->withQueryString(),
-            'budgets' => DB::table('campaign_finance_budgets')->where('account_id', $id ?? 0)->orderBy('id')->get(),
-            'requests' => DB::table('campaign_finance_requests')->where('account_id', $id ?? 0)->latest('id')->paginate(25, ['*'], 'requests_page')->withQueryString(),
-            'entries' => DB::table('campaign_finance_entries')->where('account_id', $id ?? 0)->latest('id')->paginate(25, ['*'], 'entries_page')->withQueryString(),
-            'audits' => DB::table('campaign_finance_audits')->where('account_id', $id ?? 0)->latest('id')->paginate(25, ['*'], 'audits_page')->withQueryString(),
-            'monthlyTotals' => DB::table('campaign_finance_entries')->where('account_id', $id ?? 0)->where('created_at', '>=', now()->startOfMonth())->selectRaw('kind, SUM(amount_minor) AS total')->groupBy('kind')->pluck('total', 'kind'),
-            'totals' => DB::table('campaign_finance_entries')->where('account_id', $id ?? 0)->selectRaw('kind, SUM(amount_minor) AS total')->groupBy('kind')->pluck('total', 'kind'),
+            'profileData' => $actor,
+            'pageTitle' => $section === 'dashboard' ? 'Campaign Finance' : $sections[$section],
+            'section' => $section, 'sections' => $sections, 'filters' => $filters, 'capabilities' => $capabilities,
+            'custodians' => $custodians, 'custodianSearch' => $search, 'accounts' => $accounts, 'account' => $account,
+            'documents' => $section === 'reports' && $capabilities->allows($actor, 'finance.documents.view')
+                ? DB::table('campaign_finance_documents')->where('account_id', $id)->latest('id')->paginate(25, ['*'], 'documents_page')->withQueryString()
+                : null,
+            'budgets' => in_array($section, ['budgets', 'requests', 'expenditure'], true) ? DB::table('campaign_finance_budgets')->where('account_id', $id)->orderBy('id')->get() : [],
+            'paystackTransfersEnabled' => $section === 'disbursements' && app(\App\Services\Enterprise\CampaignPaystackService::class)->settings()?->transfers,
+            'period' => $section === 'reports' && $account
+                ? app(\App\Services\Enterprise\CampaignFinancePeriodService::class)->latest((int) $account->id) : null,
+            'statementChecks' => $section === 'reports'
+                ? DB::table('campaign_finance_statement_checks as checks')
+                    ->leftJoin('campaign_finance_statement_imports as imports', 'imports.check_id', '=', 'checks.id')
+                    ->leftJoin('campaign_finance_statement_resolutions as resolution', 'resolution.check_id', '=', 'checks.id')
+                    ->whereIn('checks.account_id', $finance->accounts($actor)->select('campaign_finance_accounts.id'))
+                    ->select('checks.*', 'imports.sha256', 'resolution.matched_check_id')
+                    ->orderByDesc('checks.id')->limit(50)->get() : collect(),
+            'incomingFundingProposals' => $incomingFundingProposals,
+            'fundingBudgets' => $fundingBudgets,
+            'fundingProposals' => $section === 'requests'
+                ? DB::table('campaign_finance_funding_proposals as proposals')
+                    ->join('campaign_finance_proposal_controls as control', 'control.proposal_id', '=', 'proposals.id')
+                    ->leftJoin('campaign_finance_requests as allocated', 'allocated.id', '=', 'proposals.assigned_request_id')
+                    ->where('proposals.requested_by', $actor->id)
+                    ->select('proposals.*', 'control.revision', 'allocated.status as payment_status')
+                    ->latest('proposals.id')->paginate(25, ['*'], 'proposals_page')->withQueryString() : null,
+            'requests' => in_array($section, ['requests', 'approvals', 'disbursements'], true)
+                ? $requests->leftJoin('campaign_finance_workflows', 'campaign_finance_workflows.request_id', '=', 'campaign_finance_requests.id')
+                    ->leftJoin('campaign_finance_request_routes as routing', 'routing.request_id', '=', 'campaign_finance_requests.id')
+                    ->select('campaign_finance_requests.*', 'campaign_finance_workflows.next_stage', 'campaign_finance_workflows.stages',
+                        'routing.purpose', 'routing.destination_id', 'routing.recipient', 'routing.settled_at', 'routing.spent_minor')
+                    ->selectSub(DB::table('campaign_finance_request_recipients')
+                        ->whereColumn('request_id', 'campaign_finance_requests.id')->selectRaw('COUNT(*)'), 'beneficiary_count')
+                    ->selectSub(DB::table('campaign_finance_request_recipients as profile_recipient')
+                        ->join('campaign_finance_profile_beneficiaries as profile', 'profile.beneficiary_id', '=', 'profile_recipient.id')
+                        ->whereColumn('profile_recipient.request_id', 'campaign_finance_requests.id')
+                        ->select('profile_recipient.id')->limit(1), 'profile_beneficiary_id')
+                    ->latest('campaign_finance_requests.id')->paginate(25, ['*'], 'requests_page')->withQueryString() : null,
+            'entries' => in_array($section, ['income', 'expenditure', 'reports'], true)
+                ? $entries->leftJoin('campaign_finance_journal', 'campaign_finance_journal.entry_id', '=', 'campaign_finance_entries.id')
+                    ->leftJoin('campaign_finance_manual_expenses as manual', 'manual.entry_id', '=', 'campaign_finance_entries.id')
+                    ->leftJoin('campaign_finance_reversals as correction', 'correction.entry_id', '=', 'campaign_finance_entries.id')
+                    ->leftJoin('campaign_finance_reversals as reversed', 'reversed.reversal_id', '=', 'campaign_finance_entries.id')
+                    ->select('campaign_finance_entries.*', 'campaign_finance_journal.debit_code', 'campaign_finance_journal.credit_code', 'correction.reversal_id', 'reversed.entry_id as reverses_entry_id', 'manual.payee', 'manual.paid_on', 'manual.reference', 'manual.evidence_reference')
+                    ->latest('campaign_finance_entries.id')->paginate(25, ['*'], 'entries_page')->withQueryString() : null,
+            'audits' => $section === 'reports' && $capabilities->allows($actor, 'finance.reconcile')
+                ? DB::table('campaign_finance_audits')->where('account_id', $id)->latest('id')->paginate(25, ['*'], 'audits_page')->withQueryString() : null,
+            'ledgerCheck' => $section === 'reports' ? DB::table('campaign_finance_ledger_checks')->where('account_id', $id)->first() : null,
+            'chartOfAccounts' => CampaignFinanceJournal::ACCOUNTS,
+            'treasury' => $treasury,
+            'reserved' => $reserved,
+            'pending' => $pending,
+            'totals' => $totals,
         ])->header('Cache-Control', 'no-store');
+    }
+
+    public function closePeriod(Request $request, int $id, \App\Services\Enterprise\CampaignFinancePeriodService $periods)
+    {
+        $data = $request->validate(['statement_id' => 'required|integer|min:1', 'reason' => 'required|string|max:500']);
+        $periods->close($request->user(), $id, (int) $data['statement_id'], $data['reason']);
+        return back()->with('finance_status', 'Accounting period closed.');
+    }
+
+    public function reopenPeriod(Request $request, int $id, \App\Services\Enterprise\CampaignFinancePeriodService $periods)
+    {
+        $data = $request->validate(['event_id' => 'required|integer|min:1', 'reason' => 'required|string|max:500']);
+        $periods->reopen($request->user(), $id, (int) $data['event_id'], $data['reason']);
+        return back()->with('finance_status', 'Accounting period reopened.');
+    }
+
+    public function prepareStatementCheck(Request $request, \App\Services\Enterprise\CampaignFinanceStatementService $statements)
+    {
+        $data = $request->validate([
+            'account_id' => 'required|integer|min:1',
+            'statement_date' => 'required|date_format:Y-m-d|before_or_equal:today',
+            'statement_balance' => ['required', 'regex:/^\d{1,12}(\.\d{1,2})?$/D'],
+            'evidence_reference' => 'required|string|min:3|max:300',
+        ]);
+        $statements->prepare($request->user(), (int) $data['account_id'],
+            $data['statement_date'], $this->minor($data['statement_balance']),
+            $data['evidence_reference']);
+        return back()->with('finance_status', 'Statement check recorded for independent Finance review. This is not a verified bank settlement.');
+    }
+
+    public function importStatement(Request $request, \App\Services\Enterprise\CampaignFinanceStatementService $statements)
+    {
+        $balance = ['required', 'regex:/^\d{1,12}(\.\d{1,2})?$/D'];
+        $data = $request->validate([
+            'account_id' => 'required|integer|min:1',
+            'starts_on' => 'required|date_format:Y-m-d|before_or_equal:statement_date',
+            'statement_date' => 'required|date_format:Y-m-d|before_or_equal:today',
+            'opening_balance' => $balance,
+            'statement_balance' => $balance,
+            'evidence_reference' => 'required|string|max:300',
+            'statement_csv' => 'required|file|max:512',
+        ]);
+        $statements->import($request->user(), (int) $data['account_id'], $data['starts_on'], $data['statement_date'],
+            $this->minor($data['opening_balance']), $this->minor($data['statement_balance']),
+            $data['evidence_reference'], $data['statement_csv']->get());
+        return back()->with('finance_status', 'Statement imported. A second finance officer must review it.');
+    }
+
+    public function resolveStatementVariance(Request $request, int $id, \App\Services\Enterprise\CampaignFinanceStatementService $statements)
+    {
+        $data = $request->validate(['matched_check_id' => 'required|integer|min:1', 'resolution_reason' => 'required|string|max:500']);
+        $statements->resolve($request->user(), $id, (int) $data['matched_check_id'], $data['resolution_reason']);
+        return back()->with('finance_status', 'Statement variance resolution recorded.');
+    }
+
+    public function reviewStatementCheck(Request $request, int $id, \App\Services\Enterprise\CampaignFinanceStatementService $statements)
+    {
+        $data = $request->validate(['review_notes' => 'required|string|min:3|max:500']);
+        $statements->review($request->user(), $id, $data['review_notes']);
+        return back()->with('finance_status', 'Independent statement review recorded. Any variance requires investigation.');
+    }
+
+    public function reconcile(Request $request, int $id, CampaignFinanceService $finance)
+    {
+        $finance->reconcileHistory($request->user(), $id);
+        return back()->with('finance_status', 'The recorded transaction history reconciles to the account balance.');
+    }
+
+    public function cancel(Request $request, int $id, CampaignFinanceService $finance)
+    {
+        $finance->cancel($request->user(), $id);
+        return back()->with('finance_status', 'Funding request cancelled.');
     }
 
     public function account(Request $request, CampaignFinanceService $finance)
     {
         $data = $request->validate(['name' => 'required|string|max:120', 'owner_id' => 'required|integer|min:1']);
         $account = $finance->createAccount($request->user(), $data['name'], (int) $data['owner_id']);
-        return redirect()->route('finance.index', ['account' => $account->id])->with('finance_status', 'Financial account created.');
+        return redirect()->route('finance.section', ['section' => 'accounts', 'account' => $account->id])->with('finance_status', 'Financial account created.');
     }
 
     public function budget(Request $request, CampaignFinanceService $finance)
@@ -51,11 +256,143 @@ class CampaignFinanceController extends Controller
         return back()->with('finance_status', 'Budget allocation recorded.');
     }
 
+    public function submitFundingProposal(Request $request, CampaignFinanceService $finance)
+    {
+        if (is_array($request->input('recipients'))) {
+            $request->merge(['recipients' => array_values(array_filter(
+                $request->input('recipients'),
+                fn ($payee) => !is_array($payee) || trim((string) ($payee['name'] ?? '')) !== ''
+                    || trim((string) ($payee['amount'] ?? '')) !== ''
+            ))]);
+        }
+        $data = $request->validate([
+            'submission_key' => 'required|uuid',
+            'amount' => ['required', 'regex:/^\\d{1,12}(\\.\\d{1,2})?$/D'],
+            'purpose' => 'required|string|max:500',
+            'use_profile' => 'sometimes|boolean',
+            'recipients' => 'sometimes|array|max:20',
+            'recipients.*' => 'required|array:name,amount',
+            'recipients.*.name' => 'required|string|max:160',
+            'recipients.*.amount' => ['required', 'regex:/^\\d{1,12}(\\.\\d{1,2})?$/D'],
+        ]);
+        $finance->submitFundingProposal(
+            $request->user(), $this->minor($data['amount']), $data['purpose'], $data['submission_key'],
+            array_map(fn (array $payee) => ['name' => $payee['name'], 'amount_minor' => $this->minor($payee['amount'])],
+                $data['recipients'] ?? []), $request->boolean('use_profile')
+        );
+        return redirect()->route('finance.section', ['section' => 'requests'])
+            ->with('finance_status', 'Funding proposal submitted to Finance intake. No payment has been authorized.');
+    }
+
+    public function fundingProposalHistory(Request $request, int $id, CampaignFundingProposalService $proposals)
+    {
+        [$proposal, $events, $payment] = $proposals->history($request->user(), $id);
+
+        return response()->view('backend.finance.proposal-history', [
+            'profileData' => $request->user(),
+            'pageTitle' => 'Funding proposal #'.$id.' history',
+            'proposal' => $proposal, 'events' => $events, 'payment' => $payment,
+        ]);
+    }
+
+    public function reviewFundingProposal(Request $request, int $id, CampaignFundingProposalService $proposals)
+    {
+        $data = $request->validate([
+            'revision' => 'required|integer|min:1',
+            'decision' => 'required|in:return,reject',
+            'reason' => 'required|string|max:500',
+        ]);
+        $proposals->review($request->user(), $id, (int) $data['revision'],
+            $data['decision'], $data['reason']);
+        return back()->with('finance_status', 'Funding proposal review recorded.');
+    }
+
+    public function resubmitFundingProposal(Request $request, int $id, CampaignFundingProposalService $proposals)
+    {
+        if (is_array($request->input('recipients'))) {
+            $request->merge(['recipients' => array_values(array_filter(
+                $request->input('recipients'),
+                fn ($payee) => !is_array($payee) || trim((string) ($payee['name'] ?? '')) !== ''
+                    || trim((string) ($payee['amount'] ?? '')) !== ''
+            ))]);
+        }
+        $data = $request->validate([
+            'revision' => 'required|integer|min:1',
+            'amount' => ['required', 'regex:/^\d{1,12}(\.\d{1,2})?$/D'],
+            'purpose' => 'required|string|max:500',
+            'use_profile' => 'sometimes|boolean',
+            'recipients' => 'sometimes|array|max:20',
+            'recipients.*' => 'required|array:name,amount',
+            'recipients.*.name' => 'required|string|max:160',
+            'recipients.*.amount' => ['required', 'regex:/^\d{1,12}(\.\d{1,2})?$/D'],
+        ]);
+        $recipients = array_map(fn (array $payee) => [
+            'name' => $payee['name'], 'amount_minor' => $this->minor($payee['amount']),
+        ], $data['recipients'] ?? []);
+        $proposals->resubmit($request->user(), $id, (int) $data['revision'],
+            $this->minor($data['amount']), $data['purpose'], $recipients, $request->boolean('use_profile'));
+        return redirect()->route('finance.section', ['section' => 'requests'])
+            ->with('finance_status', 'Revised funding proposal resubmitted to Finance.');
+    }
+
+    public function assignFundingProposal(Request $request, int $id, CampaignFundingProposalService $proposals)
+    {
+        $data = $request->validate([
+            'revision' => 'required|integer|min:1',
+            'account_id' => 'required|integer|min:1',
+            'budget_id' => 'nullable|integer|min:1',
+            'destination_id' => 'nullable|integer|min:1',
+        ]);
+        $proposals->assign($request->user(), $id, (int) $data['revision'],
+            (int) $data['account_id'], isset($data['budget_id']) ? (int) $data['budget_id'] : null,
+            isset($data['destination_id']) ? (int) $data['destination_id'] : null);
+        return redirect()->route('finance.section', ['section' => 'approvals'])
+            ->with('finance_status', 'Funding account assigned. Independent financial approval is still required.');
+    }
+
     public function paymentRequest(Request $request, CampaignFinanceService $finance)
     {
+        // Omit fully blank UI rows but reject any partially entered recipient.
+        if (is_array($request->input('recipients'))) {
+            $request->merge(['recipients' => array_values(array_filter(
+                $request->input('recipients'),
+                fn ($payee) => !is_array($payee) || trim((string) ($payee['name'] ?? '')) !== ''
+                    || trim((string) ($payee['amount'] ?? '')) !== ''
+            ))]);
+        }
         $data = $request->validate(['account_id' => 'required|integer|min:1', 'budget_id' => 'nullable|integer|min:1',
-            'amount' => ['required', 'regex:/^\d{1,12}(\.\d{1,2})?$/D'], 'description' => 'required|string|max:500']);
-        $finance->request($request->user(), (int) $data['account_id'], isset($data['budget_id']) ? (int) $data['budget_id'] : null, $this->minor($data['amount']), $data['description']);
+            'amount' => ['required', 'regex:/^\d{1,12}(\.\d{1,2})?$/D'], 'description' => 'required|string|max:500',
+            'purpose' => 'nullable|in:expense,transfer,advance', 'destination_id' => 'nullable|integer|min:1',
+            'recipient' => 'nullable|string|max:160',
+            'use_profile' => 'sometimes|boolean',
+            'profile_username' => 'nullable|string|max:100',
+            'recipients' => 'sometimes|array|max:20',
+            'recipients.*' => 'required|array:name,amount',
+            'recipients.*.name' => 'required|string|max:160',
+            'recipients.*.amount' => ['required', 'regex:/^\\d{1,12}(\\.\\d{1,2})?$/D'],
+        ]);
+        $profile = $request->boolean('use_profile') ? $request->user() : null;
+        if (!empty($data['profile_username'])) {
+            $finance->authorize($request->user(), 'finance.paystack.recipients.manage');
+            if ($profile) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'profile_username' => 'Choose either your own profile or one member.',
+                ]);
+            }
+            $profile = app(\App\Services\LocationScopeService::class)
+                ->applyScope(\App\Models\User::query()->where('status', 'active'), $request->user(), 'users')
+                ->where('username', trim($data['profile_username']))->firstOrFail();
+        }
+        $finance->request(
+            $request->user(), (int) $data['account_id'], isset($data['budget_id']) ? (int) $data['budget_id'] : null,
+            $this->minor($data['amount']), $data['description'], $data['purpose'] ?? 'expense',
+            isset($data['destination_id']) ? (int) $data['destination_id'] : null, $data['recipient'] ?? null,
+            array_map(fn (array $payee) => [
+                'name' => $payee['name'],
+                'amount_minor' => $this->minor($payee['amount']),
+            ], $data['recipients'] ?? []),
+            $profile,
+        );
         return back()->with('finance_status', 'Payment request submitted for independent approval.');
     }
 
@@ -76,19 +413,69 @@ class CampaignFinanceController extends Controller
         return back()->with('finance_status', 'Transaction recorded. No bank transfer was initiated.');
     }
 
+    public function postMovement(Request $request, int $id, CampaignFinanceService $finance)
+    {
+        $data = $request->validate(['reference' => 'required|string|max:200', 'idempotency_key' => 'required|uuid']);
+        $finance->postApprovedMovement($request->user(), $id, $data['idempotency_key'], $data['reference']);
+        return back()->with('finance_status', 'Approved movement recorded in the campaign ledger.');
+    }
+
+    public function settleAdvance(Request $request, int $id, CampaignFinanceService $finance)
+    {
+        $data = $request->validate([
+            'spent' => ['required', 'regex:/^\d{1,12}(\.\d{1,2})?$/D'],
+            'evidence' => 'required|string|max:300', 'idempotency_key' => 'required|uuid',
+            'returns_received' => 'accepted',
+        ]);
+        $finance->settleAdvance($request->user(), $id, $this->minor($data['spent']), $data['evidence'], $data['idempotency_key']);
+        return back()->with('finance_status', 'Advance settled.');
+    }
+
+    public function manualExpense(Request $request, CampaignFinanceService $finance)
+    {
+        $data = $request->validate([
+            'account_id' => 'required|integer|min:1',
+            'budget_id' => 'nullable|integer|min:1',
+            'amount' => ['required', 'regex:/^\d{1,12}(\.\d{1,2})?$/D'],
+            'description' => 'required|string|max:500',
+            'idempotency_key' => 'required|uuid',
+        ]);
+        $finance->recordManualExpense(
+            $request->user(), (int) $data['account_id'], $this->minor($data['amount']), $data['description'],
+            $data['idempotency_key'], $request->only('payee', 'paid_on', 'reference', 'evidence_reference'),
+            isset($data['budget_id']) ? (int) $data['budget_id'] : null,
+        );
+        return back()->with('finance_status', 'Expense recorded against the selected account.');
+    }
+
+    public function reverse(Request $request, int $accountId, int $entryId, CampaignFinanceService $finance)
+    {
+        $data = $request->validate(['reason' => 'required|string|max:500', 'idempotency_key' => 'required|uuid']);
+        $finance->reverse($request->user(), $accountId, $entryId, $data['reason'], $data['idempotency_key']);
+        return back()->with('finance_status', 'Reversal posted. The original transaction remains in the journal.');
+    }
+
     public function statement(Request $request, int $id, CampaignFinanceService $finance)
     {
         $finance->authorize($request->user(), 'finance.reports.export');
         $account = $finance->account($request->user(), $id);
         return response()->streamDownload(function () use ($account) {
             $out = fopen('php://output', 'w');
-            fputcsv($out, ['Transaction', 'Date', 'Kind', 'Currency', 'Amount', 'Balance', 'Description', 'Payment request'], ',', '"', '');
-            foreach (DB::table('campaign_finance_entries')->where('account_id', $account->id)->orderBy('id')->cursor() as $entry) {
-                $description = preg_match('/^[\s]*[=+\-@\t\r]/u', $entry->description) ? "'".$entry->description : $entry->description;
+            fputcsv($out, ['Transaction', 'Date', 'Kind', 'Currency', 'Amount', 'Balance', 'Description', 'Payment request', 'Debit code', 'Credit code', 'Reverses transaction', 'Payee', 'Date paid', 'Payment reference', 'Evidence reference'], ',', '"', '');
+            foreach (DB::table('campaign_finance_entries')
+                ->leftJoin('campaign_finance_journal', 'campaign_finance_journal.entry_id', '=', 'campaign_finance_entries.id')
+                ->leftJoin('campaign_finance_reversals', 'campaign_finance_reversals.reversal_id', '=', 'campaign_finance_entries.id')
+                ->leftJoin('campaign_finance_manual_expenses as manual', 'manual.entry_id', '=', 'campaign_finance_entries.id')
+                ->where('campaign_finance_entries.account_id', $account->id)
+                ->select('campaign_finance_entries.*', 'campaign_finance_journal.debit_code', 'campaign_finance_journal.credit_code',
+                    'campaign_finance_reversals.entry_id as reverses_entry_id', 'manual.payee', 'manual.paid_on', 'manual.reference', 'manual.evidence_reference')
+                ->orderBy('campaign_finance_entries.id')->cursor() as $entry) {
+                $csvText = static fn (?string $value) => preg_match('/^[\s]*[=+\-@\t\r]/u', $value ?? '') ? "'".$value : $value;
                 fputcsv($out, [$entry->id, $entry->created_at, $entry->kind, $account->currency,
                     intdiv((int) $entry->amount_minor, 100).'.'.str_pad((string) ($entry->amount_minor % 100), 2, '0', STR_PAD_LEFT),
                     intdiv((int) $entry->balance_after_minor, 100).'.'.str_pad((string) ($entry->balance_after_minor % 100), 2, '0', STR_PAD_LEFT),
-                    $description, $entry->request_id], ',', '"', '');
+                    $csvText($entry->description), $entry->request_id, $entry->debit_code, $entry->credit_code, $entry->reverses_entry_id,
+                    $csvText($entry->payee), $entry->paid_on, $csvText($entry->reference), $csvText($entry->evidence_reference)], ',', '"', '');
             }
             fclose($out);
         }, 'campaign-finance-'.$account->id.'.csv', ['Content-Type' => 'text/csv; charset=UTF-8', 'Cache-Control' => 'no-store', 'X-Content-Type-Options' => 'nosniff']);
@@ -103,7 +490,7 @@ class CampaignFinanceController extends Controller
 
     public function downloadDocument(Request $request, int $id, CampaignFinanceService $finance)
     {
-        $finance->authorize($request->user(), 'finance.view');
+        $finance->authorize($request->user(), 'finance.documents.view');
         $document = DB::table('campaign_finance_documents')->where('id', $id)->first();
         abort_unless($document, 404);
         $finance->account($request->user(), (int) $document->account_id);
