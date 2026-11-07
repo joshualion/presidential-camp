@@ -525,7 +525,9 @@
 @endif
                 </li>
 
-                @if(app(\App\Services\Enterprise\EntitlementService::class)->active('campaign_finance'))
+                @php($campaignPaymentGrant = app(\App\Services\Enterprise\EntitlementService::class)->cached()['features']['campaign_finance'] ?? null)
+                @if($campaignPaymentGrant && $campaignPaymentGrant['active'] === true && $campaignPaymentGrant['starts_at'] <= time()
+                    && (!isset($campaignPaymentGrant['expires_at']) || $campaignPaymentGrant['expires_at'] > time()))
                     <li class="nav-item">
                         <a href="{{ route('finance.paystack.settings') }}" class="nav-link">
                             <i class="fas fa-credit-card nav-icon"></i>

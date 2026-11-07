@@ -18,6 +18,10 @@ use Symfony\Component\Process\Process;
 require __DIR__.'/../vendor/autoload.php';
 $app = require __DIR__.'/../bootstrap/app.php';
 $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+set_exception_handler(static function (Throwable $error): never {
+    fwrite(STDERR, (string) $error.PHP_EOL);
+    exit(1);
+});
 if (!app()->environment('testing') || DB::connection()->getDriverName() !== 'mysql'
     || !preg_match('/_test$/D', DB::connection()->getDatabaseName())
     || !in_array(config('database.connections.mysql.host'), ['127.0.0.1', 'localhost'], true)) {
@@ -46,21 +50,31 @@ if (($argv[1] ?? '') === 'worker') {
     exit;
 }
 
-Artisan::call('migrate:fresh', ['--force' => true]);
+if (Artisan::call('migrate:fresh', ['--force' => true]) !== 0) {
+    throw new RuntimeException('Could not migrate the synthetic finance database.');
+}
 SystemSetting::create(['package' => 'presidential', 'system_name' => 'Concurrency test', 'system_country' => 'Nigeria']);
 $country = Country::create(['name' => 'Nigeria', 'uuid' => (string)Str::uuid()]);
 $region = Region::create(['name' => 'Synthetic region', 'country_id' => $country->id]);
 $state = State::create(['name' => 'Synthetic state', 'region_id' => $region->id]);
 $actors = [];
+$permissions = ['finance.accounts.manage', 'finance.record', 'finance.budget.manage',
+    'finance.disbursement.create', 'finance.disbursement.approve', 'finance.disbursement.execute'];
 foreach (['requester', 'approver'] as $role) {
     $actor = User::create(['uuid' => (string)Str::uuid(), 'username' => 'finance-'.$role, 'email' => 'finance-'.$role.'@example.test',
         'firstname' => 'Finance', 'lastname' => ucfirst($role), 'password' => bcrypt('synthetic-password'),
         'access_level' => 'stateadmin', 'status' => 'active', 'state_id' => $state->id, 'region_id' => $region->id]);
-    foreach (['finance.accounts.manage', 'finance.record', 'finance.budget.manage', 'finance.disbursement.create', 'finance.disbursement.approve', 'finance.disbursement.execute'] as $permission) {
+    foreach ($permissions as $permission) {
         $actor->givePermissionTo(Permission::findOrCreate($permission, 'web'));
     }
     $actors[$role] = $actor;
 }
+
+DB::table('campaign_finance_governance')->insert([
+    'previous_id' => 0, 'actor_id' => $actors['requester']->id, 'mode' => 'delegated',
+    'grants' => json_encode(['level:stateadmin' => $permissions], JSON_THROW_ON_ERROR),
+    'created_at' => now(),
+]);
 
 function concurrentFinanceWorkers(array $jobs): array
 {
@@ -69,7 +83,11 @@ function concurrentFinanceWorkers(array $jobs): array
     $processes = [];
     try {
         foreach ($jobs as $index => $job) {
-            $process = new Process(array_merge([PHP_BINARY, '-c', php_ini_loaded_file(), __FILE__, 'worker', $barrier, (string)$index], array_map('strval', $job)), base_path());
+            $php = [PHP_BINARY];
+            if ($ini = php_ini_loaded_file()) {
+                array_push($php, '-c', $ini);
+            }
+            $process = new Process(array_merge($php, [__FILE__, 'worker', $barrier, (string) $index], array_map('strval', $job)), base_path());
             $process->setTimeout(30);
             $process->start();
             $processes[] = $process;
