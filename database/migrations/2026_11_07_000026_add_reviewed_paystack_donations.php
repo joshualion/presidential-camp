@@ -18,7 +18,7 @@ return new class extends Migration
                 ->constrained('campaign_paystack_settlement_matches')->restrictOnDelete();
             $table->foreignId('check_id')->unique()
                 ->constrained('campaign_finance_statement_checks')->restrictOnDelete();
-            $table->string('provider_transaction_id', 20)->unique();
+            $table->string('provider_transaction_id', 20)->unique('paystack_donation_transaction_once');
             $table->string('reference', 100)->unique();
             $table->char('connection', 64);
             $table->char('donor_digest', 64)->index();

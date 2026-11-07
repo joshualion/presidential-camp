@@ -14,7 +14,7 @@ return [
     'supported_sources' => ['1.0.8', '1.0.9', '1.1.0', '1.1.1', '1.1.2', '1.1.3', '1.1.4', '1.1.5', '1.1.6', '1.1.7', '1.1.8', '1.1.9', '1.2.0', '1.2.1', '1.2.2', '1.2.3', '1.2.4', '1.2.5'],
     // Names are added only after reviewing their up() implementation and compatibility.
     'approved_migrations' => [
-        '2026_11_07_000026_add_reviewed_paystack_donations' => 'ff74d13f75dad1ef22499b587ff712bfdcd349f49487cfbe046dd4637156df0d',
+        '2026_11_07_000026_add_reviewed_paystack_donations' => 'fa492356f7d6757261e2741cfa97b4c5b0d378f4e119b788da8e8a8246aaf22c',
         '2026_11_07_000025_bind_finance_beneficiaries_to_profiles' => 'c29f4968b6fc6abda2fd2681fa2a212f0011dcbfb4efce387494f34fdb39b080',
         '2026_11_07_000024_add_campaign_finance_statement_evidence' => 'c502da2a0590cd8ed5fda8eed2860cd7f73a981e4c55dc35e2a13a2bc03a130a',
         '2026_11_07_000023_add_campaign_paystack_refund_checks' => '0cfa8d11138455a200f5329c01b69968975e5d0d13b6e8734f078c163cceb0f2',
