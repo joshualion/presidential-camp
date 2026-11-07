@@ -82,6 +82,7 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
+        'finance_bank_revision',
     ];
 
     /**
@@ -319,6 +320,13 @@ public function invitees()
 
         protected static function booted()
         {
+            static::updating(function (User $user) {
+                if ($user->isDirty(['bank', 'bank_account_number', 'firstname', 'lastname', 'access_level', 'status',
+                    'region_id', 'state_id', 'senatorial_district_id', 'federal_constituency_id', 'lga_id', 'ward_id', 'polling_unit_id'])
+                    && \Illuminate\Support\Facades\Schema::hasColumn('users', 'finance_bank_revision')) {
+                    $user->finance_bank_revision = (string) Str::uuid();
+                }
+            });
             static::creating(function ($user) {
                 if (empty($user->referral_code)) {
                     $user->referral_code = self::generateReferralCode();

@@ -68,7 +68,7 @@ class CampaignFinanceService
      * A sub-office may ask headquarters for funding without access to the paying
      * account. This is only intake; it does not approve, reserve or move money.
      */
-    public function submitFundingProposal(User $actor, int $amount, string $purpose, string $key, array $recipients = []): int
+    public function submitFundingProposal(User $actor, int $amount, string $purpose, string $key, array $recipients = [], bool $useProfile = false): int
     {
         $this->authorize($actor, 'finance.disbursement.create');
         $this->amount($amount);
@@ -76,6 +76,10 @@ class CampaignFinanceService
         if (!Str::isUuid($key) || count($recipients) > 20) {
             $this->invalid('Use a valid submission key and no more than twenty recipients.');
         }
+        if ($useProfile && $recipients) {
+            $this->invalid('Choose your profile or enter named recipients.');
+        }
+        $profileName = $useProfile ? app(CampaignFinanceProfileBank::class)->snapshot($actor)['name'] : null;
         $total = 0;
         $names = [];
         foreach ($recipients as &$payee) {
@@ -95,6 +99,10 @@ class CampaignFinanceService
         unset($payee);
         if ($recipients && $total !== $amount) {
             $this->invalid('Recipient allocations must total the proposed funding amount.');
+        }
+
+        if ($profileName !== null) {
+            $recipients = [['name' => $profileName, 'amount_minor' => $amount, 'use_profile' => true]];
         }
 
         return DB::transaction(function () use ($actor, $amount, $purpose, $key, $recipients) {
@@ -149,7 +157,7 @@ class CampaignFinanceService
     }
 
     public function request(User $actor, int $accountId, ?int $budgetId, int $amount, string $description,
-        string $purpose = 'expense', ?int $destinationId = null, ?string $recipient = null, array $recipients = []
+        string $purpose = 'expense', ?int $destinationId = null, ?string $recipient = null, array $recipients = [], ?User $profileBeneficiary = null
     ): int {
         $this->authorize($actor, 'finance.disbursement.create');
         $this->amount($amount); $description = $this->text($description, 500);
@@ -162,6 +170,12 @@ class CampaignFinanceService
         $recipient = $purpose === 'advance' ? $this->text($recipient ?? '', 160) : null;
         if (count($recipients) > 20 || ($recipients && $purpose !== 'expense')) {
             $this->invalid('Provide up to twenty named recipients for a direct expense request only.');
+        }
+        if ($profileBeneficiary && (int) $profileBeneficiary->id !== (int) $actor->id) {
+            $this->authorize($actor, 'finance.paystack.recipients.manage');
+        }
+        if ($profileBeneficiary && ($purpose !== 'expense' || $recipients)) {
+            $this->invalid('Profile bank details can be used for a direct expense with one beneficiary.');
         }
         $planned = 0;
         $seen = [];
@@ -182,12 +196,19 @@ class CampaignFinanceService
         if ($recipients && $planned !== $amount) {
             $this->invalid('Named recipient amounts must equal the total request.');
         }
-        return DB::transaction(function () use ($actor, $accountId, $budgetId, $amount, $description, $purpose, $destinationId, $recipient, $recipients) {
+        return DB::transaction(function () use ($actor, $accountId, $budgetId, $amount, $description, $purpose, $destinationId, $recipient, $recipients, $profileBeneficiary) {
             if ($purpose === 'transfer') {
                 $this->account($actor, $destinationId);
             }
             $this->account($actor, $accountId, true);
             $this->budget($accountId, $budgetId);
+            $profile = null;
+            if ($profileBeneficiary) {
+                $profileBeneficiary = app(LocationScopeService::class)->applyScope(User::query(), $actor, 'users')
+                    ->whereKey($profileBeneficiary->id)->lockForUpdate()->firstOrFail();
+                $profile = app(CampaignFinanceProfileBank::class)->snapshot($profileBeneficiary);
+                $recipients = [['name' => $profile['name'], 'amount_minor' => $amount]];
+            }
             $id = DB::table('campaign_finance_requests')->insertGetId(['account_id' => $accountId, 'budget_id' => $budgetId,
                 'amount_minor' => $amount, 'description' => $description, 'requested_by' => $actor->id, 'status' => 'pending', 'created_at' => now(), 'updated_at' => now()]);
             if ($purpose !== 'expense') {
@@ -212,16 +233,22 @@ class CampaignFinanceService
                 'created_at' => now(),
             ]);
             foreach ($recipients as $position => $payee) {
-                DB::table('campaign_finance_request_recipients')->insert([
+                $beneficiaryId = DB::table('campaign_finance_request_recipients')->insertGetId([
                     'request_id' => $id,
                     'position' => $position + 1,
                     'recipient_name' => $payee['name'],
                     'amount_minor' => $payee['amount_minor'],
                     'created_at' => now(),
                 ]);
+                if ($profile) {
+                    DB::table('campaign_finance_profile_beneficiaries')->insert([
+                        'beneficiary_id' => $beneficiaryId, 'user_id' => $profileBeneficiary->id,
+                        'bank_fingerprint' => $profile['fingerprint'], 'created_at' => now(),
+                    ]);
+                }
             }
             app(CampaignFinancePolicy::class)->snapshot($id, $amount);
-            $this->audit($accountId, $actor, 'request.created', ['request_id' => $id, 'amount_minor' => $amount]);
+            $this->audit($accountId, $actor, 'request.created', ['request_id' => $id, 'amount_minor' => $amount, 'profile_beneficiary_id' => $profileBeneficiary?->id]);
             return $id;
         });
     }
@@ -242,6 +269,16 @@ class CampaignFinanceService
             if ($routing?->destination_id) {
                 $this->account($actor, (int) $routing->destination_id);
             }
+            $itemized = DB::table('campaign_finance_request_recipients')->where('request_id', $id)->exists();
+            if ($approve && $itemized) {
+                $profileId = DB::table('campaign_finance_request_recipients as recipient')
+                    ->join('campaign_finance_profile_beneficiaries as profile', 'profile.beneficiary_id', '=', 'recipient.id')
+                    ->where('recipient.request_id', $id)->value('recipient.id');
+                if ($profileId !== null) {
+                    $profile = app(CampaignFinanceProfileBank::class)->forRequest($actor, (int) $profileId, true);
+                    abort_if((int) $profile['user_id'] === (int) $actor->id, 403, 'A beneficiary cannot approve their own reimbursement.');
+                }
+            }
             $workflow = DB::table('campaign_finance_workflows')->where('request_id', $id)->lockForUpdate()->first();
             if ($workflow) {
                 $stages = json_decode($workflow->stages, true, 512, JSON_THROW_ON_ERROR);
@@ -258,7 +295,7 @@ class CampaignFinanceService
                     return;
                 }
             }
-            if ($approve && ($workflow || $routing)) {
+            if ($approve && ($workflow || $routing || $itemized)) {
                 $this->assertAvailable($account, $request->budget_id, (int) $request->amount_minor);
             }
             DB::table('campaign_finance_requests')->where('id', $id)->update(['status' => $approve ? 'approved' : 'rejected', 'decided_by' => $actor->id, 'decided_at' => now(), 'updated_at' => now()]);
@@ -579,7 +616,8 @@ class CampaignFinanceService
         return DB::table('campaign_finance_requests')
             ->where(function ($query) {
                 $query->whereIn('campaign_finance_requests.id', DB::table('campaign_finance_workflows')->select('request_id'))
-                    ->orWhereIn('campaign_finance_requests.id', DB::table('campaign_finance_request_routes')->select('request_id'));
+                    ->orWhereIn('campaign_finance_requests.id', DB::table('campaign_finance_request_routes')->select('request_id'))
+                    ->orWhereIn('campaign_finance_requests.id', DB::table('campaign_finance_request_recipients')->select('request_id'));
             })
             ->where('campaign_finance_requests.status', 'approved');
     }

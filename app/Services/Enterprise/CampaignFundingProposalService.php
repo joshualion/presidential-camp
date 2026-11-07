@@ -113,7 +113,8 @@ class CampaignFundingProposalService
             }
             $seen[$key] = true;
             $total += $value;
-            $normalized[] = ['name' => $name, 'amount_minor' => $value];
+            $normalized[] = ['name' => $name, 'amount_minor' => $value]
+                + (($payee['use_profile'] ?? false) === true ? ['use_profile' => true] : []);
         }
         if ($normalized && $total !== $amount) {
             $this->invalid('Recipient amounts must equal the proposed total.');
@@ -121,7 +122,7 @@ class CampaignFundingProposalService
         return $normalized;
     }
 
-    public function resubmit(User $actor, int $id, int $revision, int $amount, string $purpose, array $recipients): void
+    public function resubmit(User $actor, int $id, int $revision, int $amount, string $purpose, array $recipients, bool $useProfile = false): void
     {
         $this->finance->authorize($actor, 'finance.disbursement.create');
         if ($amount < 1 || $amount > 100000000000000) {
@@ -132,6 +133,13 @@ class CampaignFundingProposalService
             $this->invalid('Provide a valid purpose.');
         }
         $recipients = $this->recipients($recipients, $amount);
+        if ($useProfile) {
+            if ($recipients) {
+                $this->invalid('Choose your profile or enter named recipients.');
+            }
+            $profile = app(CampaignFinanceProfileBank::class)->snapshot($actor);
+            $recipients = [['name' => $profile['name'], 'amount_minor' => $amount, 'use_profile' => true]];
+        }
         DB::transaction(function () use ($actor, $id, $revision, $amount, $purpose, $recipients) {
             $proposal = DB::table('campaign_finance_funding_proposals')
                 ->where('id', $id)->where('requested_by', $actor->id)->lockForUpdate()->firstOrFail();
@@ -194,10 +202,12 @@ class CampaignFundingProposalService
             if ($destination && ($recipients || $budgetId !== null)) {
                 $this->invalid('An internal branch allocation cannot include named payees or an expenditure budget.');
             }
+            $profileUser = count($recipients) === 1 && ($recipients[0]['use_profile'] ?? false)
+                ? User::query()->findOrFail($proposal->requested_by) : null;
             $requestId = $this->finance->request(
                 $actor, $accountId, $budgetId, (int) $proposal->amount_minor,
                 $proposal->purpose, $destination ? 'transfer' : 'expense',
-                $destination?->id, null, $recipients
+                $destination?->id, null, $profileUser ? [] : $recipients, $profileUser
             );
             // An explicit chain is compulsory for branch-to-headquarters funding.
             // Missing approval policy fails closed and rolls back the new request.

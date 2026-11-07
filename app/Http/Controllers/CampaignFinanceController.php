@@ -147,6 +147,10 @@ class CampaignFinanceController extends Controller
                         'routing.purpose', 'routing.destination_id', 'routing.recipient', 'routing.settled_at', 'routing.spent_minor')
                     ->selectSub(DB::table('campaign_finance_request_recipients')
                         ->whereColumn('request_id', 'campaign_finance_requests.id')->selectRaw('COUNT(*)'), 'beneficiary_count')
+                    ->selectSub(DB::table('campaign_finance_request_recipients as profile_recipient')
+                        ->join('campaign_finance_profile_beneficiaries as profile', 'profile.beneficiary_id', '=', 'profile_recipient.id')
+                        ->whereColumn('profile_recipient.request_id', 'campaign_finance_requests.id')
+                        ->select('profile_recipient.id')->limit(1), 'profile_beneficiary_id')
                     ->latest('campaign_finance_requests.id')->paginate(25, ['*'], 'requests_page')->withQueryString() : null,
             'entries' => in_array($section, ['income', 'expenditure', 'reports'], true)
                 ? $entries->leftJoin('campaign_finance_journal', 'campaign_finance_journal.entry_id', '=', 'campaign_finance_entries.id')
@@ -265,6 +269,7 @@ class CampaignFinanceController extends Controller
             'submission_key' => 'required|uuid',
             'amount' => ['required', 'regex:/^\\d{1,12}(\\.\\d{1,2})?$/D'],
             'purpose' => 'required|string|max:500',
+            'use_profile' => 'sometimes|boolean',
             'recipients' => 'sometimes|array|max:20',
             'recipients.*' => 'required|array:name,amount',
             'recipients.*.name' => 'required|string|max:160',
@@ -273,7 +278,7 @@ class CampaignFinanceController extends Controller
         $finance->submitFundingProposal(
             $request->user(), $this->minor($data['amount']), $data['purpose'], $data['submission_key'],
             array_map(fn (array $payee) => ['name' => $payee['name'], 'amount_minor' => $this->minor($payee['amount'])],
-                $data['recipients'] ?? [])
+                $data['recipients'] ?? []), $request->boolean('use_profile')
         );
         return redirect()->route('finance.section', ['section' => 'requests'])
             ->with('finance_status', 'Funding proposal submitted to Finance intake. No payment has been authorized.');
@@ -315,6 +320,7 @@ class CampaignFinanceController extends Controller
             'revision' => 'required|integer|min:1',
             'amount' => ['required', 'regex:/^\d{1,12}(\.\d{1,2})?$/D'],
             'purpose' => 'required|string|max:500',
+            'use_profile' => 'sometimes|boolean',
             'recipients' => 'sometimes|array|max:20',
             'recipients.*' => 'required|array:name,amount',
             'recipients.*.name' => 'required|string|max:160',
@@ -324,7 +330,7 @@ class CampaignFinanceController extends Controller
             'name' => $payee['name'], 'amount_minor' => $this->minor($payee['amount']),
         ], $data['recipients'] ?? []);
         $proposals->resubmit($request->user(), $id, (int) $data['revision'],
-            $this->minor($data['amount']), $data['purpose'], $recipients);
+            $this->minor($data['amount']), $data['purpose'], $recipients, $request->boolean('use_profile'));
         return redirect()->route('finance.section', ['section' => 'requests'])
             ->with('finance_status', 'Revised funding proposal resubmitted to Finance.');
     }
@@ -358,11 +364,25 @@ class CampaignFinanceController extends Controller
             'amount' => ['required', 'regex:/^\d{1,12}(\.\d{1,2})?$/D'], 'description' => 'required|string|max:500',
             'purpose' => 'nullable|in:expense,transfer,advance', 'destination_id' => 'nullable|integer|min:1',
             'recipient' => 'nullable|string|max:160',
+            'use_profile' => 'sometimes|boolean',
+            'profile_username' => 'nullable|string|max:100',
             'recipients' => 'sometimes|array|max:20',
             'recipients.*' => 'required|array:name,amount',
             'recipients.*.name' => 'required|string|max:160',
             'recipients.*.amount' => ['required', 'regex:/^\\d{1,12}(\\.\\d{1,2})?$/D'],
         ]);
+        $profile = $request->boolean('use_profile') ? $request->user() : null;
+        if (!empty($data['profile_username'])) {
+            $finance->authorize($request->user(), 'finance.paystack.recipients.manage');
+            if ($profile) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'profile_username' => 'Choose either your own profile or one member.',
+                ]);
+            }
+            $profile = app(\App\Services\LocationScopeService::class)
+                ->applyScope(\App\Models\User::query()->where('status', 'active'), $request->user(), 'users')
+                ->where('username', trim($data['profile_username']))->firstOrFail();
+        }
         $finance->request(
             $request->user(), (int) $data['account_id'], isset($data['budget_id']) ? (int) $data['budget_id'] : null,
             $this->minor($data['amount']), $data['description'], $data['purpose'] ?? 'expense',
@@ -371,6 +391,7 @@ class CampaignFinanceController extends Controller
                 'name' => $payee['name'],
                 'amount_minor' => $this->minor($payee['amount']),
             ], $data['recipients'] ?? []),
+            $profile,
         );
         return back()->with('finance_status', 'Payment request submitted for independent approval.');
     }

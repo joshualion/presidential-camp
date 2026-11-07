@@ -17,6 +17,8 @@
             <input type="hidden" name="submission_key" value="{{ (string)\Illuminate\Support\Str::uuid() }}">
             <label>Funding amount (NGN)<input name="amount" class="form-control" inputmode="decimal" required></label>
             <label>Purpose / project / event<textarea name="purpose" class="form-control" maxlength="500" required></textarea></label>
+            <label><input type="checkbox" name="use_profile" value="1" @checked(old('use_profile'))>
+                Use the bank details already saved in my profile for this reimbursement</label>
             <p class="small">Optional named recipients: leave all rows blank if the branch itself will receive the allocation, subject to Finance approval.</p>
             @foreach(range(0, 4) as $i)
                 <div class="form-row">
@@ -48,6 +50,10 @@
                             <label>Purpose<textarea class="form-control" name="purpose" required maxlength="500">{{ $proposal->purpose }}</textarea></label>
                             <p class="small">You may change recipients. Blank rows are ignored. Recipient amounts must equal the request total.</p>
                             @php($previousRecipients = json_decode($proposal->recipients, true, 512, JSON_THROW_ON_ERROR))
+                            @php($usesProfile = $previousRecipients[0]['use_profile'] ?? false)
+                            <label><input type="checkbox" name="use_profile" value="1" @checked($usesProfile)>
+                                Use my saved bank details for this reimbursement</label>
+                            @if($usesProfile) @php($previousRecipients = []) @endif
                             @foreach(range(0, max(4, count($previousRecipients) - 1)) as $i)
                                 <div class="form-row">
                                     <div class="col-md-7"><label>Recipient {{ $i + 1 }}<input name="recipients[{{ $i }}][name]" class="form-control" maxlength="160" value="{{ $previousRecipients[$i]['name'] ?? '' }}"></label></div>

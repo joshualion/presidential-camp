@@ -9,6 +9,7 @@ interface PaymentGateway
     public function listSettlements(string $secret, string $from, string $to): array;
     public function fetchRefund(string $secret, int $refundId): array;
     public function verifyCollection(string $secret, string $reference): array;
+    public function createRecipient(string $secret, array $details): array;
     public function fetchRecipient(string $secret, string $code): array;
     public function initiateTransfer(string $secret, array $details): array;
     public function initiateBulkTransfer(string $secret, array $details): array;

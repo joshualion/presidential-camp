@@ -1,4 +1,12 @@
 @if($payment->status === 'approved' && $payment->beneficiary_count && $paystackTransfersEnabled)
+    @if($payment->profile_beneficiary_id
+        && $capabilities->allows(auth()->user(), 'finance.paystack.recipients.manage')
+        && app(\App\Services\Enterprise\CampaignFinancePolicy::class)->permits(auth()->user(), 'finance.paystack.recipients.manage'))
+        <form method="POST" action="{{ route('finance.paystack.beneficiary.profile', $payment->profile_beneficiary_id) }}">
+            @csrf
+            <button class="btn btn-outline-primary btn-sm">Prepare test recipient from saved profile</button>
+        </form>
+    @endif
     @if($capabilities->allows(auth()->user(), 'finance.paystack.approve'))
         <form method="POST" action="{{ route('finance.paystack.batch.approve', $payment->id) }}">
             @csrf

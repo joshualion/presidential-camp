@@ -194,6 +194,9 @@ class CampaignPaystackService
             $this->invalid('Enter a valid Paystack test recipient code.');
         }
         $beneficiary = DB::table('campaign_finance_request_recipients')->where('id', $beneficiaryId)->firstOrFail();
+        if (DB::table('campaign_finance_profile_beneficiaries')->where('beneficiary_id', $beneficiaryId)->exists()) {
+            $this->invalid('Use the approved member profile to prepare this beneficiary.');
+        }
         $accountId = DB::table('campaign_finance_requests')->where('id', $beneficiary->request_id)->value('account_id');
         $this->finance->account($actor, (int) $accountId);
         $key = $this->connection('transfers');
@@ -220,6 +223,63 @@ class CampaignPaystackService
         }, 3);
     }
 
+    public function linkProfileBeneficiary(User $actor, int $beneficiaryId): void
+    {
+        $this->finance->authorize($actor, 'finance.paystack.recipients.manage');
+        $beneficiary = DB::table('campaign_finance_request_recipients')->where('id', $beneficiaryId)->firstOrFail();
+        $request = DB::table('campaign_finance_requests')->where('id', $beneficiary->request_id)->firstOrFail();
+        $this->finance->account($actor, (int) $request->account_id);
+        abort_if((int) $request->requested_by === (int) $actor->id, 403);
+        $key = $this->connection('transfers');
+        $profile = app(CampaignFinanceProfileBank::class)->forRequest($actor, $beneficiaryId);
+        abort_if($profile && (int) $profile['user_id'] === (int) $actor->id, 403);
+        if ($request->status !== 'approved' || !$profile) {
+            $this->invalid('This profile beneficiary requires an approved reimbursement.');
+        }
+        // The Paystack test fixture must never receive an actual member's bank details.
+        if (!in_array($profile['bank'], ['011', 'first bank', 'first bank of nigeria', 'first bank of nigeria limited'], true)
+            || $profile['number'] !== '0000000000') {
+            $this->invalid('Profile transfers in test mode require Paystack’s First Bank test account (0000000000).');
+        }
+        $details = $this->gateway->createRecipient($key, [
+            'type' => 'nuban', 'name' => 'Campaign reimbursement test',
+            'account_number' => $profile['number'], 'bank_code' => '011', 'currency' => 'NGN',
+        ]);
+        $recipient = $details['recipient_code'] ?? '';
+        if (!is_string($recipient) || !preg_match('/^RCP_[a-z0-9]{6,75}$/iD', $recipient)
+            || ($details['domain'] ?? null) !== 'test' || ($details['type'] ?? null) !== 'nuban'
+            || ($details['currency'] ?? null) !== 'NGN' || ($details['active'] ?? null) !== true
+            || data_get($details, 'details.account_number') !== $profile['number']
+            || data_get($details, 'details.bank_code') !== '011') {
+            $this->invalid('Paystack did not return a verified test recipient for the saved account.');
+        }
+
+        DB::transaction(function () use ($actor, $beneficiaryId, $request, $recipient, $key) {
+            $current = DB::table('campaign_finance_requests')->where('id', $request->id)->lockForUpdate()->firstOrFail();
+            $this->finance->account($actor, (int) $current->account_id);
+            app(CampaignFinanceProfileBank::class)->forRequest($actor, $beneficiaryId, true);
+            $links = DB::table('campaign_paystack_beneficiary_links');
+            $link = (clone $links)->where('beneficiary_id', $beneficiaryId)->lockForUpdate()->first();
+            if ($current->status !== 'approved' || $link?->operation_id
+                || !hash_equals($key, $this->connection('transfers'))) {
+                $this->invalid('The approved reimbursement or payment connection changed. Reload before preparing it.');
+            }
+            if ($link && $link->recipient_code === $recipient && hash_equals($link->connection, hash('sha256', $key))) {
+                return;
+            }
+            $links->updateOrInsert(['beneficiary_id' => $beneficiaryId], [
+                'recipient_code' => $recipient, 'connection' => hash('sha256', $key),
+                'linked_by' => $actor->id, 'linked_at' => now(),
+            ]);
+            DB::table('campaign_finance_audits')->insert([
+                'account_id' => $current->account_id, 'actor_id' => $actor->id,
+                'action' => 'paystack.profile_beneficiary.prepared',
+                'details' => json_encode(['request_id' => $current->id, 'beneficiary_id' => $beneficiaryId], JSON_THROW_ON_ERROR),
+                'created_at' => now(),
+            ]);
+        }, 3);
+    }
+
     public function approveBatch(User $actor, int $requestId): void
     {
         $this->finance->authorize($actor, 'finance.paystack.approve');
@@ -237,6 +297,8 @@ class CampaignPaystackService
                 $this->invalid('The batch must match the approved total and use distinct verified recipients.');
             }
             foreach ($items as $item) {
+                $profile = app(CampaignFinanceProfileBank::class)->forRequest($actor, (int) $item->id, true);
+                abort_if($profile && (int) $profile['user_id'] === (int) $actor->id, 403, 'A beneficiary cannot authorize their own payout.');
                 if (!$item->recipient_code || $item->operation_id || !hash_equals($item->connection, hash('sha256', $key))) {
                     $this->invalid('Verify every recipient in this test account before authorizing the batch.');
                 }
@@ -263,12 +325,15 @@ class CampaignPaystackService
                 403, 'A funding approver cannot execute this payout.');
             $items = $this->batchItems($requestId)
                 ->leftJoin('campaign_paystack_operations as operations', 'operations.id', '=', 'links.operation_id')
-                ->get(['operations.*', 'beneficiaries.amount_minor as approved_amount', 'links.recipient_code as mapped_recipient', 'links.linked_by']);
+                ->get(['operations.*', 'beneficiaries.amount_minor as approved_amount', 'beneficiaries.id as beneficiary_id', 'links.recipient_code as mapped_recipient', 'links.linked_by']);
             if ($request->status !== 'approved' || $items->isEmpty()) {
                 $this->invalid('This batch is unavailable for submission.');
             }
             $details = [];
             foreach ($items as $item) {
+                $profile = app(CampaignFinanceProfileBank::class)->forRequest($actor, (int) $item->beneficiary_id, true);
+                abort_if($profile && in_array((int) $actor->id, [(int) $request->requested_by, (int) $profile['user_id']], true), 403,
+                    'A member cannot submit their own reimbursement payout.');
                 if ($item->status !== 'authorized' || $item->mode !== 'test'
                     || !hash_equals($item->connection, hash('sha256', $key))
                     || (int) $item->amount_minor !== (int) $item->approved_amount || $item->recipient_code !== $item->mapped_recipient) {
@@ -284,6 +349,10 @@ class CampaignPaystackService
             return $details;
         }, 3);
 
+        if (count($transfers) === 1) {
+            $this->gateway->initiateTransfer($key, ['currency' => 'NGN', 'source' => 'balance'] + $transfers[0]);
+            return;
+        }
         $this->gateway->initiateBulkTransfer($key, ['currency' => 'NGN', 'source' => 'balance', 'transfers' => $transfers]);
     }
 

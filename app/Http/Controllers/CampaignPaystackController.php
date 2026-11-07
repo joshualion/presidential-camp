@@ -20,6 +20,7 @@ class CampaignPaystackController extends Controller
             'beneficiaries' => \Illuminate\Support\Facades\DB::table('campaign_finance_request_recipients as beneficiaries')
                 ->join('campaign_finance_requests as requests', 'requests.id', '=', 'beneficiaries.request_id')
                 ->where('requests.status', 'approved')
+                ->whereNotIn('beneficiaries.id', \Illuminate\Support\Facades\DB::table('campaign_finance_profile_beneficiaries')->select('beneficiary_id'))
                 ->whereIn('requests.account_id', $finance->accounts($request->user())->select('campaign_finance_accounts.id'))
                 ->latest('beneficiaries.id')->limit(100)
                 ->get(['beneficiaries.id', 'beneficiaries.request_id', 'beneficiaries.recipient_name']),
@@ -57,11 +58,15 @@ class CampaignPaystackController extends Controller
     {
         $actor = $request->user();
         $operations = $paystack->operations($actor)
-            ->select(['account_id', 'destination_id', 'request_id', 'reference', 'kind', 'amount_minor', 'status', 'created_at'])
+            ->leftJoin('campaign_paystack_beneficiary_links as links', 'links.operation_id', '=', 'campaign_paystack_operations.id')
+            ->leftJoin('campaign_finance_request_recipients as beneficiary', 'beneficiary.id', '=', 'links.beneficiary_id')
+            ->select(['account_id', 'destination_id', 'reference', 'kind', 'campaign_paystack_operations.amount_minor',
+                'campaign_paystack_operations.status', 'campaign_paystack_operations.created_at', 'submitted_by'])
+            ->selectRaw('COALESCE(campaign_paystack_operations.request_id, beneficiary.request_id) as request_id')
             ->selectSub(\Illuminate\Support\Facades\DB::table('campaign_paystack_refund_checks')
                 ->whereColumn('operation_id', 'campaign_paystack_operations.id')->where('status', 'processed')
                 ->selectRaw('COALESCE(SUM(amount_minor), 0)'), 'processed_refunds_minor')
-            ->latest('id')->paginate(25);
+            ->latest('campaign_paystack_operations.id')->paginate(25);
         $accounts = $finance->accounts($actor)->orderBy('name')->pluck('name', 'id');
         return response()->view('backend.finance.paystack-operations', [
             'profileData' => $actor, 'pageTitle' => 'Campaign Paystack test activity',
@@ -92,6 +97,12 @@ class CampaignPaystackController extends Controller
         $data = $request->validate(['beneficiary_id' => 'required|integer|min:1', 'recipient' => 'required|string|max:80']);
         $paystack->linkBeneficiary($request->user(), (int) $data['beneficiary_id'], $data['recipient']);
         return back()->with('finance_status', 'Test beneficiary verified and linked.');
+    }
+
+    public function linkProfileBeneficiary(Request $request, int $id, CampaignPaystackService $paystack)
+    {
+        $paystack->linkProfileBeneficiary($request->user(), $id);
+        return back()->with('finance_status', 'Saved profile linked to the approved reimbursement for test payout.');
     }
 
     public function approveBatch(Request $request, int $id, CampaignPaystackService $paystack)

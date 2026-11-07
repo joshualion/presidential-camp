@@ -29,6 +29,15 @@
                 @endforeach
             </select>
         </label>
+        <label><input type="checkbox" name="use_profile" value="1" @checked(old('use_profile'))>
+            Use the bank details already saved in my profile for this reimbursement</label>
+        @if($capabilities->allows(auth()->user(), 'finance.paystack.recipients.manage')
+            && app(\App\Services\Enterprise\CampaignFinancePolicy::class)->permits(auth()->user(), 'finance.paystack.recipients.manage'))
+            <label>Or enter the username of the member being reimbursed
+                <input class="form-control" name="profile_username" maxlength="100" value="{{ old('profile_username') }}">
+            </label>
+            <p class="small">Leave the named recipient rows blank. Finance uses the member’s saved bank details after independent approval.</p>
+        @endif
         <details class="card card-body mb-2">
             <summary>Optional named recipients (direct expense requests only)</summary>
             <p class="small">You can specify up to five people here. For larger itemized requests, the API supports twenty. The named amounts must sum to the request total. A named recipient request cannot be marked paid until the recipient-level disbursement workflow is available.</p>

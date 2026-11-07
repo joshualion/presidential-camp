@@ -1211,3 +1211,87 @@ test('reviewed bank credit matches one verified Paystack live settlement without
     $http::assertSent(fn ($request) => $request->method() === 'GET'
         && $request->hasHeader('Authorization', 'Bearer sk_live_'.str_repeat('a', 30)));
 });
+
+test('approved reimbursement reuses its bound profile in a single audited test payout', function () {
+    $this->requester->update(['bank' => 'First Bank', 'bank_account_number' => '0000000000']);
+    $linker = User::factory()->create(['access_level' => 'superadmin', 'status' => 'active']);
+    $payoutApprover = User::factory()->create(['access_level' => 'superadmin', 'status' => 'active']);
+    $executor = User::factory()->create(['access_level' => 'superadmin', 'status' => 'active']);
+    foreach ([$this->outsider, $linker, $payoutApprover, $executor, $this->requester] as $user) {
+        foreach (['finance.paystack.view', 'finance.paystack.approve', 'finance.paystack.transfer', 'finance.paystack.recipients.manage'] as $permission) {
+            $user->givePermissionTo(Permission::findOrCreate($permission, 'web'));
+        }
+    }
+    $payments = app(\App\Services\Enterprise\CampaignPaystackService::class);
+    $payments->saveSettings($linker, ['test_public' => 'pk_test_'.str_repeat('a', 30),
+        'test_secret' => 'sk_test_'.str_repeat('b', 30)], 'test', false, true);
+    $this->finance->record($this->requester, $this->account->id, 'income', 12000, 'Opening funds', (string) Str::uuid());
+    $requestId = $this->finance->request($this->requester, $this->account->id, null, 5000,
+        'Travel reimbursement', profileBeneficiary: $this->requester);
+    $beneficiaryId = (int) DB::table('campaign_finance_request_recipients')->where('request_id', $requestId)->value('id');
+    expect((int) DB::table('campaign_finance_profile_beneficiaries')->where('beneficiary_id', $beneficiaryId)->value('user_id'))
+        ->toBe($this->requester->id);
+
+    $http = \Illuminate\Support\Facades\Http::class;
+    $http::preventStrayRequests();
+    $http::fake([
+        'https://api.paystack.co/transferrecipient' => $http::response(['status' => true, 'data' => [
+            'recipient_code' => 'RCP_profile123', 'domain' => 'test', 'type' => 'nuban', 'currency' => 'NGN',
+            'active' => true, 'details' => ['account_number' => '0000000000', 'bank_code' => '011'],
+        ]]),
+        'https://api.paystack.co/transfer' => $http::response(['status' => true, 'data' => ['status' => 'pending']]),
+        'https://api.paystack.co/transfer/verify/*' => fn ($request) => $http::response([
+            'status' => true, 'data' => ['reference' => basename($request->url()), 'domain' => 'test',
+                'status' => 'success', 'currency' => 'NGN', 'amount' => 5000, 'recipient' => ['recipient_code' => 'RCP_profile123']],
+        ]),
+    ]);
+    expect(fn () => $payments->linkProfileBeneficiary($linker, $beneficiaryId))->toThrow(ValidationException::class);
+    $this->finance->decide($this->approver, $requestId, true);
+    expect(fn () => $payments->linkProfileBeneficiary($this->outsider, $beneficiaryId))
+        ->toThrow(\Illuminate\Database\Eloquent\ModelNotFoundException::class);
+    expect(fn () => $payments->linkBeneficiary($linker, $beneficiaryId, 'RCP_profile123'))->toThrow(ValidationException::class);
+    $payments->linkProfileBeneficiary($linker, $beneficiaryId);
+    expect(fn () => $payments->approveBatch($linker, $requestId))
+        ->toThrow(\Symfony\Component\HttpKernel\Exception\HttpException::class);
+    $payments->approveBatch($payoutApprover, $requestId);
+    expect(fn () => $payments->submitBatch($this->requester, $requestId))
+        ->toThrow(\Symfony\Component\HttpKernel\Exception\HttpException::class);
+    $staleRequest = $this->finance->request($this->requester, $this->account->id, null, 1000,
+        'Separate stale reimbursement', profileBeneficiary: $this->requester);
+    $staleBeneficiary = (int) DB::table('campaign_finance_request_recipients')->where('request_id', $staleRequest)->value('id');
+    $this->finance->decide($this->approver, $staleRequest, true);
+    $payments->linkProfileBeneficiary($linker, $staleBeneficiary);
+    $payments->approveBatch($payoutApprover, $staleRequest);
+    $payments->submitBatch($executor, $requestId);
+    expect(fn () => $payments->submitBatch($executor, $requestId))->toThrow(ValidationException::class);
+    $operation = DB::table('campaign_paystack_operations')->orderBy('id')->first();
+    expect($operation->status)->toBe('pending');
+    expect($payments->verify($executor, $operation->reference))->toBe('success');
+    $this->requester->update(['bank_account_number' => '1111111111']);
+    $this->requester->update(['bank_account_number' => '0000000000']);
+    expect(fn () => $payments->submitBatch($executor, $staleRequest))->toThrow(ValidationException::class);
+    expect(DB::table('campaign_finance_audits')->where('action', 'paystack.profile_beneficiary.prepared')->count())->toBe(2);
+    expect($this->account->fresh()->balance_minor)->toBe(12000);
+    $http::assertSentCount(4);
+});
+
+test('an authorized officer can select an existing member profile without copying bank fields into the request', function () {
+    $member = User::factory()->create([
+        'access_level' => 'user', 'state_id' => 1, 'status' => 'active', 'username' => 'member-reimbursement',
+        'bank' => 'First Bank', 'bank_account_number' => '0000000000',
+    ]);
+    $otherState = User::factory()->create([
+        'access_level' => 'user', 'state_id' => 2, 'status' => 'active', 'username' => 'out-of-state-member',
+        'bank' => 'First Bank', 'bank_account_number' => '0000000000',
+    ]);
+    $payload = ['account_id' => $this->account->id, 'amount' => '50', 'description' => 'Documented travel reimbursement'];
+    $this->actingAs($this->requester)->post(route('finance.requests.store'), $payload + ['profile_username' => $member->username])
+        ->assertForbidden();
+    $this->requester->givePermissionTo(Permission::findOrCreate('finance.paystack.recipients.manage', 'web'));
+    $this->post(route('finance.requests.store'), $payload + ['profile_username' => $otherState->username])->assertNotFound();
+    $this->post(route('finance.requests.store'), $payload + ['profile_username' => $member->username])->assertRedirect()->assertSessionHasNoErrors();
+    $binding = DB::table('campaign_finance_profile_beneficiaries')->first();
+    expect((int) $binding->user_id)->toBe($member->id);
+    expect($binding->bank_fingerprint)->toHaveLength(64);
+    expect(json_encode($binding, JSON_THROW_ON_ERROR))->not->toContain($member->bank_account_number);
+});

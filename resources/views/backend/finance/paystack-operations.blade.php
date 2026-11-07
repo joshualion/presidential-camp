@@ -24,9 +24,12 @@
         <tbody>
             @forelse($operations as $operation)
                 <tr>
-                    <td>{{ $operation->reference }}</td><td>{{ ucfirst($operation->kind) }}</td>
+                    <td>{{ $operation->reference }}
+                        @if($operation->request_id)<div>Funding request #{{ $operation->request_id }}</div>@endif
+                        @if($operation->submitted_by)<div>Submitted by officer #{{ $operation->submitted_by }}</div>@endif
+                    </td><td>{{ ucfirst($operation->kind) }}</td>
                     <td>{{ $accounts[$operation->account_id] ?? 'Parent or external jurisdiction' }}</td>
-                    <td>{{ $operation->destination_id ? ($accounts[$operation->destination_id] ?? 'Another jurisdiction') : 'Main campaign Paystack account' }}</td>
+                    <td>{{ $operation->destination_id ? ($accounts[$operation->destination_id] ?? 'Another jurisdiction') : ($operation->kind === 'transfer' ? 'Verified test beneficiary' : 'Main campaign Paystack account') }}</td>
                     <td>{{ number_format($operation->amount_minor / 100, 2) }}</td><td>{{ ucfirst($operation->status) }}
                         @if($operation->processed_refunds_minor > 0)
                             <div>Verified refunds NGN {{ number_format($operation->processed_refunds_minor / 100, 2) }}</div>
