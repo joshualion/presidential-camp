@@ -1300,3 +1300,71 @@ test('an authorized officer can select an existing member profile without copyin
     expect($binding->bank_fingerprint)->toHaveLength(64);
     expect(json_encode($binding, JSON_THROW_ON_ERROR))->not->toContain($member->bank_account_number);
 });
+
+test('a reviewed live donation posts its gross and fee once without moving money', function () {
+    $admin = User::factory()->create(['access_level' => 'superadmin', 'status' => 'active']);
+    $donorReviewer = User::factory()->create(['access_level' => 'superadmin', 'status' => 'active']);
+    $poster = User::factory()->create(['access_level' => 'superadmin', 'status' => 'active']);
+    $payments = app(\App\Services\Enterprise\CampaignPaystackService::class);
+    $donations = app(\App\Services\Enterprise\CampaignPaystackDonationService::class);
+    $statements = app(\App\Services\Enterprise\CampaignFinanceStatementService::class);
+    foreach ([$this->requester, $this->approver, $this->outsider, $admin, $donorReviewer, $poster] as $actor) {
+        $actor->givePermissionTo(Permission::findOrCreate('finance.reconcile', 'web'));
+        $actor->givePermissionTo(Permission::findOrCreate('finance.donations.manage', 'web'));
+        $actor->givePermissionTo(Permission::findOrCreate('finance.record', 'web'));
+        $actor->givePermissionTo(Permission::findOrCreate('finance.paystack.view', 'web'));
+    }
+    $payments->saveSettings($admin, ['live_secret' => 'sk_live_'.str_repeat('a', 30)], 'test', false, false);
+    $date = today()->subDay()->toDateString();
+    $credit = 'BANK-REF-188';
+    $csv = "date,reference,amount_minor\n{$date},{$credit},9800\n";
+    $check = $statements->import($this->requester, $this->account->id, $date, $date, 0, 9800, 'Bank evidence', $csv);
+    $statements->review($this->approver, $check, 'Verified independent bank evidence');
+    $http = \Illuminate\Support\Facades\Http::class;
+    $receipt = ['id' => 4099260516, 'domain' => 'live', 'status' => 'success', 'currency' => 'NGN',
+        'reference' => 'donation-case-101', 'amount' => 10000, 'fees' => 200];
+    $success = false;
+    $http::preventStrayRequests();
+    $http::fake([
+        'https://api.paystack.co/settlement/123/transactions?*' => $http::response(['status' => true, 'data' => [$receipt]]),
+        'https://api.paystack.co/transaction/verify/donation-case-101' => function () use ($http, $receipt, &$success) {
+            return $http::response(['status' => true, 'data' => ['status' => $success ? 'success' : 'pending'] + $receipt]);
+        },
+        'https://api.paystack.co/settlement?*' => $http::response(['status' => true, 'data' => [[
+            'id' => 123, 'integration' => 81, 'domain' => 'live', 'status' => 'success',
+            'currency' => 'NGN', 'total_processed' => 10000, 'total_fees' => 200,
+            'effective_amount' => 9800, 'total_amount' => 9800, 'deductions' => null,
+            'settlement_date' => $date.'T00:00:00.000Z',
+        ]]]),
+    ]);
+    $payments->matchSettlement($admin, $check, 123, $credit);
+    $match = (int) DB::table('campaign_paystack_settlement_matches')->value('id');
+    $reference = $receipt['reference'];
+
+    expect(fn () => $donations->prepare($donorReviewer, $match, $reference, 'Donor-001', 'REVIEW-001', 0))
+        ->toThrow(ValidationException::class);
+    expect(DB::table('campaign_paystack_donation_reviews')->count())->toBe(0);
+    $success = true;
+    expect(fn () => $donations->prepare($donorReviewer, $match, $reference, 'Donor-001', 'REVIEW-001', 50_000_000_000))
+        ->toThrow(ValidationException::class);
+    $donations->prepare($donorReviewer, $match, $reference, 'Donor-001', 'REVIEW-001', 0);
+    expect($donations->queue($this->outsider))->toBe([]);
+    expect($donations->queue($poster)[0]->evidence['review_record'])->toBe('REVIEW-001');
+    expect(DB::table('campaign_paystack_donation_reviews')->value('evidence'))->not->toContain('REVIEW-001');
+    expect(fn () => $donations->post($donorReviewer, $match))->toThrow(\Symfony\Component\HttpKernel\Exception\HttpException::class);
+    expect(fn () => $donations->post($this->approver, $match))->toThrow(\Symfony\Component\HttpKernel\Exception\HttpException::class);
+    expect(DB::table('campaign_finance_entries')->count())->toBe(0);
+
+    expect(fn () => $donations->post($this->outsider, $match))->toThrow(\Illuminate\Database\Eloquent\ModelNotFoundException::class);
+    $success = false;
+    expect(fn () => $donations->post($poster, $match))->toThrow(ValidationException::class);
+    expect(DB::table('campaign_finance_entries')->count())->toBe(0);
+    $success = true;
+    $id = $donations->post($poster, $match);
+    expect($donations->post($poster, $match))->toBe($id);
+    expect($this->account->fresh()->balance_minor)->toBe(9800);
+    expect(DB::table('campaign_finance_entries')->pluck('kind')->all())->toBe(['income', 'expenditure']);
+    expect(DB::table('campaign_finance_journal')->count())->toBe(2);
+    expect(DB::table('campaign_finance_audits')->where('action', 'paystack.donation.posted')->count())->toBe(1);
+    $http::assertNotSent(fn ($request) => $request->method() !== 'GET');
+});

@@ -4,6 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Services\Enterprise\CampaignFinanceService;
 use App\Services\Enterprise\CampaignPaystackService;
+use App\Services\Enterprise\CampaignPaystackDonationService;
+use App\Services\CampaignCapabilityService;
+use App\Services\Enterprise\CampaignFinancePolicy;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
@@ -54,7 +57,7 @@ class CampaignPaystackController extends Controller
         return back()->with('finance_status', 'Test recipient verified and linked to the selected ledger account.');
     }
 
-    public function index(Request $request, CampaignPaystackService $paystack, CampaignFinanceService $finance)
+    public function index(Request $request, CampaignPaystackService $paystack, CampaignFinanceService $finance, CampaignPaystackDonationService $donations)
     {
         $actor = $request->user();
         $operations = $paystack->operations($actor)
@@ -68,10 +71,36 @@ class CampaignPaystackController extends Controller
                 ->selectRaw('COALESCE(SUM(amount_minor), 0)'), 'processed_refunds_minor')
             ->latest('campaign_paystack_operations.id')->paginate(25);
         $accounts = $finance->accounts($actor)->orderBy('name')->pluck('name', 'id');
+        $capabilities = app(CampaignCapabilityService::class);
+        $policy = app(CampaignFinancePolicy::class);
+        $mayReview = $capabilities->allows($actor, 'finance.donations.manage') && $policy->permits($actor, 'finance.donations.manage')
+            && $capabilities->allows($actor, 'finance.reconcile') && $policy->permits($actor, 'finance.reconcile');
         return response()->view('backend.finance.paystack-operations', [
+            'donationReviews' => $mayReview ? $donations->queue($actor) : [],
+            'mayPostDonations' => $mayReview && $capabilities->allows($actor, 'finance.record') && $policy->permits($actor, 'finance.record'),
             'profileData' => $actor, 'pageTitle' => 'Campaign Paystack test activity',
             'operations' => $operations, 'accounts' => $accounts, 'settings' => $paystack->settings(),
         ])->header('Cache-Control', 'no-store');
+    }
+
+    public function prepareDonation(Request $request, int $id, CampaignPaystackDonationService $donations)
+    {
+        $data = $request->validate([
+            'reference' => 'required|string|max:100',
+            'donor_case' => 'required|string|max:64',
+            'review_record' => 'required|string|max:120',
+            'other_minor' => 'required|integer|min:0|max:50000000000',
+            'attest' => 'accepted',
+        ]);
+        $donations->prepare($request->user(), $id, $data['reference'], $data['donor_case'], $data['review_record'], (int) $data['other_minor']);
+        return back()->with('finance_status', 'Donation evidence saved for independent review.');
+    }
+
+    public function postDonation(Request $request, int $id, CampaignPaystackDonationService $donations)
+    {
+        $request->validate(['attest' => 'accepted']);
+        $donations->post($request->user(), $id);
+        return back()->with('finance_status', 'Verified donation and any processing fee posted to the ledger.');
     }
 
     public function collect(Request $request, CampaignPaystackService $paystack)

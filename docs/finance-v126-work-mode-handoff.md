@@ -59,3 +59,12 @@ Last checked: 2026-11-06 18:53 Africa/Lagos. This is an engineering continuation
 
 ## Completion reporting contract
 Provide results by repository/branch/commit, exact test commands and CI links, passing/failing counts, high-severity outstanding defects, schema changes, security review, environment readiness, signed artifact verification and whether release is published. Never imply background progress or claim completion before verified.
+
+
+## 2026-11-07 release completion pass
+
+The preceding candidate at bd0a791 passed all application jobs, six MySQL/MariaDB backup jobs and the official signing/fresh-install/upgrade rehearsal. The follow-up adds independent review and posting for an existing single-payment live Paystack settlement. Read-only provider calls must confirm the receipt and its membership in the matched settlement. A reviewed bank CSV must have an unchanged journal snapshot and an unposted variance equal to the net credit. Gross income and processing fees post atomically and idempotently. Evidence references are encrypted, geographic restrictions apply, and donor totals include declared off-platform contributions.
+
+Live payment initiation stays disabled. Sandbox collection and disbursement tests use synthetic details. Merchant eligibility and donor evidence require the customer’s authorized compliance review. Multi-payment settlements and refund adjustments use separate reconciliation and must not be booked through the single-payment donation shortcut. The release notes describe these boundaries.
+
+Run the full quality and private candidate workflows for the follow-up commit before merging and publishing through community-release.yml. The publisher rechecks signatures, backups, fresh installs and supported upgrades, including 1.2.5, before creating the public 1.2.6 release. Do not replace 1.2.5 assets.

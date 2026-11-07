@@ -198,6 +198,7 @@ if ($targetVersion === '1.2.6') {
         '2026_11_07_000022_add_campaign_paystack_beneficiary_links',
         '2026_11_07_000023_add_campaign_paystack_refund_checks',
         '2026_11_07_000024_add_campaign_finance_statement_evidence',
+        '2026_11_07_000026_add_reviewed_paystack_donations',
         '2026_11_07_000025_bind_finance_beneficiaries_to_profiles',
     ]);
 }
@@ -271,7 +272,7 @@ if ($targetVersion === '1.2.6') {
     $schema = \Illuminate\Support\Facades\Schema::class;
     $assert($schema::hasColumn('users', 'finance_bank_revision'), 'Finance bank revision column was not installed.');
     foreach (['campaign_finance_statement_imports', 'campaign_finance_statement_resolutions',
-        'campaign_paystack_settlement_matches', 'campaign_finance_profile_beneficiaries'] as $table) {
+        'campaign_paystack_settlement_matches', 'campaign_finance_profile_beneficiaries', 'campaign_paystack_donation_reviews'] as $table) {
         $assert($schema::hasTable($table), 'Missing Finance upgrade table: '.$table);
     }
 }

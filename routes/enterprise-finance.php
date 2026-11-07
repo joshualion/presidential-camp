@@ -25,6 +25,10 @@ Route::middleware(['auth', 'enterprise.feature:campaign_finance,finance.view'])-
     Route::post('/paystack/transfer/{id}', [CampaignPaystackController::class, 'transfer'])->middleware('throttle:10,1')->whereNumber('id')->name('paystack.transfer');
     Route::post('/paystack/settlements/{id}/match', [CampaignPaystackController::class, 'matchSettlement'])
         ->middleware('throttle:10,1')->whereNumber('id')->name('paystack.settlements.match');
+    Route::post('/paystack/donations/{id}/prepare', [CampaignPaystackController::class, 'prepareDonation'])
+        ->middleware('throttle:10,1')->whereNumber('id')->name('paystack.donation.prepare');
+    Route::post('/paystack/donations/{id}/post', [CampaignPaystackController::class, 'postDonation'])
+        ->middleware('throttle:10,1')->whereNumber('id')->name('paystack.donation.post');
     Route::post('/paystack/refunds/{reference}', [CampaignPaystackController::class, 'refund'])->middleware('throttle:10,1')->whereUuid('reference')->name('paystack.refund');
     Route::post('/paystack/verify/{reference}', [CampaignPaystackController::class, 'verify'])->middleware('throttle:10,1')->whereUuid('reference')->name('paystack.verify');
     Route::post('/paystack/transfer/{id}/approve', [CampaignPaystackController::class, 'approveTransfer'])->middleware('throttle:10,1')->whereNumber('id')->name('paystack.approve');

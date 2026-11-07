@@ -349,6 +349,23 @@ class CampaignFinanceService
         }, 3);
     }
 
+    /** Called inside the reviewed settlement transaction while its account is locked. */
+    public function postVerifiedDonation(User $actor, CampaignFinanceAccount $account, object $match, string $reference): array
+    {
+        $this->authorize($actor, 'finance.record');
+        $journal = app(CampaignFinanceJournal::class);
+        $journal->reconcile($account);
+        $journal->assertIntegrity($account);
+        $income = $this->post($actor, $account, 'income', (int) $match->gross_minor,
+            'Verified Paystack donation '.$reference, (string) Str::uuid());
+        $fee = (int) $match->fee_minor > 0
+            ? $this->post($actor, $account, 'expenditure', (int) $match->fee_minor,
+                'Paystack processing fee '.$reference, (string) Str::uuid())
+            : null;
+
+        return ['income_entry_id' => $income, 'fee_entry_id' => $fee];
+    }
+
     public function recordManualExpense(User $actor, int $accountId, int $amount, string $description, string $key, array $receipt, ?int $budgetId = null): int
     {
         $this->authorize($actor, 'finance.expenses.record');
