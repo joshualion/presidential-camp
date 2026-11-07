@@ -23,13 +23,13 @@ class CampaignFinanceJournal
      */
     public function reconcile(CampaignFinanceAccount $account): void
     {
-        if (DB::table('campaign_finance_ledger_checks')->where('account_id', $account->id)->exists()) {
+        if (DB::table('campaign_finance_ledger_checks')->where('account_id', $account->id)->lockForUpdate()->first(['account_id'])) {
             return;
         }
 
         $balance = 0;
         $count = 0;
-        $entries = DB::table('campaign_finance_entries')->where('account_id', $account->id)->lazyById(500);
+        $entries = DB::table('campaign_finance_entries')->where('account_id', $account->id)->lockForUpdate()->lazyById(500);
         foreach ($entries as $entry) {
             $amount = (int) $entry->amount_minor;
             if ($amount < 1 || $amount > 100000000000000 || !in_array($entry->kind, ['income', 'expenditure'], true)) {

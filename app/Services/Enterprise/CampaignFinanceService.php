@@ -276,7 +276,8 @@ class CampaignFinanceService
             $account = $this->account($actor, $accountId, true);
             $journal = app(CampaignFinanceJournal::class);
             $journal->reconcile($account);
-            $existing = DB::table('campaign_finance_entries')->where('idempotency_key', $key)->first();
+            // A scoped account lookup can establish a snapshot before its row lock is acquired.
+            $existing = DB::table('campaign_finance_entries')->where('idempotency_key', $key)->lockForUpdate()->first();
             if ($existing) {
                 if ((int) $existing->account_id !== $accountId || $existing->kind !== $kind || (int) $existing->amount_minor !== $amount
                     || (int) $existing->recorded_by !== (int) $actor->id || $existing->description !== $description || (int) $existing->request_id !== (int) $requestId) {
@@ -329,9 +330,9 @@ class CampaignFinanceService
 
         return DB::transaction(function () use ($actor, $accountId, $amount, $description, $key, $receipt, $referenceKey, $budgetId) {
             $account = $this->account($actor, $accountId, true);
-            $existing = DB::table('campaign_finance_entries')->where('idempotency_key', $key)->first();
+            $existing = DB::table('campaign_finance_entries')->where('idempotency_key', $key)->lockForUpdate()->first();
             if ($existing) {
-                $saved = DB::table('campaign_finance_manual_expenses')->where('entry_id', $existing->id)->first();
+                $saved = DB::table('campaign_finance_manual_expenses')->where('entry_id', $existing->id)->lockForUpdate()->first();
                 if (!$saved || (int) $existing->account_id !== $accountId || (int) $existing->recorded_by !== (int) $actor->id
                     || (int) $existing->amount_minor !== $amount || $existing->description !== $description
                     || (int) $existing->budget_id !== (int) $budgetId || array_intersect_key((array) $saved, $receipt) != $receipt) {
@@ -339,7 +340,7 @@ class CampaignFinanceService
                 }
                 return (int) $existing->id;
             }
-            if (DB::table('campaign_finance_manual_expenses')->where('account_id', $accountId)->where('reference_key', $referenceKey)->exists()) {
+            if (DB::table('campaign_finance_manual_expenses')->where('account_id', $accountId)->where('reference_key', $referenceKey)->lockForUpdate()->first(['entry_id'])) {
                 $this->invalid('That payment reference is already recorded on this account.');
             }
 
@@ -505,8 +506,8 @@ class CampaignFinanceService
                 ->whereIn('kind', ['income', 'expenditure'])->firstOrFail();
             abort_if((int) $original->recorded_by === (int) $actor->id, 403, 'Another officer must reverse an entry you posted.');
 
-            $reversalId = DB::table('campaign_finance_reversals')->where('entry_id', $entryId)->value('reversal_id');
-            $existing = DB::table('campaign_finance_entries')->where('idempotency_key', $key)->first();
+            $reversalId = DB::table('campaign_finance_reversals')->where('entry_id', $entryId)->lockForUpdate()->value('reversal_id');
+            $existing = DB::table('campaign_finance_entries')->where('idempotency_key', $key)->lockForUpdate()->first();
             if ($existing) {
                 if ((int) $existing->id !== (int) $reversalId || (int) $existing->recorded_by !== (int) $actor->id || $existing->description !== $reason) {
                     $this->invalid('This submission key was already used for another transaction.');
